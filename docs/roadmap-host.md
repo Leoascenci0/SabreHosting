@@ -37,7 +37,7 @@ o servidor real só roda na Confirmação, num PC.
   *Confirmação:* teste com o servidor falso: ciclo completo de estados; parada demorada mata após o prazo.
   *Depende de:* host-1.2
 
-- [ ] **2.2 — Console/RCON: salvar, pausar gravação, avisar no chat**
+- [x] **2.2 — Console/RCON: salvar, pausar gravação, avisar no chat** (PR #30, 30/10/2026; pelo console, sem RCON)
   *O que fazer:* cliente RCON (ou console via stdin) com `save-off`, `save-all flush` (esperando a confirmação),
   `save-on`, `say`, `list`. Senha RCON gerada por sessão, nunca gravada no git.
   *Arquivo:* `packages/nucleo/src/servidor/comandos.ts`

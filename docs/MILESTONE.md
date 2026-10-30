@@ -20,8 +20,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 ## Fila
 
 **M1 — Fundação**
-- **Onda 5:** host-2.1 · bkpmel-1.1 · cartmel-1.5 (melhorias puxadas antes de bkp-1.2 e cart-1.3, mesmos arquivos)
-- **Onda 6:** bkp-1.2 · cart-1.3 · host-2.2
+- **Onda 6 (em curso):** cart-1.3 (aberto, filha session_012qrjnu4PytBLmUvN6JrB8r) · bkp-1.2 · lanc-1.1
 - **Onda 6b:** bkp-2.1 (espera D6) · rede-1.1 (espera D2, D3)
 - **Onda 7:** bkp-1.3 · cart-2.1 · rede-2.1
 - **Onda 8:** bkp-2.2 · cart-1.4 · host-3.1 [P: teste no PC]
@@ -61,7 +60,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 - Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; bkpmel-1.2).
 - Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1 a 1.4 e 1.6; 1.5 feito).
-- Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2, 2.3).
+- Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
 - Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1 e 1.2, CI).
 
 - Bedrock via Geyser (se D1 = Java + Bedrock depois).
@@ -70,12 +69,14 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Feito
 
-- 30/10/2026 — Onda 1: base-1.1 monorepo TypeScript (PR #3).
+- 30/10/2026 — Onda 5: host-2.1 subir/parar (PR #24), bkpmel-1.1 caminhos Windows (PR #29), cartmel-1.5 época
+  blindada (PR #27); host-2.2 comandos pelo console (PR #30).
 - 30/10/2026 — Onda 4: host-1.2 EULA e configuração (PR #20), bkp-1.1 manifesto (PR #21), cart-1.2 trava de host
   (PR #22).
 - 30/10/2026 — Onda 3: host-1.1 download com hash (PR #12), cart-1.1 cartório com token (PR #15), host-2.3 nota do PC
   (PR #16).
 - 30/10/2026 — Onda 2: base-1.2 CI (PR #7), base-1.3 mundos de teste (PR #9), base-2.1 modelos de issue (PR #8).
+- 30/10/2026 — Onda 1: base-1.1 monorepo TypeScript (PR #3).
 
 - 30/10/2026 — Decididas D8 (Electron + TypeScript), D1 (Java) e D5 (mods Fabric e Forge juntos: NeoForge + Sinytra
   Connector). Ver `docs/ops/DECISOES.md`.
