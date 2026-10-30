@@ -1,0 +1,22 @@
+# Proxy Velocity (porta 25565). Instalada DESLIGADA pelo instalar-velocity.sh: só ligar depois de pôr o plugin da
+# whitelist (ver infra/vps/velocity/LEIAME.md).
+[Unit]
+Description=SabreHosting - proxy Velocity (porta 25565)
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
+
+[Service]
+User=sabre
+Group=sabre
+WorkingDirectory=/var/lib/sabre/velocity
+ExecStart=/usr/bin/java -Xms128M -Xmx512M -jar /opt/sabre/velocity/velocity.jar
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/sabre/velocity
+
+[Install]
+WantedBy=multi-user.target
