@@ -174,6 +174,21 @@ export class ServidorMinecraft extends EventEmitter {
     await this.pararServidor();
   }
 
+  /**
+   * Única porta de escrita no console do servidor. Recusa quebra de linha e caractere de controle (nenhum
+   * comando "pega carona" noutro) e só escreve com o servidor pronto.
+   */
+  enviar(linha: string): void {
+    if (/[\p{Cc}\p{Zl}\p{Zp}]/u.test(linha)) {
+      throw new Error(
+        "O comando tem quebra de linha ou caractere de controle; não enviei nada ao servidor.",
+      );
+    }
+    if (this.estado !== "pronto")
+      throw new Error("O servidor ainda não está pronto para comandos.");
+    this.filho.stdin?.write(`${linha}\n`);
+  }
+
   /** Escreve `stop`; se não sair até o prazo, mata e avisa no log. */
   pararServidor(): Promise<void> {
     if (this.estado === "parado" || this.estado === "caiu") return Promise.resolve();
