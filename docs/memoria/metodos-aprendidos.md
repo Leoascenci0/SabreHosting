@@ -28,9 +28,12 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 | rede-2.1 | script+config | M3+M7 | ~150 | ~200 (+~300 teste) | não | #48 |
 | bkp-2.1 | rotação (apaga) | M7 | ~100 | ~150 (+~250 teste) | não | #50 |
 | rede-1.2 | tutorial | M3 | ~150 | ~260 | não | #51 |
+| cart-2.1 | cliente+renovador | M3+M7 | ~180 | ~420 (+~560 teste) | não (4 passadas de revisão) | #41 |
 
 ## Lições
-_(nenhuma ainda)_
+- **L-01** Item de trava/tempo (renovação, prazo, parada) precisa da CONTA de tempo no briefing: prazo do cartório, margem
+  local, tempo de salvar e de parar, e todos os caminhos de perda (alarme, laço, fila, hibernação, callback que lança).
+  O cart-2.1 levou 4 passadas porque cada revisão achou mais um caminho. Vezes: 1.
 
 ## Anti-padrões
 - **A-01** Copiar a pasta do mundo com o servidor rodando "porque é rápido": corrompe o mundo. Sempre `save-off` + `save-all flush`.

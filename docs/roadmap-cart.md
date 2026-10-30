@@ -43,7 +43,7 @@ Objetivo: um serviço pequeno na nuvem que sabe qual é a versão mais nova do m
 
 ## Bloco 2 — Cliente no app
 
-- [ ] **2.1 — Cliente do cartório no núcleo**
+- [x] **2.1 — Cliente do cartório no núcleo** (PR #41, 30/10/2026)
   *Nota da revisão do cart-1.2 (PR #22):* o cliente conta o prazo pelo **próprio relógio** a partir do envio do pedido
   (nunca pelo `expiraEm` do servidor); a identidade da trava é o PC, então o cliente guarda a época que **ele** ganhou
   e nunca adota a época devolvida numa recusa (senão um processo zumbi do mesmo PC renovaria).
