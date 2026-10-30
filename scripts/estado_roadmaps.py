@@ -23,8 +23,11 @@ def ler(caminho):
 def main():
     filtro = sys.argv[1] if len(sys.argv) > 1 else None
     feitos, itens = set(), []
-    for caminho in sorted(glob.glob(os.path.join(RAIZ, "docs", "roadmap-*.md"))):
-        sigla = os.path.basename(caminho)[len("roadmap-"):-3]
+    # Roadmaps 100% feitos moram em docs/concluidos/ e ainda contam como dependência cumprida.
+    caminhos = sorted(glob.glob(os.path.join(RAIZ, "docs", "roadmap-*.md")))
+    caminhos += sorted(glob.glob(os.path.join(RAIZ, "docs", "concluidos", "roadmap-*.md")))
+    for caminho in caminhos:
+        sigla = os.path.basename(caminho)[len("roadmap-"):-3].replace("-melhoria", "mel")
         atual = None
         for linha in ler(caminho):
             m = ITEM.match(linha)

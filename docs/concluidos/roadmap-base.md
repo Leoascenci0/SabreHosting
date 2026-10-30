@@ -22,7 +22,7 @@ dependência sem linha em `DECISOES.md` (este roadmap registra as da fundação)
   *Confirmação:* `npm ci && npm run vistoria` → APROVADA na nuvem.
   *Depende de:* — · D8 decidida (Electron + TypeScript). SOZINHO na onda.
 
-- [ ] **1.2 — CI no GitHub Actions**
+- [x] **1.2 — CI no GitHub Actions** (PR #7, 30/10/2026; proteção da main descrita no PR para o Eliel ligar)
   *O que fazer:* workflow que roda `npm ci` + `npm run vistoria` em todo PR e push na `main` (Ubuntu); PR de fork roda
   sem segredos (`pull_request`, nunca `pull_request_target`). Proteção da `main` documentada no PR para o Eliel ligar.
   *Arquivo:* `.github/workflows/vistoria.yml`
