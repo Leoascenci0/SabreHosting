@@ -34,6 +34,7 @@ playerdata/
 /mundos/
 /backups/
 !tests/mundos/**
+tests/mundos/gerados/
 
 # Worktrees dos agentes
 .claude/worktrees/
