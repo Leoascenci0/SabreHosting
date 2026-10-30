@@ -9,7 +9,7 @@ Objetivo: um serviço pequeno na nuvem que sabe qual é a versão mais nova do m
 
 ## Bloco 1 — Núcleo do cartório
 
-- [ ] **1.1 — Serviço, banco e autenticação por token**
+- [x] **1.1 — Serviço, banco e autenticação por token** (PR #15, 30/10/2026)
   *O que fazer:* Fastify escutando só na rede privada; SQLite com migrações; PCs, tokens (hash guardado, nunca o
   token), convites de uso único com validade. Log sem segredos.
   *Arquivo:* `services/cartorio/src/`

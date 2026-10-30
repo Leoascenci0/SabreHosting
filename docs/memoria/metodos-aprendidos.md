@@ -5,6 +5,13 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 ## Histórico
 | Item | Tipo | Método | Estimado | Real | Trocou? | PR |
 |---|---|---|---|---|---|---|
+| base-1.1 | config/esqueleto | M7+M6 | ~120 | 155 (sem lock) | não | #3 |
+| base-1.3 | ajuda de teste | M7 | ~130 | ~190 | não | #9 |
+| base-2.1 | documento/yaml | M3 | ~90 | ~180 (com plano) | não | #8 |
+| base-1.2 | workflow CI | M6 | ~35 | 26 | não | #7 |
+| host-1.1 | download+hash | M7 | ~140 | 290 | não (revisão somou limites) | #12 |
+| cart-1.1 | serviço+auth | M6 | ~175 | 252 (+234 teste) | não | #15 |
+| host-2.3 | fórmula+medição | M7 | ~130 | ~120 (+~140 teste) | não | #16 |
 
 ## Lições
 _(nenhuma ainda)_
