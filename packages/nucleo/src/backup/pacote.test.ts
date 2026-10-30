@@ -210,13 +210,32 @@ describe("criarPacote / abrirPacote", () => {
     expect(existsSync(temp)).toBe(false);
   });
 
-  it("recusa pasta temporária que já tem coisas, sem apagar nada", async () => {
-    const { pacote, sha256: hash, base } = await pacoteBom();
+  it("recusa pasta temporária com arquivos, mesmo com pacote corrompido, e não apaga nada", async () => {
+    const { pacote, base } = await pacoteBom();
     const temp = join(base, "temp");
     mkdirSync(temp);
     writeFileSync(join(temp, "importante.txt"), "meu");
-    await expect(abrirPacote(pacote, hash, temp)).rejects.toThrow(/não está vazia/);
+    await expect(abrirPacote(pacote, "0".repeat(64), temp)).rejects.toThrow(
+      /já existe e não está vazia/,
+    );
     expect(readdirSync(temp)).toEqual(["importante.txt"]);
+  });
+
+  it("recusa a própria pasta do mundo como temporária", async () => {
+    const { pacote, sha256: hash, mundo } = await pacoteBom();
+    const antes = hashesDoMundo(mundo);
+    await expect(abrirPacote(pacote, hash, mundo)).rejects.toThrow(/já existe e não está vazia/);
+    expect(hashesDoMundo(mundo)).toEqual(antes);
+  });
+
+  it("recusa pasta temporária que é um arquivo e o arquivo continua lá", async () => {
+    const { pacote, base } = await pacoteBom();
+    const temp = join(base, "arquivo.txt");
+    writeFileSync(temp, "meu");
+    await expect(abrirPacote(pacote, "0".repeat(64), temp)).rejects.toThrow(
+      /já existe e não está vazia/,
+    );
+    expect(readFileSync(temp, "utf8")).toBe("meu");
   });
 
   it("recusa mundo com arquivo chamado manifesto.json e não deixa .parcial", async () => {

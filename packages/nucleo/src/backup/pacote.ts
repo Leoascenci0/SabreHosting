@@ -8,7 +8,7 @@
  */
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, readdir, rename, rm } from "node:fs/promises";
+import { mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { Worker } from "node:worker_threads";
@@ -238,17 +238,26 @@ async function extrair(pacote: string, pasta: string): Promise<Manifesto> {
  * Confere o hash do pacote ANTES de abrir; extrai só arquivos comuns do manifesto, conferindo cada um. Qualquer falha
  * apaga a pasta temporária inteira e lança erro em pt-BR. A pasta temporária precisa não existir ou estar vazia.
  */
+/** Só aceita pasta que não existe ou está vazia: a limpeza em falha nunca pode apagar o que já era do amigo. */
+async function exigirLivre(pasta: string): Promise<void> {
+  const info = await stat(pasta).catch((erro: NodeJS.ErrnoException) => {
+    if (erro.code === "ENOENT") return undefined;
+    throw erro;
+  });
+  if (info === undefined) return;
+  if (!info.isDirectory() || (await readdir(pasta)).length > 0) {
+    throw new Error(
+      "A pasta temporária para abrir o pacote já existe e não está vazia (ou é um arquivo); nada foi apagado nem aberto.",
+    );
+  }
+}
+
 export async function abrirPacote(
   pacote: string,
   sha256Esperado: string,
   pastaTemporaria: string,
 ): Promise<Manifesto> {
-  const existente = await readdir(pastaTemporaria).catch(() => []);
-  if (existente.length > 0) {
-    throw new Error(
-      "A pasta temporária para abrir o pacote não está vazia; nada foi apagado nem aberto.",
-    );
-  }
+  await exigirLivre(pastaTemporaria);
   try {
     const { hash } = await hashComTamanho(pacote);
     if (hash !== sha256Esperado) {
