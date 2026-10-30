@@ -7,7 +7,12 @@ export interface TemposTrava {
   renovarMs: number;
 }
 export type MotivoRecusa =
-  "ocupada" | "epoca_velha" | "nao_e_dono" | "vencida" | "destino_desconhecido";
+  | "ocupada"
+  | "epoca_velha"
+  | "nao_e_dono"
+  | "vencida"
+  | "destino_desconhecido"
+  | "destino_invalido";
 export type ResultadoTrava =
   | { ok: true; epoca: number; expiraEm: number }
   | { ok: false; motivo: MotivoRecusa; donoPcId: number | null; epoca: number; expiraEm: number };
@@ -70,8 +75,8 @@ function mudar(
   });
 }
 
-/** Por que uma operação do dono foi recusada. O último caso só acontece em `passar` (destino inexistente). */
-function recusaDoDono(pc: number, epoca: number, agora: number) {
+/** Por que uma operação do dono foi recusada. Os dois últimos casos só acontecem em `passar`. */
+function recusaDoDono(pc: number, epoca: number, agora: number, para?: number) {
   return (l: Linha): MotivoRecusa =>
     l.epoca !== epoca
       ? "epoca_velha"
@@ -79,7 +84,9 @@ function recusaDoDono(pc: number, epoca: number, agora: number) {
         ? "nao_e_dono"
         : l.expira_em <= agora
           ? "vencida"
-          : "destino_desconhecido";
+          : para === pc
+            ? "destino_invalido"
+            : "destino_desconhecido";
 }
 
 /** Livre, vencida ou já deste PC (app que reiniciou) → dono = pc, época + 1. */
@@ -109,7 +116,7 @@ export function renovar(
   );
 }
 
-/** Migração de host: só o dono atual (época atual, valendo) passa para um PC do grupo; época + 1. */
+/** Migração de host: só o dono atual (época atual, valendo) passa para outro PC com token ativo; época + 1. */
 export function passar(
   banco: Banco,
   de: number,
@@ -121,9 +128,10 @@ export function passar(
   return mudar(
     banco,
     `dono_pc_id = ?, expira_em = ?, epoca = epoca + 1
-     WHERE dono_pc_id = ? AND epoca = ? AND expira_em > ? AND EXISTS (SELECT 1 FROM pcs WHERE id = ?)`,
-    [para, agora + prazoMs, de, epoca, agora, para],
-    recusaDoDono(de, epoca, agora),
+     WHERE dono_pc_id = ? AND epoca = ? AND expira_em > ? AND ? <> ?
+       AND EXISTS (SELECT 1 FROM tokens WHERE pc_id = ? AND revogado_em IS NULL)`,
+    [para, agora + prazoMs, de, epoca, agora, para, de, para],
+    recusaDoDono(de, epoca, agora, para),
   );
 }
 

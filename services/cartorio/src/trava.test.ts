@@ -23,13 +23,17 @@ function pasta() {
   return p;
 }
 
-/** Banco novo com `n` PCs (ids 1..n). */
+/** Banco novo com `n` PCs (ids 1..n), cada um com um token ativo. */
 function montarBanco(n = 3): { banco: Banco; caminho: string } {
   const caminho = join(pasta(), "cartorio.db");
   const banco = abrirBanco(caminho);
   fechar.push(() => banco.close());
   const inserir = banco.prepare("INSERT INTO pcs (nome, criado_em) VALUES (?, 0)");
-  for (let i = 1; i <= n; i++) inserir.run(`PC ${i}`);
+  const token = banco.prepare("INSERT INTO tokens (hash, pc_id, criado_em) VALUES (?, ?, 0)");
+  for (let i = 1; i <= n; i++) {
+    inserir.run(`PC ${i}`);
+    token.run(`hash-${i}`, i);
+  }
   return { banco, caminho };
 }
 
@@ -165,6 +169,38 @@ describe("trava: época (host zumbi)", () => {
     });
     expect(passar(banco, 1, 2, 1, PRAZO, PRAZO)).toMatchObject({ ok: false, motivo: "vencida" });
     expect(estadoTrava(banco, 1)).toEqual({ donoPcId: 1, epoca: 1, expiraEm: PRAZO });
+  });
+
+  it("passar para si mesmo ou para PC sem token ativo (sem token, revogado) → recusa, nada muda", () => {
+    const { banco } = montarBanco();
+    banco.prepare("INSERT INTO pcs (nome, criado_em) VALUES ('Sem token', 0)").run(); // id 4
+    banco.prepare("UPDATE tokens SET revogado_em = 1 WHERE pc_id = 3").run();
+    pegar(banco, 1, 0, PRAZO);
+    expect(passar(banco, 1, 1, 1, 1, PRAZO)).toMatchObject({
+      ok: false,
+      motivo: "destino_invalido",
+    });
+    for (const destino of [4, 3]) {
+      expect(passar(banco, 1, destino, 1, 1, PRAZO)).toMatchObject({
+        ok: false,
+        motivo: "destino_desconhecido",
+      });
+    }
+    expect(estadoTrava(banco, 1)).toEqual({ donoPcId: 1, epoca: 1, expiraEm: PRAZO });
+  });
+
+  it("INSERT OR REPLACE, REPLACE e DELETE na trava falham e a época não muda", () => {
+    const { banco } = montarBanco();
+    pegar(banco, 1, 0, PRAZO);
+    pegar(banco, 2, PRAZO, PRAZO); // época 2
+    for (const sql of [
+      "INSERT OR REPLACE INTO trava (id) VALUES (1)",
+      "REPLACE INTO trava (id, epoca) VALUES (1, 0)",
+      "DELETE FROM trava",
+    ]) {
+      expect(() => banco.exec(sql), sql).toThrow();
+    }
+    expect(estadoTrava(banco, PRAZO + 1)).toEqual({ donoPcId: 2, epoca: 2, expiraEm: 2 * PRAZO });
   });
 
   it("soltar por quem não é dono → recusa; soltar pelo dono libera e a época não desce", () => {
