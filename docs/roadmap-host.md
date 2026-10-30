@@ -18,7 +18,7 @@ o servidor real só roda na Confirmação, num PC.
   *Confirmação:* teste: hash errado → recusa e apaga; hash certo → usa o cache na segunda vez.
   *Depende de:* base-1.1 · D1 (Java) e D5 (NeoForge + Connector) decididas
 
-- [ ] **1.2 — EULA e configuração do servidor**
+- [x] **1.2 — EULA e configuração do servidor** (PR #20, 30/10/2026)
   *O que fazer:* gerar `server.properties` e `eula.txt` a partir das Configurações (porta só na rede privada,
   whitelist ligada, `online-mode` conforme o proxy, `simulation-distance` < `view-distance`). O EULA só vira `true`
   depois de o usuário aceitar na tela (o núcleo expõe a pergunta; a tela vem no app-1.x).
@@ -29,7 +29,7 @@ o servidor real só roda na Confirmação, num PC.
 
 ## Bloco 2 — Controlar
 
-- [ ] **2.1 — Iniciar e parar com flags certas**
+- [x] **2.1 — Iniciar e parar com flags certas** (PR #24, 30/10/2026)
   *O que fazer:* iniciar o Java com RAM pela nota do PC e flags conhecidas (Aikar), prioridade normal; parar com `stop`
   e esperar sair; matar só se passar do prazo, avisando no log. Estado observável (parado, subindo, pronto, parando).
   *Arquivo:* `packages/nucleo/src/servidor/processo.ts`, servidor falso em `packages/nucleo/test/ajuda/`
@@ -37,7 +37,7 @@ o servidor real só roda na Confirmação, num PC.
   *Confirmação:* teste com o servidor falso: ciclo completo de estados; parada demorada mata após o prazo.
   *Depende de:* host-1.2
 
-- [ ] **2.2 — Console/RCON: salvar, pausar gravação, avisar no chat**
+- [x] **2.2 — Console/RCON: salvar, pausar gravação, avisar no chat** (PR #30, 30/10/2026; pelo console, sem RCON)
   *O que fazer:* cliente RCON (ou console via stdin) com `save-off`, `save-all flush` (esperando a confirmação),
   `save-on`, `say`, `list`. Senha RCON gerada por sessão, nunca gravada no git.
   *Arquivo:* `packages/nucleo/src/servidor/comandos.ts`

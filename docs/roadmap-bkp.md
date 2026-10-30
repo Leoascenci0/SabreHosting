@@ -8,7 +8,7 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
 
 ## Bloco 1 — Pacote
 
-- [ ] **1.1 — Manifesto do mundo**
+- [x] **1.1 — Manifesto do mundo** (PR #21, 30/10/2026)
   *O que fazer:* percorrer a pasta do mundo em fluxo e gerar `manifesto.json` (caminho relativo, tamanho, SHA-256 de
   cada arquivo; versão; época; data). Recusar caminhos com `..`/absolutos. Comparar dois manifestos → lista do que
   mudou (base do delta).
