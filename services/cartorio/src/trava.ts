@@ -89,6 +89,23 @@ function recusaDoDono(pc: number, epoca: number, agora: number, para?: number) {
             : "destino_desconhecido";
 }
 
+/** Recusa de uma operação do dono feita fora de `mudar` (ex.: registrar versão), lida na mesma transação. */
+export function recusaNaTrava(
+  banco: Banco,
+  pc: number,
+  epoca: number,
+  agora: number,
+): Extract<ResultadoTrava, { ok: false }> {
+  const l = linha(banco);
+  return {
+    ok: false,
+    motivo: recusaDoDono(pc, epoca, agora)(l),
+    donoPcId: l.dono_pc_id,
+    epoca: l.epoca,
+    expiraEm: l.expira_em,
+  };
+}
+
 /** Livre, vencida ou já deste PC (app que reiniciou) → dono = pc, época + 1. */
 export function pegar(banco: Banco, pc: number, agora: number, prazoMs: number): ResultadoTrava {
   return mudar(
