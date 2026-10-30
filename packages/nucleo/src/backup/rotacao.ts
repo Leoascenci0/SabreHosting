@@ -56,6 +56,9 @@ export function planejarRotacao(
   if (new Set(backups.map((b) => b.nome)).size !== backups.length) {
     throw new Error("Há nomes de backup repetido na lista da rotação; não apaguei nada.");
   }
+  if (backups.some((b) => Number.isNaN(b.data.getTime()))) {
+    throw new Error("Há backup com data inválida na lista da rotação; não apaguei nada.");
+  }
   const lista = [...backups].sort(maisRecenteDireto);
   const manter = new Set<BackupDaRotacao>(lista.slice(0, recentes));
 
@@ -88,6 +91,14 @@ export function planejarRotacao(
 
 /** Só estes nomes são do SabreHosting; qualquer outra coisa na pasta de backups não é da rotação. */
 const NOME_DE_BACKUP = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-v\d+\.tar\.gz$/;
+
+/** Arquivo comum (nunca link, pasta ou nome estranho) com nome do SabreHosting dentro da pasta. */
+async function ehArquivoDoSabre(pasta: string, nome: string): Promise<boolean> {
+  if (!NOME_DE_BACKUP.test(nome)) return false;
+  // lstat não segue link: um link simbólico nunca passa por `isFile`.
+  const info = await lstat(join(pasta, nome)).catch(() => undefined);
+  return info?.isFile() === true;
+}
 
 /** Conferência padrão: abre o pacote (hash + manifesto + cada arquivo) numa pasta temporária, que é apagada depois. */
 export async function conferirPacote(pasta: string, backup: BackupDaRotacao): Promise<boolean> {
@@ -136,16 +147,14 @@ export async function aplicarRotacao(
   const resultado: ResultadoDaRotacao = { apagados: [], ignorados: [], falhas: [] };
   const alvos: BackupDaRotacao[] = [];
   for (const b of plano.apagar) {
-    const info = NOME_DE_BACKUP.test(b.nome)
-      ? await lstat(join(pasta, b.nome)).catch(() => undefined)
-      : undefined;
-    // lstat não segue link: um link simbólico nunca passa por `isFile`.
-    (info?.isFile() ? alvos : resultado.ignorados).push(b);
+    ((await ehArquivoDoSabre(pasta, b.nome)) ? alvos : resultado.ignorados).push(b);
   }
   if (simular) return { ...resultado, apagados: alvos };
 
   let confirmado = false;
   for (const b of bonsMantidos) {
+    // Um link ou arquivo fora do padrão não conta como o bom que fica: `abrirPacote` seguiria o link.
+    if (!(await ehArquivoDoSabre(pasta, b.nome))) continue;
     if (await conferir(pasta, b)) {
       confirmado = true;
       break;

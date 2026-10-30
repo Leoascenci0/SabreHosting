@@ -128,6 +128,15 @@ describe("planejarRotacao", () => {
     expect(() => planejarRotacao([b, { ...b }], { agora: AGORA })).toThrow(/repetido/);
   });
 
+  it("recusa data inválida (não apaga o bom de data válida em favor de um 'bom' sem data)", () => {
+    const ruins = Array.from({ length: 15 }, (_, i) => backup(horas(i + 1), "ruim"));
+    const bomVelho = backup(new Date(2026, 7, 1, 10, 0, 0));
+    const invalido: BackupDaRotacao = { nome: "zzz-v1.tar.gz", data: new Date("x"), estado: "bom" };
+    expect(() =>
+      planejarRotacao([...ruins, bomVelho, invalido], { agora: AGORA, recentes: 10 }),
+    ).toThrow(/data inválida/);
+  });
+
   it("não muda a lista recebida", () => {
     const l = [backup(horas(50)), backup(horas(1))];
     const copia = JSON.stringify(l);
@@ -154,6 +163,18 @@ describe("planejarRotacao", () => {
       }
       const recentes = 1 + Math.floor(r() * 12);
       const diarios = Math.floor(r() * 9);
+      // Em ~1 de cada 8 sequências entra um backup de data inválida: o plano tem de recusar a lista inteira.
+      if (r() < 0.125) {
+        const invalido: BackupDaRotacao = {
+          nome: "zzz-v1.tar.gz",
+          data: new Date("x"),
+          estado: "bom",
+        };
+        expect(
+          () => planejarRotacao([...l, invalido], { agora: AGORA, recentes, diarios }),
+          `semente ${semente} (data inválida)`,
+        ).toThrow(/data inválida/);
+      }
       const plano = planejarRotacao(l, { agora: AGORA, recentes, diarios });
       const ctx = `semente ${semente}`;
 
@@ -333,6 +354,39 @@ describe("aplicarRotacao", () => {
     expect(existsSync(join(dir, comoPasta.nome))).toBe(true);
     expect(existsSync(join(dir, estranho.nome))).toBe(true);
     expect(existsSync(join(dir, velho.nome))).toBe(false);
+  });
+
+  it("um link (ou nome fora do padrão) não conta como o bom que fica: nada é apagado", async () => {
+    const dir = pasta();
+    const fora = pasta();
+    const real = backup(new Date(2026, 9, 1, 10, 0, 0));
+    const comoLink = backup(new Date(2026, 9, 29, 9, 0, 0));
+    const estranho: BackupDaRotacao = {
+      nome: "meu-mundo.tar.gz",
+      data: new Date(2026, 9, 28),
+      estado: "bom",
+    };
+    writeFileSync(join(fora, "real"), "x");
+    symlinkSync(join(fora, "real"), join(dir, comoLink.nome));
+    writeFileSync(join(dir, estranho.nome), "e");
+    const velhos = Array.from({ length: 3 }, (_, i) =>
+      backup(new Date(2026, 8, 1 + i, 9, 0, 0), "ruim"),
+    );
+    criarArquivos(dir, [...velhos]);
+    // A conferência "aprovaria" qualquer coisa (como o abrirPacote, que seguiria o link); o guarda tem de vir antes.
+    const plano = { manter: [comoLink, estranho], apagar: velhos };
+    await expect(aplicarRotacao(dir, plano, { conferir: sempreBom })).rejects.toThrow(
+      /nenhum backup bom/i,
+    );
+    expect(readdirSync(dir).length).toBe(2 + velhos.length);
+    // com o arquivo real mantido, a rotação segue normalmente
+    writeFileSync(join(dir, real.nome), "r");
+    const ok = await aplicarRotacao(
+      dir,
+      { manter: [comoLink, real], apagar: velhos },
+      { conferir: sempreBom },
+    );
+    expect(ok.apagados.length).toBe(velhos.length);
   });
 
   it("recusa plano adulterado: apagar o que também está em manter, ou o não conferido", async () => {
