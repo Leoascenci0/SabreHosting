@@ -9,7 +9,7 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
 
 ## Bloco 1 — Máquina e rede privada
 
-- [ ] **1.1 — Script de instalação da máquina na nuvem**
+- [x] **1.1 — Script de instalação da máquina na nuvem** (PR #42, 30/10/2026; conferir a impressão digital da chave NodeSource antes de rodar)
   *O que fazer:* script idempotente (Ubuntu) que instala Java, Node, WireGuard, firewall (só portas do Minecraft e do
   WireGuard abertas), usuário sem privilégio, serviços systemd. Testado num contêiner Docker na nuvem do Claude.
   *Arquivo:* `infra/vps/instalar.sh`, `infra/vps/teste/Dockerfile`
