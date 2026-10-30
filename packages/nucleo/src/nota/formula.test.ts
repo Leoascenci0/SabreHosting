@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calcularNota, REFERENCIA, type Medicao } from "./formula.js";
+import { calcularNota, NOTA_MAXIMA, REFERENCIA, type Medicao } from "./formula.js";
 
 const media: Medicao = { cpuUmNucleo: 150, cpuNucleos: 600, ramLivreMb: 4096, uploadMbps: 25 };
 
@@ -20,14 +20,38 @@ describe("calcularNota", () => {
     expect(calcularNota({ ...media, uploadMbps: 40 })).toBeGreaterThan(base);
   });
 
-  it("fica em 0–100 nos extremos", () => {
-    expect(calcularNota({ cpuUmNucleo: 0, cpuNucleos: 0, ramLivreMb: 0, uploadMbps: 0 })).toBe(0);
-    expect(
-      calcularNota({ cpuUmNucleo: 1e9, cpuNucleos: 1e9, ramLivreMb: 1e9, uploadMbps: 1e9 }),
-    ).toBe(100);
-    expect(calcularNota({ cpuUmNucleo: -5, cpuNucleos: NaN, ramLivreMb: -1, uploadMbps: -1 })).toBe(
-      0,
-    );
+  it("fica em 0–NOTA_MAXIMA nos extremos", () => {
+    const todas = (v: number): Medicao => ({
+      cpuUmNucleo: v,
+      cpuNucleos: v,
+      ramLivreMb: v,
+      uploadMbps: v,
+    });
+    expect(calcularNota(todas(0))).toBe(0);
+    expect(calcularNota(todas(-5))).toBe(0);
+    expect(calcularNota(todas(NaN))).toBe(0);
+    expect(calcularNota(todas(-Infinity))).toBe(0);
+    expect(calcularNota(todas(1e12))).toBe(NOTA_MAXIMA);
+    expect(calcularNota(todas(Infinity))).toBe(NOTA_MAXIMA);
+  });
+
+  it("não satura em 100: PC 2× mais forte dá cerca de 200", () => {
+    const dobro = Object.fromEntries(
+      Object.entries(REFERENCIA).map(([k, v]) => [k, v * 2]),
+    ) as unknown as Medicao;
+    expect(calcularNota(dobro)).toBe(200);
+  });
+
+  it("host com nota 90 é superado por um PC com medições 1,3× maiores", () => {
+    const escalar = (f: number): Medicao => ({
+      cpuUmNucleo: REFERENCIA.cpuUmNucleo * f,
+      cpuNucleos: REFERENCIA.cpuNucleos * f,
+      ramLivreMb: REFERENCIA.ramLivreMb * f,
+      uploadMbps: REFERENCIA.uploadMbps * f,
+    });
+    const host = calcularNota(escalar(0.9));
+    expect(host).toBe(90);
+    expect(calcularNota(escalar(0.9 * 1.3))).toBeGreaterThanOrEqual(1.3 * host);
   });
 
   it("dá 100 a um PC exatamente na referência", () => {
