@@ -29,7 +29,7 @@ o servidor real só roda na Confirmação, num PC.
 
 ## Bloco 2 — Controlar
 
-- [ ] **2.1 — Iniciar e parar com flags certas**
+- [x] **2.1 — Iniciar e parar com flags certas** (PR #24, 30/10/2026)
   *O que fazer:* iniciar o Java com RAM pela nota do PC e flags conhecidas (Aikar), prioridade normal; parar com `stop`
   e esperar sair; matar só se passar do prazo, avisando no log. Estado observável (parado, subindo, pronto, parando).
   *Arquivo:* `packages/nucleo/src/servidor/processo.ts`, servidor falso em `packages/nucleo/test/ajuda/`

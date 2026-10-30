@@ -56,3 +56,13 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* remover `octetosValidos` faz um teste falhar; `server.properties` tem `enable-query=false`.
   *Origem:* host-1.2 · PR #20 · qa
+
+- [ ] **2.3 — Processo do servidor mais robusto**
+  *O que fazer:* validar `javaPath` e `pasta` como caminhos absolutos; guarda contra duas chamadas de
+  `iniciarServidor` na mesma pasta no mesmo PC; estado "pronto" só pela linha `Done (` vinda da thread do servidor (não
+  do chat); evitar aviso duplo quando o Java não existe.
+  *Arquivo:* `packages/nucleo/src/servidor/processo.ts`, `packages/nucleo/src/servidor/processo.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes: caminho relativo recusado; segunda chamada na mesma pasta recusada; "Done (" no chat não muda
+  o estado.
+  *Origem:* host-2.1 · PR #24 · qa

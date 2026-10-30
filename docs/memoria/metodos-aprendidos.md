@@ -15,6 +15,7 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 | host-1.2 | config+EULA | M7 | ~100 | ~160 (+~170 teste) | não | #20 |
 | bkp-1.1 | manifesto+hash | M1+M7 | ~120 | ~140 (+~200 teste) | não | #21 |
 | cart-1.2 | trava | M1+M7 | ~130 | 255 (+285 teste) | não | #22 |
+| host-2.1 | processo | M7+M1 | ~180 | ~280 (+~330 teste) | não | #24 |
 
 ## Lições
 _(nenhuma ainda)_
