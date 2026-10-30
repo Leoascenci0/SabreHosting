@@ -43,7 +43,7 @@ estão explicados na primeira vez.
 
 Isto é feito **no seu PC Windows**, não na Oracle.
 
-1. Clique no menu Iniciar, digite `Terminal` e abra o **Terminal** (ou *Windows PowerShell*).
+1. Clique no menu Iniciar, digite `Terminal` e abra o **Terminal** (ou *Windows PowerShell*). Os comandos deste passo e do passo 5 (item 1) são do **PowerShell**; os comandos depois de entrar na máquina são do Ubuntu (Linux).
 2. Cole o comando abaixo e aperte Enter. As três perguntas seguintes podem ser respondidas só com Enter; se quiser,
    crie uma frase-senha (*passphrase*), que protege a chave caso alguém pegue seu PC.
 
@@ -141,16 +141,28 @@ cd SabreHosting
 grep NODESOURCE_DIGITAL= infra/vps/instalar.sh
 ```
 
-   Agora compare com a impressão digital publicada na fonte oficial: abra `https://github.com/nodesource/distributions`
-   no navegador e procure a seção da chave GPG (*GPG key*). Os dois valores têm de ser **iguais** (ignorando os
-   espaços). **Se forem diferentes, pare** e avise a Máxima pelo chat (sem colar nada além de “a impressão digital não confere”); não rode o instalador.
+   O valor esperado está na linha `NODESOURCE_DIGITAL=` do `infra/vps/instalar.sh`. Agora confira de onde ele vem:
+   baixe a chave pela URL oficial do NodeSource e veja a impressão digital dela:
+
+```
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /tmp/nodesource.key
+gpg --show-keys --with-fingerprint /tmp/nodesource.key
+```
+
+   A impressão digital mostrada tem de ser **igual** à do script (ignorando espaços). Se forem diferentes, **pare**
+   e não rode o instalador (o próprio script também recusa nesse caso).
+
+> **ATENÇÃO:** isso só prova que a chave baixada hoje bate com o script. Se você **não** tiver uma fonte oficial
+> que confirme a impressão digital do script, **peça à Máxima antes de rodar o instalador**. Não procure a impressão
+> digital em sites aleatórios.
+
 5. Se você quiser ver o que ele faria sem mudar nada, rode primeiro a simulação:
 
 ```
-SABRE_SIMULAR=1 bash infra/vps/instalar.sh
+sudo SABRE_SIMULAR=1 bash infra/vps/instalar.sh
 ```
 
-6. Instale de verdade (pede sua autorização de administrador, `sudo`; leva alguns minutos):
+6. Instale de verdade (com `sudo`, o administrador; o script exige isso e leva alguns minutos):
 
 ```
 sudo bash infra/vps/instalar.sh
