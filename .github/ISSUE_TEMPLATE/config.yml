@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Falha de segurança
+    url: https://github.com/Leoascenci0/SabreHosting/security
+    about: Achou algo que pode expor um PC, vazar segredo ou mexer num mundo? Reporte em privado, não abra issue pública.
