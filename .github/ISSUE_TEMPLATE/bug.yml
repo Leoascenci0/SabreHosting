@@ -1,0 +1,56 @@
+name: Bug
+description: Algo não funciona como deveria no app ou na documentação.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar. **Não anexe o mundo do servidor nem arquivos pessoais** (fotos, endereço, senhas):
+        se precisar mostrar algo, descreva em texto. Falha de segurança **não** vai aqui: use a aba Security.
+  - type: textarea
+    id: o-que-aconteceu
+    attributes:
+      label: O que aconteceu?
+      description: Descreva o problema com suas palavras.
+    validations:
+      required: true
+  - type: textarea
+    id: como-reproduzir
+    attributes:
+      label: Como reproduzir
+      description: Passo a passo, do jeito que você fez.
+      placeholder: |
+        1. Abri o app
+        2. Cliquei em ...
+        3. Apareceu ...
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que deveria acontecer?
+    validations:
+      required: true
+  - type: input
+    id: versao-app
+    attributes:
+      label: Versão do app
+      description: Está em Configurações › Sobre (ou no nome do instalador).
+      placeholder: "ex.: 0.3.1"
+    validations:
+      required: true
+  - type: input
+    id: versao-windows
+    attributes:
+      label: Versão do Windows
+      description: "Windows 10 ou 11, e a versão de 64 bits (Configurações › Sistema › Sobre)."
+      placeholder: "ex.: Windows 11 23H2 (64 bits)"
+    validations:
+      required: true
+  - type: textarea
+    id: registro
+    attributes:
+      label: Trecho do registro (opcional)
+      description: Só as linhas de erro, sem nomes de pessoas nem endereços de IP.
+      render: text

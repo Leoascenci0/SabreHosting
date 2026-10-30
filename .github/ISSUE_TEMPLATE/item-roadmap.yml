@@ -1,0 +1,46 @@
+name: Item de roadmap
+description: Trabalho planejado num docs/roadmap-*.md, para pegar e executar.
+title: "[Item] "
+labels: ["roadmap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use este modelo para um item já escrito num `docs/roadmap-<sigla>.md`. Um item por issue.
+        Antes de começar, comente nesta issue para ninguém fazer o mesmo item.
+  - type: input
+    id: item
+    attributes:
+      label: Sigla e número do item
+      description: "ex.: base-2.1"
+      placeholder: "sigla-número"
+    validations:
+      required: true
+  - type: textarea
+    id: o-que-fazer
+    attributes:
+      label: O que fazer
+      description: Copie o texto do item no roadmap.
+    validations:
+      required: true
+  - type: input
+    id: arquivo
+    attributes:
+      label: Arquivos envolvidos
+      placeholder: "ex.: .github/ISSUE_TEMPLATE/*.yml"
+  - type: textarea
+    id: confirmacao
+    attributes:
+      label: Como saber que ficou pronto (confirmação)
+      description: O que dá para ver ou testar para dizer que o item está pronto.
+    validations:
+      required: true
+  - type: checkboxes
+    id: regras
+    attributes:
+      label: Antes de abrir o PR
+      options:
+        - label: Li o CLAUDE.md e as regras de ouro do mundo
+          required: true
+        - label: Rodei `npm run vistoria` e ela deu APROVADA
+          required: true

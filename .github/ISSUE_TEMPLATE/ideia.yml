@@ -1,0 +1,39 @@
+name: Ideia
+description: Sugestão de função nova ou de melhoria para o projeto.
+title: "[Ideia] "
+labels: ["ideia"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideias são bem-vindas. Antes de abrir, veja se ela já não está no roadmap (`docs/roadmap-*.md`).
+        Lembre que o projeto é para grupos de amigos jogarem sem pagar hospedagem.
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qual problema a ideia resolve?
+      description: Conte a situação do dia a dia, antes de falar da solução.
+    validations:
+      required: true
+  - type: textarea
+    id: solucao
+    attributes:
+      label: Como você imagina que funcione?
+    validations:
+      required: true
+  - type: dropdown
+    id: quem-usa
+    attributes:
+      label: Quem mais se beneficiaria?
+      options:
+        - Qualquer grupo de amigos
+        - Só quem hospeda o servidor
+        - Só quem joga
+        - Não sei
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Já pensou em outro jeito?
+      description: Opcional.
