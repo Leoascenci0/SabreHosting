@@ -17,7 +17,7 @@ Objetivo: um serviço pequeno na nuvem que sabe qual é a versão mais nova do m
   *Confirmação:* testes: token inválido → 401; convite usado duas vezes → recusado.
   *Depende de:* base-1.1
 
-- [ ] **1.2 — Trava de host com prazo e época**
+- [x] **1.2 — Trava de host com prazo e época** (PR #22, 30/10/2026)
   *O que fazer:* pegar, renovar, passar (para migração) e soltar a trava, de forma atômica; época sobe a cada troca
   de dono; prazo e renovação configuráveis.
   *Arquivo:* `services/cartorio/src/trava.ts`
@@ -44,6 +44,9 @@ Objetivo: um serviço pequeno na nuvem que sabe qual é a versão mais nova do m
 ## Bloco 2 — Cliente no app
 
 - [ ] **2.1 — Cliente do cartório no núcleo**
+  *Nota da revisão do cart-1.2 (PR #22):* o cliente conta o prazo pelo **próprio relógio** a partir do envio do pedido
+  (nunca pelo `expiraEm` do servidor); a identidade da trava é o PC, então o cliente guarda a época que **ele** ganhou
+  e nunca adota a época devolvida numa recusa (senão um processo zumbi do mesmo PC renovaria).
   *O que fazer:* cliente tipado com novas tentativas e tempo-limite; token no cofre do sistema (`safeStorage`); renovação
   automática da trava com aviso quando falhar.
   *Arquivo:* `packages/nucleo/src/cartorio/`

@@ -36,3 +36,13 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* o teste roda 20 vezes sem falhar e falha se a leitura da versão sair da transação.
   *Origem:* cart-1.1 · PR #15 · qa integridade
+
+- [ ] **1.5 — Trava: blindar a época e o destino da passagem**
+  *O que fazer:* gatilhos `BEFORE DELETE` e `BEFORE INSERT` na tabela `trava` que recusam (hoje só o UPDATE é
+  protegido; um `INSERT OR REPLACE` zera a época); `passar` recusa destino = o próprio PC e destino sem token ativo
+  (`tokens.revogado_em IS NULL`); teste da migração v1→v2 com PCs já cadastrados.
+  *Arquivo:* `services/cartorio/src/banco.ts`, `services/cartorio/src/trava.ts`, `services/cartorio/src/trava.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* `INSERT OR REPLACE` na trava falha; passar para si mesmo ou para PC sem token → recusa; migração v1→v2
+  preserva os PCs.
+  *Origem:* cart-1.2 · PR #22 · qa integridade + qa segurança
