@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createWriteStream } from "node:fs";
 import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { hashDoArquivo } from "../integridade/hash.js";
 
 const TAMANHO_HEX = { sha1: 40, sha256: 64, sha512: 128 } as const;
 
@@ -34,12 +34,6 @@ export class ErroDownload extends Error {
 
 /** Erro de rede que vale tentar de novo, mantendo o parcial. */
 class ErroDeConexao extends ErroDownload {}
-
-async function hashDoArquivo(caminho: string, algoritmo: string): Promise<string> {
-  const hash = createHash(algoritmo);
-  await pipeline(createReadStream(caminho), hash);
-  return hash.digest("hex");
-}
 
 const existe = (caminho: string) =>
   stat(caminho).then(
