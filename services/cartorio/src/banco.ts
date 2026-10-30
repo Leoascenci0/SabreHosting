@@ -43,6 +43,30 @@ export const MIGRACOES = [
    BEGIN SELECT RAISE(ABORT, 'A trava é uma linha só e não se recria.'); END;
    CREATE TRIGGER trava_nao_apaga BEFORE DELETE ON trava
    BEGIN SELECT RAISE(ABORT, 'A trava não se apaga.'); END;`,
+  // Versões do mundo: número que só cresce (max + 1, sem buraco), registro que não muda nem se apaga.
+  // `copias`: uma linha por PC, a versão que ele tem agora.
+  `CREATE TABLE versoes (
+     numero INTEGER PRIMARY KEY,
+     epoca INTEGER NOT NULL,
+     pc_id INTEGER NOT NULL REFERENCES pcs(id),
+     manifesto_sha256 TEXT NOT NULL
+       CHECK (length(manifesto_sha256) = 64 AND manifesto_sha256 NOT GLOB '*[^0-9a-f]*'),
+     arquivos INTEGER NOT NULL CHECK (arquivos >= 0),
+     bytes INTEGER NOT NULL CHECK (bytes >= 0),
+     criada_em INTEGER NOT NULL
+   );
+   CREATE TRIGGER versoes_sem_buraco BEFORE INSERT ON versoes
+   WHEN NEW.numero IS NOT (SELECT coalesce(max(numero), 0) + 1 FROM versoes)
+   BEGIN SELECT RAISE(ABORT, 'A versão nova é a última + 1, sem buraco.'); END;
+   CREATE TRIGGER versoes_nao_muda BEFORE UPDATE ON versoes
+   BEGIN SELECT RAISE(ABORT, 'Versão registrada não muda.'); END;
+   CREATE TRIGGER versoes_nao_apaga BEFORE DELETE ON versoes
+   BEGIN SELECT RAISE(ABORT, 'Versão registrada não se apaga.'); END;
+   CREATE TABLE copias (
+     pc_id INTEGER PRIMARY KEY REFERENCES pcs(id),
+     versao INTEGER NOT NULL REFERENCES versoes(numero),
+     informada_em INTEGER NOT NULL
+   );`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */
