@@ -18,7 +18,7 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
 
 ## Bloco 1 — Integração com o Prism (marco M3)
 
-- [ ] **1.1 — Achar o Prism no PC**
+- [x] **1.1 — Achar o Prism no PC** (PR #36, 30/10/2026)
   *O que fazer:* detectar se o Prism está instalado (caminhos padrão no Windows e o escolhido pelo amigo), qual versão
   e onde fica a pasta de instâncias; sem Prism, mostrar o link oficial de download.
   *Arquivo:* `packages/nucleo/src/launcher/prism.ts`

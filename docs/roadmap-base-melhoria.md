@@ -20,3 +20,16 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   **Tela no app:** não se aplica.
   *Confirmação:* push de teste na main com arquivo proibido faz o check ficar vermelho (num ramo de teste espelhado).
   *Origem:* base-1.2 · PR #7 · qa
+
+- [ ] **1.3 — Testes estáveis sob carga**
+  *O que fazer:* o teste de corrida da trava (`services/cartorio/src/trava.test.ts`, "10 workers … 20 rodadas") exige que
+  os perdedores vejam a época da MESMA rodada; sob carga, um perdedor atrasado lê a época de uma rodada seguinte e o
+  teste falha (a garantia "exatamente 1 ganha" continua valendo). Sincronizar as rodadas (barreira: a rodada N+1 só
+  começa quando todos os workers responderam a N) ou conferir só que a época vista pelo perdedor é ≥ a do vencedor.
+  Prazo explícito (30 s) nos testes pesados de 20 MB (`packages/nucleo/test/mundos.test.ts`,
+  `packages/nucleo/src/backup/manifesto.test.ts`). Achado na Onda 6: 1 falha em 15 rodadas normais; 2–4 falhas por
+  rodada com 4 vitest em paralelo.
+  *Arquivo:* `services/cartorio/src/trava.test.ts`, `services/cartorio/src/trava-corrida.worker.mjs`, os testes citados
+  **Tela no app:** não se aplica.
+  *Confirmação:* 4 `npx vitest run` em paralelo, 3 vezes seguidas, sem falha.
+  *Origem:* onda 6 · revisão da orquestradora
