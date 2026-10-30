@@ -25,7 +25,7 @@ Objetivo: um serviço pequeno na nuvem que sabe qual é a versão mais nova do m
   *Confirmação:* teste de corrida: 10 PCs disputando → um só ganha; prazo vencido libera; época velha recusada.
   *Depende de:* cart-1.1
 
-- [ ] **1.3 — Versões do mundo e quem tem cópia**
+- [x] **1.3 — Versões do mundo e quem tem cópia** (PR #32, 30/10/2026)
   *O que fazer:* registrar versão nova (exige trava + época atual + manifesto); responder "qual a mais nova" e "quem
   tem a versão N"; PCs informam a versão que têm.
   *Arquivo:* `services/cartorio/src/versoes.ts`
