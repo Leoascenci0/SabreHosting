@@ -16,7 +16,6 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-- **Onda 3:** host-1.1 · cart-1.1 · host-2.3
 
 ## Fila
 
@@ -60,7 +59,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Backlog
 
-- Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.3).
+- Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1 a 1.4).
+- Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.3, 2.1 [P], 2.2).
 - Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1 e 1.2, CI).
 
 - Bedrock via Geyser (se D1 = Java + Bedrock depois).
@@ -70,6 +70,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 ## Feito
 
 - 30/10/2026 — Onda 1: base-1.1 monorepo TypeScript (PR #3).
+- 30/10/2026 — Onda 3: host-1.1 download com hash (PR #12), cart-1.1 cartório com token (PR #15), host-2.3 nota do PC
+  (PR #16).
 - 30/10/2026 — Onda 2: base-1.2 CI (PR #7), base-1.3 mundos de teste (PR #9), base-2.1 modelos de issue (PR #8).
 
 - 30/10/2026 — Decididas D8 (Electron + TypeScript), D1 (Java) e D5 (mods Fabric e Forge juntos: NeoForge + Sinytra

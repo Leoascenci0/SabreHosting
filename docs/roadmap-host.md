@@ -45,7 +45,7 @@ o servidor real só roda na Confirmação, num PC.
   *Confirmação:* teste: `salvarSeguro()` só devolve depois do "Saved the game" do servidor falso.
   *Depende de:* host-2.1
 
-- [ ] **2.3 — Nota do PC (benchmark)**
+- [x] **2.3 — Nota do PC (benchmark)** (PR #16, 30/10/2026; escala 100 = referência, sem teto)
   *O que fazer:* medir CPU (um núcleo e vários, teste curto), RAM livre e upload (contra o cartório, quando houver;
   até lá, parâmetro) e gerar uma nota de 0 a 100 com a fórmula documentada. Rodar no 1º uso e semanalmente, nunca com
   jogo aberto.
