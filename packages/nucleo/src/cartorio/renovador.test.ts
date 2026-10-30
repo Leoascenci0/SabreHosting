@@ -18,15 +18,30 @@ const recusa = (motivo: TravaRecusada["motivo"], epoca: number): TravaRecusada =
   expiraEm: 0,
 });
 
-/** Relógio e repetição manuais: o teste anda o tempo e dispara o tique. */
+/**
+ * Relógios e agenda manuais: `andar(ms)` avança os dois relógios e dispara, na ordem, os tiques e alarmes que
+ * vencem no caminho. `t.parede` pode andar sozinho (hibernação: o monotônico parado).
+ */
 function montar(extra: Partial<OpcoesRenovador> = {}) {
-  const t = { agora: 1_000 };
-  const tiques: { fn: () => void; ms: number; cancelado: boolean }[] = [];
+  const t = { agora: 1_000, parede: 1_700_000_000_000 };
+  type Agendado = {
+    fn: () => void;
+    ms: number;
+    quando: number;
+    repete: boolean;
+    cancelado: boolean;
+  };
+  const agenda: Agendado[] = [];
   const renovacoes: number[] = [];
   const solturas: number[] = [];
   const perdas: string[] = [];
   let respostaPegar: () => Promise<RespostaTrava> = async () => aceita();
   let respostaRenovar: () => Promise<RespostaTrava> = async () => aceita();
+  const agendar = (repete: boolean) => (fn: () => void, ms: number) => {
+    const a = { fn, ms, quando: t.agora + ms, repete, cancelado: false };
+    agenda.push(a);
+    return () => void (a.cancelado = true);
+  };
   const r = new Renovador({
     cliente: {
       pegar: () => respostaPegar(),
@@ -41,21 +56,30 @@ function montar(extra: Partial<OpcoesRenovador> = {}) {
     },
     aoPerder: (motivo) => void perdas.push(motivo),
     agora: () => t.agora,
-    relogio: {
-      repetir: (fn, ms) => {
-        const tique = { fn, ms, cancelado: false };
-        tiques.push(tique);
-        return () => void (tique.cancelado = true);
-      },
-    },
+    agoraParede: () => t.parede,
+    relogio: { repetir: agendar(true), depois: agendar(false) },
     ...extra,
   });
-  /** Anda o relógio e roda o tique ativo, esperando as promessas assentarem. */
-  async function tique(ms = 20_000) {
-    t.agora += ms;
-    for (const q of tiques) if (!q.cancelado) q.fn();
-    await new Promise((ok) => setImmediate(ok));
+  const assentar = () => new Promise((ok) => setImmediate(ok));
+  async function andar(ms: number) {
+    const alvo = t.agora + ms;
+    for (;;) {
+      const proximo = agenda
+        .filter((a) => !a.cancelado && a.quando <= alvo)
+        .sort((x, y) => x.quando - y.quando)[0];
+      if (!proximo) break;
+      t.parede += proximo.quando - t.agora;
+      t.agora = proximo.quando;
+      if (proximo.repete) proximo.quando += proximo.ms;
+      else proximo.cancelado = true;
+      proximo.fn();
+      await assentar();
+    }
+    t.parede += alvo - t.agora;
+    t.agora = alvo;
+    await assentar();
   }
+  const tiques = () => agenda.filter((a) => a.repete);
   return {
     r,
     t,
@@ -63,7 +87,7 @@ function montar(extra: Partial<OpcoesRenovador> = {}) {
     renovacoes,
     solturas,
     perdas,
-    tique,
+    andar,
     pegarResponde: (f: () => Promise<RespostaTrava>) => void (respostaPegar = f),
     renovarResponde: (f: () => Promise<RespostaTrava>) => void (respostaRenovar = f),
   };
@@ -78,10 +102,10 @@ describe("renovador da trava", () => {
   it("pega, renova a cada renovarMs com a própria época e mantém a trava", async () => {
     const m = montar();
     await m.r.pegar();
-    expect(m.tiques).toHaveLength(1);
-    expect(m.tiques[0]?.ms).toBe(20_000);
+    expect(m.tiques()).toHaveLength(1);
+    expect(m.tiques()[0]?.ms).toBe(20_000);
     expect(await m.r.temTrava()).toBe(true);
-    for (let i = 0; i < 5; i++) await m.tique();
+    await m.andar(5 * 20_000);
     expect(m.renovacoes).toEqual([4, 4, 4, 4, 4]);
     expect(await m.r.temTrava()).toBe(true);
     expect(m.perdas).toEqual([]);
@@ -91,21 +115,37 @@ describe("renovador da trava", () => {
     const m = montar();
     m.pegarResponde(async () => ({ ...recusa("ocupada", 9), erro: "O servidor já está no PC B." }));
     await expect(m.r.pegar()).rejects.toThrow("O servidor já está no PC B.");
-    expect(m.tiques).toHaveLength(0);
+    expect(m.tiques()).toHaveLength(0);
     expect(await m.r.temTrava()).toBe(false);
   });
 
-  it("prazo conta do envio, não da resposta nem do expiraEm do cartório", async () => {
+  it("pegar: prazo conta do envio, não da resposta nem do expiraEm do cartório", async () => {
     const m = montar();
     m.pegarResponde(async () => {
       m.t.agora += 25_000; // resposta chegou 25 s depois do envio
+      m.t.parede += 25_000;
       return aceita();
     });
     await m.r.pegar();
-    // prazo local = 3 × 20 s − margem 10 s = 50 s a partir do envio (t = 1 000)
-    m.t.agora = 1_000 + 49_999;
+    // prazo local = 3 × 20 s − margem 25 s = 35 s a partir do envio (t = 1 000)
+    m.t.agora = 1_000 + 34_999;
     expect(await m.r.temTrava()).toBe(true);
-    m.t.agora = 1_000 + 50_000;
+    m.t.agora = 1_000 + 35_000;
+    expect(await m.r.temTrava()).toBe(false);
+  });
+
+  it("renovar: prazo conta do envio da renovação, não da resposta atrasada", async () => {
+    const m = montar();
+    await m.r.pegar(); // t = 1 000
+    m.renovarResponde(async () => {
+      m.t.agora += 10_000; // resposta 10 s depois do envio (t = 21 000)
+      m.t.parede += 10_000;
+      return aceita();
+    });
+    await m.andar(20_000); // tique em 21 000; a resposta chega em 31 000
+    m.t.agora = 21_000 + 34_999;
+    expect(await m.r.temTrava()).toBe(true);
+    m.t.agora = 21_000 + 35_000; // contando da resposta ainda valeria até 66 000
     expect(await m.r.temTrava()).toBe(false);
   });
 
@@ -113,53 +153,67 @@ describe("renovador da trava", () => {
     const m = montar();
     await m.r.pegar();
     m.renovarResponde(async () => recusa("epoca_velha", 5));
-    await m.tique();
+    await m.andar(20_000);
     expect(await m.r.temTrava()).toBe(false);
     expect(m.perdas).toEqual(["Outro PC assumiu o servidor."]);
     m.renovarResponde(async () => aceita(5));
-    await m.tique();
-    await m.tique();
+    await m.andar(60_000);
     expect(m.renovacoes).toEqual([4]); // parou: nada de renovar com a época 5
-    expect(m.tiques[0]?.cancelado).toBe(true);
+    expect(m.tiques()[0]?.cancelado).toBe(true);
     expect(await m.r.temTrava()).toBe(false);
     expect(m.perdas).toHaveLength(1);
   });
 
-  it("cartório mudo: prazo local vence, temTrava cai e avisa uma vez só", async () => {
+  it("cartório mudo: avisa no fim do prazo local (alarme), sem esperar o próximo tique, uma vez só", async () => {
     const m = montar();
-    await m.r.pegar();
+    await m.r.pegar(); // t = 1 000; vence em 36 000; tiques em 21 000, 41 000…
     m.renovarResponde(() => new Promise(() => {})); // nunca responde
-    await m.tique(); // t = 21 000: ainda no prazo (vence em 51 000)
+    await m.andar(20_000); // 21 000: renovação pendurada
     expect(await m.r.temTrava()).toBe(true);
-    await m.tique(); // 41 000: a renovação anterior segue pendurada, não sobrepõe
-    expect(m.renovacoes).toEqual([4]);
+    await m.andar(14_999); // 35 999
     expect(m.perdas).toEqual([]);
-    await m.tique(); // 61 000: venceu
-    expect(await m.r.temTrava()).toBe(false);
+    await m.andar(1); // 36 000: o alarme dispara, o tique de 41 000 ainda não chegou
     expect(m.perdas).toHaveLength(1);
     expect(m.perdas[0]).toMatch(/cartório não respondeu/);
-    await m.tique();
+    expect(await m.r.temTrava()).toBe(false);
+    await m.andar(60_000);
     expect(m.perdas).toHaveLength(1);
+    expect(m.renovacoes).toEqual([4]); // nem sobrepôs a pendurada, nem renovou depois de perder
   });
 
-  it("temTrava cai pelo relógio mesmo antes do próximo tique", async () => {
+  it("temTrava cai pelo relógio mesmo antes de alarme ou tique", async () => {
     const m = montar();
     await m.r.pegar();
-    m.t.agora += 50_000;
+    m.t.agora += 35_000;
     expect(await m.r.temTrava()).toBe(false);
   });
 
-  it("falha de rede isolada dentro do prazo não perde a trava", async () => {
+  it("hibernação: relógio de parede andou 5 min com o monotônico parado → trava perdida", async () => {
     const m = montar();
     await m.r.pegar();
+    m.t.parede += 5 * 60_000; // PC dormiu: o monotônico não andou
+    expect(await m.r.temTrava()).toBe(false);
+    await m.andar(20_000); // primeiro tique ao acordar
+    expect(m.perdas).toHaveLength(1);
+    expect(m.renovacoes).toEqual([]); // não tenta renovar uma trava que já venceu
+  });
+
+  it("hora do Windows atrasada não estende a trava (vale o monotônico)", async () => {
+    const m = montar();
+    await m.r.pegar();
+    m.t.parede -= 60 * 60_000;
+    m.t.agora += 35_000;
+    expect(await m.r.temTrava()).toBe(false);
+  });
+
+  it("falha de rede numa renovação não perde a trava antes do prazo local", async () => {
+    const m = montar();
+    await m.r.pegar(); // vence em 36 000
     m.renovarResponde(async () => {
       throw new ErroCartorio("Sem resposta do cartório.", "rede");
     });
-    await m.tique();
-    expect(await m.r.temTrava()).toBe(true);
-    m.renovarResponde(async () => aceita());
-    await m.tique();
-    await m.tique();
+    await m.andar(20_000); // 21 000: falhou (já depois das novas tentativas do cliente)
+    await m.andar(14_999); // 35 999: ainda vale
     expect(await m.r.temTrava()).toBe(true);
     expect(m.perdas).toEqual([]);
   });
@@ -170,17 +224,26 @@ describe("renovador da trava", () => {
       const m = montar();
       m.pegarResponde(async () => aceita(4, ms));
       await expect(m.r.pegar()).rejects.toThrow(/intervalo/);
-      expect(m.tiques).toHaveLength(0);
+      expect(m.tiques()).toHaveLength(0);
       expect(m.solturas).toEqual([4]);
       expect(await m.r.temTrava()).toBe(false);
     },
   );
 
-  it("soltar cancela a renovação e solta com a própria época", async () => {
+  it("margem que come o prazo inteiro é recusada", async () => {
+    const m = montar({ margemMs: 50_000 });
+    await expect(m.r.pegar()).rejects.toThrow(/intervalo/);
+    expect(m.solturas).toEqual([4]);
+  });
+
+  it("soltar cancela renovação e alarme e solta com a própria época", async () => {
     const m = montar();
     await m.r.pegar();
     await m.r.soltar();
-    expect(m.tiques[0]?.cancelado).toBe(true);
+    expect(m.tiques()[0]?.cancelado).toBe(true);
+    await m.andar(120_000);
+    expect(m.perdas).toEqual([]); // alarme cancelado: soltar não é perder
+    expect(m.renovacoes).toEqual([]);
     expect(m.solturas).toEqual([4]);
     expect(await m.r.temTrava()).toBe(false);
     await m.r.soltar(); // segunda vez: nada a soltar

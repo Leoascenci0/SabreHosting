@@ -189,8 +189,8 @@ export class ServidorMinecraft extends EventEmitter {
     this.filho.stdin?.write(`${linha}\n`);
   }
 
-  /** Escreve `stop`; se não sair até o prazo, mata e avisa no log. */
-  pararServidor(): Promise<void> {
+  /** Escreve `stop`; se não sair até o prazo (padrão: `prazoParadaMs`), mata e avisa no log. */
+  pararServidor(prazoMs = this.prazoParadaMs): Promise<void> {
     if (this.estado === "parado" || this.estado === "caiu") return Promise.resolve();
     this.paradaEmCurso ??= (async () => {
       this.mudar("parando");
@@ -198,10 +198,10 @@ export class ServidorMinecraft extends EventEmitter {
       const prazo = setTimeout(() => {
         this.registrar(
           "aviso",
-          `O servidor não encerrou em ${this.prazoParadaMs} ms; forçando o encerramento (o mundo pode perder os últimos instantes).`,
+          `O servidor não encerrou em ${prazoMs} ms; forçando o encerramento (o mundo pode perder os últimos instantes).`,
         );
         this.filho.kill("SIGKILL");
-      }, this.prazoParadaMs);
+      }, prazoMs);
       try {
         await this.saiu;
       } finally {

@@ -12,8 +12,12 @@ export interface OpcoesHospedar extends Omit<OpcoesIniciar, "temTrava"> {
   renovador?: Omit<OpcoesRenovador, "cliente" | "aoPerder">;
   /** Avisa a tela que a trava se perdeu; o servidor já está sendo salvo e parado. */
   aoPerder?: (motivo: string) => void;
-  /** Quanto esperar o `save-all flush` ao perder a trava. Padrão: 15 s (a trava já está no fim). */
+  /**
+   * Ao perder a trava: quanto esperar o `save-all flush` e, depois, o `stop` antes de matar. Padrão: 10 s cada; os
+   * dois somados (20 s) cabem na margem do renovador (25 s), antes de o cartório liberar a trava para outro PC.
+   */
   prazoSalvarMs?: number;
+  prazoPararNaPerdaMs?: number;
 }
 
 /**
@@ -23,7 +27,14 @@ export interface OpcoesHospedar extends Omit<OpcoesIniciar, "temTrava"> {
 export async function hospedar(
   opcoes: OpcoesHospedar,
 ): Promise<{ servidor: ServidorMinecraft; renovador: Renovador }> {
-  const { cliente, aoPerder, prazoSalvarMs = 15_000, renovador: tempos, ...iniciar } = opcoes;
+  const {
+    cliente,
+    aoPerder,
+    prazoSalvarMs = 10_000,
+    prazoPararNaPerdaMs = 10_000,
+    renovador: tempos,
+    ...iniciar
+  } = opcoes;
   let servidor: ServidorMinecraft | undefined;
   let perdeu = false;
   const encerrar = async (s: ServidorMinecraft) => {
@@ -31,7 +42,7 @@ export async function hospedar(
       () => {},
     );
     await salvarSeguro(s, async () => {}, prazoSalvarMs).catch(() => {});
-    await s.pararServidor();
+    await s.pararServidor(prazoPararNaPerdaMs);
   };
   const renovador = new Renovador({
     ...tempos,

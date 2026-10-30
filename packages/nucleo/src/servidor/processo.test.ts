@@ -143,6 +143,15 @@ describe("parada", () => {
     expect(logs.some((l) => l.startsWith("aviso:") && /encerr|prazo/i.test(l))).toBe(true);
   });
 
+  it("prazo dado na chamada vale no lugar do padrão (perda da trava)", async () => {
+    const s = await subir("travado", { prazoParadaMs: 5000 });
+    await esperarEstado(s, "pronto");
+    const inicio = Date.now();
+    await s.pararServidor(200);
+    expect(s.codigoSaida).toBeNull();
+    expect(Date.now() - inicio).toBeLessThan(2000);
+  });
+
   it("parada normal sai com `stop` sem matar nem avisar", async () => {
     const s = await subir();
     await esperarEstado(s, "pronto");

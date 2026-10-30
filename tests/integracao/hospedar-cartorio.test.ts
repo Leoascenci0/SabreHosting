@@ -88,18 +88,24 @@ function espiao(cmd: string, args: readonly string[], opcoes: SpawnOptions): Chi
   return filho;
 }
 
-async function hospedarFalso(cliente: ReturnType<typeof criarCliente>, perdas: string[] = []) {
+async function hospedarFalso(
+  cliente: ReturnType<typeof criarCliente>,
+  perdas: string[] = [],
+  extra: Partial<Parameters<typeof hospedar>[0]> & { modo?: string } = {},
+) {
+  const { modo = "normal", ...resto } = extra;
   const h = await hospedar({
     cliente,
     pasta: join(pasta, "jogo"),
     javaPath: process.execPath,
     versaoNeoForge: NEO,
-    prefixoArgs: [FALSO, "normal"],
+    prefixoArgs: [FALSO, modo],
     spawnFn: espiao,
     memoriaTotalBytes: 16 * 1024 ** 3,
     plataforma: "linux",
     prazoParadaMs: 5000,
     aoPerder: (motivo) => void perdas.push(motivo),
+    ...resto,
   });
   servidores.push(h.servidor);
   fechar.push(() => h.renovador.soltar());
@@ -160,5 +166,20 @@ describe("trava de host contra o cartório real", () => {
     ].map((trecho) => logs.findIndex((l) => l.endsWith(trecho)));
     expect(ordem.every((i) => i >= 0)).toBe(true);
     expect(ordem).toEqual([...ordem].sort((x, y) => x - y));
+  }, 10_000);
+
+  it("perdeu a trava e o servidor não sai com `stop`: morto no prazo da perda, não no da parada normal", async () => {
+    const { app, pc } = await subirCartorio();
+    const { servidor } = await hospedarFalso(await pc("PC A"), [], {
+      modo: "travado",
+      prazoParadaMs: 30_000,
+      prazoPararNaPerdaMs: 300,
+    });
+    await esperarEstado(servidor, "pronto");
+    await app.close();
+    const inicio = Date.now();
+    await esperarEstado(servidor, "parado");
+    expect(servidor.codigoSaida).toBeNull(); // morto: o `stop` foi ignorado
+    expect(Date.now() - inicio).toBeLessThan(3_000);
   }, 10_000);
 });
