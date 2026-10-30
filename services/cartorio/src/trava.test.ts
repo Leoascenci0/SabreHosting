@@ -77,8 +77,9 @@ describe("trava: corrida entre PCs", () => {
       const ganhou = daRodada.filter((r) => r.ok);
       expect(ganhou).toHaveLength(1);
       expect(ganhou[0]?.epoca).toBe(rodada);
-      // Quem perdeu vê a mesma época de quem ganhou.
-      expect(new Set(daRodada.map((r) => r.epoca))).toEqual(new Set([rodada]));
+      // Quem perdeu vê a época de quem ganhou ou uma mais nova (nunca uma mais velha). "Igual" seria frágil: sob
+      // carga o perdedor atrasado só lê o banco depois de a rodada seguinte já ter começado.
+      for (const r of daRodada) expect(r.epoca).toBeGreaterThanOrEqual(rodada);
     }
   }, 20_000);
 
