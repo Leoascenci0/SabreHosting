@@ -21,7 +21,7 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   *Confirmação:* push de teste na main com arquivo proibido faz o check ficar vermelho (num ramo de teste espelhado).
   *Origem:* base-1.2 · PR #7 · qa
 
-- [ ] **1.3 — Testes estáveis sob carga**
+- [x] **1.3 — Testes estáveis sob carga** (PR #43, 30/10/2026)
   *O que fazer:* o teste de corrida da trava (`services/cartorio/src/trava.test.ts`, "10 workers … 20 rodadas") exige que
   os perdedores vejam a época da MESMA rodada; sob carga, um perdedor atrasado lê a época de uma rodada seguinte e o
   teste falha (a garantia "exatamente 1 ganha" continua valendo). Sincronizar as rodadas (barreira: a rodada N+1 só
