@@ -9,14 +9,29 @@ import {
 } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { setFlagsFromString } from "node:v8";
-import { runInNewContext } from "node:vm";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo, mudarRegioes } from "../../test/ajuda/mundos.js";
 import { compararManifestos, gerarManifesto, validarManifesto } from "./manifesto.js";
 
 const pastas: string[] = [];
+const leituras: Array<{ pedaco: number; abertos: number }> = [];
+
+// Passa direto para o node:fs de verdade, só anotando cada leitura em fluxo (tamanho do pedaço e quantas abertas).
+vi.mock("node:fs", async (original) => {
+  const real = await original<typeof import("node:fs")>();
+  let abertos = 0;
+  return {
+    ...real,
+    createReadStream: (...args: Parameters<typeof real.createReadStream>) => {
+      const fluxo = real.createReadStream(...args);
+      abertos++;
+      leituras.push({ pedaco: fluxo.readableHighWaterMark, abertos });
+      fluxo.once("close", () => abertos--);
+      return fluxo;
+    },
+  };
+});
 const opcoes = { versao: 3, epoca: 1, agora: new Date("2026-10-30T12:00:00Z") };
 
 function mundo(tamanho: "1MB" | "20MB" = "1MB"): string {
@@ -109,29 +124,16 @@ describe("gerarManifesto: Windows e arquivos não comuns", () => {
   });
 });
 
-it("mundo de 20 MB: memória viva não cresce com o tamanho do mundo", async () => {
-  setFlagsFromString("--expose-gc");
-  const gc = runInNewContext("gc") as () => void;
+it("mundo de 20 MB: lê em pedaços pequenos, um arquivo por vez (memória não cresce com o tamanho do mundo)", async () => {
+  // Medir `arrayBuffers` com gc por amostra dependia da velocidade da máquina (o lixo entre dois gc chegava a
+  // 8-14 MB sob carga). Aqui se mede o que a causa: tamanho do pedaço e quantos arquivos abertos ao mesmo tempo.
   const pasta = mundo("20MB");
-  // Sob carga o sistema devolve a memória externa um instante depois do gc: dar tempo antes de medir, senão o
-  // resto do mundo recém-gerado entra na conta do pico.
-  const limpar = () => {
-    gc();
-    gc();
-  };
-  limpar();
-  await new Promise((resolver) => setTimeout(resolver, 100));
-  limpar();
-  const antes = process.memoryUsage().arrayBuffers;
-  let pico = antes;
-  const timer = setInterval(() => {
-    limpar();
-    pico = Math.max(pico, process.memoryUsage().arrayBuffers);
-  }, 20);
+  leituras.length = 0;
   const m = await gerarManifesto(pasta, opcoes);
-  clearInterval(timer);
   expect(m.arquivos.length).toBe(81);
-  expect(pico - antes).toBeLessThan(8 * 1024 * 1024);
+  expect(leituras.length).toBeGreaterThanOrEqual(81);
+  expect(Math.max(...leituras.map((l) => l.pedaco))).toBeLessThanOrEqual(1024 * 1024);
+  expect(Math.max(...leituras.map((l) => l.abertos))).toBe(1);
 }, 30_000);
 
 describe("compararManifestos", () => {
