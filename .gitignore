@@ -1,0 +1,39 @@
+# Sistema e editor
+.DS_Store
+Thumbs.db
+*.swp
+__pycache__/
+*.pyc
+
+# Node / build
+node_modules/
+dist/
+out/
+release/
+coverage/
+*.tgz
+
+# Segredos: nunca no git (use .env.exemplo)
+.env
+.env.*
+!.env.exemplo
+*.key
+*.pem
+*.conf.secret
+wg*.conf
+
+# Mundo e servidor Minecraft: nunca no git (regra de ouro 6). Mundos de teste ficam em tests/mundos/.
+*.jar
+*.mca
+*.mcr
+level.dat
+level.dat_old
+session.lock
+playerdata/
+/servidor/
+/mundos/
+/backups/
+!tests/mundos/**
+
+# Worktrees dos agentes
+.claude/worktrees/

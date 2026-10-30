@@ -1,0 +1,7 @@
+{
+  "_leia": "Tetos do projeto. Só descem. Subir exige linha em docs/ops/DECISOES.md e tirar outro peso no mesmo PR (CLAUDE.md).",
+  "arquivo_max_kb": 1024,
+  "app_parado_ram_mb": 150,
+  "instalador_mb": 120,
+  "troca_de_host_s": 20
+}

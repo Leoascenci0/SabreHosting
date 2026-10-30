@@ -1,0 +1,10 @@
+#!/bin/sh
+# Trava de commit do SabreHosting: roda o verificador só sobre o que está em stage
+# (commit na main, segredo, mundo real, arquivo grande). Nunca contornar com --no-verify.
+# Ligar uma vez por clone:  git config core.hooksPath .githooks
+raiz=$(git rev-parse --show-toplevel) || exit 0
+for c in python3 python py; do
+  if command -v "$c" >/dev/null 2>&1; then exec "$c" "$raiz/scripts/verificar.py" --staged; fi
+done
+echo "pre-commit: Python 3 não encontrado — a trava NÃO rodou; não conte com este commit conferido." >&2
+exit 0
