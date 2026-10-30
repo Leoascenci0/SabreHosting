@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import { isAbsolute, join, resolve } from "node:path";
 
 export const LINK_DOWNLOAD_PRISM = "https://prismlauncher.org/download";
@@ -9,7 +10,7 @@ export interface SistemaArquivos {
   ler(caminho: string): Promise<string>;
 }
 
-/** Roda um programa SEM shell e devolve a saída de texto. Injetado: nos testes nunca roda o `reg`. */
+/** Roda um programa SEM shell e devolve a saída de texto. Injetável: nos testes nunca roda o `reg`. */
 export type ExecArquivo = (arquivo: string, args: readonly string[]) => Promise<string>;
 
 export interface OpcoesDetectarPrism {
@@ -49,11 +50,12 @@ function lerInstanceDir(cfg: string): string | null {
     if (secao !== "" && secao !== "General") continue;
     const m = /^InstanceDir\s*=(.*)$/.exec(linha);
     if (!m) continue;
-    const valor = (m[1] ?? "")
-      .trim()
-      .replace(/^"(.*)"$/, "$1")
-      .replace(/\\+/g, "/");
-    return valor === "" ? null : valor;
+    const valor = (m[1] ?? "").trim().replace(/^"(.*)"$/, "$1");
+    if (valor === "") return null;
+    // Caminho de rede (\\servidor\pasta) mantém as duas barras iniciais.
+    const rede = /^(\\\\|\/\/)/.test(valor);
+    const limpo = valor.replace(/[\\/]+/g, "/");
+    return rede ? `/${limpo}` : limpo;
   }
   return null;
 }
@@ -63,7 +65,12 @@ function inteiro(versao: string): number {
 }
 
 export async function detectarPrism(op: OpcoesDetectarPrism): Promise<ResultadoPrism> {
-  const { ambiente, fs } = op;
+  const { ambiente } = op;
+  // Pasta sem permissão ou arquivo travado conta como "não existe", nunca derruba a detecção.
+  const fs: SistemaArquivos = {
+    existe: (c) => op.fs.existe(c).catch(() => false),
+    ler: (c) => op.fs.ler(c),
+  };
   const avisos: string[] = [];
   const padrao = join(ambiente.LOCALAPPDATA, "Programs", "PrismLauncher");
   const dadosPadrao = join(ambiente.APPDATA, "PrismLauncher");
@@ -83,11 +90,13 @@ export async function detectarPrism(op: OpcoesDetectarPrism): Promise<ResultadoP
 
   let pastaDados: string;
   let portatil = false;
+  let soDados = false;
   if (pasta !== null) {
     portatil = await fs.existe(join(pasta, CFG));
     pastaDados = portatil ? pasta : dadosPadrao;
   } else if (await fs.existe(join(dadosPadrao, CFG))) {
     pasta = pastaDados = dadosPadrao;
+    soDados = true;
     avisos.push("Achei só os dados do Prism, não o programa; a versão não pôde ser conferida.");
   } else {
     return { instalado: false, linkDownload: LINK_DOWNLOAD_PRISM };
@@ -96,17 +105,25 @@ export async function detectarPrism(op: OpcoesDetectarPrism): Promise<ResultadoP
   let instanceDir = "instances";
   const caminhoCfg = join(pastaDados, CFG);
   if (await fs.existe(caminhoCfg)) {
-    instanceDir = lerInstanceDir(await fs.ler(caminhoCfg)) ?? instanceDir;
+    try {
+      instanceDir = lerInstanceDir(await fs.ler(caminhoCfg)) ?? instanceDir;
+    } catch {
+      avisos.push(
+        "Não consegui ler a configuração do Prism (arquivo travado ou sem permissão); usei a pasta de instâncias padrão.",
+      );
+    }
   }
-  const pastaInstancias =
-    /^[A-Za-z]:\//.test(instanceDir) || isAbsolute(instanceDir)
+  const rede = instanceDir.startsWith("//");
+  const pastaInstancias = rede
+    ? instanceDir
+    : /^[A-Za-z]:\//.test(instanceDir) || isAbsolute(instanceDir)
       ? resolve(instanceDir)
       : join(pastaDados, instanceDir);
 
   let versao: string | null = null;
   if (portatil) {
     avisos.push("Prism portátil: não consigo saber a versão; vou assumir que serve.");
-  } else if (avisos.every((a) => !a.startsWith("Achei só os dados"))) {
+  } else if (!soDados) {
     try {
       versao = (await op.lerRegistro?.()) ?? null;
     } catch {
@@ -137,14 +154,46 @@ const CHAVES_DESINSTALACAO = [
   "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
 ];
 
-/** Lê o DisplayVersion do Prism nas chaves de desinstalação via `reg query` (sem shell, argumentos fixos). */
-export async function lerRegistroWindows(exec: ExecArquivo): Promise<string | null> {
+const PRAZO_REG_MS = 5000;
+
+const execReal: ExecArquivo = (arquivo, args) =>
+  new Promise((ok, falha) => {
+    execFile(
+      arquivo,
+      [...args],
+      { shell: false, timeout: PRAZO_REG_MS, windowsHide: true, encoding: "utf8" },
+      (erro, saida) => (erro ? falha(erro) : ok(saida)),
+    );
+  });
+
+export interface OpcoesRegistro {
+  exec?: ExecArquivo;
+  prazoMs?: number;
+  plataforma?: string;
+}
+
+/**
+ * Lê o DisplayVersion do Prism nas chaves de desinstalação via `reg query` (sem shell, argumentos fixos,
+ * com prazo). Devolve null em erro, prazo estourado ou fora do Windows.
+ */
+export async function lerRegistroWindows(op: OpcoesRegistro = {}): Promise<string | null> {
+  if ((op.plataforma ?? process.platform) !== "win32") return null;
+  const exec = op.exec ?? execReal;
+  const prazo = op.prazoMs ?? PRAZO_REG_MS;
   for (const chave of CHAVES_DESINSTALACAO) {
     let saida: string;
+    let timer: NodeJS.Timeout | undefined;
     try {
-      saida = await exec("reg", ["query", chave, "/s", "/v", "DisplayVersion"]);
+      saida = await Promise.race([
+        exec("reg", ["query", chave, "/s", "/v", "DisplayVersion"]),
+        new Promise<never>((_, falha) => {
+          timer = setTimeout(() => falha(new Error("prazo")), prazo);
+        }),
+      ]);
     } catch {
       continue;
+    } finally {
+      clearTimeout(timer);
     }
     let eDoPrism = false;
     for (const linha of saida.split(/\r?\n/)) {

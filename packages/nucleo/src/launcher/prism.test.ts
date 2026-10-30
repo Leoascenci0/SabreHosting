@@ -147,6 +147,46 @@ describe("detectarPrism", () => {
     expect(r).toMatchObject({ instalado: true, versao: null });
   });
 
+  it("cfg ilegível (sem permissão) vira aviso e instâncias padrão", async () => {
+    await criar(join(instalacaoPadrao(), "prismlauncher.exe"));
+    await criar(join(dados(), "prismlauncher.cfg"), "[General]\nInstanceDir=x\n");
+    const r = await detectarPrism({
+      ambiente,
+      fs: {
+        existe: fs.existe,
+        ler: async () => {
+          throw Object.assign(new Error("EACCES"), { code: "EACCES" });
+        },
+      },
+      lerRegistro: registro("9.0"),
+    });
+    expect(r).toMatchObject({ instalado: true, pastaInstancias: join(dados(), "instances") });
+    expect(r.instalado && r.avisos.join(" ")).toMatch(/não consegui ler a configuração/i);
+  });
+
+  it("fs.existe que lança conta como ausente", async () => {
+    const r = await detectarPrism({
+      ambiente,
+      fs: {
+        existe: async () => {
+          throw new Error("EPERM");
+        },
+        ler: fs.ler,
+      },
+    });
+    expect(r).toEqual({ instalado: false, linkDownload: "https://prismlauncher.org/download" });
+  });
+
+  it("InstanceDir em caminho de rede mantém as duas barras", async () => {
+    await criar(join(instalacaoPadrao(), "prismlauncher.exe"));
+    await criar(
+      join(dados(), "prismlauncher.cfg"),
+      "[General]\nInstanceDir=\\\\servidor\\pasta\\inst\n",
+    );
+    const r = await detectarPrism({ ambiente, fs, lerRegistro: registro("9.0") });
+    expect(r).toMatchObject({ pastaInstancias: "//servidor/pasta/inst" });
+  });
+
   it("erro ao ler o registro não derruba a detecção", async () => {
     await criar(join(instalacaoPadrao(), "prismlauncher.exe"));
     const r = await detectarPrism({
@@ -176,7 +216,7 @@ describe("lerRegistroWindows", () => {
       chamadas.push([arq, args]);
       return saida;
     };
-    expect(await lerRegistroWindows(exec)).toBe("9.4");
+    expect(await lerRegistroWindows({ exec, plataforma: "win32" })).toBe("9.4");
     expect(chamadas[0]?.[0]).toBe("reg");
     expect(chamadas[0]?.[1]).toEqual(
       expect.arrayContaining(["query", "/s", "/v", "DisplayVersion"]),
@@ -184,11 +224,36 @@ describe("lerRegistroWindows", () => {
   });
 
   it("sem a chave ou com erro do reg: null", async () => {
-    expect(await lerRegistroWindows(async () => "")).toBeNull();
+    const win = { plataforma: "win32" };
+    expect(await lerRegistroWindows({ ...win, exec: async () => "" })).toBeNull();
     expect(
-      await lerRegistroWindows(async () => {
-        throw new Error("não achou");
+      await lerRegistroWindows({
+        ...win,
+        exec: async () => {
+          throw new Error("não achou");
+        },
       }),
     ).toBeNull();
+  });
+
+  it("reg que nunca responde: null dentro do prazo", async () => {
+    const inicio = Date.now();
+    const r = await lerRegistroWindows({
+      plataforma: "win32",
+      prazoMs: 30,
+      exec: () => new Promise<string>(() => {}),
+    });
+    expect(r).toBeNull();
+    expect(Date.now() - inicio).toBeLessThan(1000);
+  });
+
+  it("fora do Windows: null sem chamar o reg", async () => {
+    let chamou = false;
+    const exec: ExecArquivo = async () => {
+      chamou = true;
+      return saida;
+    };
+    expect(await lerRegistroWindows({ plataforma: "linux", exec })).toBeNull();
+    expect(chamou).toBe(false);
   });
 });
