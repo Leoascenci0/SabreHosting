@@ -18,4 +18,6 @@
 | 2026-10-30 | **Node 22 LTS** (`.nvmrc` = 22, `engines.node >=22`); versões exatas ficam no `package-lock.json` | base-1.1 (decidido pela Máxima) |
 | 2026-10-30 | Dependências de desenvolvimento do monorepo (todas MIT/Apache-2.0, só em dev, não vão no instalador): `typescript` (tipos estritos, Apache-2.0), `eslint` + `typescript-eslint` (regras de código, MIT), `prettier` (estilo, MIT), `vitest` (testes, MIT), `@types/node` (tipos do Node, MIT) | base-1.1 |
 | 2026-10-30 | **Electron entra no app-1.1**, não antes: `apps/desktop` fica só com package.json, tsconfig e teste de exemplo | base-1.1 (decidido pela Máxima) |
+| 2026-10-30 | Dependência **`fastify`** (servidor HTTP do cartório, MIT) só em `services/cartorio`, não vai no instalador do app; escolhida pela validação de corpo por esquema e pelo log com `redact` embutidos | cart-1.1 (decidido pela Máxima) |
+| 2026-10-30 | Banco do cartório em **`node:sqlite`** nativo do Node (sem dependência nem compilação, ao contrário do `better-sqlite3`); `engines` do cartório `>=22.13`; o aviso `ExperimentalWarning` do Node é aceito | cart-1.1 (decidido pela Máxima) |
 | 2026-10-30 | Nota do PC: escala **100 = PC de referência, sem teto em cima** (não 0–100), para a regra "nota nova ≥ 1,3 × nota do host" funcionar com hosts fortes. Decidido pela Máxima (reversível) | host-2.3, migra-1.1 |
