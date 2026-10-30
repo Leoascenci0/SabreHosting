@@ -5,6 +5,7 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 ## Histórico
 | Item | Tipo | Método | Estimado | Real | Trocou? | PR |
 |---|---|---|---|---|---|---|
+| base-1.1 | config/esqueleto | M7+M6 | ~120 | 155 (sem lock) | não | #3 |
 
 ## Lições
 _(nenhuma ainda)_

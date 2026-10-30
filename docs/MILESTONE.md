@@ -16,13 +16,11 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-_(nenhuma onda; projeto acabou de ser criado)_
+- **Onda 2:** base-1.2 · base-1.3 · base-2.1
 
 ## Fila
 
 **M1 — Fundação**
-- **Onda 1:** base-1.1 (SOZINHO)
-- **Onda 2:** base-1.2 · base-1.3 · base-2.1
 - **Onda 3:** host-1.1 · host-2.3 · cart-1.1
 - **Onda 4:** host-1.2 · bkp-1.1 · cart-1.2
 - **Onda 5:** host-2.1 · bkp-1.2 · cart-1.3
@@ -68,6 +66,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 30/10/2026 — Onda 1: base-1.1 monorepo TypeScript (PR #3).
 
 - 30/10/2026 — Decididas D8 (Electron + TypeScript), D1 (Java) e D5 (mods Fabric e Forge juntos: NeoForge + Sinytra
   Connector). Ver `docs/ops/DECISOES.md`.

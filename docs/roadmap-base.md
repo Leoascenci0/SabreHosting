@@ -12,7 +12,7 @@ dependência sem linha em `DECISOES.md` (este roadmap registra as da fundação)
 
 ## Bloco 1 — Esqueleto
 
-- [ ] **1.1 — Monorepo TypeScript com as quatro pastas**
+- [x] **1.1 — Monorepo TypeScript com as quatro pastas** (PR #3, 30/10/2026)
   *O que fazer:* criar `package.json` raiz com workspaces (`apps/desktop`, `packages/nucleo`, `services/cartorio`),
   TypeScript estrito, ESLint + Prettier, Vitest; um teste de exemplo em cada pacote; scripts `npm test`,
   `npm run lint`, `npm run vistoria` (lint + testes + `python3 scripts/verificar.py --base origin/main`).
