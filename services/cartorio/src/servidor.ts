@@ -48,8 +48,9 @@ const RECUSA_TRAVA: Record<MotivoRecusa, (dono: string) => string> = {
   destino_invalido: () => "O servidor já está neste PC. Escolha outro PC para receber.",
 };
 const VERSAO_INEXISTENTE = { erro: "Essa versão do mundo não existe no cartório." };
-const EPOCA = { type: "integer", minimum: 1 };
-const TOTAL = { type: "integer", minimum: 0 };
+/** Inteiro exato em JS (≤ 2^53 − 1): número maior viraria decimal e ficaria gravado para sempre em `versoes`. */
+const EPOCA = { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER };
+const TOTAL = { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 
 /** Endereços que significam "todas as interfaces", em qualquer grafia (inclusive ::ffff:0.0.0.0). */
 const TODAS_AS_INTERFACES = new BlockList();

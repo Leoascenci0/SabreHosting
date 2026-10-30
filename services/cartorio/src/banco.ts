@@ -47,13 +47,13 @@ export const MIGRACOES = [
   // `copias`: uma linha por PC, a versão que ele tem agora.
   `CREATE TABLE versoes (
      numero INTEGER PRIMARY KEY,
-     epoca INTEGER NOT NULL,
+     epoca INTEGER NOT NULL CHECK (typeof(epoca) = 'integer' AND epoca >= 1),
      pc_id INTEGER NOT NULL REFERENCES pcs(id),
      manifesto_sha256 TEXT NOT NULL
        CHECK (length(manifesto_sha256) = 64 AND manifesto_sha256 NOT GLOB '*[^0-9a-f]*'),
-     arquivos INTEGER NOT NULL CHECK (arquivos >= 0),
-     bytes INTEGER NOT NULL CHECK (bytes >= 0),
-     criada_em INTEGER NOT NULL
+     arquivos INTEGER NOT NULL CHECK (typeof(arquivos) = 'integer' AND arquivos >= 0),
+     bytes INTEGER NOT NULL CHECK (typeof(bytes) = 'integer' AND bytes >= 0),
+     criada_em INTEGER NOT NULL CHECK (typeof(criada_em) = 'integer' AND criada_em >= 0)
    );
    CREATE TRIGGER versoes_sem_buraco BEFORE INSERT ON versoes
    WHEN NEW.numero IS NOT (SELECT coalesce(max(numero), 0) + 1 FROM versoes)
@@ -65,7 +65,7 @@ export const MIGRACOES = [
    CREATE TABLE copias (
      pc_id INTEGER PRIMARY KEY REFERENCES pcs(id),
      versao INTEGER NOT NULL REFERENCES versoes(numero),
-     informada_em INTEGER NOT NULL
+     informada_em INTEGER NOT NULL CHECK (typeof(informada_em) = 'integer' AND informada_em >= 0)
    );`,
 ];
 

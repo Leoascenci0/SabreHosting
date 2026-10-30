@@ -157,6 +157,12 @@ describe("versões: o banco protege o histórico", () => {
       expect(() => registrarVersao(banco, 1, 1, 1, { ...DADOS, manifestoSha256: ruim })).toThrow();
     }
     expect(() => registrarVersao(banco, 1, 1, 1, { ...DADOS, bytes: -1 })).toThrow();
+    // Decimal (1e30 não cabe em inteiro de 64 bits; 1,5 não é inteiro) seria gravado para sempre.
+    for (const ruim of [1e30, 1.5]) {
+      expect(() => registrarVersao(banco, 1, 1, 1, { ...DADOS, arquivos: ruim })).toThrow();
+      expect(() => registrarVersao(banco, 1, 1, 1, { ...DADOS, bytes: ruim })).toThrow();
+    }
+    expect(() => registrarVersao(banco, 1, 1, 1.5, DADOS)).toThrow();
     expect(contar(banco, "versoes")).toBe(0);
     expect(contar(banco, "copias")).toBe(0);
   });
@@ -276,6 +282,35 @@ describe("versões: rotas do cartório", () => {
     expect(r.statusCode).toBe(400);
     const v = await app.inject({ url: "/versoes/mais-nova", headers: ana });
     expect(v.json()).toEqual({ versao: null });
+  });
+
+  it("número fora de inteiro exato (1e30, 2^53, -1, 1,5) em qualquer campo → 400 e nada gravado", async () => {
+    const { app, ana } = await montarApp();
+    const { epoca } = (
+      await app.inject({ method: "POST", url: "/trava/pegar", headers: ana })
+    ).json<{ epoca: number }>();
+    const certo = { epoca, ...DADOS };
+    for (const ruim of [1e30, 2 ** 53, -1, 1.5]) {
+      for (const campo of ["epoca", "arquivos", "bytes"] as const) {
+        const payload = { ...certo, [campo]: ruim };
+        const r = await app.inject({ method: "POST", url: "/versoes", headers: ana, payload });
+        expect(r.statusCode, `${campo} = ${ruim}`).toBe(400);
+      }
+      const c = await app.inject({
+        method: "POST",
+        url: "/copias",
+        headers: ana,
+        payload: { versao: ruim },
+      });
+      expect(c.statusCode, `versao = ${ruim}`).toBe(400);
+      const q = await app.inject({ url: `/versoes/${ruim}/copias`, headers: ana });
+      expect(q.statusCode, `:n = ${ruim}`).toBe(400);
+    }
+    expect((await app.inject({ url: "/versoes/mais-nova", headers: ana })).json()).toEqual({
+      versao: null,
+    });
+    const r = await app.inject({ method: "POST", url: "/versoes", headers: ana, payload: certo });
+    expect(r.json()).toEqual({ numero: 1 });
   });
 
   it("fluxo: pega a trava, envia, outro PC informa a cópia, consultas; envio sem trava → 409", async () => {
