@@ -170,6 +170,68 @@ describe("trava (regra de ouro 1)", () => {
     expect(chamadas).toHaveLength(0);
   });
 
+  it("temTrava que nunca responde: antes do spawn não sobe e explica", async () => {
+    const nunca = () => new Promise<boolean>(() => {});
+    await expect(
+      iniciarServidor(opcoes("normal", { temTrava: nunca, prazoTravaMs: 50 })),
+    ).rejects.toThrow(/cartório não respondeu.*sem a trava/);
+    expect(chamadas).toHaveLength(0);
+    await expect(readFile(join(pasta, "user_jvm_args.txt"))).rejects.toThrow();
+  });
+
+  it("sem trava ou sem EULA, nem grava o user_jvm_args.txt", async () => {
+    await expect(
+      iniciarServidor(opcoes("normal", { temTrava: async () => false })),
+    ).rejects.toThrow();
+    await writeFile(join(pasta, "eula.txt"), "eula=false\n");
+    await expect(iniciarServidor(opcoes())).rejects.toThrow();
+    await expect(readFile(join(pasta, "user_jvm_args.txt"))).rejects.toThrow();
+  });
+
+  it("temTrava que trava durante a execução: para o servidor e loga", async () => {
+    let travar = false;
+    let tique: () => void = () => {};
+    const relogio = { repetir: (fn: () => void) => ((tique = fn), () => {}) };
+    const temTrava = () => (travar ? new Promise<boolean>(() => {}) : Promise.resolve(true));
+    const s = await subir("normal", { temTrava, relogio, prazoTravaMs: 50 });
+    await esperarEstado(s, "pronto");
+    const logs: string[] = [];
+    s.on("log", (l: { texto: string }) => logs.push(l.texto));
+    travar = true;
+    tique();
+    await esperarEstado(s, "parado");
+    expect(logs.some((l) => /cartório não respondeu/.test(l))).toBe(true);
+  });
+
+  it("não loga perda de trava se o servidor já está parando", async () => {
+    let tem = true;
+    let tique: () => void = () => {};
+    const relogio = { repetir: (fn: () => void) => ((tique = fn), () => {}) };
+    const s = await subir("normal", { temTrava: async () => tem, relogio });
+    await esperarEstado(s, "pronto");
+    const logs: string[] = [];
+    s.on("log", (l: { texto: string }) => logs.push(l.texto));
+    tem = false;
+    tique();
+    const parada = s.pararServidor();
+    await parada;
+    await new Promise((r) => setTimeout(r, 30));
+    expect(logs.some((l) => /Perdi a trava/.test(l))).toBe(false);
+  });
+
+  it("o intervalo de 20 s é cancelado ao parar e ao cair", async () => {
+    const cancelamentos: string[] = [];
+    const relogio = (nome: string) => ({
+      repetir: () => () => void cancelamentos.push(nome),
+    });
+    const a = await subir("normal", { relogio: relogio("parou") });
+    await esperarEstado(a, "pronto");
+    await a.pararServidor();
+    const b = await subir("cai", { relogio: relogio("caiu") });
+    await esperarEstado(b, "caiu");
+    expect(cancelamentos).toEqual(["parou", "caiu"]);
+  });
+
   it("perder a trava com o servidor rodando para o servidor e loga o motivo", async () => {
     let tem = true;
     let tique: () => void = () => {};

@@ -16,6 +16,8 @@ export interface OpcoesIniciar {
   temTrava: () => Promise<boolean>;
   /** Configurações › Servidor › Memória máxima (MB). Sem valor: automático. */
   ramMb?: number;
+  /** Quanto esperar a resposta de `temTrava`; sem resposta vale como "sem trava". Padrão: 10 s. */
+  prazoTravaMs?: number;
   /** Quanto esperar o `stop` antes de matar. Padrão: 60 s. */
   prazoParadaMs?: number;
   /** Repete `fn` a cada `ms` e devolve quem cancela. Padrão: `setInterval`. */
@@ -33,6 +35,26 @@ const MINIMO_RAM_MB = 512;
 const AVISO_ABAIXO_MB = 4 * 1024;
 const INTERVALO_TRAVA_MS = 20_000;
 const PRAZO_PARADA_PADRAO_MS = 60_000;
+const PRAZO_TRAVA_PADRAO_MS = 10_000;
+
+/** Erro, demora e `false` valem como sem trava; só `true` dentro do prazo confirma. */
+async function travaConfirmada(
+  temTrava: () => Promise<boolean>,
+  prazoMs: number,
+): Promise<"sim" | "nao" | "semResposta"> {
+  let timer: NodeJS.Timeout | undefined;
+  const semResposta = new Promise<"semResposta">((resolve) => {
+    timer = setTimeout(() => resolve("semResposta"), prazoMs);
+  });
+  try {
+    const r = await Promise.race([temTrava(), semResposta]);
+    return r === true ? "sim" : r === "semResposta" ? r : "nao";
+  } catch {
+    return "nao";
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 // Flags do Aikar (G1GC). `UnlockExperimentalVMOptions` precisa vir antes das G1*Percent.
 const FLAGS_AIKAR = [
@@ -77,7 +99,7 @@ export class ServidorMinecraft extends EventEmitter {
   constructor(
     private readonly filho: ChildProcess,
     private readonly prazoParadaMs: number,
-    temTrava: () => Promise<boolean>,
+    confirmarTrava: () => Promise<"sim" | "nao" | "semResposta">,
     relogio: NonNullable<OpcoesIniciar["relogio"]>,
   ) {
     super();
@@ -109,7 +131,7 @@ export class ServidorMinecraft extends EventEmitter {
       });
     }
     this.cancelarRelogio = relogio.repetir(
-      () => void this.conferirTrava(temTrava),
+      () => void this.conferirTrava(confirmarTrava),
       INTERVALO_TRAVA_MS,
     );
   }
@@ -129,21 +151,25 @@ export class ServidorMinecraft extends EventEmitter {
     if (this.estado === "subindo" && linha.includes("Done (")) this.mudar("pronto");
   }
 
-  private async conferirTrava(temTrava: () => Promise<boolean>): Promise<void> {
+  private async conferirTrava(
+    confirmarTrava: () => Promise<"sim" | "nao" | "semResposta">,
+  ): Promise<void> {
     if (this.verificando || (this.estado !== "subindo" && this.estado !== "pronto")) return;
     this.verificando = true;
-    let tem = false;
+    let resposta: "sim" | "nao" | "semResposta";
     try {
-      tem = await temTrava();
-    } catch {
-      tem = false; // sem poder confirmar, vale como perdida: nunca seguir sem trava.
+      resposta = await confirmarTrava();
     } finally {
       this.verificando = false;
     }
-    if (tem) return;
+    if (resposta === "sim") return;
+    // Já parando, parado ou caído: não há o que parar nem o que avisar.
+    if (this.estado !== "subindo" && this.estado !== "pronto") return;
     this.registrar(
       "aviso",
-      "Perdi a trava de host do cartório; parando o servidor para não duplicar o mundo.",
+      resposta === "semResposta"
+        ? "O cartório não respondeu a tempo; parando o servidor para não ficar sem a trava de host."
+        : "Perdi a trava de host do cartório; parando o servidor para não duplicar o mundo.",
     );
     await this.pararServidor();
   }
@@ -199,17 +225,17 @@ export async function iniciarServidor(opcoes: OpcoesIniciar): Promise<ServidorMi
   } catch {
     throw new Error(`O NeoForge ${versaoNeoForge} ainda não foi instalado nesta pasta.`);
   }
-  await gravarAtomico(join(pasta, "user_jvm_args.txt"), textoJvm(ramMb));
 
   // Reconferida logo antes do spawn: é a regra de ouro 1.
-  let tem = false;
-  try {
-    tem = await temTrava();
-  } catch {
-    tem = false;
+  const confirmar = () => travaConfirmada(temTrava, opcoes.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS);
+  const trava = await confirmar();
+  if (trava === "semResposta") {
+    throw new Error("O cartório não respondeu; não dá para hospedar sem a trava.");
   }
-  if (!tem)
+  if (trava === "nao") {
     throw new Error("Este PC não tem a trava de host do cartório; o servidor não pode subir.");
+  }
+  await gravarAtomico(join(pasta, "user_jvm_args.txt"), textoJvm(ramMb));
 
   const filho = (opcoes.spawnFn ?? spawnPadrao)(
     opcoes.javaPath,
@@ -226,7 +252,7 @@ export async function iniciarServidor(opcoes: OpcoesIniciar): Promise<ServidorMi
   const servidor = new ServidorMinecraft(
     filho,
     opcoes.prazoParadaMs ?? PRAZO_PARADA_PADRAO_MS,
-    temTrava,
+    confirmar,
     relogio,
   );
   if (ramMb < AVISO_ABAIXO_MB) {
