@@ -73,6 +73,21 @@ describe("versões: só o dono da trava registra", () => {
     expect(contar(banco, "copias")).toBe(0);
   });
 
+  it("mesmo PC pegou de novo (app reiniciou, época 1 → 2): envio com a época 1 com a trava valendo → recusa", () => {
+    const banco = montarBanco();
+    pegar(banco, 1, 0, PRAZO);
+    expect(pegar(banco, 1, 10, PRAZO)).toMatchObject({ ok: true, epoca: 2 });
+    expect(registrarVersao(banco, 1, 1, 20, DADOS)).toMatchObject({
+      ok: false,
+      motivo: "epoca_velha",
+      donoPcId: 1,
+      epoca: 2,
+    });
+    expect(contar(banco, "versoes")).toBe(0);
+    expect(contar(banco, "copias")).toBe(0);
+    expect(registrarVersao(banco, 1, 2, 30, DADOS)).toEqual({ ok: true, numero: 1 });
+  });
+
   it("vale até 1 ms antes de vencer; renovada, continua valendo", () => {
     const banco = montarBanco();
     pegar(banco, 1, 0, PRAZO);
@@ -311,6 +326,27 @@ describe("versões: rotas do cartório", () => {
     });
     const r = await app.inject({ method: "POST", url: "/versoes", headers: ana, payload: certo });
     expect(r.json()).toEqual({ numero: 1 });
+  });
+
+  it("POST /versoes com a época anterior do mesmo PC (pegou a trava de novo) → 409 e nada gravado", async () => {
+    const { app, ana } = await montarApp();
+    const pegarTrava = async () =>
+      (await app.inject({ method: "POST", url: "/trava/pegar", headers: ana })).json<{
+        epoca: number;
+      }>().epoca;
+    const velha = await pegarTrava();
+    expect(await pegarTrava()).toBe(velha + 1);
+    const r = await app.inject({
+      method: "POST",
+      url: "/versoes",
+      headers: ana,
+      payload: { epoca: velha, ...DADOS },
+    });
+    expect(r.statusCode).toBe(409);
+    expect(r.json()).toMatchObject({ motivo: "epoca_velha", epoca: velha + 1 });
+    expect((await app.inject({ url: "/versoes/mais-nova", headers: ana })).json()).toEqual({
+      versao: null,
+    });
   });
 
   it("fluxo: pega a trava, envia, outro PC informa a cópia, consultas; envio sem trava → 409", async () => {
