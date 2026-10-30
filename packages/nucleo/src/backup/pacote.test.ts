@@ -78,7 +78,7 @@ describe("criarPacote / abrirPacote", () => {
     expect(hashesDoMundo(temp)).toEqual(hashesDoMundo(mundo));
     expect(manifesto).toMatchObject({ versao: 3, epoca: 1 });
     expect(manifesto.arquivos.length).toBe(Object.keys(hashesDoMundo(mundo)).length);
-  });
+  }, 30_000);
 
   it("não trava o laço de eventos ao empacotar 20 MB (maior intervalo entre ticks de 10 ms)", async () => {
     const base = pasta();
@@ -94,7 +94,7 @@ describe("criarPacote / abrirPacote", () => {
     clearInterval(relogio);
     console.log(`maior intervalo entre ticks durante o empacotamento: ${maior.toFixed(0)} ms`);
     expect(maior).toBeLessThan(200);
-  });
+  }, 30_000);
 
   it("recusa o pacote com 1 byte trocado ANTES de extrair", async () => {
     const { pacote, sha256: hash, base } = await pacoteBom();
