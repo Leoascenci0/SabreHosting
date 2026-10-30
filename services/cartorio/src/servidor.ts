@@ -1,4 +1,4 @@
-import { isIP } from "node:net";
+import { BlockList, isIP } from "node:net";
 import type { Writable } from "node:stream";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import { type Banco, criarConvite, pcDoToken, usarConvite } from "./banco.js";
@@ -25,11 +25,15 @@ const CONVITE_INVALIDO = {
   erro: "Convite inválido, já usado ou vencido. Peça um novo ao administrador.",
 };
 
+/** Endereços que significam "todas as interfaces", em qualquer grafia (inclusive ::ffff:0.0.0.0). */
+const TODAS_AS_INTERFACES = new BlockList();
+TODAS_AS_INTERFACES.addAddress("0.0.0.0", "ipv4");
+TODAS_AS_INTERFACES.addAddress("::", "ipv6");
+
 /** O cartório só escuta na rede privada: recusa "todas as interfaces" e nome que não é IP. */
 export function conferirEndereco(endereco: string): string {
   const versao = isIP(endereco);
-  const todas = versao === 4 ? endereco === "0.0.0.0" : /^[0:]+$/.test(endereco);
-  if (versao === 0 || todas) {
+  if (versao === 0 || TODAS_AS_INTERFACES.check(endereco, versao === 4 ? "ipv4" : "ipv6")) {
     throw new Error(
       `Endereço "${endereco}" recusado: use o IP do cartório na rede privada (ex.: 10.8.0.1).`,
     );
@@ -61,7 +65,7 @@ export function criarCartorio({ banco, segredoAdmin, logger, agora = Date.now }:
   app.post<{ Body: { nomePc: string; validadeMinutos?: number } }>(
     "/convites",
     {
-      preHandler: soAdmin,
+      onRequest: soAdmin,
       schema: {
         body: {
           type: "object",

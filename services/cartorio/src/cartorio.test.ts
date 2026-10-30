@@ -1,6 +1,7 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import { abrirBanco, criarConvite, usarConvite } from "./banco.js";
@@ -80,6 +81,8 @@ describe("cartório: saúde e token", () => {
       payload: { nomePc: "x" },
     });
     expect(semAdmin.statusCode).toBe(401);
+    const corpoInvalido = await app.inject({ method: "POST", url: "/convites", payload: {} });
+    expect(corpoInvalido.statusCode).toBe(401);
     const { token } = (await usar(await convidar())).json<{ token: string }>();
     const comTokenDePc = await app.inject({
       method: "POST",
@@ -116,14 +119,14 @@ describe("cartório: convites", () => {
     expect((await usar(convite)).statusCode).toBe(401);
   });
 
-  it("duas chamadas simultâneas com o mesmo convite → só uma passa", async () => {
+  it("duas chamadas no mesmo processo (inject, em sequência pelo SQLite síncrono) → só a primeira passa", async () => {
     const { convidar, usar } = montar();
     const convite = await convidar();
     const codigos = (await Promise.all([usar(convite), usar(convite)])).map((r) => r.statusCode);
     expect(codigos.sort()).toEqual([200, 401]);
   });
 
-  it("duas conexões ao mesmo banco: o convite só vale numa", () => {
+  it("duas conexões ao mesmo arquivo, uma após a outra: o convite só vale numa", () => {
     const { pasta } = montar();
     const a = abrirBanco(join(pasta, "outro.db"));
     const b = abrirBanco(join(pasta, "outro.db"));
@@ -134,11 +137,36 @@ describe("cartório: convites", () => {
     b.close();
   });
 
+  it("convite vale até 1 ms antes de vencer", async () => {
+    const { convidar, usar, relogio } = montar();
+    const convite = await convidar("PC", 10);
+    relogio.agora += 10 * 60_000 - 1;
+    expect((await usar(convite)).statusCode).toBe(200);
+  });
+
   it("convite vencido → recusado", async () => {
     const { convidar, usar, relogio } = montar();
     const convite = await convidar("PC", 10);
     relogio.agora += 10 * 60_000;
     expect((await usar(convite)).statusCode).toBe(401);
+  });
+
+  it("falha ao criar o token: convite continua sem uso e nenhum PC é criado", () => {
+    const { pasta } = montar();
+    const banco = abrirBanco(join(pasta, "falha.db"));
+    const convite = criarConvite(banco, "PC", 0, 60_000);
+    banco.exec(
+      "CREATE TRIGGER falha BEFORE INSERT ON tokens BEGIN SELECT RAISE(ABORT, 'teste'); END",
+    );
+    expect(() => usarConvite(banco, convite, 1)).toThrow(/teste/);
+    expect(banco.prepare("SELECT usado_em, pc_id FROM convites").get()).toEqual({
+      usado_em: null,
+      pc_id: null,
+    });
+    expect(banco.prepare("SELECT count(*) AS n FROM pcs").get()).toEqual({ n: 0 });
+    banco.exec("DROP TRIGGER falha");
+    expect(usarConvite(banco, convite, 2)).toBeDefined();
+    banco.close();
   });
 
   it("convite inventado → recusado", async () => {
@@ -147,9 +175,57 @@ describe("cartório: convites", () => {
   });
 });
 
+describe("cartório: migrações", () => {
+  function tabelas(caminho: string): string[] {
+    const banco = new DatabaseSync(caminho);
+    const nomes = banco
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+      .all()
+      .map((l) => String(l["name"]));
+    banco.close();
+    return nomes;
+  }
+
+  it("abrir o mesmo banco de novo não repete a migração; duas conexões abertas juntas", () => {
+    const { pasta } = montar();
+    const caminho = join(pasta, "m.db");
+    const a = abrirBanco(caminho);
+    const b = abrirBanco(caminho);
+    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 1 }]);
+    a.close();
+    b.close();
+    abrirBanco(caminho).close();
+    expect(tabelas(caminho)).toEqual(["convites", "esquema", "pcs", "tokens"]);
+  });
+
+  it("migração que falha no meio é desfeita inteira: versão não sobe, nenhuma tabela pela metade", () => {
+    const { pasta } = montar();
+    const caminho = join(pasta, "m.db");
+    abrirBanco(caminho, ["CREATE TABLE a (x)"]).close();
+    const quebrada = [
+      "CREATE TABLE a (x)",
+      "CREATE TABLE b (x); CREATE TABLE c (x); ISTO NAO E SQL",
+    ];
+    expect(() => abrirBanco(caminho, quebrada)).toThrow();
+    expect(tabelas(caminho)).toEqual(["a", "esquema"]);
+    const banco = new DatabaseSync(caminho);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 1 }]);
+    banco.close();
+  });
+});
+
 describe("cartório: endereço de escuta", () => {
-  it("recusa 0.0.0.0, :: e nome que não é IP; aceita IP privado", () => {
-    for (const e of ["0.0.0.0", "::", "::0", "0:0:0:0:0:0:0:0", "localhost", ""]) {
+  it("recusa 0.0.0.0, :: (em qualquer grafia) e nome que não é IP; aceita IP privado", () => {
+    for (const e of [
+      "0.0.0.0",
+      "::",
+      "::0",
+      "0:0:0:0:0:0:0:0",
+      "::ffff:0.0.0.0",
+      "::ffff:0:0",
+      "localhost",
+      "",
+    ]) {
       expect(() => conferirEndereco(e)).toThrow();
     }
     expect(conferirEndereco("127.0.0.1")).toBe("127.0.0.1");

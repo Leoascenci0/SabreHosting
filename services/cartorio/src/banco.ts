@@ -30,22 +30,27 @@ const MIGRACOES = [
    );`,
 ];
 
-export function abrirBanco(caminho: string): Banco {
+/** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */
+export function abrirBanco(caminho: string, migracoes = MIGRACOES): Banco {
   const banco = new DatabaseSync(caminho);
-  banco.exec(
-    "PRAGMA foreign_keys = ON; CREATE TABLE IF NOT EXISTS esquema (versao INTEGER NOT NULL)",
-  );
-  const linha = banco.prepare("SELECT versao FROM esquema").get() as { versao: number } | undefined;
-  const versao = linha?.versao ?? 0;
-  if (versao > MIGRACOES.length) {
+  try {
+    banco.exec("PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON");
+    emTransacao(banco, () => {
+      banco.exec("CREATE TABLE IF NOT EXISTS esquema (versao INTEGER NOT NULL)");
+      const linha = banco.prepare("SELECT versao FROM esquema").get() as
+        { versao: number } | undefined;
+      const versao = linha?.versao ?? 0;
+      if (versao > migracoes.length) {
+        throw new Error(`Banco do cartório na versão ${versao}, mais nova que este programa.`);
+      }
+      migracoes.slice(versao).forEach((sql) => banco.exec(sql));
+      banco.exec("DELETE FROM esquema");
+      banco.prepare("INSERT INTO esquema (versao) VALUES (?)").run(migracoes.length);
+    });
+  } catch (erro) {
     banco.close();
-    throw new Error(`Banco do cartório na versão ${versao}, mais nova que este programa.`);
+    throw erro;
   }
-  emTransacao(banco, () => {
-    MIGRACOES.slice(versao).forEach((sql) => banco.exec(sql));
-    banco.exec("DELETE FROM esquema");
-    banco.prepare("INSERT INTO esquema (versao) VALUES (?)").run(MIGRACOES.length);
-  });
   return banco;
 }
 
