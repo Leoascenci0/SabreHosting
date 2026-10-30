@@ -25,7 +25,7 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
   *Confirmação:* teste: pacote corrompido (1 byte) é recusado; mundo de 20 MB empacota sem travar o processo.
   *Depende de:* bkp-1.1
 
-- [ ] **1.3 — Backup consistente com o servidor rodando**
+- [x] **1.3 — Backup consistente com o servidor rodando** (PR #45, 30/10/2026)
   *O que fazer:* orquestrar `save-off` → `save-all flush` → manifesto+pacote → `save-on` (sempre, mesmo em erro);
   agendado a cada X minutos.
   *Arquivo:* `packages/nucleo/src/backup/agendador.ts`
