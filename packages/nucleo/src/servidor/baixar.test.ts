@@ -171,4 +171,124 @@ describe("baixarConferido", () => {
     );
     expect(existsSync(destino)).toBe(false);
   });
+
+  it("final corrompido é apagado antes de baixar; se o download falha, ele não fica", async () => {
+    const destino = join(pasta, "a.jar");
+    await writeFile(destino, "lixo");
+    manipulador = (_req, res) => {
+      res.writeHead(500);
+      res.end();
+    };
+    await expect(baixarConferido({ url: url(), hashEsperado: hashCerto, destino })).rejects.toThrow(
+      /500/,
+    );
+    expect(existsSync(destino)).toBe(false);
+  });
+
+  it("416 na retomada: recomeça do zero sem Range", async () => {
+    const destino = join(pasta, "a.jar");
+    manipulador = (_req, res) => responder(res, conteudo, 1000);
+    await expect(
+      baixarConferido({ url: url(), hashEsperado: hashCerto, destino, tentativas: 1 }),
+    ).rejects.toThrow();
+    const ranges: (string | undefined)[] = [];
+    manipulador = (req, res) => {
+      ranges.push(req.headers.range);
+      if (req.headers.range) {
+        res.writeHead(416);
+        return void res.end();
+      }
+      responder(res, conteudo);
+    };
+    await baixarConferido({ url: url(), hashEsperado: hashCerto, destino });
+    expect(ranges).toHaveLength(2);
+    expect(ranges[1]).toBeUndefined();
+    expect(await readFile(destino)).toEqual(conteudo);
+  });
+
+  it("206 com Content-Range fora do lugar: descarta o parcial e recomeça de verdade", async () => {
+    const destino = join(pasta, "a.jar");
+    manipulador = (_req, res) => responder(res, conteudo, 1000);
+    await expect(
+      baixarConferido({ url: url(), hashEsperado: hashCerto, destino, tentativas: 1 }),
+    ).rejects.toThrow();
+    manipulador = (req, res) => {
+      if (!req.headers.range) return responder(res, conteudo);
+      res.writeHead(206, { "content-range": "bytes 5-9/10", "content-length": 5 });
+      res.end("12345");
+    };
+    await baixarConferido({ url: url(), hashEsperado: hashCerto, destino });
+    expect(await readFile(destino)).toEqual(conteudo);
+  });
+
+  it("retomada seguida de hash errado: limpa parcial e .meta", async () => {
+    const destino = join(pasta, "a.jar");
+    manipulador = (_req, res) => responder(res, conteudo, 1000);
+    await expect(
+      baixarConferido({ url: url(), hashEsperado: hashCerto, destino, tentativas: 1 }),
+    ).rejects.toThrow();
+    manipulador = (req, res) => {
+      const ini = Number(/bytes=(\d+)-/.exec(req.headers.range ?? "")?.[1]);
+      const resto = Buffer.from("x".repeat(conteudo.length - ini));
+      res.writeHead(206, {
+        "content-length": resto.length,
+        "content-range": `bytes ${ini}-${conteudo.length - 1}/${conteudo.length}`,
+      });
+      res.end(resto);
+    };
+    await expect(baixarConferido({ url: url(), hashEsperado: hashCerto, destino })).rejects.toThrow(
+      /não confere/,
+    );
+    expect(await readdir(pasta)).toEqual([]);
+  });
+
+  it("servidor que para de mandar bytes: desiste pelo tempo sem dados", async () => {
+    const destino = join(pasta, "a.jar");
+    manipulador = (_req, res) => {
+      res.writeHead(200, { "content-length": conteudo.length });
+      res.write("a");
+    };
+    await expect(
+      baixarConferido({
+        url: url(),
+        hashEsperado: hashCerto,
+        destino,
+        tentativas: 1,
+        tempoSemDados: 150,
+      }),
+    ).rejects.toThrow(/parou de enviar/);
+    expect(existsSync(destino)).toBe(false);
+  });
+
+  it("arquivo acima do teto: recusa pelo Content-Length e não deixa nada", async () => {
+    const destino = join(pasta, "a.jar");
+    await expect(
+      baixarConferido({ url: url(), hashEsperado: hashCerto, destino, tamanhoMaximo: 100 }),
+    ).rejects.toThrow(/limite/);
+    expect(await readdir(pasta)).toEqual([]);
+  });
+
+  it("arquivo acima do teto sem Content-Length: aborta o fluxo e apaga o parcial", async () => {
+    const destino = join(pasta, "a.jar");
+    manipulador = (_req, res) => {
+      res.writeHead(200, { "transfer-encoding": "chunked" });
+      res.end(conteudo);
+    };
+    await expect(
+      baixarConferido({ url: url(), hashEsperado: hashCerto, destino, tamanhoMaximo: 100 }),
+    ).rejects.toThrow(/limite/);
+    expect(await readdir(pasta)).toEqual([]);
+  });
+
+  it("redirecionamento para http: recusa; para https não seguro nem tenta", async () => {
+    const destino = join(pasta, "a.jar");
+    manipulador = (_req, res) => {
+      res.writeHead(301, { location: "http://exemplo.com/a.jar" });
+      res.end();
+    };
+    await expect(baixarConferido({ url: url(), hashEsperado: hashCerto, destino })).rejects.toThrow(
+      /não seguro/,
+    );
+    expect(await readdir(pasta)).toEqual([]);
+  });
 });
