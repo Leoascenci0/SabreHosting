@@ -8,3 +8,17 @@ export async function hashDoArquivo(caminho: string, algoritmo = "sha256"): Prom
   await pipeline(createReadStream(caminho), hash);
   return hash.digest("hex");
 }
+
+/** Hash e quantidade de bytes lidos na MESMA passada, para que tamanho e hash sejam do mesmo instante. */
+export async function hashComTamanho(
+  caminho: string,
+  algoritmo = "sha256",
+): Promise<{ hash: string; tamanho: number }> {
+  const hash = createHash(algoritmo);
+  let tamanho = 0;
+  for await (const pedaco of createReadStream(caminho) as AsyncIterable<Buffer>) {
+    hash.update(pedaco);
+    tamanho += pedaco.length;
+  }
+  return { hash: hash.digest("hex"), tamanho };
+}

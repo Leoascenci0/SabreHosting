@@ -51,6 +51,13 @@ describe("gerarManifesto", () => {
     expect(await gerarManifesto(pasta, opcoes)).toEqual(await gerarManifesto(pasta, opcoes));
   });
 
+  it("pastas vazias não entram no manifesto", async () => {
+    const pasta = mundo();
+    mkdirSync(join(pasta, "vazia", "dentro"), { recursive: true });
+    const m = await gerarManifesto(pasta, opcoes);
+    expect(m.arquivos.some((a) => a.caminho.startsWith("vazia"))).toBe(false);
+  });
+
   it("ignora session.lock e links simbólicos, avisando do link", async () => {
     const pasta = mundo();
     writeFileSync(join(pasta, "session.lock"), "x");
@@ -136,6 +143,18 @@ describe("validarManifesto", () => {
       expect(() => validarManifesto({ ...base, arquivos: [arq(caminho)] })).toThrow(/caminho/i);
     },
   );
+
+  it("recusa sha256 que não é texto e tamanho que não é inteiro seguro", () => {
+    const hex = "a".repeat(64);
+    expect(() =>
+      validarManifesto({ ...base, arquivos: [{ caminho: "a", tamanho: 1, sha256: [hex] }] }),
+    ).toThrow(/inválido/);
+    for (const tamanho of [-1, 1.5, 2 ** 53, "1"]) {
+      expect(() =>
+        validarManifesto({ ...base, arquivos: [{ caminho: "a", tamanho, sha256: hex }] }),
+      ).toThrow(/inválido/);
+    }
+  });
 
   it("recusa formato desconhecido, hash ruim e caminho repetido", () => {
     expect(() => validarManifesto({ ...base, formato: 2, arquivos: [] })).toThrow();

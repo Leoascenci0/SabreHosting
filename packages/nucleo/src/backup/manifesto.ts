@@ -3,10 +3,11 @@
  *
  * Este módulo SÓ LÊ a pasta do mundo (regra de ouro 2). Quem chama é responsável por garantir que o servidor não
  * está escrevendo (`save-off` + `save-all flush`, feito no bkp-1.3). Os arquivos são lidos em fluxo, um por vez.
+ * Pastas vazias não entram no manifesto (o Minecraft recria as que precisa).
  */
 import { lstat, opendir } from "node:fs/promises";
 import { join } from "node:path";
-import { hashDoArquivo } from "../integridade/hash.js";
+import { hashComTamanho } from "../integridade/hash.js";
 
 export interface ArquivoDoManifesto {
   caminho: string;
@@ -57,6 +58,21 @@ async function* percorrer(
   }
 }
 
+const MUDOU = "O mundo mudou durante a leitura; o servidor ainda está gravando?";
+
+/** Tamanho e hash vêm da mesma leitura; se o arquivo sumiu ou cresceu/encolheu no meio, recusa. */
+async function lerArquivo(caminho: string, completo: string): Promise<ArquivoDoManifesto> {
+  try {
+    const { size } = await lstat(completo);
+    const { hash, tamanho } = await hashComTamanho(completo);
+    if (tamanho !== size) throw new Error(MUDOU);
+    return { caminho, tamanho, sha256: hash };
+  } catch (erro) {
+    if ((erro as NodeJS.ErrnoException).code === "ENOENT") throw new Error(MUDOU, { cause: erro });
+    throw erro;
+  }
+}
+
 export async function gerarManifesto(
   pastaDoMundo: string,
   { versao, epoca, agora = new Date(), aviso = () => undefined }: OpcoesManifesto,
@@ -64,8 +80,7 @@ export async function gerarManifesto(
   const arquivos: ArquivoDoManifesto[] = [];
   for await (const caminho of percorrer(pastaDoMundo, "", aviso)) {
     const completo = join(pastaDoMundo, caminho);
-    const { size } = await lstat(completo);
-    arquivos.push({ caminho, tamanho: size, sha256: await hashDoArquivo(completo) });
+    arquivos.push(await lerArquivo(caminho, completo));
   }
   arquivos.sort((a, b) => (a.caminho < b.caminho ? -1 : a.caminho > b.caminho ? 1 : 0));
   return { formato: 1, versao, epoca, criadoEm: agora.toISOString(), arquivos };
@@ -95,7 +110,12 @@ export function validarManifesto(bruto: unknown): Manifesto {
     if (vistos.has(a.caminho))
       throw new Error(`Manifesto recusado: caminho repetido (${a.caminho}).`);
     vistos.add(a.caminho);
-    if (!Number.isInteger(a.tamanho) || (a.tamanho as number) < 0 || !SHA256.test(a.sha256 ?? "")) {
+    if (
+      !Number.isSafeInteger(a.tamanho) ||
+      (a.tamanho as number) < 0 ||
+      typeof a.sha256 !== "string" ||
+      !SHA256.test(a.sha256)
+    ) {
       throw new Error(`Manifesto recusado: tamanho ou hash inválido em ${a.caminho}.`);
     }
   }
