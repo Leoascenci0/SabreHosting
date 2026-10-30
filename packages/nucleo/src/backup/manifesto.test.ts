@@ -191,12 +191,24 @@ describe("validarManifesto", () => {
     expect(() => validarManifesto(null)).toThrow();
   });
 
-  it.each(["CON.txt", "nul", "a/COM1", "lpt9.dat", "Aux.tar.gz", "prn ", "a/con .txt"])(
-    "recusa o nome reservado do Windows %j",
-    (caminho) => {
-      expect(() => validarManifesto({ ...base, arquivos: [arq(caminho)] })).toThrow(/caminho/i);
-    },
-  );
+  it.each([
+    "CON.txt",
+    "nul",
+    "a/COM1",
+    "lpt9.dat",
+    "Aux.tar.gz",
+    "COM¹",
+    "com².txt",
+    "LPT³",
+    "lpt¹.dat",
+    "CONIN$",
+    "conout$.log",
+    "a/CONOUT$",
+    "prn ",
+    "a/con .txt",
+  ])("recusa o nome reservado do Windows %j", (caminho) => {
+    expect(() => validarManifesto({ ...base, arquivos: [arq(caminho)] })).toThrow(/caminho/i);
+  });
 
   it.each([
     "a.",
@@ -216,8 +228,18 @@ describe("validarManifesto", () => {
   });
 
   it("aceita nomes parecidos com reservados que o Windows aceita", () => {
-    const nomes = ["console.txt", "com10", "lpt0", "region/r.0.0.mca", "a.b", ".hidden"];
-    expect(validarManifesto({ ...base, arquivos: nomes.map(arq) }).arquivos).toHaveLength(6);
+    const nomes = [
+      "console.txt",
+      "com10",
+      "com¹0",
+      "conin",
+      "con$x",
+      "lpt0",
+      "region/r.0.0.mca",
+      "a.b",
+      ".hidden",
+    ];
+    expect(validarManifesto({ ...base, arquivos: nomes.map(arq) }).arquivos).toHaveLength(9);
   });
 
   it("recusa caminhos que colidem sem diferenciar maiúscula", () => {

@@ -45,8 +45,13 @@ const MAX_ARQUIVOS = 200_000;
 const MAX_PROFUNDIDADE = 32;
 const MAX_CAMINHO = 240;
 
-const RESERVADO_WINDOWS = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+const RESERVADO_WINDOWS = /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³]|conin\$|conout\$)$/i;
 const PROIBIDO_WINDOWS = /[<>:"|?*\u0000-\u001f]/;
+
+/** Mesmo tom para o amigo, na hora de gerar e na de conferir: qual arquivo e o que fazer. */
+function recusaArquivo(motivo: string): Error {
+  return new Error(`${motivo} Renomeie ou apague esse arquivo no mundo e tente de novo.`);
+}
 
 async function* percorrer(
   raiz: string,
@@ -90,8 +95,8 @@ export async function gerarManifesto(
   const arquivos: ArquivoDoManifesto[] = [];
   for await (const caminho of percorrer(pastaDoMundo, "", aviso)) {
     if (!caminhoSeguro(caminho)) {
-      throw new Error(
-        `O mundo tem um arquivo com nome que o Windows não aceita (${caminho}). Renomeie ou apague esse arquivo antes de salvar o mundo.`,
+      throw recusaArquivo(
+        `O arquivo "${caminho}" tem um nome que o Windows não aceita (caminho inseguro).`,
       );
     }
     const completo = join(pastaDoMundo, caminho);
@@ -135,21 +140,27 @@ export function validarManifesto(bruto: unknown): Manifesto {
   const arquivos: ArquivoDoManifesto[] = [];
   for (const a of m.arquivos as Partial<ArquivoDoManifesto>[]) {
     if (!caminhoSeguro(a?.caminho)) {
-      throw new Error(`Manifesto recusado: caminho inseguro (${JSON.stringify(a?.caminho)}).`);
+      throw recusaArquivo(
+        `O arquivo ${JSON.stringify(a?.caminho)} tem um nome que o Windows não aceita (caminho inseguro).`,
+      );
     }
     if (a.caminho.length > MAX_CAMINHO) {
-      throw new Error(`Manifesto recusado: caminho longo demais (${a.caminho.slice(0, 40)}...).`);
+      throw recusaArquivo(
+        `O arquivo "${a.caminho}" tem um caminho longo demais (máximo ${MAX_CAMINHO} caracteres).`,
+      );
     }
     if (a.caminho.split("/").length > MAX_PROFUNDIDADE) {
-      throw new Error(`Manifesto recusado: profundidade demais em ${a.caminho}.`);
+      throw recusaArquivo(
+        `O arquivo "${a.caminho}" está fundo demais (profundidade máxima ${MAX_PROFUNDIDADE} pastas).`,
+      );
     }
     const minusculo = a.caminho.toLowerCase();
     if (vistos.has(a.caminho)) {
-      throw new Error(`Manifesto recusado: caminho repetido (${a.caminho}).`);
+      throw recusaArquivo(`O arquivo "${a.caminho}" aparece duas vezes (caminho repetido).`);
     }
     if (vistosMinusculos.has(minusculo)) {
-      throw new Error(
-        `Manifesto recusado: caminhos que só diferem na maiúscula (${a.caminho}); o Windows os trata como o mesmo arquivo.`,
+      throw recusaArquivo(
+        `O arquivo "${a.caminho}" só difere de outro na maiúscula; o Windows os trata como o mesmo arquivo.`,
       );
     }
     vistos.add(a.caminho);
