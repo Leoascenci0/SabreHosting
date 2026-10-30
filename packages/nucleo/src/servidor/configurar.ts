@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export interface OpcoesServidor {
@@ -9,7 +9,7 @@ export interface OpcoesServidor {
   porta?: number;
   /** Configurações › Servidor › Distância de visão. Padrão: 10. */
   distanciaVisao?: number;
-  /** Configurações › Servidor › Distância de simulação. Padrão: 8. */
+  /** Configurações › Servidor › Distância de simulação (5–32). Padrão: 8. */
   distanciaSimulacao?: number;
 }
 
@@ -41,7 +41,7 @@ export function gerarPropriedades(opcoes: OpcoesServidor): string {
   }
   validarFaixa(porta, "porta", 1024, 65535);
   validarFaixa(distanciaVisao, "distância de visão", 3, 32);
-  validarFaixa(distanciaSimulacao, "distância de simulação", 3, 32);
+  validarFaixa(distanciaSimulacao, "distância de simulação", 5, 32);
   if (distanciaSimulacao >= distanciaVisao) {
     throw new Error("A distância de simulação precisa ser menor que a distância de visão.");
   }
@@ -85,7 +85,17 @@ export async function podeSubir(pasta: string): Promise<{ pode: boolean; motivo?
   } catch {
     return recusa;
   }
-  return /^eula=true\s*$/m.test(texto) ? { pode: true } : recusa;
+  // Só a linha exata, sem espaço e sem comentário (aceita CRLF do Windows).
+  return texto.split(/\r?\n/).includes("eula=true") ? { pode: true } : recusa;
+}
+
+async function existe(caminho: string): Promise<boolean> {
+  try {
+    await stat(caminho);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function gravarAtomico(destino: string, conteudo: string): Promise<void> {
@@ -108,5 +118,7 @@ export async function gravarConfiguracao(
   const propriedades = gerarPropriedades(opcoes);
   const eula = gerarEula(aceite);
   await gravarAtomico(join(pasta, "server.properties"), propriedades);
+  // Sem novo aceite, o eula.txt que já existe fica como está (mudar a distância não desfaz o aceite).
+  if (aceite === undefined && (await existe(join(pasta, "eula.txt")))) return;
   await gravarAtomico(join(pasta, "eula.txt"), eula);
 }

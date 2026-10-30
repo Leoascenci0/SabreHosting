@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -57,7 +57,13 @@ describe("gerarPropriedades", () => {
     expect(() => gerarPropriedades({ ...base, distanciaVisao: 2 })).toThrow(/visão/);
     expect(() => gerarPropriedades({ ...base, distanciaVisao: 33 })).toThrow(/visão/);
     expect(() => gerarPropriedades({ ...base, distanciaVisao: 12.5 })).toThrow(/visão/);
-    expect(() => gerarPropriedades({ ...base, distanciaSimulacao: 2 })).toThrow(/simulação/);
+    expect(() => gerarPropriedades({ ...base, distanciaSimulacao: 4 })).toThrow(/simulação/);
+    expect(() =>
+      gerarPropriedades({ ...base, distanciaVisao: 32, distanciaSimulacao: 33 }),
+    ).toThrow(/simulação/);
+    expect(gerarPropriedades({ ...base, distanciaVisao: 32, distanciaSimulacao: 31 })).toContain(
+      "view-distance=32",
+    );
   });
 
   it("recusa porta inválida", () => {
@@ -125,5 +131,31 @@ describe("podeSubir e gravarConfiguracao", () => {
   it("opções inválidas não escrevem nada", async () => {
     await expect(gravarConfiguracao(pasta, { ipRedePrivada: "0.0.0.0" })).rejects.toThrow();
     expect(await readdir(pasta)).toEqual([]);
+  });
+
+  it.each([
+    ["# eula=true\n", false],
+    [" eula=true\n", false],
+    ["eula=true \n", false],
+    ["", false],
+    ["\u0000\u0001\ufffd\ufffd", false],
+    ["# comentário\nfoo=bar\neula=true\nbaz=1\n", true],
+    ["eula=true\r\n", true],
+  ])("podeSubir com eula.txt %j → %s", async (conteudo, esperado) => {
+    await writeFile(join(pasta, "eula.txt"), conteudo);
+    expect((await podeSubir(pasta)).pode).toBe(esperado);
+  });
+
+  it("mudar a configuração sem novo aceite não desfaz o aceite", async () => {
+    await gravarConfiguracao(pasta, base, { aceitoEm: new Date() });
+    await gravarConfiguracao(pasta, { ...base, distanciaVisao: 12 });
+    expect((await podeSubir(pasta)).pode).toBe(true);
+    expect(await readFile(join(pasta, "server.properties"), "utf8")).toContain("view-distance=12");
+  });
+
+  it("falha na gravação não deixa temporário", async () => {
+    await mkdir(join(pasta, "server.properties"));
+    await expect(gravarConfiguracao(pasta, base)).rejects.toThrow();
+    expect((await readdir(pasta)).filter((n) => n.endsWith(".tmp"))).toEqual([]);
   });
 });
