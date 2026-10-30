@@ -23,7 +23,8 @@ SABRE_SIMULAR=1 bash infra/vps/instalar.sh   # só mostra o que faria; não muda
 
 ## O que NÃO faz
 
-- Não configura Velocity, sala de espera nem cartório (itens rede-2.x e cart-2.2).
+- Não configura Velocity, sala de espera nem cartório (itens rede-2.x e cart-2.2). O Velocity tem script próprio,
+  `instalar-velocity.sh` (rede-2.1): ver `velocity/LEIAME.md`.
 - Não cadastra amigos na rede privada (sem `[Peer]` ainda).
 - **Não abre portas na conta da Oracle.** A Oracle tem uma "Security List" própria, fora da máquina: as mesmas três
   portas precisam ser abertas lá (tutorial rede-1.2). O script avisa no fim.
