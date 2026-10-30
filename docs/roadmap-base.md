@@ -20,7 +20,7 @@ dependência sem linha em `DECISOES.md` (este roadmap registra as da fundação)
   *Arquivo:* `package.json`, `tsconfig*.json`, `.eslintrc*`, `apps/desktop/`, `packages/nucleo/`, `services/cartorio/`
   **Tela no app:** não se aplica.
   *Confirmação:* `npm ci && npm run vistoria` → APROVADA na nuvem.
-  *Depende de:* — · **ESPERA DECISÃO D8** (Electron + TypeScript). SOZINHO na onda.
+  *Depende de:* — · D8 decidida (Electron + TypeScript). SOZINHO na onda.
 
 - [ ] **1.2 — CI no GitHub Actions**
   *O que fazer:* workflow que roda `npm ci` + `npm run vistoria` em todo PR e push na `main` (Ubuntu); PR de fork roda

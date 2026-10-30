@@ -10,12 +10,13 @@ o servidor real só roda na Confirmação, num PC.
 ## Bloco 1 — Baixar e preparar
 
 - [ ] **1.1 — Baixar Java e servidor com hash conferido**
-  *O que fazer:* módulo que baixa o Java (Adoptium, versão fixada) e o jar do servidor (API oficial do Paper, D5) para a
+  *O que fazer:* módulo que baixa o Java (Adoptium, versão fixada) e o servidor NeoForge (instalador do repositório Maven oficial do NeoForge, D5) mais o Sinytra Connector e a Forgified
+  Fabric API (Modrinth) para a
   pasta do app, confere SHA-256, guarda em cache e nunca re-baixa à toa. Download retomável; falha com mensagem pt-BR.
   *Arquivo:* `packages/nucleo/src/servidor/baixar.ts`, testes com servidor HTTP local falso
   **Tela no app:** não se aplica (a versão vem do grupo, item cart).
   *Confirmação:* teste: hash errado → recusa e apaga; hash certo → usa o cache na segunda vez.
-  *Depende de:* base-1.1 · **ESPERA DECISÃO D1, D5**
+  *Depende de:* base-1.1 · D1 (Java) e D5 (NeoForge + Connector) decididas
 
 - [ ] **1.2 — EULA e configuração do servidor**
   *O que fazer:* gerar `server.properties` e `eula.txt` a partir das Configurações (porta só na rede privada,
