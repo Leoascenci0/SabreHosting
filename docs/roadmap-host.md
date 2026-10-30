@@ -9,7 +9,7 @@ o servidor real só roda na Confirmação, num PC.
 
 ## Bloco 1 — Baixar e preparar
 
-- [ ] **1.1 — Baixar Java e servidor com hash conferido**
+- [x] **1.1 — Baixar Java e servidor com hash conferido** (PR #12, 30/10/2026)
   *O que fazer:* módulo que baixa o Java (Adoptium, versão fixada) e o servidor NeoForge (instalador do repositório Maven oficial do NeoForge, D5) mais o Sinytra Connector e a Forgified
   Fabric API (Modrinth) para a
   pasta do app, confere SHA-256, guarda em cache e nunca re-baixa à toa. Download retomável; falha com mensagem pt-BR.

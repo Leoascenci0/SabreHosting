@@ -60,6 +60,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Backlog
 
+- Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.3).
 - Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1 e 1.2, CI).
 
 - Bedrock via Geyser (se D1 = Java + Bedrock depois).
