@@ -21,7 +21,6 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 **M1 — Fundação**
 - **Onda 7 (em curso):** cart-2.1 · basemel-1.3 · rede-1.1 ✅ · bkp-1.3
 - **Onda 6b:** bkp-2.1 · rede-1.1
-- **Onda 7:** bkp-1.3 · cart-2.1 · rede-2.1
 - **Onda 8:** bkp-2.2 · cart-1.4 · host-3.1 [P: teste no PC]
 
 **M2 — Primeira partida**
