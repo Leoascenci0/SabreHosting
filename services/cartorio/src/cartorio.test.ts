@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
-import { abrirBanco, criarConvite, usarConvite } from "./banco.js";
+import { MIGRACOES, abrirBanco, criarConvite, usarConvite } from "./banco.js";
 import { gerarSegredo } from "./segredo.js";
 import { conferirEndereco, criarCartorio } from "./servidor.js";
 
@@ -191,11 +191,39 @@ describe("cartório: migrações", () => {
     const caminho = join(pasta, "m.db");
     const a = abrirBanco(caminho);
     const b = abrirBanco(caminho);
-    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 2 }]);
+    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 3 }]);
     a.close();
     b.close();
     abrirBanco(caminho).close();
     expect(tabelas(caminho)).toEqual(["convites", "esquema", "pcs", "tokens", "trava"]);
+  });
+
+  it("v1 → v3 com PCs, tokens e convites já cadastrados preserva tudo e protege a trava", () => {
+    const { pasta } = montar();
+    const caminho = join(pasta, "m.db");
+    const v1 = abrirBanco(caminho, MIGRACOES.slice(0, 1));
+    v1.exec(`INSERT INTO pcs (id, nome, criado_em) VALUES (1, 'Ana', 10), (2, 'Bia', 20);
+      INSERT INTO tokens (hash, pc_id, criado_em) VALUES ('h1', 1, 10), ('h2', 2, 20);
+      INSERT INTO convites (hash, nome_pc, criado_em, expira_em) VALUES ('c1', 'Caio', 30, 40)`);
+    v1.close();
+    const banco = abrirBanco(caminho);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 3 }]);
+    expect(banco.prepare("SELECT id, nome, criado_em FROM pcs ORDER BY id").all()).toEqual([
+      { id: 1, nome: "Ana", criado_em: 10 },
+      { id: 2, nome: "Bia", criado_em: 20 },
+    ]);
+    expect(banco.prepare("SELECT hash, pc_id FROM tokens ORDER BY hash").all()).toEqual([
+      { hash: "h1", pc_id: 1 },
+      { hash: "h2", pc_id: 2 },
+    ]);
+    expect(banco.prepare("SELECT hash, nome_pc FROM convites").all()).toEqual([
+      { hash: "c1", nome_pc: "Caio" },
+    ]);
+    expect(banco.prepare("SELECT id, dono_pc_id, epoca FROM trava").all()).toEqual([
+      { id: 1, dono_pc_id: null, epoca: 0 },
+    ]);
+    expect(() => banco.exec("INSERT OR REPLACE INTO trava (id) VALUES (1)")).toThrow();
+    banco.close();
   });
 
   it("migração que falha no meio é desfeita inteira: versão não sobe, nenhuma tabela pela metade", () => {

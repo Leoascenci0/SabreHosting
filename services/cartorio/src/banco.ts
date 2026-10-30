@@ -8,7 +8,7 @@ export interface Pc {
 }
 
 /** Migrações em ordem; a posição + 1 é a versão do esquema. Nunca editar uma que já saiu: acrescentar outra. */
-const MIGRACOES = [
+export const MIGRACOES = [
   `CREATE TABLE pcs (
      id INTEGER PRIMARY KEY,
      nome TEXT NOT NULL,
@@ -38,6 +38,11 @@ const MIGRACOES = [
    INSERT INTO trava (id) VALUES (1);
    CREATE TRIGGER trava_epoca_nunca_desce BEFORE UPDATE OF epoca ON trava
    WHEN NEW.epoca < OLD.epoca BEGIN SELECT RAISE(ABORT, 'A época da trava nunca desce.'); END;`,
+  // A linha única não se recria nem se apaga: INSERT OR REPLACE / REPLACE / DELETE zerariam a época (fencing).
+  `CREATE TRIGGER trava_nao_recria BEFORE INSERT ON trava
+   BEGIN SELECT RAISE(ABORT, 'A trava é uma linha só e não se recria.'); END;
+   CREATE TRIGGER trava_nao_apaga BEFORE DELETE ON trava
+   BEGIN SELECT RAISE(ABORT, 'A trava não se apaga.'); END;`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */

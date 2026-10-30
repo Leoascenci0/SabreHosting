@@ -42,7 +42,9 @@ const RECUSA_TRAVA: Record<MotivoRecusa, (dono: string) => string> = {
   nao_e_dono: () => "Este PC não está hospedando agora.",
   vencida: () =>
     "Este PC ficou tempo demais sem avisar o cartório e perdeu a vez. Pare o servidor.",
-  destino_desconhecido: () => "O PC para onde o servidor iria não faz parte do grupo.",
+  destino_desconhecido: () =>
+    "O PC para onde o servidor iria não faz parte do grupo ou perdeu o acesso.",
+  destino_invalido: () => "O servidor já está neste PC. Escolha outro PC para receber.",
 };
 const EPOCA = { type: "integer", minimum: 1 };
 
