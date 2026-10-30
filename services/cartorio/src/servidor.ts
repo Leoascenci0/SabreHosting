@@ -14,6 +14,7 @@ import {
   renovar,
   soltar,
 } from "./trava.js";
+import { type DadosVersao, informarCopia, maisNova, quemTem, registrarVersao } from "./versoes.js";
 
 export interface OpcoesCartorio {
   banco: Banco;
@@ -46,7 +47,10 @@ const RECUSA_TRAVA: Record<MotivoRecusa, (dono: string) => string> = {
     "O PC para onde o servidor iria não faz parte do grupo ou perdeu o acesso.",
   destino_invalido: () => "O servidor já está neste PC. Escolha outro PC para receber.",
 };
-const EPOCA = { type: "integer", minimum: 1 };
+const VERSAO_INEXISTENTE = { erro: "Essa versão do mundo não existe no cartório." };
+/** Inteiro exato em JS (≤ 2^53 − 1): número maior viraria decimal e ficaria gravado para sempre em `versoes`. */
+const EPOCA = { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER };
+const TOTAL = { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 
 /** Endereços que significam "todas as interfaces", em qualquer grafia (inclusive ::ffff:0.0.0.0). */
 const TODAS_AS_INTERFACES = new BlockList();
@@ -109,10 +113,12 @@ export function criarCartorio({
       (banco.prepare("SELECT id, nome FROM pcs WHERE id = ?").get(id) as Pc | undefined) ?? null
     );
   }
-  function responderTrava(resp: FastifyReply, r: ResultadoTrava) {
-    if (r.ok) return { ...r, renovarMs };
+  function recusar(resp: FastifyReply, r: Extract<ResultadoTrava, { ok: false }>) {
     const erro = RECUSA_TRAVA[r.motivo](pcPorId(r.donoPcId)?.nome ?? "outro PC");
     return resp.code(409).send({ erro, ...r });
+  }
+  function responderTrava(resp: FastifyReply, r: ResultadoTrava) {
+    return r.ok ? { ...r, renovarMs } : recusar(resp, r);
   }
   const corpoTrava = (...campos: string[]) => ({
     onRequest: soPc,
@@ -195,6 +201,52 @@ export function criarCartorio({
   );
   app.post<{ Body: { epoca: number } }>("/trava/soltar", corpoTrava("epoca"), (req, resp) =>
     responderTrava(resp, soltar(banco, pcDe(req).id, req.body.epoca)),
+  );
+
+  app.post<{ Body: DadosVersao & { epoca: number } }>(
+    "/versoes",
+    {
+      onRequest: soPc,
+      schema: {
+        body: {
+          type: "object",
+          required: ["epoca", "manifestoSha256", "arquivos", "bytes"],
+          properties: {
+            epoca: EPOCA,
+            manifestoSha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+            arquivos: TOTAL,
+            bytes: TOTAL,
+          },
+        },
+      },
+    },
+    (req, resp) => {
+      const { epoca, ...dados } = req.body;
+      const r = registrarVersao(banco, pcDe(req).id, epoca, agora(), dados);
+      return r.ok ? resp.code(201).send({ numero: r.numero }) : recusar(resp, r);
+    },
+  );
+  app.get("/versoes/mais-nova", { onRequest: soPc }, () => ({ versao: maisNova(banco) }));
+  app.post<{ Body: { versao: number } }>(
+    "/copias",
+    {
+      onRequest: soPc,
+      schema: {
+        body: { type: "object", required: ["versao"], properties: { versao: EPOCA } },
+      },
+    },
+    (req, resp) =>
+      informarCopia(banco, pcDe(req).id, req.body.versao, agora())
+        ? resp.code(204).send()
+        : resp.code(404).send(VERSAO_INEXISTENTE),
+  );
+  app.get<{ Params: { n: number } }>(
+    "/versoes/:n/copias",
+    {
+      onRequest: soPc,
+      schema: { params: { type: "object", required: ["n"], properties: { n: EPOCA } } },
+    },
+    (req) => ({ numero: req.params.n, pcs: quemTem(banco, req.params.n) }),
   );
 
   return app;
