@@ -1,0 +1,164 @@
+// Ponta a ponta da trava (cart-2.1): cartório de verdade em 127.0.0.1 (porta 0, banco num diretório temporário) +
+// cliente/renovador do núcleo + servidor de Minecraft falso. Nada de mundo real nem da máquina da nuvem.
+import { spawn } from "node:child_process";
+import type { ChildProcess, SpawnOptions } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { criarCliente } from "../../packages/nucleo/src/cartorio/cliente.js";
+import { cofreEmMemoria } from "../../packages/nucleo/src/cartorio/cofre.js";
+import { hospedar } from "../../packages/nucleo/src/cartorio/hospedar.js";
+import type {
+  EstadoServidor,
+  ServidorMinecraft,
+} from "../../packages/nucleo/src/servidor/processo.js";
+import { abrirBanco } from "../../services/cartorio/src/banco.js";
+import { gerarSegredo } from "../../services/cartorio/src/segredo.js";
+import { criarCartorio } from "../../services/cartorio/src/servidor.js";
+
+const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "../..");
+const FALSO = join(RAIZ, "packages/nucleo/test/ajuda/servidor-falso.mjs");
+const NEO = "21.1.172";
+// Tempos curtos de teste; a regra do cartório (prazo ≥ 3 × renovação) continua valendo.
+const TEMPOS = { prazoMs: 300, renovarMs: 100 };
+
+let pasta: string;
+let criados: ChildProcess[];
+let servidores: ServidorMinecraft[];
+let fechar: Array<() => Promise<unknown>>;
+
+beforeEach(async () => {
+  pasta = await mkdtemp(join(tmpdir(), "sabre-integ-"));
+  const jogo = join(pasta, "jogo");
+  const dir = join(jogo, "libraries/net/neoforged/neoforge", NEO);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "unix_args.txt"), "# args\n");
+  await writeFile(join(jogo, "eula.txt"), "eula=true\n");
+  criados = [];
+  servidores = [];
+  fechar = [];
+});
+
+afterEach(async () => {
+  for (const s of servidores) await s.pararServidor().catch(() => {});
+  for (const f of fechar.splice(0).reverse()) await f().catch(() => {});
+  for (const filho of criados) {
+    if (filho.exitCode === null && filho.signalCode === null) filho.kill("SIGKILL");
+  }
+  await rm(pasta, { recursive: true, force: true });
+});
+
+async function subirCartorio() {
+  const segredoAdmin = gerarSegredo();
+  const app = criarCartorio({
+    banco: abrirBanco(join(pasta, "cartorio.db")),
+    segredoAdmin,
+    logger: { level: "silent" },
+    trava: TEMPOS,
+  });
+  await app.listen({ host: "127.0.0.1", port: 0 });
+  fechar.push(() => app.close());
+  const url = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
+  /** Um PC do grupo: convite → token no cofre → cliente. */
+  async function pc(nomePc: string) {
+    const convite = await app.inject({
+      method: "POST",
+      url: "/convites",
+      headers: { authorization: `Bearer ${segredoAdmin}` },
+      payload: { nomePc },
+    });
+    const usado = await app.inject({
+      method: "POST",
+      url: "/convites/usar",
+      payload: { convite: convite.json<{ convite: string }>().convite },
+    });
+    const cofre = cofreEmMemoria();
+    await cofre.guardar(usado.json<{ token: string }>().token);
+    return criarCliente({ url, cofre, prazoMs: 200, esperaBaseMs: 10 });
+  }
+  return { app, pc };
+}
+
+function espiao(cmd: string, args: readonly string[], opcoes: SpawnOptions): ChildProcess {
+  const filho = spawn(cmd, args, opcoes);
+  criados.push(filho);
+  return filho;
+}
+
+async function hospedarFalso(cliente: ReturnType<typeof criarCliente>, perdas: string[] = []) {
+  const h = await hospedar({
+    cliente,
+    pasta: join(pasta, "jogo"),
+    javaPath: process.execPath,
+    versaoNeoForge: NEO,
+    prefixoArgs: [FALSO, "normal"],
+    spawnFn: espiao,
+    memoriaTotalBytes: 16 * 1024 ** 3,
+    plataforma: "linux",
+    prazoParadaMs: 5000,
+    aoPerder: (motivo) => void perdas.push(motivo),
+  });
+  servidores.push(h.servidor);
+  fechar.push(() => h.renovador.soltar());
+  return h;
+}
+
+function esperarEstado(s: ServidorMinecraft, alvo: EstadoServidor): Promise<void> {
+  if (s.estado === alvo) return Promise.resolve();
+  return new Promise((ok) => {
+    s.on("estado", (e: { estado: EstadoServidor }) => {
+      if (e.estado === alvo) ok();
+    });
+  });
+}
+
+const dormir = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
+
+describe("trava de host contra o cartório real", () => {
+  it("renovando, a trava passa do prazo e outro PC continua recusado; parou, solta", async () => {
+    const { pc } = await subirCartorio();
+    const a = await pc("PC A");
+    const b = await pc("PC B");
+    const { servidor, renovador } = await hospedarFalso(a);
+    await esperarEstado(servidor, "pronto");
+
+    await dormir(3 * TEMPOS.prazoMs); // sem renovação a trava já teria vencido 3 vezes
+    expect(await renovador.temTrava()).toBe(true);
+    const recusa = await b.pegar();
+    expect(recusa).toMatchObject({ ok: false, motivo: "ocupada" });
+
+    await servidor.pararServidor();
+    await dormir(50); // o `soltar` sai no evento de parada
+    expect(await renovador.temTrava()).toBe(false);
+    expect(await b.pegar()).toMatchObject({ ok: true });
+  });
+
+  it("renovação para → prazo local vence → save-all e parada do servidor", async () => {
+    const { app, pc } = await subirCartorio();
+    const perdas: string[] = [];
+    const { servidor, renovador } = await hospedarFalso(await pc("PC A"), perdas);
+    const logs: string[] = [];
+    servidor.on("log", (l: { texto: string }) => logs.push(l.texto));
+    await esperarEstado(servidor, "pronto");
+    expect(await renovador.temTrava()).toBe(true);
+
+    await app.close(); // o cartório some: a renovação para de ser aceita
+    await esperarEstado(servidor, "parado");
+
+    expect(await renovador.temTrava()).toBe(false);
+    expect(perdas).toHaveLength(1);
+    expect(perdas[0]).toMatch(/cartório não respondeu/);
+    const ordem = [
+      "RECEBIDO save-off",
+      "RECEBIDO save-all flush",
+      "Saved the game",
+      "RECEBIDO save-on",
+      "Stopping server",
+    ].map((trecho) => logs.findIndex((l) => l.endsWith(trecho)));
+    expect(ordem.every((i) => i >= 0)).toBe(true);
+    expect(ordem).toEqual([...ordem].sort((x, y) => x - y));
+  }, 10_000);
+});
