@@ -81,7 +81,11 @@ export async function criarPacote(
   destino: string,
   opcoes: { versao: number; epoca: number },
 ): Promise<PacoteCriado> {
-  const manifesto = await gerarManifesto(pastaDoMundo, opcoes);
+  const manifesto = await gerarManifesto(pastaDoMundo, opcoes).catch((erro: unknown) => {
+    throw new Error("Não consegui ler o mundo para montar o pacote; o mundo não foi alterado.", {
+      cause: erro,
+    });
+  });
   if (manifesto.arquivos.some((a) => a.caminho === NOME_MANIFESTO)) {
     throw new Error(
       `O mundo tem um arquivo chamado "${NOME_MANIFESTO}", nome reservado do pacote. Renomeie esse arquivo e tente de novo.`,
