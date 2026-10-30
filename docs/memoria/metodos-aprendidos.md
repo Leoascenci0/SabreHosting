@@ -27,6 +27,7 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 | bkp-1.3 | agendador | M1+M7 | ~100 | ~110 (+~200 teste) | não | #45 |
 | rede-2.1 | script+config | M3+M7 | ~150 | ~200 (+~300 teste) | não | #48 |
 | bkp-2.1 | rotação (apaga) | M7 | ~100 | ~150 (+~250 teste) | não | #50 |
+| rede-1.2 | tutorial | M3 | ~150 | ~260 | não | #51 |
 
 ## Lições
 _(nenhuma ainda)_

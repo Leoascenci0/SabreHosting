@@ -17,7 +17,7 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
   *Confirmação:* rodar duas vezes no contêiner sem erro; `ufw status` com as 2 portas.
   *Depende de:* — · D2 (WireGuard) e D3 (Oracle Always Free SP) decididas
 
-- [ ] **1.2 — Tutorial: criar a máquina na nuvem**
+- [x] **1.2 — Tutorial: criar a máquina na nuvem** (PR #51, 30/10/2026; a execução é do Eliel)
   *O que fazer:* passo a passo com prints descritos para o Eliel criar a VM (D3), apontar o script e guardar os segredos
   no cofre dele (não no chat).
   *Arquivo:* `docs/tutoriais/rede-criar-maquina.md`
