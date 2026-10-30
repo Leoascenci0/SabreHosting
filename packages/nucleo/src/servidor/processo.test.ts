@@ -143,6 +143,15 @@ describe("parada", () => {
     expect(logs.some((l) => l.startsWith("aviso:") && /encerr|prazo/i.test(l))).toBe(true);
   });
 
+  it("prazo dado na chamada vale no lugar do padrão (perda da trava)", async () => {
+    const s = await subir("travado", { prazoParadaMs: 5000 });
+    await esperarEstado(s, "pronto");
+    const inicio = Date.now();
+    await s.pararServidor(200);
+    expect(s.codigoSaida).toBeNull();
+    expect(Date.now() - inicio).toBeLessThan(2000);
+  });
+
   it("parada normal sai com `stop` sem matar nem avisar", async () => {
     const s = await subir();
     await esperarEstado(s, "pronto");
@@ -251,6 +260,69 @@ describe("trava (regra de ouro 1)", () => {
     await esperarEstado(s, "parado");
     expect(logs.some((l) => /trava/i.test(l))).toBe(true);
     expect(s.codigoSaida).toBe(0);
+  });
+
+  it("sem trava, servidor que ignora o `stop` morre no prazo curto, não no da parada normal", async () => {
+    let tem = true;
+    let tique: () => void = () => {};
+    const relogio = { repetir: (fn: () => void) => ((tique = fn), () => {}) };
+    const s = await subir("travado", {
+      temTrava: async () => tem,
+      relogio,
+      prazoParadaMs: 30_000,
+      prazoParadaSemTravaMs: 200,
+    });
+    await esperarEstado(s, "pronto");
+    tem = false;
+    const inicio = Date.now();
+    tique();
+    await esperarEstado(s, "parado");
+    expect(s.codigoSaida).toBeNull(); // morto: o `stop` foi ignorado
+    expect(Date.now() - inicio).toBeLessThan(3_000);
+  });
+
+  it("parada normal (60 s) em curso é encurtada por pararSemTrava", async () => {
+    const s = await subir("travado", { prazoParadaMs: 30_000, prazoParadaSemTravaMs: 200 });
+    await esperarEstado(s, "pronto");
+    const normal = s.pararServidor(); // `stop` ignorado: mataria só em 30 s
+    await new Promise((r) => setTimeout(r, 50));
+    const inicio = Date.now();
+    await s.pararSemTrava();
+    await normal;
+    expect(s.codigoSaida).toBeNull();
+    expect(Date.now() - inicio).toBeLessThan(3_000);
+  });
+
+  it("laço de 20 s sem trava durante parada normal encurta o prazo, sem aviso de perda", async () => {
+    let tem = true;
+    let tique: () => void = () => {};
+    const relogio = { repetir: (fn: () => void) => ((tique = fn), () => {}) };
+    const s = await subir("travado", {
+      temTrava: async () => tem,
+      relogio,
+      prazoParadaMs: 30_000,
+      prazoParadaSemTravaMs: 200,
+    });
+    await esperarEstado(s, "pronto");
+    const logs: string[] = [];
+    s.on("log", (l: { texto: string }) => logs.push(l.texto));
+    void s.pararServidor();
+    tem = false;
+    const inicio = Date.now();
+    tique();
+    await esperarEstado(s, "parado");
+    expect(Date.now() - inicio).toBeLessThan(3_000);
+    expect(logs.some((l) => /Perdi a trava/.test(l))).toBe(false);
+  });
+
+  it("prazo mais longo não estica uma parada já marcada", async () => {
+    const s = await subir("travado", { prazoParadaMs: 200 });
+    await esperarEstado(s, "pronto");
+    const inicio = Date.now();
+    const p = s.pararServidor();
+    void s.pararServidor(30_000);
+    await p;
+    expect(Date.now() - inicio).toBeLessThan(3_000);
   });
 
   it("com a trava em dia o servidor segue rodando", async () => {
