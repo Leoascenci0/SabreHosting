@@ -3,5 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "iniciar": "node dist/iniciar.js"
+  },
+  "dependencies": {
+    "fastify": "^5.12.7"
+  }
 }
