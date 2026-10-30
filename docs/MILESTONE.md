@@ -19,7 +19,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 ## Fila
 
 **M1 — Fundação**
-- **Onda 6 (em curso):** cart-1.3 (aberto, filha session_012qrjnu4PytBLmUvN6JrB8r) · bkp-1.2 · lanc-1.1
+- **Onda 7 (em curso):** cart-2.1 · basemel-1.3 · rede-1.1 ✅ · bkp-1.3
 - **Onda 6b:** bkp-2.1 · rede-1.1
 - **Onda 7:** bkp-1.3 · cart-2.1 · rede-2.1
 - **Onda 8:** bkp-2.2 · cart-1.4 · host-3.1 [P: teste no PC]
@@ -63,6 +63,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 - 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
 
+- 30/10/2026 — Onda 6: cart-1.3 versões do mundo (PR #32), lanc-1.1 achar o Prism (PR #36), bkp-1.2 pacote
+  fechado (PR #38).
 - 30/10/2026 — Onda 5: host-2.1 subir/parar (PR #24), bkpmel-1.1 caminhos Windows (PR #29), cartmel-1.5 época
   blindada (PR #27); host-2.2 comandos pelo console (PR #30).
 - 30/10/2026 — Onda 4: host-1.2 EULA e configuração (PR #20), bkp-1.1 manifesto (PR #21), cart-1.2 trava de host

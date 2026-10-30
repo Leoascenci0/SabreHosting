@@ -21,6 +21,8 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 | host-2.2 | comandos console | M7+M1 | ~170 | ~200 (+~250 teste) | não | #30 |
 | cart-1.3 | versões+fencing | M1+M7 | ~130 | ~260 (+~330 teste) | não | #32 |
 | lanc-1.1 | detecção | M7 | ~120 | ~190 (+~200 teste) | não | #36 |
+| bkp-1.2 | pacote+extração | M6 | ~90 | ~280 (+~300 teste) | não | #38 |
+| rede-1.1 | script shell | M7 | ~150 | ~260 (+~250 teste) | não | #42 |
 
 ## Lições
 _(nenhuma ainda)_

@@ -17,7 +17,7 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
   *Confirmação:* testes com mundos de teste: muda 2 regiões → diff aponta só as 2.
   *Depende de:* base-1.3
 
-- [ ] **1.2 — Pacote fechado e conferido**
+- [x] **1.2 — Pacote fechado e conferido** (PR #38, 30/10/2026; .tar.gz com a lib `tar`)
   *O que fazer:* gerar pacote (zip ou tar.zst, escolher pelo desempenho e registrar) com o manifesto dentro; abrir e
   conferir todos os hashes; compactação em worker com prioridade baixa.
   *Arquivo:* `packages/nucleo/src/backup/pacote.ts`
