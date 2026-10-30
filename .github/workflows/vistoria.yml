@@ -1,0 +1,26 @@
+name: Vistoria
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  vistoria:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # o verificador compara com origin/main
+      # Em push na main o ramo ativo seria "main", que o verificador reprova de propósito.
+      - run: git checkout --detach
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run vistoria
