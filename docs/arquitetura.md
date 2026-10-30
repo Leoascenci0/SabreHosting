@@ -38,7 +38,7 @@ os PCs e numa máquina pequena na nuvem.
 | Proxy | nuvem | Velocity + plugin próprio pequeno | porta única para os jogadores; move todos na troca de host |
 | Sala de espera | nuvem | NanoLimbo (ou similar leve) | segura os jogadores durante a troca |
 | Rede privada | todos | WireGuard com hub na nuvem (D2) | liga PCs e nuvem sem abrir porta em casa |
-| Servidor de jogo | PC do host | Paper (D5), Java via Adoptium | o Minecraft em si |
+| Servidor de jogo | PC do host | NeoForge + Sinytra Connector (D5: mods Forge e Fabric juntos), Java via Adoptium | o Minecraft em si |
 | Histórico longo (opcional) | PC do Eliel | Google Drive para Computador | backup diário/semanal numa pasta sincronizada |
 
 ## 3. Fluxos principais
@@ -89,6 +89,10 @@ docs/                arquitetura, roadmaps, milestone, memória, ops
 ```
 
 ## 6. Limites conhecidos (ditos ao Eliel)
+
+- Mods (D5): nem todo mod Fabric roda pelo Sinytra Connector, e a versão do Minecraft fica presa às que o Connector
+  suporta. A lista de mods é a mesma no servidor e em todos os jogadores (lanc-1.4); o proxy Velocity precisa de um
+  mod de compatibilidade de encaminhamento no servidor NeoForge (a confirmar no rede-2.1).
 
 - Não dá para dividir o processamento do mundo entre vários PCs (o servidor precisa ser a única fonte da verdade).
 - Troca de host tem uma pausa curta (tela de carregamento); zero pausa é impossível.

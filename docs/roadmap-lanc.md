@@ -33,7 +33,7 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
   *Arquivo:* `packages/nucleo/src/launcher/instancia.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* teste gera a instância numa pasta falsa; conferência manual no Prism real. **[P: teste no PC]**
-  *Depende de:* lanc-1.1, cart-1.3 · **ESPERA DECISÃO D1, D5**
+  *Depende de:* lanc-1.1, cart-1.3 · D1 e D5 decididas (loader NeoForge)
 
 - [ ] **1.3 — Botão Jogar abre o jogo já conectado**
   *O que fazer:* chamar o Prism pela linha de comando para abrir a instância do grupo e entrar direto no endereço do
@@ -45,11 +45,11 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
 
 - [ ] **1.4 — Mods do grupo iguais para todos**
   *O que fazer:* lista de mods do grupo (nome, versão, hash) guardada no cartório; o SabreHosting baixa do Modrinth com hash
-  conferido e coloca na instância. Só se o grupo usar mods (D5).
+  conferido e coloca na instância e no servidor (mods Fabric rodam pelo Sinytra Connector, D5).
   *Arquivo:* `packages/nucleo/src/launcher/mods.ts`
   **Tela no app:** Configurações › Grupo › "Mods do grupo" (só o dono do grupo edita).
   *Confirmação:* teste: hash errado recusado; mod removido da lista sai da instância.
-  *Depende de:* lanc-1.2 · **ESPERA DECISÃO D5**
+  *Depende de:* lanc-1.2 · D5 decidida (o grupo usa mods)
 
 ## Bloco 2 — Launcher próprio do SabreHosting (marco M6, depende da Microsoft)
 

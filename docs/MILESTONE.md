@@ -21,9 +21,9 @@ _(nenhuma onda; projeto acabou de ser criado)_
 ## Fila
 
 **M1 — Fundação**
-- **Onda 1:** base-1.1 (SOZINHO) — espera D8
+- **Onda 1:** base-1.1 (SOZINHO)
 - **Onda 2:** base-1.2 · base-1.3 · base-2.1
-- **Onda 3:** host-1.1 (espera D1, D5) · host-2.3 · cart-1.1
+- **Onda 3:** host-1.1 · host-2.3 · cart-1.1
 - **Onda 4:** host-1.2 · bkp-1.1 · cart-1.2
 - **Onda 5:** host-2.1 · bkp-1.2 · cart-1.3
 - **Onda 6:** host-2.2 · bkp-2.1 (espera D6) · rede-1.1 (espera D2, D3)
@@ -50,31 +50,27 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
 
-- **D1 — Edição do Minecraft:** Java (recomendado: o SabreHosting é feito para ele) · Java + Bedrock depois (via
-  Geyser, para quem joga no celular/console) · Só Bedrock. *Trava:* host-1.1.
 - **D2 — Rede privada:** WireGuard próprio na máquina da nuvem (recomendado: grátis, sem limite de pessoas, nada de
   terceiros) · Tailscale (mais fácil, mas o plano grátis limita usuários) · playit.gg (túnel pronto, menos controle).
   *Trava:* rede-1.1.
 - **D3 — Máquina na nuvem:** Oracle Cloud Always Free em São Paulo (recomendado: grátis; às vezes demora para liberar
   vaga) · VPS paga barata no Brasil (~R$ 20–40/mês, garantida). Envolve cadastro: só o Eliel faz. *Trava:* rede-1.1.
 - **D4 — Ícone do app:** o nome já foi decidido (SabreHosting); falta o ícone. *Trava:* app-1.1.
-- **D5 — Tipo de servidor:** Paper (recomendado: rápido e aceita plugins) · Fabric + mods de otimização (Lithium, C2ME)
-  · Vanilla puro. Depende do que o grupo usa hoje na hospedagem. *Trava:* host-1.1.
 - **D6 — Regras do grupo:** quantos backups guardar (padrão 10 + 7 diários), folga para trocar de host (padrão 30%),
   quem pode hospedar (padrão: todos que ligarem a opção). *Trava:* bkp-2.1, migra-1.1.
-- **D8 — Tecnologia do app:** Electron + TypeScript (recomendado: o mais testável na nuvem e o mais conhecido por
-  contribuidores) · Tauri (instalador menor, mas parte em Rust). *Trava:* base-1.1.
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
   assinatura (pago, ~US$ 100+/ano). *Trava:* app-3.2.
 
 ## Backlog
 
-- Suporte a mods (Fabric/Forge) com sincronização da pasta de mods entre os PCs.
 - Bedrock via Geyser (se D1 = Java + Bedrock depois).
 - App para Linux e macOS (o núcleo já é multiplataforma).
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 30/10/2026 — Decididas D8 (Electron + TypeScript), D1 (Java) e D5 (mods Fabric e Forge juntos: NeoForge + Sinytra
+  Connector). Ver `docs/ops/DECISOES.md`.
 
 - 30/10/2026 — Projeto criado: CLAUDE.md e skills adaptados do SEURBH, Máxima, qualidade-sabre, arquitetura,
   10 roadmaps, licença MIT.
