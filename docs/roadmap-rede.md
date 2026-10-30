@@ -35,7 +35,7 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
 
 ## Bloco 2 — Proxy
 
-- [ ] **2.1 — Velocity com whitelist e modern forwarding**
+- [x] **2.1 — Velocity com whitelist e modern forwarding** (PR #48, 30/10/2026; whitelist pendente em redemel-2.1, unidade desligada)
   *O que fazer:* configuração do Velocity (porta pública), segredo de forwarding gerado na instalação, servidor de
   destino dinâmico.
   *Arquivo:* `infra/vps/velocity/`

@@ -49,6 +49,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Backlog
 
+- Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-2.1 obrigatório antes de ligar o proxy, 2.2).
 - Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; bkpmel-1.2).
 - Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1 a 1.4 e 1.6; 1.5 feito).
 - Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
