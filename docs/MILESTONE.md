@@ -20,9 +20,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 ## Fila
 
 **M1 — Fundação**
-- **Onda 4:** host-1.2 · bkp-1.1 · cart-1.2
-- **Onda 5:** host-2.1 · bkp-1.2 · cart-1.3
-- **Onda 6:** host-2.2 · bkp-2.1 (espera D6) · rede-1.1 (espera D2, D3)
+- **Onda 5:** host-2.1 · bkpmel-1.1 · cartmel-1.5 (melhorias puxadas antes de bkp-1.2 e cart-1.3, mesmos arquivos)
+- **Onda 6:** bkp-1.2 · cart-1.3 · host-2.2
+- **Onda 6b:** bkp-2.1 (espera D6) · rede-1.1 (espera D2, D3)
 - **Onda 7:** bkp-1.3 · cart-2.1 · rede-2.1
 - **Onda 8:** bkp-2.2 · cart-1.4 · host-3.1 [P: teste no PC]
 
@@ -71,6 +71,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 ## Feito
 
 - 30/10/2026 — Onda 1: base-1.1 monorepo TypeScript (PR #3).
+- 30/10/2026 — Onda 4: host-1.2 EULA e configuração (PR #20), bkp-1.1 manifesto (PR #21), cart-1.2 trava de host
+  (PR #22).
 - 30/10/2026 — Onda 3: host-1.1 download com hash (PR #12), cart-1.1 cartório com token (PR #15), host-2.3 nota do PC
   (PR #16).
 - 30/10/2026 — Onda 2: base-1.2 CI (PR #7), base-1.3 mundos de teste (PR #9), base-2.1 modelos de issue (PR #8).
