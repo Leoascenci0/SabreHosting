@@ -15,3 +15,6 @@
 | 2026-10-30 | **D8:** app desktop em **Electron + TypeScript** (não Tauri) | base-1.1, app-* |
 | 2026-10-30 | **D1:** edição **Java** do Minecraft (Bedrock fica fora; Geyser segue no Backlog) | host-1.1, lanc-1.2 |
 | 2026-10-30 | **D5:** servidor **com mods de todos os tipos, Fabric e Forge ao mesmo tempo** (resposta do Eliel: "os dois ao mesmo tempo"). Caminho técnico proposto pela Máxima: servidor **NeoForge + Sinytra Connector** (roda mods Fabric dentro do NeoForge). Limites ditos: nem todo mod Fabric funciona no Connector e a versão do Minecraft fica presa às que o Connector suporta. Substitui o "Paper" da arquitetura. A versão do Minecraft continua decisão do Eliel | host-1.1, lanc-1.2, lanc-1.4 |
+| 2026-10-30 | **Node 22 LTS** (`.nvmrc` = 22, `engines.node >=22`); versões exatas ficam no `package-lock.json` | base-1.1 (decidido pela Máxima) |
+| 2026-10-30 | Dependências de desenvolvimento do monorepo (todas MIT/Apache-2.0, só em dev, não vão no instalador): `typescript` (tipos estritos, Apache-2.0), `eslint` + `typescript-eslint` (regras de código, MIT), `prettier` (estilo, MIT), `vitest` (testes, MIT), `@types/node` (tipos do Node, MIT) | base-1.1 |
+| 2026-10-30 | **Electron entra no app-1.1**, não antes: `apps/desktop` fica só com package.json, tsconfig e teste de exemplo | base-1.1 (decidido pela Máxima) |

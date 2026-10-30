@@ -1,0 +1,29 @@
+{
+  "name": "sabrehosting",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/desktop",
+    "packages/nucleo",
+    "services/cartorio"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint . && tsc --build && prettier --check \"{apps,packages,services}/**/*.{ts,json}\" \"*.{ts,js,json}\"",
+    "formatar": "prettier --write \"{apps,packages,services}/**/*.{ts,json}\" \"*.{ts,js,json}\"",
+    "vistoria": "npm run lint && npm test && python3 scripts/verificar.py --base origin/main",
+    "estado": "python3 scripts/estado_roadmaps.py"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
+  }
+}
