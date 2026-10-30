@@ -1,11 +1,11 @@
 # Rótulos do GitHub
 
-Lista de rótulos sugeridos para as issues e os PRs do SabreHosting. Quem cria é o Eliel, à mão, em
+Lista de rótulos sugeridos para as issues e os pedidos de mudança (PR, pull request) do SabreHosting. Quem cria é o Eliel, à mão, em
 **Issues › Labels › New label**. Nenhum script cria rótulo.
 
 ## Rótulos da comunidade
 
-| Nome | Cor (hex) | O que quer dizer |
+| Nome | Cor (código) | O que quer dizer |
 |---|---|---|
 | `bom-primeiro-item` | `7057ff` | Tarefa pequena, bem explicada, boa para quem está começando no projeto. |
 | `seguranca` | `d93f0b` | Relacionado a rede, cartório, download ou segredo. Falha de segurança **não** vira issue pública: vai pela aba Security. |
@@ -17,7 +17,7 @@ Lista de rótulos sugeridos para as issues e os PRs do SabreHosting. Quem cria �
 
 Os modelos em `.github/ISSUE_TEMPLATE/` já citam estes três. Crie-os também.
 
-| Nome | Cor (hex) | O que quer dizer |
+| Nome | Cor (código) | O que quer dizer |
 |---|---|---|
 | `bug` | `d73a4a` | Algo não funciona como deveria (modelo `bug.yml`). |
 | `ideia` | `a2eeef` | Sugestão de função ou melhoria (modelo `ideia.yml`). |
@@ -29,7 +29,7 @@ Os modelos em `.github/ISSUE_TEMPLATE/` já citam estes três. Crie-os também.
 2. Clique em **Labels** (ao lado de Milestones).
 3. Clique em **New label**.
 4. Digite o **nome** exato da tabela (com hífen e minúsculas, ex.: `bom-primeiro-item`).
-5. Em **Color**, escolha a cor com o seletor ou cole o código hex da tabela (ex.: `7057ff`).
+5. Em **Color**, escolha a cor com o seletor ou cole o código de cor, 6 letras e números (ex.: `7057ff`).
 6. Preencha **Description** com a frase da coluna "O que quer dizer" (opcional, ajuda quem contribui).
 7. Clique em **Create label** e repita para os 8 rótulos.
 
