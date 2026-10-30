@@ -1,0 +1,21 @@
+# Exemplo: o item cart-2.2 define o comando final. Instalada DESLIGADA (sem enable).
+[Unit]
+Description=SabreHosting - cartorio (versao do mundo e trava de host)
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
+
+[Service]
+User=sabre
+Group=sabre
+WorkingDirectory=/opt/sabre/cartorio
+ExecStart=/usr/bin/node /opt/sabre/cartorio/dist/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/sabre
+
+[Install]
+WantedBy=multi-user.target
