@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { salvarSeguro } from "../../packages/nucleo/src/servidor/comandos.js";
 import { criarCliente } from "../../packages/nucleo/src/cartorio/cliente.js";
 import { cofreEmMemoria } from "../../packages/nucleo/src/cartorio/cofre.js";
 import { hospedar } from "../../packages/nucleo/src/cartorio/hospedar.js";
@@ -181,5 +182,33 @@ describe("trava de host contra o cartório real", () => {
     await esperarEstado(servidor, "parado");
     expect(servidor.codigoSaida).toBeNull(); // morto: o `stop` foi ignorado
     expect(Date.now() - inicio).toBeLessThan(3_000);
+  }, 10_000);
+
+  it("backup pendurado na fila não atrasa a parada: perda → parado em ≤ prazoSalvar + prazoParadaSemTrava", async () => {
+    const { app, pc } = await subirCartorio();
+    let perdeuEm = 0;
+    const { servidor } = await hospedar({
+      cliente: await pc("PC A"),
+      pasta: join(pasta, "jogo"),
+      javaPath: process.execPath,
+      versaoNeoForge: NEO,
+      prefixoArgs: [FALSO, "mudo"], // nunca confirma o `save-all flush`
+      spawnFn: espiao,
+      memoriaTotalBytes: 16 * 1024 ** 3,
+      plataforma: "linux",
+      prazoParadaMs: 30_000,
+      prazoSalvarMs: 300,
+      prazoParadaSemTravaMs: 300,
+      aoPerder: () => void (perdeuEm = Date.now()),
+    });
+    servidores.push(servidor);
+    await esperarEstado(servidor, "pronto");
+    // Backup em curso segurando a fila de comandos por até 60 s.
+    const backup = salvarSeguro(servidor, async () => {}, 60_000).catch(() => {});
+    await app.close();
+    await esperarEstado(servidor, "parado");
+    expect(perdeuEm).toBeGreaterThan(0);
+    expect(Date.now() - perdeuEm).toBeLessThan(300 + 300 + 700); // prazos + folga do teste
+    await backup;
   }, 10_000);
 });

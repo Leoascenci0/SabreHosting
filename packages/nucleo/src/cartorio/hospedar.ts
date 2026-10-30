@@ -29,11 +29,21 @@ export async function hospedar(
   const { cliente, aoPerder, prazoSalvarMs = 10_000, renovador: tempos, ...iniciar } = opcoes;
   let servidor: ServidorMinecraft | undefined;
   let perdeu = false;
+  /**
+   * Aviso e gravação são melhor esforço e passam pela fila de comandos (pode haver backup na frente); a parada
+   * NÃO: sai no máximo `prazoSalvarMs` depois da perda, salvou ou não.
+   */
   const encerrar = async (s: ServidorMinecraft) => {
-    await say(s, "Este PC perdeu a vez de hospedar; salvando o mundo e parando o servidor.").catch(
-      () => {},
-    );
-    await salvarSeguro(s, async () => {}, prazoSalvarMs).catch(() => {});
+    const salvar = (async () => {
+      await say(
+        s,
+        "Este PC perdeu a vez de hospedar; salvando o mundo e parando o servidor.",
+      ).catch(() => {});
+      await salvarSeguro(s, async () => {}, prazoSalvarMs).catch(() => {});
+    })();
+    let prazo: NodeJS.Timeout | undefined;
+    await Promise.race([salvar, new Promise((ok) => (prazo = setTimeout(ok, prazoSalvarMs)))]);
+    clearTimeout(prazo);
     await s.pararSemTrava();
   };
   const renovador = new Renovador({

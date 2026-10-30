@@ -98,6 +98,8 @@ export class ServidorMinecraft extends EventEmitter {
   codigoSaida?: number | null;
   aviso?: string;
   private paradaEmCurso?: Promise<void>;
+  /** Quando (relógio monotônico) o processo será morto se não sair; um prazo menor sempre encurta. */
+  private morte?: { quando: number; timer: NodeJS.Timeout };
   private readonly saiu: Promise<void>;
   private cancelarRelogio: () => void = () => {};
   private verificando = false;
@@ -161,7 +163,8 @@ export class ServidorMinecraft extends EventEmitter {
   private async conferirTrava(
     confirmarTrava: () => Promise<"sim" | "nao" | "semResposta">,
   ): Promise<void> {
-    if (this.verificando || (this.estado !== "subindo" && this.estado !== "pronto")) return;
+    const ativo = () => this.estado === "subindo" || this.estado === "pronto";
+    if (this.verificando || (!ativo() && this.estado !== "parando")) return;
     this.verificando = true;
     let resposta: "sim" | "nao" | "semResposta";
     try {
@@ -170,8 +173,9 @@ export class ServidorMinecraft extends EventEmitter {
       this.verificando = false;
     }
     if (resposta === "sim") return;
-    // Já parando, parado ou caído: não há o que parar nem o que avisar.
-    if (this.estado !== "subindo" && this.estado !== "pronto") return;
+    // Parada normal em curso: só encurta o prazo, sem aviso. Parado ou caído: nada a fazer.
+    if (this.estado === "parando") return void (await this.pararSemTrava());
+    if (!ativo()) return;
     this.registrar(
       "aviso",
       resposta === "semResposta"
@@ -201,26 +205,37 @@ export class ServidorMinecraft extends EventEmitter {
     this.filho.stdin?.write(`${linha}\n`);
   }
 
-  /** Escreve `stop`; se não sair até o prazo (padrão: `prazoParadaMs`), mata e avisa no log. */
+  /**
+   * Escreve `stop`; se não sair até o prazo (padrão: `prazoParadaMs`), mata e avisa no log. Chamada com parada já
+   * em curso só pode ENCURTAR o prazo (perda da trava no meio de uma parada normal).
+   */
   pararServidor(prazoMs = this.prazoParadaMs): Promise<void> {
     if (this.estado === "parado" || this.estado === "caiu") return Promise.resolve();
+    this.armarMorte(prazoMs);
     this.paradaEmCurso ??= (async () => {
       this.mudar("parando");
       this.filho.stdin?.write("stop\n");
-      const prazo = setTimeout(() => {
-        this.registrar(
-          "aviso",
-          `O servidor não encerrou em ${prazoMs} ms; forçando o encerramento (o mundo pode perder os últimos instantes).`,
-        );
-        this.filho.kill("SIGKILL");
-      }, prazoMs);
       try {
         await this.saiu;
       } finally {
-        clearTimeout(prazo);
+        clearTimeout(this.morte?.timer);
       }
     })();
     return this.paradaEmCurso;
+  }
+
+  private armarMorte(prazoMs: number): void {
+    const quando = performance.now() + prazoMs;
+    if (this.morte && this.morte.quando <= quando) return;
+    clearTimeout(this.morte?.timer);
+    const timer = setTimeout(() => {
+      this.registrar(
+        "aviso",
+        `O servidor não encerrou em ${prazoMs} ms; forçando o encerramento (o mundo pode perder os últimos instantes).`,
+      );
+      this.filho.kill("SIGKILL");
+    }, prazoMs);
+    this.morte = { quando, timer };
   }
 }
 
