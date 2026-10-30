@@ -4,6 +4,7 @@
 # SABRE_SIMULAR=1 só registra os comandos (nada muda); SABRE_ESTADO guarda o "estado" da simulação.
 # Detalhes e limites: infra/vps/LEIAME.md
 set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USUARIO=sabre
@@ -47,10 +48,11 @@ gravar() {
 }
 
 # ja_feito <chave> <teste real...>: na simulação olha o estado; de verdade roda o teste.
+# SABRE_CHECAR_REAL=1 (só testes) faz a simulação rodar os testes reais, que só leem.
 ja_feito() {
   local chave=$1
   shift
-  if simulando; then [ -e "$ESTADO/$chave" ]; else "$@" >/dev/null 2>&1; fi
+  if simulando && [ -z "${SABRE_CHECAR_REAL:-}" ]; then [ -e "$ESTADO/$chave" ]; else "$@" >/dev/null 2>&1; fi
 }
 marcar() { if simulando; then : >"$ESTADO/$1"; fi; }
 
@@ -86,21 +88,35 @@ fi
 
 PACOTES=(openjdk-21-jre-headless wireguard-tools ufw unattended-upgrades curl gnupg ca-certificates)
 
+# Todos os pacotes precisam estar instalados (um faltando já refaz a instalação).
 pacotes_prontos() {
   local p
-  for p in "${PACOTES[@]}" nodejs; do dpkg -s "$p"; done
+  for p in "${PACOTES[@]}"; do
+    dpkg -s "$p" >/dev/null 2>&1 || return 1
+  done
 }
+# Node velho (ex.: o 18 do Ubuntu) não serve: só vale a linha 22.
+node22_pronto() {
+  [[ "$(node -v 2>/dev/null)" == v22.* ]]
+}
+
 if ! ja_feito pacotes pacotes_prontos; then
   executar apt-get update
-  # Node 22 pelo repositório oficial, só depois de conferir a impressão digital da chave.
   executar apt-get install -y --no-install-recommends "${PACOTES[@]}"
+  marcar pacotes
+fi
+
+if ! ja_feito node22 node22_pronto; then
+  # Node 22 pelo repositório oficial, só depois de conferir a impressão digital da chave.
   if simulando; then
-    echo "SIMULADO: nodesource: baixar chave, conferir impressão digital $NODESOURCE_DIGITAL e gravar em /etc/apt/keyrings/nodesource.gpg"
+    echo "SIMULADO: nodesource: baixar chave, conferir 1 chave com impressão digital $NODESOURCE_DIGITAL e gravar em /etc/apt/keyrings/nodesource.gpg"
   else
     install -d -m 755 /etc/apt/keyrings
     chave_tmp=$(mktemp)
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o "$chave_tmp"
-    digital=$(gpg --show-keys --with-colons "$chave_tmp" | awk -F: '/^fpr:/{print $10; exit}')
+    lista=$(gpg --show-keys --with-colons "$chave_tmp")
+    [ "$(grep -c '^pub:' <<<"$lista")" -eq 1 ] || falhar "o arquivo de chave do Node não tem exatamente 1 chave. Nada foi instalado dele."
+    digital=$(awk -F: '/^fpr:/{print $10; exit}' <<<"$lista")
     [ "$digital" = "$NODESOURCE_DIGITAL" ] || falhar "a chave do repositório do Node não confere (veio $digital). Nada foi instalado dela."
     gpg --dearmor <"$chave_tmp" >/etc/apt/keyrings/nodesource.gpg
     rm -f "$chave_tmp"
@@ -110,7 +126,7 @@ deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node
 FIM
   executar apt-get update
   executar apt-get install -y --no-install-recommends nodejs
-  marcar pacotes
+  marcar node22
 fi
 
 # Atualizações de segurança automáticas.
@@ -148,7 +164,9 @@ PostUp = wg set %i private-key $CHAVE_HUB
 FIM
   marcar wg0-conf
 fi
-if ! ja_feito wg0-ativo systemctl is-enabled wg-quick@wg0; then
+# Habilitado mas parado também precisa subir.
+wg0_ativo() { systemctl is-enabled -q wg-quick@wg0 && systemctl is-active -q wg-quick@wg0; }
+if ! ja_feito wg0-ativo wg0_ativo; then
   executar systemctl enable --now wg-quick@wg0
   marcar wg0-ativo
 fi

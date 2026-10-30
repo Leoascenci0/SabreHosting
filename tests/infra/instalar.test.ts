@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -41,6 +41,9 @@ describe("infra/vps/instalar.sh em simulação", () => {
       /GRAVAR .*wg0\.conf/,
       /nodesource/,
       /apt-get install/,
+      /GRAVAR .*00-sabre\.conf/,
+      /systemctl reload ssh/,
+      /enable --now wg-quick/,
     ]) {
       expect(
         um.some((c) => padrao.test(c)),
@@ -133,5 +136,63 @@ describe("infra/vps/instalar.sh em simulação", () => {
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(/sudo/);
     expect(r.stdout).not.toMatch(/^\+ /m);
+  });
+
+  it("SSH: testa a configuração (com desfazer) antes de recarregar", () => {
+    const c = rodar().comandos;
+    const gravar = c.findIndex((x) => /^GRAVAR .*00-sabre\.conf/.test(x));
+    const teste = c.findIndex(
+      (x) => x.includes("sshd -t") && x.includes("rm -f /etc/ssh/sshd_config.d/00-sabre.conf"),
+    );
+    const recarregar = c.indexOf("systemctl reload ssh");
+    expect(gravar).toBeGreaterThanOrEqual(0);
+    expect(teste).toBeGreaterThan(gravar);
+    expect(recarregar).toBeGreaterThan(teste);
+  });
+
+  it("apt roda sem perguntas", () => {
+    expect(readFileSync(SCRIPT, "utf8")).toContain("export DEBIAN_FRONTEND=noninteractive");
+  });
+});
+
+// Testes com dpkg/node/systemctl falsos no PATH: a simulação roda só os testes reais (que apenas leem).
+describe("checagens reais com ferramentas falsas", () => {
+  function comFalsos(scripts: Record<string, string>) {
+    const bin = join(estado, "bin");
+    mkdirSync(bin);
+    for (const [nome, corpo] of Object.entries(scripts)) {
+      writeFileSync(join(bin, nome), `#!/bin/sh\n${corpo}\n`);
+      chmodSync(join(bin, nome), 0o755);
+    }
+    return rodar({
+      SABRE_CHECAR_REAL: "1",
+      PATH: `${bin}:${process.env.PATH}`,
+    });
+  }
+  const todosOk = { dpkg: "exit 0", node: "echo v22.11.0", systemctl: "exit 0" };
+
+  it("tudo pronto: não instala pacote nem Node nem sobe o wg0", () => {
+    const c = comFalsos(todosOk).comandos;
+    expect(c.some((x) => /apt-get|nodesource/.test(x))).toBe(false);
+    expect(c.some((x) => /enable --now wg-quick/.test(x))).toBe(false);
+  });
+
+  it("um pacote faltando no meio da lista refaz a instalação", () => {
+    const c = comFalsos({ ...todosOk, dpkg: '[ "$2" = ufw ] && exit 1; exit 0' }).comandos;
+    expect(c.some((x) => x.startsWith("apt-get install") && x.includes("ufw"))).toBe(true);
+  });
+
+  it("Node 18 já instalado ainda instala o 22 pelo NodeSource", () => {
+    const c = comFalsos({ ...todosOk, node: "echo v18.19.1" }).comandos;
+    expect(c.some((x) => x === "apt-get install -y --no-install-recommends nodejs")).toBe(true);
+    expect(c.some((x) => /GRAVAR .*nodesource\.list/.test(x))).toBe(true);
+  });
+
+  it("wg0 habilitado mas parado sobe de novo", () => {
+    const c = comFalsos({
+      ...todosOk,
+      systemctl: '[ "$1" = is-active ] && exit 3; exit 0',
+    }).comandos;
+    expect(c).toContain("systemctl enable --now wg-quick@wg0");
   });
 });
