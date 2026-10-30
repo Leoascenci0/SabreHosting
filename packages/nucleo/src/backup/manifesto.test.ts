@@ -7,6 +7,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { setFlagsFromString } from "node:v8";
 import { runInNewContext } from "node:vm";
@@ -81,6 +82,31 @@ describe("gerarManifesto", () => {
     },
     60_000,
   );
+});
+
+describe("gerarManifesto: Windows e arquivos não comuns", () => {
+  it("recusa mundo com nome que o Windows não aceita, antes de ler os arquivos", async () => {
+    const pasta = mundo();
+    writeFileSync(join(pasta, "CON.txt"), "x");
+    await expect(gerarManifesto(pasta, opcoes)).rejects.toThrow(/Windows/);
+  });
+
+  it("recusa duas regiões que só diferem na maiúscula", async () => {
+    const pasta = mundo();
+    mkdirSync(join(pasta, "region"), { recursive: true });
+    writeFileSync(join(pasta, "region", "R.mca"), "1");
+    writeFileSync(join(pasta, "region", "r.mca"), "2");
+    await expect(gerarManifesto(pasta, opcoes)).rejects.toThrow(/maiúscula/);
+  });
+
+  it.skipIf(process.platform === "win32")("avisa de FIFO em vez de pular em silêncio", async () => {
+    const pasta = mundo();
+    execFileSync("mkfifo", [join(pasta, "canal")]);
+    const avisos: string[] = [];
+    const m = await gerarManifesto(pasta, { ...opcoes, aviso: (t) => avisos.push(t) });
+    expect(avisos.some((t) => t.includes("canal"))).toBe(true);
+    expect(m.arquivos.some((a) => a.caminho === "canal")).toBe(false);
+  });
 });
 
 it("mundo de 20 MB: memória viva não cresce com o tamanho do mundo", async () => {
@@ -163,5 +189,93 @@ describe("validarManifesto", () => {
     ).toThrow();
     expect(() => validarManifesto({ ...base, arquivos: [arq("a"), arq("a")] })).toThrow();
     expect(() => validarManifesto(null)).toThrow();
+  });
+
+  it.each([
+    "CON.txt",
+    "nul",
+    "a/COM1",
+    "lpt9.dat",
+    "Aux.tar.gz",
+    "COM¹",
+    "com².txt",
+    "LPT³",
+    "lpt¹.dat",
+    "CONIN$",
+    "conout$.log",
+    "a/CONOUT$",
+    "prn ",
+    "a/con .txt",
+  ])("recusa o nome reservado do Windows %j", (caminho) => {
+    expect(() => validarManifesto({ ...base, arquivos: [arq(caminho)] })).toThrow(/caminho/i);
+  });
+
+  it.each([
+    "a.",
+    "a ",
+    "d/a./b",
+    "a:b",
+    "a?b",
+    "a*b",
+    'a"b',
+    "a<b",
+    "a>b",
+    "a|b",
+    "a\u0001b",
+    "a\u001fb",
+  ])("recusa o nome %j que o Windows não aceita", (caminho) => {
+    expect(() => validarManifesto({ ...base, arquivos: [arq(caminho)] })).toThrow(/caminho/i);
+  });
+
+  it("aceita nomes parecidos com reservados que o Windows aceita", () => {
+    const nomes = [
+      "console.txt",
+      "com10",
+      "com¹0",
+      "conin",
+      "con$x",
+      "lpt0",
+      "region/r.0.0.mca",
+      "a.b",
+      ".hidden",
+    ];
+    expect(validarManifesto({ ...base, arquivos: nomes.map(arq) }).arquivos).toHaveLength(9);
+  });
+
+  it("recusa caminhos que colidem sem diferenciar maiúscula", () => {
+    expect(() =>
+      validarManifesto({ ...base, arquivos: [arq("region/R.mca"), arq("region/r.mca")] }),
+    ).toThrow(/maiúscula/);
+  });
+
+  it("recusa profundidade 33 e aceita 32", () => {
+    const fundo = (n: number) => Array.from({ length: n }, () => "d").join("/");
+    expect(() => validarManifesto({ ...base, arquivos: [arq(fundo(33))] })).toThrow(/profundidade/);
+    expect(validarManifesto({ ...base, arquivos: [arq(fundo(32))] }).arquivos).toHaveLength(1);
+  });
+
+  it("recusa caminho de 241 caracteres e aceita 240", () => {
+    expect(() => validarManifesto({ ...base, arquivos: [arq("a".repeat(241))] })).toThrow(/longo/);
+    expect(validarManifesto({ ...base, arquivos: [arq("a".repeat(240))] }).arquivos).toHaveLength(
+      1,
+    );
+  });
+
+  it("recusa 200 001 arquivos (lista sintética) e aceita 200 000", () => {
+    const lista = (n: number) => Array.from({ length: n }, (_, i) => arq(`f${i}`));
+    expect(() => validarManifesto({ ...base, arquivos: lista(200_001) })).toThrow(/arquivos/);
+    expect(validarManifesto({ ...base, arquivos: lista(200_000) }).arquivos).toHaveLength(200_000);
+  });
+
+  it("devolve objeto reconstruído, sem campos extras", () => {
+    const sujo = {
+      ...base,
+      extra: 1,
+      arquivos: [{ ...arq("a"), modo: 0o777, __proto__: { x: 1 } }],
+    };
+    const m = validarManifesto(sujo);
+    expect(m).toEqual({ ...base, arquivos: [arq("a")] });
+    expect(m).not.toBe(sujo);
+    expect(Object.keys(m.arquivos[0] as object).sort()).toEqual(["caminho", "sha256", "tamanho"]);
   });
 });

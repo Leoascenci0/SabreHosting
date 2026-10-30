@@ -40,6 +40,19 @@ export interface Diferenca {
 const IGNORADOS = new Set(["session.lock"]);
 const SHA256 = /^[0-9a-f]{64}$/;
 
+/** Limites do manifesto (decididos pela Máxima, reversíveis): o Windows tem teto de caminho e o sync lê tudo na RAM. */
+const MAX_ARQUIVOS = 200_000;
+const MAX_PROFUNDIDADE = 32;
+const MAX_CAMINHO = 240;
+
+const RESERVADO_WINDOWS = /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³]|conin\$|conout\$)$/i;
+const PROIBIDO_WINDOWS = /[<>:"|?*\u0000-\u001f]/;
+
+/** Mesmo tom para o amigo, na hora de gerar e na de conferir: qual arquivo e o que fazer. */
+function recusaArquivo(motivo: string): Error {
+  return new Error(`${motivo} Renomeie ou apague esse arquivo no mundo e tente de novo.`);
+}
+
 async function* percorrer(
   raiz: string,
   relativo: string,
@@ -52,8 +65,10 @@ async function* percorrer(
       aviso(`Link simbólico ignorado no mundo: ${caminho}`);
     } else if (entrada.isDirectory()) {
       yield* percorrer(raiz, caminho, aviso);
-    } else if (entrada.isFile() && !IGNORADOS.has(entrada.name)) {
-      yield caminho;
+    } else if (entrada.isFile()) {
+      if (!IGNORADOS.has(entrada.name)) yield caminho;
+    } else {
+      aviso(`Arquivo especial ignorado no mundo (não é arquivo comum): ${caminho}`);
     }
   }
 }
@@ -79,18 +94,33 @@ export async function gerarManifesto(
 ): Promise<Manifesto> {
   const arquivos: ArquivoDoManifesto[] = [];
   for await (const caminho of percorrer(pastaDoMundo, "", aviso)) {
+    if (!caminhoSeguro(caminho)) {
+      throw recusaArquivo(
+        `O arquivo "${caminho}" tem um nome que o Windows não aceita (caminho inseguro).`,
+      );
+    }
     const completo = join(pastaDoMundo, caminho);
     arquivos.push(await lerArquivo(caminho, completo));
   }
   arquivos.sort((a, b) => (a.caminho < b.caminho ? -1 : a.caminho > b.caminho ? 1 : 0));
-  return { formato: 1, versao, epoca, criadoEm: agora.toISOString(), arquivos };
+  return validarManifesto({ formato: 1, versao, epoca, criadoEm: agora.toISOString(), arquivos });
 }
 
+/** Caminho que qualquer PC (Windows incluso) consegue extrair sem escapar da pasta do mundo. */
 function caminhoSeguro(caminho: unknown): caminho is string {
   if (typeof caminho !== "string" || caminho === "") return false;
-  if (caminho.includes("\\") || caminho.includes("\0")) return false;
-  if (caminho.startsWith("/") || /^[a-zA-Z]:/.test(caminho)) return false;
-  return caminho.split("/").every((parte) => parte !== "" && parte !== "." && parte !== "..");
+  if (caminho.includes("\\") || caminho.startsWith("/") || /^[a-zA-Z]:/.test(caminho)) return false;
+  return caminho
+    .split("/")
+    .every(
+      (parte) =>
+        parte !== "" &&
+        parte !== "." &&
+        parte !== ".." &&
+        !PROIBIDO_WINDOWS.test(parte) &&
+        !/[. ]$/.test(parte) &&
+        !RESERVADO_WINDOWS.test((parte.split(".")[0] ?? "").trimEnd()),
+    );
 }
 
 /** Confere um manifesto vindo de fora (rede, disco). Lança erro em pt-BR se algo não for seguro. */
@@ -102,14 +132,39 @@ export function validarManifesto(bruto: unknown): Manifesto {
   if (!Number.isInteger(m.versao) || !Number.isInteger(m.epoca) || typeof m.criadoEm !== "string") {
     throw new Error("Manifesto do mundo sem versão, época ou data.");
   }
+  if (m.arquivos.length > MAX_ARQUIVOS) {
+    throw new Error(`Manifesto recusado: arquivos demais (mais de ${MAX_ARQUIVOS}).`);
+  }
   const vistos = new Set<string>();
+  const vistosMinusculos = new Set<string>();
+  const arquivos: ArquivoDoManifesto[] = [];
   for (const a of m.arquivos as Partial<ArquivoDoManifesto>[]) {
     if (!caminhoSeguro(a?.caminho)) {
-      throw new Error(`Manifesto recusado: caminho inseguro (${JSON.stringify(a?.caminho)}).`);
+      throw recusaArquivo(
+        `O arquivo ${JSON.stringify(a?.caminho)} tem um nome que o Windows não aceita (caminho inseguro).`,
+      );
     }
-    if (vistos.has(a.caminho))
-      throw new Error(`Manifesto recusado: caminho repetido (${a.caminho}).`);
+    if (a.caminho.length > MAX_CAMINHO) {
+      throw recusaArquivo(
+        `O arquivo "${a.caminho}" tem um caminho longo demais (máximo ${MAX_CAMINHO} caracteres).`,
+      );
+    }
+    if (a.caminho.split("/").length > MAX_PROFUNDIDADE) {
+      throw recusaArquivo(
+        `O arquivo "${a.caminho}" está fundo demais (profundidade máxima ${MAX_PROFUNDIDADE} pastas).`,
+      );
+    }
+    const minusculo = a.caminho.toLowerCase();
+    if (vistos.has(a.caminho)) {
+      throw recusaArquivo(`O arquivo "${a.caminho}" aparece duas vezes (caminho repetido).`);
+    }
+    if (vistosMinusculos.has(minusculo)) {
+      throw recusaArquivo(
+        `O arquivo "${a.caminho}" só difere de outro na maiúscula; o Windows os trata como o mesmo arquivo.`,
+      );
+    }
     vistos.add(a.caminho);
+    vistosMinusculos.add(minusculo);
     if (
       !Number.isSafeInteger(a.tamanho) ||
       (a.tamanho as number) < 0 ||
@@ -118,8 +173,15 @@ export function validarManifesto(bruto: unknown): Manifesto {
     ) {
       throw new Error(`Manifesto recusado: tamanho ou hash inválido em ${a.caminho}.`);
     }
+    arquivos.push({ caminho: a.caminho, tamanho: a.tamanho as number, sha256: a.sha256 });
   }
-  return m as Manifesto;
+  return {
+    formato: 1,
+    versao: m.versao as number,
+    epoca: m.epoca as number,
+    criadoEm: m.criadoEm as string,
+    arquivos,
+  };
 }
 
 /** O que mudou de `a` (antes) para `b` (depois). Base do delta. */
