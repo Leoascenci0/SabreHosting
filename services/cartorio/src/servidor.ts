@@ -1,14 +1,26 @@
 import { BlockList, isIP } from "node:net";
 import type { Writable } from "node:stream";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
-import { type Banco, criarConvite, pcDoToken, usarConvite } from "./banco.js";
+import { type Banco, type Pc, criarConvite, pcDoToken, usarConvite } from "./banco.js";
 import { iguais } from "./segredo.js";
+import {
+  type MotivoRecusa,
+  type ResultadoTrava,
+  type TemposTrava,
+  conferirTempos,
+  estadoTrava,
+  passar,
+  pegar,
+  renovar,
+  soltar,
+} from "./trava.js";
 
 export interface OpcoesCartorio {
   banco: Banco;
   segredoAdmin: string;
   logger?: { level?: string; stream?: Writable };
   agora?: () => number;
+  trava?: Partial<TemposTrava>;
 }
 
 /** Caminhos que o log apaga: cabeçalho de autorização e qualquer token ou convite. */
@@ -24,6 +36,15 @@ const NAO_AUTORIZADO = { erro: "Acesso negado. Peça um convite novo ao administ
 const CONVITE_INVALIDO = {
   erro: "Convite inválido, já usado ou vencido. Peça um novo ao administrador.",
 };
+const RECUSA_TRAVA: Record<MotivoRecusa, (dono: string) => string> = {
+  ocupada: (dono) => `O servidor já está no ${dono}. Entre por lá como jogador ou espere ele sair.`,
+  epoca_velha: () => "Outro PC assumiu o servidor. Pare o servidor deste PC e entre como jogador.",
+  nao_e_dono: () => "Este PC não está hospedando agora.",
+  vencida: () =>
+    "Este PC ficou tempo demais sem avisar o cartório e perdeu a vez. Pare o servidor.",
+  destino_desconhecido: () => "O PC para onde o servidor iria não faz parte do grupo.",
+};
+const EPOCA = { type: "integer", minimum: 1 };
 
 /** Endereços que significam "todas as interfaces", em qualquer grafia (inclusive ::ffff:0.0.0.0). */
 const TODAS_AS_INTERFACES = new BlockList();
@@ -46,9 +67,16 @@ function bearer(req: FastifyRequest): string | undefined {
   return tipo === "Bearer" && valor ? valor : undefined;
 }
 
-export function criarCartorio({ banco, segredoAdmin, logger, agora = Date.now }: OpcoesCartorio) {
+export function criarCartorio({
+  banco,
+  segredoAdmin,
+  logger,
+  agora = Date.now,
+  trava,
+}: OpcoesCartorio) {
   if (segredoAdmin.length < 32)
     throw new Error("Segredo de administrador ausente ou curto (mínimo 32 caracteres).");
+  const { prazoMs, renovarMs } = conferirTempos(trava);
   const app = Fastify({
     logger: { level: "info", ...logger, redact: { paths: REDACT, censor: "[oculto]" } },
   });
@@ -59,6 +87,41 @@ export function criarCartorio({ banco, segredoAdmin, logger, agora = Date.now }:
     if (segredo && iguais(segredo, segredoAdmin)) pronto();
     else void resp.code(401).send(NAO_AUTORIZADO);
   }
+
+  const pcDaChamada = new WeakMap<FastifyRequest, Pc>();
+  function soPc(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
+    const token = bearer(req);
+    const pc = token ? pcDoToken(banco, token) : undefined;
+    if (!pc) return void resp.code(401).send(NAO_AUTORIZADO);
+    pcDaChamada.set(req, pc);
+    pronto();
+  }
+  function pcDe(req: FastifyRequest): Pc {
+    const pc = pcDaChamada.get(req);
+    if (!pc) throw new Error("Rota de PC sem o soPc.");
+    return pc;
+  }
+  function pcPorId(id: number | null): Pc | null {
+    if (id === null) return null;
+    return (
+      (banco.prepare("SELECT id, nome FROM pcs WHERE id = ?").get(id) as Pc | undefined) ?? null
+    );
+  }
+  function responderTrava(resp: FastifyReply, r: ResultadoTrava) {
+    if (r.ok) return { ...r, renovarMs };
+    const erro = RECUSA_TRAVA[r.motivo](pcPorId(r.donoPcId)?.nome ?? "outro PC");
+    return resp.code(409).send({ erro, ...r });
+  }
+  const corpoTrava = (...campos: string[]) => ({
+    onRequest: soPc,
+    schema: {
+      body: {
+        type: "object",
+        required: campos,
+        properties: Object.fromEntries(campos.map((c) => [c, EPOCA])),
+      },
+    },
+  });
 
   app.get("/saude", () => ({ ok: true }));
 
@@ -108,6 +171,29 @@ export function criarCartorio({ banco, segredoAdmin, logger, agora = Date.now }:
     if (!pc) return resp.code(401).send(NAO_AUTORIZADO);
     return pc;
   });
+
+  app.get("/trava", { onRequest: soPc }, () => {
+    const { donoPcId, epoca, expiraEm } = estadoTrava(banco, agora());
+    return { dono: pcPorId(donoPcId), epoca, expiraEm, prazoMs, renovarMs };
+  });
+  app.post("/trava/pegar", { onRequest: soPc }, (req, resp) =>
+    responderTrava(resp, pegar(banco, pcDe(req).id, agora(), prazoMs)),
+  );
+  app.post<{ Body: { epoca: number } }>("/trava/renovar", corpoTrava("epoca"), (req, resp) =>
+    responderTrava(resp, renovar(banco, pcDe(req).id, req.body.epoca, agora(), prazoMs)),
+  );
+  app.post<{ Body: { epoca: number; para: number } }>(
+    "/trava/passar",
+    corpoTrava("epoca", "para"),
+    (req, resp) =>
+      responderTrava(
+        resp,
+        passar(banco, pcDe(req).id, req.body.para, req.body.epoca, agora(), prazoMs),
+      ),
+  );
+  app.post<{ Body: { epoca: number } }>("/trava/soltar", corpoTrava("epoca"), (req, resp) =>
+    responderTrava(resp, soltar(banco, pcDe(req).id, req.body.epoca)),
+  );
 
   return app;
 }
