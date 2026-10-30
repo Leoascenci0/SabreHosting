@@ -41,7 +41,7 @@ dependência sem linha em `DECISOES.md` (este roadmap registra as da fundação)
 
 ## Bloco 2 — Comunidade
 
-- [ ] **2.1 — Issues e rótulos para contribuidores**
+- [x] **2.1 — Issues e rótulos para contribuidores** (PR #8, 30/10/2026; falta o Eliel criar os rótulos, ver docs/ops/rotulos.md)
   *O que fazer:* modelos de issue (bug, ideia, item de roadmap) em pt-BR; lista de rótulos sugeridos
   (`bom-primeiro-item`, `seguranca`, `mundo`, `app`, `nuvem`) num documento para o Eliel criar.
   *Arquivo:* `.github/ISSUE_TEMPLATE/*.yml`, `docs/ops/rotulos.md`
