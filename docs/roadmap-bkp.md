@@ -35,7 +35,7 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
 
 ## Bloco 2 — Guardar e restaurar
 
-- [ ] **2.1 — Rotação segura**
+- [x] **2.1 — Rotação segura** (PR #50, 30/10/2026)
   *O que fazer:* manter os N mais recentes + 1 por dia dos últimos 7; nunca apagar o último conferido; dry-run nos testes.
   *Arquivo:* `packages/nucleo/src/backup/rotacao.ts`
   **Tela no app:** Configurações › Backups › Quantos guardar (padrão 10). D6 decidida (10 + 7 diários).
