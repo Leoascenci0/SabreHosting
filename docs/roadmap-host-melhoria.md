@@ -45,3 +45,14 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* testes terminam rápido e nenhum worker fica vivo.
   *Origem:* host-2.3 · PR #16 · filha + qa
+
+## Bloco 1 (cont.) — Configuração do servidor
+
+- [ ] **1.4 — Testes que faltam na configuração e endurecimento**
+  *O que fazer:* teste com `10.999.0.1` (octeto inválido) recusado — hoje apagar `octetosValidos` não derruba teste;
+  gravar `enable-query=false` explícito; estreitar o IP aceito para a faixa da rede privada do WireGuard quando o
+  rede-* a definir.
+  *Arquivo:* `packages/nucleo/src/servidor/configurar.ts`, `packages/nucleo/src/servidor/configurar.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* remover `octetosValidos` faz um teste falhar; `server.properties` tem `enable-query=false`.
+  *Origem:* host-1.2 · PR #20 · qa

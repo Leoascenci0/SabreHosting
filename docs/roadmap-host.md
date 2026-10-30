@@ -18,7 +18,7 @@ o servidor real só roda na Confirmação, num PC.
   *Confirmação:* teste: hash errado → recusa e apaga; hash certo → usa o cache na segunda vez.
   *Depende de:* base-1.1 · D1 (Java) e D5 (NeoForge + Connector) decididas
 
-- [ ] **1.2 — EULA e configuração do servidor**
+- [x] **1.2 — EULA e configuração do servidor** (PR #20, 30/10/2026)
   *O que fazer:* gerar `server.properties` e `eula.txt` a partir das Configurações (porta só na rede privada,
   whitelist ligada, `online-mode` conforme o proxy, `simulation-distance` < `view-distance`). O EULA só vira `true`
   depois de o usuário aceitar na tela (o núcleo expõe a pergunta; a tela vem no app-1.x).
