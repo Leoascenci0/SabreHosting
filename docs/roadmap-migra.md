@@ -9,7 +9,7 @@ lógica de trava/migração).
 
 ## Bloco 1 — Decidir
 
-- [ ] **1.1 — Quem deve hospedar**
+- [x] **1.1 — Quem deve hospedar** (PR #54, 30/10/2026)
   *O que fazer:* regra pura: candidatos online com versão em dia e permissão de hospedar; troca só se nota ≥ folga ×
   nota do host (padrão 1,3); respeitar `/ficar` (adiar 30 min) e janela de calma.
   *Arquivo:* `packages/nucleo/src/migracao/decidir.ts`
