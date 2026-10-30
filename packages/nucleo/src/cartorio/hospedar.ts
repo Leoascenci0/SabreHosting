@@ -51,8 +51,15 @@ export async function hospedar(
     cliente,
     aoPerder: (motivo) => {
       perdeu = true;
-      aoPerder?.(motivo);
-      if (servidor) void encerrar(servidor);
+      if (servidor) void encerrar(servidor); // parar vem antes de avisar a tela: o aviso pode falhar
+      try {
+        aoPerder?.(motivo);
+      } catch (e) {
+        servidor?.emit("log", {
+          nivel: "aviso",
+          texto: `Não consegui avisar a tela da perda da trava: ${e instanceof Error ? e.message : String(e)}`,
+        });
+      }
     },
   });
   await renovador.pegar();

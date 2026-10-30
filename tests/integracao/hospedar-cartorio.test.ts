@@ -211,4 +211,25 @@ describe("trava de host contra o cartório real", () => {
     expect(Date.now() - perdeuEm).toBeLessThan(300 + 300 + 700); // prazos + folga do teste
     await backup;
   }, 10_000);
+
+  it("aviso da tela que lança erro não impede a parada na perda", async () => {
+    const { app, pc } = await subirCartorio();
+    const { servidor } = await hospedarFalso(await pc("PC A"), [], {
+      modo: "travado",
+      prazoParadaMs: 30_000,
+      prazoSalvarMs: 300,
+      prazoParadaSemTravaMs: 300,
+      aoPerder: () => {
+        throw new Error("tela quebrou");
+      },
+    });
+    const logs: string[] = [];
+    servidor.on("log", (l: { texto: string }) => logs.push(l.texto));
+    await esperarEstado(servidor, "pronto");
+    await app.close();
+    const inicio = Date.now();
+    await esperarEstado(servidor, "parado");
+    expect(Date.now() - inicio).toBeLessThan(3_000);
+    expect(logs.some((l) => /tela quebrou/.test(l))).toBe(true);
+  }, 10_000);
 });
