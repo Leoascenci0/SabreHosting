@@ -28,6 +28,16 @@ const MIGRACOES = [
      usado_em INTEGER,
      pc_id INTEGER REFERENCES pcs(id)
    );`,
+  // Trava de host: uma linha só. `epoca` (fencing token) sobe a cada troca de dono e nunca desce.
+  `CREATE TABLE trava (
+     id INTEGER PRIMARY KEY CHECK (id = 1),
+     dono_pc_id INTEGER REFERENCES pcs(id),
+     expira_em INTEGER NOT NULL DEFAULT 0,
+     epoca INTEGER NOT NULL DEFAULT 0 CHECK (epoca >= 0)
+   );
+   INSERT INTO trava (id) VALUES (1);
+   CREATE TRIGGER trava_epoca_nunca_desce BEFORE UPDATE OF epoca ON trava
+   WHEN NEW.epoca < OLD.epoca BEGIN SELECT RAISE(ABORT, 'A época da trava nunca desce.'); END;`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */
@@ -54,7 +64,7 @@ export function abrirBanco(caminho: string, migracoes = MIGRACOES): Banco {
   return banco;
 }
 
-function emTransacao<T>(banco: Banco, fazer: () => T): T {
+export function emTransacao<T>(banco: Banco, fazer: () => T): T {
   banco.exec("BEGIN IMMEDIATE");
   try {
     const r = fazer();

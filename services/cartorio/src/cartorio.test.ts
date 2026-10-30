@@ -191,11 +191,11 @@ describe("cartório: migrações", () => {
     const caminho = join(pasta, "m.db");
     const a = abrirBanco(caminho);
     const b = abrirBanco(caminho);
-    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 1 }]);
+    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 2 }]);
     a.close();
     b.close();
     abrirBanco(caminho).close();
-    expect(tabelas(caminho)).toEqual(["convites", "esquema", "pcs", "tokens"]);
+    expect(tabelas(caminho)).toEqual(["convites", "esquema", "pcs", "tokens", "trava"]);
   });
 
   it("migração que falha no meio é desfeita inteira: versão não sobe, nenhuma tabela pela metade", () => {
