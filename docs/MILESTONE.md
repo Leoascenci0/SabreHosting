@@ -16,17 +16,16 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-
 ## Fila
 
 **M1 — Fundação**
 - **Onda 6 (em curso):** cart-1.3 (aberto, filha session_012qrjnu4PytBLmUvN6JrB8r) · bkp-1.2 · lanc-1.1
-- **Onda 6b:** bkp-2.1 (espera D6) · rede-1.1 (espera D2, D3)
+- **Onda 6b:** bkp-2.1 · rede-1.1
 - **Onda 7:** bkp-1.3 · cart-2.1 · rede-2.1
 - **Onda 8:** bkp-2.2 · cart-1.4 · host-3.1 [P: teste no PC]
 
 **M2 — Primeira partida**
-- **Onda 9:** rede-1.3 · rede-2.2 · app-1.1 (espera D4)
+- **Onda 9:** rede-1.3 · rede-2.2 · app-1.1
 - **Onda 10:** rede-2.3 · app-1.2 · rede-1.2 [P: criar a VM]
 - **Onda 11:** app-1.3 · cart-2.2 [P: máquina real]
 - Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
@@ -45,14 +44,7 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
 
-- **D2 — Rede privada:** WireGuard próprio na máquina da nuvem (recomendado: grátis, sem limite de pessoas, nada de
-  terceiros) · Tailscale (mais fácil, mas o plano grátis limita usuários) · playit.gg (túnel pronto, menos controle).
-  *Trava:* rede-1.1.
-- **D3 — Máquina na nuvem:** Oracle Cloud Always Free em São Paulo (recomendado: grátis; às vezes demora para liberar
-  vaga) · VPS paga barata no Brasil (~R$ 20–40/mês, garantida). Envolve cadastro: só o Eliel faz. *Trava:* rede-1.1.
-- **D4 — Ícone do app:** o nome já foi decidido (SabreHosting); falta o ícone. *Trava:* app-1.1.
-- **D6 — Regras do grupo:** quantos backups guardar (padrão 10 + 7 diários), folga para trocar de host (padrão 30%),
-  quem pode hospedar (padrão: todos que ligarem a opção). *Trava:* bkp-2.1, migra-1.1.
+- **Versão do Minecraft** (e do NeoForge): escolha do Eliel antes do host-3.1 (teste no PC).
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
   assinatura (pago, ~US$ 100+/ano). *Trava:* app-3.2.
 
@@ -68,6 +60,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
 
 - 30/10/2026 — Onda 5: host-2.1 subir/parar (PR #24), bkpmel-1.1 caminhos Windows (PR #29), cartmel-1.5 época
   blindada (PR #27); host-2.2 comandos pelo console (PR #30).

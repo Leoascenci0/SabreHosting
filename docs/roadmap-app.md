@@ -15,7 +15,7 @@ item da mesma tela.
   *Arquivo:* `apps/desktop/src/`, `docs/design-system.md`
   **Tela no app:** Configurações › Geral › "Abrir com o Windows".
   *Confirmação:* teste E2E (Playwright para Electron) abre a janela; `audit` do impeccable sem crítico.
-  *Depende de:* base-1.1 · **ESPERA DECISÃO D4** (ícone)
+  *Depende de:* base-1.1 · D4 decidida (ícone em apps/desktop/recursos/icone/)
 
 - [ ] **1.2 — Tela inicial: Jogar / Hospedar e status**
   *O que fazer:* estado vindo do núcleo/cartório: "Servidor no PC do X" + Jogar (copia o endereço / abre o launcher);

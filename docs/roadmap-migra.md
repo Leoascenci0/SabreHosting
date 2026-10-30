@@ -13,7 +13,7 @@ lógica de trava/migração).
   *O que fazer:* regra pura: candidatos online com versão em dia e permissão de hospedar; troca só se nota ≥ folga ×
   nota do host (padrão 1,3); respeitar `/ficar` (adiar 30 min) e janela de calma.
   *Arquivo:* `packages/nucleo/src/migracao/decidir.ts`
-  **Tela no app:** Configurações › Grupo › "Folga para trocar de host". **ESPERA DECISÃO D6.**
+  **Tela no app:** Configurações › Grupo › "Folga para trocar de host". D6 decidida (folga 30%).
   *Confirmação:* testes de tabela cobrindo empate, `/ficar`, versão atrasada.
   *Depende de:* host-2.3, cart-1.3
 

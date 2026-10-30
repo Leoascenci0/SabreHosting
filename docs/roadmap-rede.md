@@ -15,7 +15,7 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
   *Arquivo:* `infra/vps/instalar.sh`, `infra/vps/teste/Dockerfile`
   **Tela no app:** não se aplica.
   *Confirmação:* rodar duas vezes no contêiner sem erro; `ufw status` com as 2 portas.
-  *Depende de:* — · **ESPERA DECISÃO D2, D3**
+  *Depende de:* — · D2 (WireGuard) e D3 (Oracle Always Free SP) decididas
 
 - [ ] **1.2 — Tutorial: criar a máquina na nuvem**
   *O que fazer:* passo a passo com prints descritos para o Eliel criar a VM (D3), apontar o script e guardar os segredos

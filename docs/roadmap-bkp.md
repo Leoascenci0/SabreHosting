@@ -38,7 +38,7 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
 - [ ] **2.1 — Rotação segura**
   *O que fazer:* manter os N mais recentes + 1 por dia dos últimos 7; nunca apagar o último conferido; dry-run nos testes.
   *Arquivo:* `packages/nucleo/src/backup/rotacao.ts`
-  **Tela no app:** Configurações › Backups › Quantos guardar (padrão 10). **ESPERA DECISÃO D6** (padrões do grupo).
+  **Tela no app:** Configurações › Backups › Quantos guardar (padrão 10). D6 decidida (10 + 7 diários).
   *Confirmação:* testes de propriedade: em qualquer sequência, sobra ≥ 1 backup bom.
   *Depende de:* bkp-1.2
 
