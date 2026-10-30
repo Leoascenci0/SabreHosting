@@ -33,3 +33,13 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   **Tela no app:** não se aplica.
   *Confirmação:* 4 `npx vitest run` em paralelo, 3 vezes seguidas, sem falha.
   *Origem:* onda 6 · revisão da orquestradora
+
+- [ ] **1.4 — Verificador barra marcador de conflito de merge**
+  *O que fazer:* `scripts/verificar.py` recusa arquivo com linha que começa com `<<<<<<< `, `=======` sozinho ou
+  `>>>>>>> ` (em `--staged` e `--base`). Aconteceu na Onda 6: um commit de controle levou um conflito do
+  `docs/ops/DECISOES.md` e o verificador aprovou.
+  *Arquivo:* `scripts/verificar.py`
+  **Tela no app:** não se aplica.
+  *Confirmação:* commit de teste com marcador → REPROVADO; `.md` com `=======` como sublinhado de título não é falso positivo
+  (exigir o trio ou a linha exata `=======` entre `<<<<<<<` e `>>>>>>>`).
+  *Origem:* onda 6 · orquestradora
