@@ -30,7 +30,7 @@ dependência sem linha em `DECISOES.md` (este roadmap registra as da fundação)
   *Confirmação:* o próprio PR mostra o check verde.
   *Depende de:* base-1.1
 
-- [ ] **1.3 — Gerador de mundos de teste**
+- [x] **1.3 — Gerador de mundos de teste** (PR #9, 30/10/2026)
   *O que fazer:* script que cria em `tests/mundos/` mundos pequenos e falsos (pasta com `level.dat` mínimo e alguns
   `region/r.X.Z.mca` com bytes aleatórios determinísticos), em 3 tamanhos (1 MB, 20 MB, 200 MB sob demanda, este não
   commitado). Funções de ajuda para os testes ("mudar 2 regiões", "corromper 1 arquivo").
