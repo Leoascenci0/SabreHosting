@@ -20,6 +20,11 @@ export interface OpcoesIniciar {
   prazoTravaMs?: number;
   /** Quanto esperar o `stop` antes de matar. Padrão: 60 s. */
   prazoParadaMs?: number;
+  /**
+   * Idem quando a trava se perdeu. Padrão: 10 s, para caber na margem do renovador (cartorio/renovador.ts) antes de o
+   * cartório liberar a trava para outro PC.
+   */
+  prazoParadaSemTravaMs?: number;
   /** Repete `fn` a cada `ms` e devolve quem cancela. Padrão: `setInterval`. */
   relogio?: { repetir: (fn: () => void, ms: number) => () => void };
   // Só para os testes (servidor falso no lugar do java):
@@ -35,6 +40,7 @@ const MINIMO_RAM_MB = 512;
 const AVISO_ABAIXO_MB = 4 * 1024;
 const INTERVALO_TRAVA_MS = 20_000;
 const PRAZO_PARADA_PADRAO_MS = 60_000;
+const PRAZO_PARADA_SEM_TRAVA_MS = 10_000;
 const PRAZO_TRAVA_PADRAO_MS = 10_000;
 
 /** Erro, demora e `false` valem como sem trava; só `true` dentro do prazo confirma. */
@@ -92,6 +98,8 @@ export class ServidorMinecraft extends EventEmitter {
   codigoSaida?: number | null;
   aviso?: string;
   private paradaEmCurso?: Promise<void>;
+  /** Quando (relógio monotônico) o processo será morto se não sair; um prazo menor sempre encurta. */
+  private morte?: { quando: number; timer: NodeJS.Timeout };
   private readonly saiu: Promise<void>;
   private cancelarRelogio: () => void = () => {};
   private verificando = false;
@@ -99,6 +107,7 @@ export class ServidorMinecraft extends EventEmitter {
   constructor(
     private readonly filho: ChildProcess,
     private readonly prazoParadaMs: number,
+    private readonly prazoParadaSemTravaMs: number,
     confirmarTrava: () => Promise<"sim" | "nao" | "semResposta">,
     relogio: NonNullable<OpcoesIniciar["relogio"]>,
   ) {
@@ -154,7 +163,8 @@ export class ServidorMinecraft extends EventEmitter {
   private async conferirTrava(
     confirmarTrava: () => Promise<"sim" | "nao" | "semResposta">,
   ): Promise<void> {
-    if (this.verificando || (this.estado !== "subindo" && this.estado !== "pronto")) return;
+    const ativo = () => this.estado === "subindo" || this.estado === "pronto";
+    if (this.verificando || (!ativo() && this.estado !== "parando")) return;
     this.verificando = true;
     let resposta: "sim" | "nao" | "semResposta";
     try {
@@ -163,15 +173,21 @@ export class ServidorMinecraft extends EventEmitter {
       this.verificando = false;
     }
     if (resposta === "sim") return;
-    // Já parando, parado ou caído: não há o que parar nem o que avisar.
-    if (this.estado !== "subindo" && this.estado !== "pronto") return;
+    // Parada normal em curso: só encurta o prazo, sem aviso. Parado ou caído: nada a fazer.
+    if (this.estado === "parando") return void (await this.pararSemTrava());
+    if (!ativo()) return;
     this.registrar(
       "aviso",
       resposta === "semResposta"
         ? "O cartório não respondeu a tempo; parando o servidor para não ficar sem a trava de host."
         : "Perdi a trava de host do cartório; parando o servidor para não duplicar o mundo.",
     );
-    await this.pararServidor();
+    await this.pararSemTrava();
+  }
+
+  /** Parada de quem perdeu a trava (laço de 20 s daqui e renovador do cartório): prazo curto antes de matar. */
+  pararSemTrava(): Promise<void> {
+    return this.pararServidor(this.prazoParadaSemTravaMs);
   }
 
   /**
@@ -189,26 +205,37 @@ export class ServidorMinecraft extends EventEmitter {
     this.filho.stdin?.write(`${linha}\n`);
   }
 
-  /** Escreve `stop`; se não sair até o prazo, mata e avisa no log. */
-  pararServidor(): Promise<void> {
+  /**
+   * Escreve `stop`; se não sair até o prazo (padrão: `prazoParadaMs`), mata e avisa no log. Chamada com parada já
+   * em curso só pode ENCURTAR o prazo (perda da trava no meio de uma parada normal).
+   */
+  pararServidor(prazoMs = this.prazoParadaMs): Promise<void> {
     if (this.estado === "parado" || this.estado === "caiu") return Promise.resolve();
+    this.armarMorte(prazoMs);
     this.paradaEmCurso ??= (async () => {
       this.mudar("parando");
       this.filho.stdin?.write("stop\n");
-      const prazo = setTimeout(() => {
-        this.registrar(
-          "aviso",
-          `O servidor não encerrou em ${this.prazoParadaMs} ms; forçando o encerramento (o mundo pode perder os últimos instantes).`,
-        );
-        this.filho.kill("SIGKILL");
-      }, this.prazoParadaMs);
       try {
         await this.saiu;
       } finally {
-        clearTimeout(prazo);
+        clearTimeout(this.morte?.timer);
       }
     })();
     return this.paradaEmCurso;
+  }
+
+  private armarMorte(prazoMs: number): void {
+    const quando = performance.now() + prazoMs;
+    if (this.morte && this.morte.quando <= quando) return;
+    clearTimeout(this.morte?.timer);
+    const timer = setTimeout(() => {
+      this.registrar(
+        "aviso",
+        `O servidor não encerrou em ${prazoMs} ms; forçando o encerramento (o mundo pode perder os últimos instantes).`,
+      );
+      this.filho.kill("SIGKILL");
+    }, prazoMs);
+    this.morte = { quando, timer };
   }
 }
 
@@ -267,6 +294,7 @@ export async function iniciarServidor(opcoes: OpcoesIniciar): Promise<ServidorMi
   const servidor = new ServidorMinecraft(
     filho,
     opcoes.prazoParadaMs ?? PRAZO_PARADA_PADRAO_MS,
+    opcoes.prazoParadaSemTravaMs ?? PRAZO_PARADA_SEM_TRAVA_MS,
     confirmar,
     relogio,
   );
