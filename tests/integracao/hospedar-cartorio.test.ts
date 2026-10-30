@@ -173,7 +173,7 @@ describe("trava de host contra o cartório real", () => {
     const { servidor } = await hospedarFalso(await pc("PC A"), [], {
       modo: "travado",
       prazoParadaMs: 30_000,
-      prazoPararNaPerdaMs: 300,
+      prazoParadaSemTravaMs: 300,
     });
     await esperarEstado(servidor, "pronto");
     await app.close();

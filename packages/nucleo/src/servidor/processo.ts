@@ -20,6 +20,11 @@ export interface OpcoesIniciar {
   prazoTravaMs?: number;
   /** Quanto esperar o `stop` antes de matar. Padrão: 60 s. */
   prazoParadaMs?: number;
+  /**
+   * Idem quando a trava se perdeu. Padrão: 10 s, para caber na margem do renovador (cartorio/renovador.ts) antes de o
+   * cartório liberar a trava para outro PC.
+   */
+  prazoParadaSemTravaMs?: number;
   /** Repete `fn` a cada `ms` e devolve quem cancela. Padrão: `setInterval`. */
   relogio?: { repetir: (fn: () => void, ms: number) => () => void };
   // Só para os testes (servidor falso no lugar do java):
@@ -35,6 +40,7 @@ const MINIMO_RAM_MB = 512;
 const AVISO_ABAIXO_MB = 4 * 1024;
 const INTERVALO_TRAVA_MS = 20_000;
 const PRAZO_PARADA_PADRAO_MS = 60_000;
+const PRAZO_PARADA_SEM_TRAVA_MS = 10_000;
 const PRAZO_TRAVA_PADRAO_MS = 10_000;
 
 /** Erro, demora e `false` valem como sem trava; só `true` dentro do prazo confirma. */
@@ -99,6 +105,7 @@ export class ServidorMinecraft extends EventEmitter {
   constructor(
     private readonly filho: ChildProcess,
     private readonly prazoParadaMs: number,
+    private readonly prazoParadaSemTravaMs: number,
     confirmarTrava: () => Promise<"sim" | "nao" | "semResposta">,
     relogio: NonNullable<OpcoesIniciar["relogio"]>,
   ) {
@@ -171,7 +178,12 @@ export class ServidorMinecraft extends EventEmitter {
         ? "O cartório não respondeu a tempo; parando o servidor para não ficar sem a trava de host."
         : "Perdi a trava de host do cartório; parando o servidor para não duplicar o mundo.",
     );
-    await this.pararServidor();
+    await this.pararSemTrava();
+  }
+
+  /** Parada de quem perdeu a trava (laço de 20 s daqui e renovador do cartório): prazo curto antes de matar. */
+  pararSemTrava(): Promise<void> {
+    return this.pararServidor(this.prazoParadaSemTravaMs);
   }
 
   /**
@@ -267,6 +279,7 @@ export async function iniciarServidor(opcoes: OpcoesIniciar): Promise<ServidorMi
   const servidor = new ServidorMinecraft(
     filho,
     opcoes.prazoParadaMs ?? PRAZO_PARADA_PADRAO_MS,
+    opcoes.prazoParadaSemTravaMs ?? PRAZO_PARADA_SEM_TRAVA_MS,
     confirmar,
     relogio,
   );

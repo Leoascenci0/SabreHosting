@@ -262,6 +262,25 @@ describe("trava (regra de ouro 1)", () => {
     expect(s.codigoSaida).toBe(0);
   });
 
+  it("sem trava, servidor que ignora o `stop` morre no prazo curto, não no da parada normal", async () => {
+    let tem = true;
+    let tique: () => void = () => {};
+    const relogio = { repetir: (fn: () => void) => ((tique = fn), () => {}) };
+    const s = await subir("travado", {
+      temTrava: async () => tem,
+      relogio,
+      prazoParadaMs: 30_000,
+      prazoParadaSemTravaMs: 200,
+    });
+    await esperarEstado(s, "pronto");
+    tem = false;
+    const inicio = Date.now();
+    tique();
+    await esperarEstado(s, "parado");
+    expect(s.codigoSaida).toBeNull(); // morto: o `stop` foi ignorado
+    expect(Date.now() - inicio).toBeLessThan(3_000);
+  });
+
   it("com a trava em dia o servidor segue rodando", async () => {
     let tique: () => void = () => {};
     const relogio = { repetir: (fn: () => void) => ((tique = fn), () => {}) };
