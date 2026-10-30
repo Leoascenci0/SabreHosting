@@ -98,7 +98,7 @@ async function existe(caminho: string): Promise<boolean> {
   }
 }
 
-async function gravarAtomico(destino: string, conteudo: string): Promise<void> {
+export async function gravarAtomico(destino: string, conteudo: string): Promise<void> {
   const temp = `${destino}.${randomUUID()}.tmp`;
   try {
     await writeFile(temp, conteudo);
