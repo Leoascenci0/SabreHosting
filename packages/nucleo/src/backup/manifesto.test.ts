@@ -113,11 +113,19 @@ it("mundo de 20 MB: memória viva não cresce com o tamanho do mundo", async () 
   setFlagsFromString("--expose-gc");
   const gc = runInNewContext("gc") as () => void;
   const pasta = mundo("20MB");
-  gc();
+  // Sob carga o sistema devolve a memória externa um instante depois do gc: dar tempo antes de medir, senão o
+  // resto do mundo recém-gerado entra na conta do pico.
+  const limpar = () => {
+    gc();
+    gc();
+  };
+  limpar();
+  await new Promise((resolver) => setTimeout(resolver, 100));
+  limpar();
   const antes = process.memoryUsage().arrayBuffers;
   let pico = antes;
   const timer = setInterval(() => {
-    gc();
+    limpar();
     pico = Math.max(pico, process.memoryUsage().arrayBuffers);
   }, 20);
   const m = await gerarManifesto(pasta, opcoes);

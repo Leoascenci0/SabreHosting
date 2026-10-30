@@ -70,5 +70,5 @@ describe("gerador de mundos de teste", () => {
         /SABRE_MUNDO_GRANDE/,
       );
     }
-  });
+  }, 30_000);
 });

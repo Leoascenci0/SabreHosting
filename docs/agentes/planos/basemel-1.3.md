@@ -6,7 +6,7 @@ Issue #39 · ramo `roadmap/basemel-1.3` · método M4 (correção pontual de tes
 - Falha 1: `mundos.test.ts` "gera 20 MB" estoura os 5 s padrão do vitest (repetiu em 3 de 4 rodadas).
 - Falha 2: `manifesto.test.ts` "mundo de 20 MB: memória viva…" mediu 9,4 MB contra o teto de 8 MB (1 vez).
 - A corrida da trava (`trava.test.ts:81`, "Set{16,20}") não repetiu em 40 execuções simultâneas só desse arquivo;
-  a investigação da causa continua abaixo.
+  não consegui reproduzi-la; o ajuste dela segue o texto do item (perdedor vê época ≥ a do vencedor).
 
 ## Desenho
 1. `mundos.test.ts`: prazo explícito de 30 s no teste de 20 MB.
