@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { rename } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,8 +15,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo } from "../../test/ajuda/mundos.js";
 import { hashDoArquivo } from "../integridade/hash.js";
 import { gerarManifesto } from "./manifesto.js";
+import * as pacoteMod from "./pacote.js";
 import { abrirPacote, criarPacote } from "./pacote.js";
+import { podeSubir } from "../servidor/configurar.js";
 import { restaurarBackup } from "./restaurar.js";
+
+// Passa direto para o real; um teste corrompe o backup do atual logo depois de gravado.
+vi.mock("./pacote.js", async (original) => {
+  const real = await original<typeof import("./pacote.js")>();
+  return { ...real, criarPacote: vi.fn(real.criarPacote) };
+});
 
 const PRAZO = 30_000;
 const pastas: string[] = [];
@@ -57,12 +73,12 @@ describe("restaurarBackup", () => {
       expect(sobras(base)).toEqual([]);
       expect(r.mundoAntigo).toBeUndefined();
       // O backup do estado atual existe, confere e reproduz o mundo de antes.
-      expect(r.backupDoAtual.caminho).toBe(
-        join(o.pastaBackups, "2026-10-31T10-00-00-000Z-v5.tar.gz"),
-      );
-      expect(r.backupDoAtual.sha256).toBe(await hashDoArquivo(r.backupDoAtual.caminho));
+      const backup = r.backupDoAtual;
+      if (backup === undefined) throw new Error("devia ter feito o backup do atual");
+      expect(backup.caminho).toBe(join(o.pastaBackups, "2026-10-31T10-00-00-000Z-v5.tar.gz"));
+      expect(backup.sha256).toBe(await hashDoArquivo(backup.caminho));
       const conferido = join(base, "conferido");
-      await abrirPacote(r.backupDoAtual.caminho, r.backupDoAtual.sha256, conferido);
+      await abrirPacote(backup.caminho, backup.sha256, conferido);
       expect(hashesDoMundo(conferido)).toEqual(antes);
       expect(r.restaurado).toMatchObject({ versao: 4, epoca: 1 });
     },
@@ -201,14 +217,86 @@ describe("restaurarBackup", () => {
   );
 
   it(
-    "falha no backup do estado atual: para antes de tocar no mundo",
+    "backup do estado atual que não confere: descartado e o mundo não muda",
     async () => {
       const { base, o, antes } = await cenario();
-      rmSync(o.pastaDoMundo, { recursive: true });
-      await expect(restaurarBackup(o)).rejects.toThrow(/mundo/i);
-      expect(existsSync(o.pastaDoMundo)).toBe(false);
+      vi.mocked(pacoteMod.criarPacote).mockImplementationOnce(async (...a) => {
+        const r = await vi
+          .importActual<typeof pacoteMod>("./pacote.js")
+          .then((m) => m.criarPacote(...a));
+        const dados = readFileSync(r.caminho);
+        const i = Math.floor(dados.length / 2);
+        dados[i] = (dados[i] ?? 0) ^ 0x01;
+        writeFileSync(r.caminho, dados); // o hash devolvido já não bate com o arquivo
+        return r;
+      });
+      await expect(restaurarBackup(o)).rejects.toThrow(/não passou na conferência/);
+      expect(hashesDoMundo(o.pastaDoMundo)).toEqual(antes);
       expect(sobras(base)).toEqual([]);
-      expect(Object.keys(antes).length).toBeGreaterThan(0);
+      expect(readdirSync(o.pastaBackups)).toEqual([]);
+    },
+    PRAZO,
+  );
+
+  it(
+    "mundo inexistente: restaura direto, sem backup do atual nem .antigo",
+    async () => {
+      const { base, o, depois } = await cenario();
+      rmSync(o.pastaDoMundo, { recursive: true });
+      const r = await restaurarBackup(o);
+      expect(r.backupDoAtual).toBeUndefined();
+      expect(hashesDoMundo(o.pastaDoMundo)).toEqual(depois);
+      expect(sobras(base)).toEqual([]);
+      expect(existsSync(o.pastaBackups)).toBe(false);
+    },
+    PRAZO,
+  );
+
+  it(
+    "pasta do mundo vazia: segue como com mundo (faz backup e troca)",
+    async () => {
+      const { o, depois } = await cenario();
+      rmSync(o.pastaDoMundo, { recursive: true });
+      mkdirSync(o.pastaDoMundo);
+      const r = await restaurarBackup(o);
+      expect(hashesDoMundo(o.pastaDoMundo)).toEqual(depois);
+      expect(r.backupDoAtual).toBeDefined();
+    },
+    PRAZO,
+  );
+
+  it(
+    "caminho do mundo com barra no fim: a temporária fica ao lado, não dentro",
+    async () => {
+      const { base, o, depois } = await cenario();
+      await restaurarBackup({ ...o, pastaDoMundo: `${o.pastaDoMundo}/` });
+      expect(hashesDoMundo(o.pastaDoMundo)).toEqual(depois);
+      expect(sobras(base)).toEqual([]);
+      expect(readdirSync(o.pastaDoMundo).some((n) => n.includes("restaurando"))).toBe(false);
+    },
+    PRAZO,
+  );
+
+  it(
+    "nem o desfazer funciona: erro diz onde está tudo e o servidor não sobe",
+    async () => {
+      const { base, o, antes } = await cenario();
+      let n = 0;
+      const renomear = async (de: string, para: string) => {
+        if (++n >= 2) throw new Error("EPERM");
+        await rename(de, para);
+      };
+      const erro = await restaurarBackup({ ...o, renomear }).catch((e: Error) => e);
+      expect(erro).toBeInstanceOf(Error);
+      const texto = (erro as Error).message;
+      const antigo = readdirSync(base).find((x) => x.startsWith("mundo.antigo-")) ?? "";
+      expect(texto).toContain(join(base, antigo));
+      expect(texto).toContain(o.pastaBackups);
+      expect(texto).not.toMatch(/^EPERM/);
+      expect(hashesDoMundo(join(base, antigo))).toEqual(antes); // o mundo de antes está inteiro
+      expect(existsSync(join(base, "RESTAURACAO-INCOMPLETA.txt"))).toBe(true);
+      writeFileSync(join(base, "eula.txt"), "eula=true\n");
+      expect((await podeSubir(base)).pode).toBe(false);
     },
     PRAZO,
   );
