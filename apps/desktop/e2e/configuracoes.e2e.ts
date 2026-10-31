@@ -1,6 +1,6 @@
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -165,6 +165,54 @@ describe("tela de configurações", () => {
         (globalThis as unknown as { __sabreE2EGrupo: { revogados: number[] } }).__sabreE2EGrupo
           .revogados,
     ) as Promise<number[]>;
+
+  it("convite: dono cria com nome e validade, vê o prazo e copia; nada fica em disco", async () => {
+    const p = await abrir(true);
+    await p.locator("#grupo-lista li").first().waitFor();
+    expect(await p.locator("#convite-resultado").isHidden()).toBe(true);
+
+    await p.locator("#convite-criar").click(); // sem nome: não chama o cartório
+    await esperarTexto(p, "#convite-erro", "Digite o nome");
+    await p.locator("#convite-nome").fill("PC do João");
+    await esperarTexto(p, "#convite-nome-ficou", "pc-do-joao");
+    await p.locator("#convite-validade").selectOption("24");
+    await p.locator("#convite-criar").click();
+    await p.locator("#convite-resultado:not([hidden])").waitFor();
+    const texto = await p.locator("#convite-texto").inputValue();
+    expect(texto).toBe("sabre://convite/1.FALSO-pc-do-joao");
+    expect(await p.locator("#convite-prazo").textContent()).toContain("Vale até");
+    expect(
+      await aberto?.evaluate(
+        () =>
+          (globalThis as unknown as { __sabreE2EGrupo: { convites: unknown[] } }).__sabreE2EGrupo
+            .convites,
+      ),
+    ).toEqual([{ nomePc: "pc-do-joao", horas: 24 }]);
+
+    await p.locator("#convite-copiar").click();
+    await esperarTexto(p, "#convite-copiar", "Copiado");
+    expect(await aberto?.evaluate(({ clipboard }) => clipboard.readText())).toBe(texto);
+
+    // Sair e voltar: o texto some da tela, e nada do convite foi gravado nas preferências.
+    await p.locator("#config-voltar").click();
+    await p.locator("#ver-config").click();
+    await p.locator("#grupo-lista li").first().waitFor();
+    expect(await p.locator("#convite-resultado").isHidden()).toBe(true);
+    expect(await p.locator("#convite-texto").inputValue()).toBe("");
+    const gravados = readdirSync(dados ?? "", { recursive: true, withFileTypes: true })
+      .filter((e) => e.isFile())
+      .map((e) => readFileSync(join(e.parentPath, e.name)).toString("latin1"));
+    expect(
+      gravados.some((c) => c.includes("sabre://convite") || c.includes("FALSO-pc-do-joao")),
+    ).toBe(false);
+  });
+
+  it("convite: amigo (não-dono) não vê o formulário", async () => {
+    const p = await abrir(false);
+    await p.locator("#cfg-endereco").waitFor();
+    expect(await p.locator("#cfg-grupo").isHidden()).toBe(true);
+    expect(await p.locator("#convite-criar").isVisible()).toBe(false);
+  });
 
   it("grupo: não-dono não vê a área nem o botão", async () => {
     const p = await abrir();

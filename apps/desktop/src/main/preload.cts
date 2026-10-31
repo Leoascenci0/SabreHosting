@@ -43,6 +43,8 @@ electron.contextBridge.exposeInMainWorld("sabre", {
   grupo: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:estado"),
     tirar: (id: number): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:tirar", id),
+    criarConvite: (nome: string, horas: number): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:grupo:criar-convite", { nome, horas }),
   },
   mods: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:mods:estado"),

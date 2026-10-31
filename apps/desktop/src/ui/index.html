@@ -252,6 +252,48 @@
               <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
             </div>
           </div>
+          <div class="campo-convite" id="grupo-convite">
+            <p class="dica">
+              Para um PC novo entrar no grupo, crie um convite e envie o texto a quem vai usar.
+            </p>
+            <label for="convite-nome">Nome do PC convidado</label>
+            <input
+              id="convite-nome"
+              type="text"
+              maxlength="40"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
+            <label for="convite-validade">Vale por</label>
+            <select id="convite-validade">
+              <option value="1" selected>1 hora</option>
+              <option value="24">1 dia</option>
+              <option value="72">3 dias</option>
+            </select>
+            <div class="acoes">
+              <button type="button" id="convite-criar">Criar convite</button>
+            </div>
+            <div id="convite-resultado" hidden>
+              <label for="convite-texto">Texto do convite</label>
+              <input
+                id="convite-texto"
+                type="text"
+                readonly
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="detalhe" id="convite-prazo"></p>
+              <p class="detalhe">
+                Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se fechar
+                esta tela, crie outro.
+              </p>
+              <div class="acoes">
+                <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+              </div>
+            </div>
+            <p class="erro" id="convite-erro" role="alert" hidden></p>
+          </div>
           <p class="detalhe" id="grupo-aviso" role="status"></p>
           <p class="erro" id="grupo-erro" role="alert" hidden></p>
         </fieldset>
