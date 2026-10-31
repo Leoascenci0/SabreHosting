@@ -6,7 +6,7 @@ import { gerarMundo, hashesDoMundo } from "../../../../packages/nucleo/test/ajud
 import { gerarManifesto } from "@sabrehosting/nucleo/backup/manifesto";
 import { hashDoArquivo } from "@sabrehosting/nucleo/integridade/hash";
 import { servirArquivos, type Servidor } from "@sabrehosting/nucleo/sync/transferencia";
-import { criarEspalhador } from "./espalhar-versao.js";
+import { criarEspalhador, criarGatilhoEspalhar } from "./espalhar-versao.js";
 
 const pastas: string[] = [];
 const servidores: Servidor[] = [];
@@ -146,9 +146,121 @@ describe("criarEspalhador", () => {
     expect(hashesDoMundo(fora)).toEqual(antes);
   });
 
+  it("servidor órfão vivo (ou erro ao checar): recusa antes de pegar a vez e o mundo não muda (1.9a)", async () => {
+    const c = await cenario();
+    const antes = hashesDoMundo(c.mundo);
+    await expect(c.montar({ servidorOrfao: async () => true })(...c.args)).rejects.toThrow(
+      /sobrou um servidor/i,
+    );
+    await expect(
+      c.montar({
+        servidorOrfao: async () => {
+          throw new Error("não sei");
+        },
+      })(...c.args),
+    ).rejects.toThrow(/sobrou um servidor/i);
+    expect(c.eventos).toEqual([]);
+    expect(hashesDoMundo(c.mundo)).toEqual(antes);
+    await expect(c.montar({ servidorOrfao: async () => false })(...c.args)).resolves.toMatchObject({
+      estado: "atualizado",
+    });
+  });
+
   it("sem pastas configuradas diz o que falta e não toca o cartório", async () => {
     const c = await cenario();
     await expect(c.montar({ pastaDoServidor: undefined })(...c.args)).rejects.toThrow(/pastas/);
     expect(c.eventos).toEqual([]);
+  });
+});
+
+describe("criarGatilhoEspalhar (1.9a)", () => {
+  const nova = { numero: 4, manifestoSha256: "a".repeat(64) } as never;
+  const copias = (pcs: { id: number; ip: string | null }[]) =>
+    ({ numero: 4, nuvem: true, pcs: pcs.map((p) => ({ ...p, nome: `PC ${p.id}` })) }) as never;
+  function montar(o: {
+    maisNova?: unknown;
+    pcs?: { id: number; ip: string | null }[];
+    local?: number;
+  }) {
+    const chamadas: unknown[][] = [];
+    const avisos: string[] = [];
+    const rodar = criarGatilhoEspalhar({
+      cliente: {
+        maisNova: async () => (o.maisNova === undefined ? nova : o.maisNova),
+        quemTem: async () => copias(o.pcs ?? []),
+        eu: async () => ({ id: 1, nome: "Eu", dono: false }),
+      } as never,
+      versaoLocal: async () => o.local ?? 3,
+      espalhar: (async (...a: unknown[]) => void chamadas.push(a)) as never,
+      aoAvisar: (t) => avisos.push(t),
+    });
+    return { rodar, chamadas, avisos };
+  }
+
+  it("PC com ip null não derruba a lista: usa só os que têm IP, sem este PC, na porta de espalhar", async () => {
+    const m = montar({
+      pcs: [
+        { id: 1, ip: "10.66.0.2" },
+        { id: 2, ip: null },
+        { id: 3, ip: "10.66.0.4" },
+      ],
+    });
+    await m.rodar();
+    expect(m.chamadas).toEqual([
+      [
+        { numero: 4, manifestoSha256: "a".repeat(64) },
+        [{ tipo: "pc", endereco: "10.66.0.4", porta: 25570 }],
+      ],
+    ]);
+    expect(m.avisos).toEqual([]);
+  });
+
+  it("sem versão nova, sem versão registrada ou sem fonte com IP: não faz nada e não avisa", async () => {
+    for (const m of [
+      montar({ local: 4, pcs: [{ id: 3, ip: "10.66.0.4" }] }),
+      montar({ maisNova: null, pcs: [{ id: 3, ip: "10.66.0.4" }] }),
+      montar({ pcs: [{ id: 2, ip: null }] }),
+    ]) {
+      await m.rodar();
+      expect(m.chamadas).toEqual([]);
+      expect(m.avisos).toEqual([]);
+    }
+  });
+
+  it("erro do cartório ou da troca vira aviso em pt-BR e nunca lança", async () => {
+    const m = montar({ pcs: [{ id: 3, ip: "10.66.0.4" }] });
+    const rodar = criarGatilhoEspalhar({
+      cliente: {
+        maisNova: async () => {
+          throw new Error("cartório fora");
+        },
+      } as never,
+      versaoLocal: async () => 0,
+      espalhar: (async () => undefined) as never,
+      aoAvisar: (t) => m.avisos.push(t),
+    });
+    await expect(rodar()).resolves.toBeUndefined();
+    expect(m.avisos).toEqual(["Atualização do mundo: cartório fora"]);
+  });
+});
+
+describe("3 PCs simulados chegam à versão M (1.9a)", () => {
+  it("PC 1 e PC 2 puxam de quem tem M; o mundo do host (PC 3) não muda e nenhum hash fica de fora", async () => {
+    const c = await cenario();
+    const hostAntes = hashesDoMundo(c.host);
+    // PC 2: outra pasta, mesmo mundo velho; serve pelo PC 1 depois que ele atualizar (cadeia host → PC1 → PC2).
+    const pc2 = join(c.base, "pc2");
+    const mundo2 = gerarMundo({ tamanho: "1MB", semente: "A", pasta: join(pc2, "world") });
+    const r1 = await c.montar()(...c.args);
+    expect(r1.estado).toBe("atualizado");
+    const r2 = await c.montar({
+      pastaDoMundo: mundo2,
+      pastaDoServidor: pc2,
+      pastaTemporaria: join(c.base, "tmp2"),
+    })(...c.args);
+    expect(r2.estado).toBe("atualizado");
+    expect(hashesDoMundo(c.mundo)).toEqual(hostAntes);
+    expect(hashesDoMundo(mundo2)).toEqual(hostAntes);
+    expect(hashesDoMundo(c.host)).toEqual(hostAntes);
   });
 });

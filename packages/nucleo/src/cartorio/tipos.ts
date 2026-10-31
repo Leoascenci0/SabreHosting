@@ -5,6 +5,7 @@ import { type PacoteDeLigacao, validarPacote } from "../rede/wireguard.js";
 
 const MOTIVOS = [
   "ocupada",
+  "atualizando",
   "epoca_velha",
   "nao_e_dono",
   "vencida",

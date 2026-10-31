@@ -11,6 +11,7 @@ import {
 } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 import { mkdirSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -23,6 +24,8 @@ import { analisarZip, importarNoCartorio } from "@sabrehosting/nucleo/importar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAvisoHistorico } from "./aviso-historico.js";
 import { criarRotacaoBackups, type RotacaoBackups } from "./rotacao-backups.js";
+import { criarEspalhador, criarGatilhoEspalhar } from "./espalhar-versao.js";
+import { listarBackups } from "@sabrehosting/nucleo/backup/listar";
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { depsBackupsReais } from "./deps-backups.js";
@@ -313,6 +316,46 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
   return criarBackups(depsBackupsE2E(servidorRodando));
 }
 
+const ESPALHAR_A_CADA_MS = 10 * 60_000;
+
+/**
+ * Atualização do mundo em segundo plano (syncmel-1.9a): no arranque e a cada 10 min pergunta ao cartório se há versão
+ * mais nova e puxa de quem já tem. Um só relógio; uma rodada por vez; nunca espera a tela. Sem grupo ou sem pastas:
+ * fica quieto (o amigo ainda não configurou). Hospedando, o espalhador recusa sozinho (o mundo vivo não se toca).
+ */
+function ligarEspalharDoApp(inicio: Inicio): void {
+  if (process.env["SABRE_E2E"] === "1") return;
+  const { SABRE_CARTORIO_TOKEN: token, SABRE_PASTA_BACKUPS: pastaBackups } = process.env;
+  if (!token || !pastaBackups) return;
+  let exigir: ReturnType<typeof clienteDoAmbiente>;
+  try {
+    exigir = clienteDoAmbiente(process.env);
+    exigir();
+  } catch {
+    return;
+  }
+  const cliente = exigir();
+  const versaoLocal = async () =>
+    Math.max(0, ...(await listarBackups(pastaBackups)).map((b) => b.versao));
+  const rodar = criarGatilhoEspalhar({
+    cliente,
+    versaoLocal,
+    espalhar: criarEspalhador({
+      pastaDoMundo: process.env["SABRE_PASTA_MUNDO"],
+      pastaDoServidor: process.env["SABRE_PASTA_SERVIDOR"],
+      pastaTemporaria: join(tmpdir(), "sabre-manifesto"),
+      token,
+      cliente,
+      servidorRodando: () => inicio.ativo(),
+      servidorOrfao: () => inicio.temOrfao(),
+      versaoLocal,
+    }),
+    aoAvisar: (texto) => console.warn(`[atualizar] ${texto}`),
+  });
+  void rodar();
+  setInterval(() => void rodar(), ESPALHAR_A_CADA_MS).unref();
+}
+
 /** Importar mundo (piloto-1.1c): seletor só de .zip; o caminho escolhido fica aqui no main, nunca vem da janela. */
 async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
   const servidorRodando = (): boolean => inicio.ativo();
@@ -502,6 +545,7 @@ if (!app.requestSingleInstanceLock()) {
     agendaApp = await criarAgendaDoApp();
     inicioApp = await criarInicioDoApp();
     backupsApp = await criarBackupsDoApp(inicioApp);
+    ligarEspalharDoApp(inicioApp);
     const inicioPronto = inicioApp;
     registrarPonte(
       inicioApp,
