@@ -30,6 +30,8 @@ O Eliel se guia pela lista de chats do claude.ai/code; cada sessão tem que dize
     Onda 21 — …
       Item 1 · …
   ```
+- **Errado (enche o contexto):** o chat da Máxima se renomear para a onda (ex.: "Máxima — onda 58") e abrir os itens
+  direto debaixo dele. A onda é **sempre outra sessão**, criada pelo coordenador; só ela cria os itens.
 - **Bastão:** a coordenadora seguinte é criada pela atual com o título `Máxima continuar — <data> (<n>º bastão)`; as
   ondas seguintes nascem dela e ficam debaixo dela.
 - **Título da sessão de onda:** `Onda <N> — <itens separados por " · ">`.
