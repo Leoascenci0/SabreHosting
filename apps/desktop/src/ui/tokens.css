@@ -6,6 +6,8 @@
   --cor-texto: #14232a;
   --cor-texto-suave: #4a5d66;
   --cor-destaque: #0a6b80;
+  --cor-sobre-destaque: #ffffff;
+  --cor-erro: #b3261e;
 
   --espaco-1: 4px;
   --espaco-2: 8px;
@@ -26,5 +28,7 @@
     --cor-texto: #eaf2f4;
     --cor-texto-suave: #9fb4bd;
     --cor-destaque: #4fd1e8;
+    --cor-sobre-destaque: #0e171c;
+    --cor-erro: #ff8a80;
   }
 }

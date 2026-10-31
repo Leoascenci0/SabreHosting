@@ -10,4 +10,15 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     definir: (ligado: boolean): Promise<boolean> =>
       electron.ipcRenderer.invoke("sabre:abrir-com-windows:definir", ligado),
   },
+  inicio: {
+    estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:estado"),
+    jogar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:jogar"),
+    hospedar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:hospedar"),
+    parar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:parar"),
+    aoProgresso: (cb: () => void): (() => void) => {
+      const ouvinte = (): void => cb();
+      electron.ipcRenderer.on("sabre:inicio:mudou", ouvinte);
+      return () => void electron.ipcRenderer.removeListener("sabre:inicio:mudou", ouvinte);
+    },
+  },
 });

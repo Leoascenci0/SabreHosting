@@ -6,5 +6,8 @@
   "type": "module",
   "dependencies": {
     "tar": "^7.5.22"
+  },
+  "exports": {
+    "./*": "./dist/packages/nucleo/src/*.js"
   }
 }

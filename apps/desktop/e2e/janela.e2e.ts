@@ -34,12 +34,10 @@ afterAll(async () => {
 });
 
 describe("janela do SabreHosting", () => {
-  it("abre com o nome, o ícone e o aviso honesto", async () => {
+  it("abre com o nome, o ícone e o estado do servidor", async () => {
     expect(await pagina.title()).toBe("SabreHosting");
     await expect(pagina.locator("h1").innerText()).resolves.toBe("SabreHosting");
-    await expect(pagina.locator(".aviso").innerText()).resolves.toContain(
-      "Em breve: Jogar e Hospedar",
-    );
+    await expect(pagina.locator("#status").innerText()).resolves.toBe("Ninguém está hospedando");
     const largura = await pagina
       .locator("img.icone")
       .evaluate((i: HTMLImageElement) => i.naturalWidth);
@@ -65,7 +63,7 @@ describe("janela do SabreHosting", () => {
       await pagina.evaluate(() =>
         Object.keys((globalThis as { sabre?: object }).sabre ?? {}).sort(),
       ),
-    ).toEqual(["abrirComWindows", "versao"]);
+    ).toEqual(["abrirComWindows", "inicio", "versao"]);
   });
 
   it("mostra a versão pela ponte", async () => {

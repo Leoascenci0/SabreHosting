@@ -12,10 +12,24 @@
     <link rel="stylesheet" href="tela.css" />
   </head>
   <body>
-    <main class="cartao">
+    <main class="cartao" id="cartao" data-estado="carregando" aria-busy="true">
       <img class="icone" src="../../recursos/icone/icone-512.png" alt="Tigre-dente-de-sabre do SabreHosting" />
       <h1>SabreHosting</h1>
-      <p class="aviso">Em breve: Jogar e Hospedar.</p>
+      <p class="status" id="status" role="status">Verificando o servidor…</p>
+      <p class="detalhe" id="detalhe"></p>
+      <p class="erro" id="erro" role="alert" hidden></p>
+      <div class="acoes">
+        <button type="button" class="principal" id="principal" hidden></button>
+        <button type="button" class="secundario" id="parar" hidden>Parar o servidor</button>
+        <button type="button" class="secundario" id="tentar" hidden>Tentar de novo</button>
+      </div>
+      <div class="confirmacao" id="confirmacao" role="alertdialog" aria-labelledby="pergunta" hidden>
+        <p id="pergunta">Os amigos conectados vão cair. Parar o servidor?</p>
+        <div class="acoes">
+          <button type="button" class="perigo" id="confirmar-parar">Parar</button>
+          <button type="button" class="secundario" id="cancelar-parar">Cancelar</button>
+        </div>
+      </div>
       <p class="versao" id="versao"></p>
     </main>
     <script type="module" src="tela.js"></script>
