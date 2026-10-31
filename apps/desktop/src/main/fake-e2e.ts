@@ -12,7 +12,9 @@ import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
 import type { RespostaTrava } from "@sabrehosting/nucleo/cartorio/tipos";
 import { depsBackups } from "./deps-backups.js";
 import type { DepsBackups } from "./backups.js";
+import type { DepsBoasVindas } from "./boas-vindas.js";
 import type { DepsGrupo } from "./grupo.js";
+import { gerarChavesDoPc } from "@sabrehosting/nucleo/rede/wireguard";
 import type { DepsImportacao } from "./importar.js";
 import type { DepsVersao } from "./versao.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
@@ -242,5 +244,50 @@ export function depsVersaoE2E(servidorRodando: () => boolean): DepsVersao {
     backupAntes: async () => undefined,
     gravar: async (v) => void (gravados.push(v), (atual = v)),
     servidorRodando,
+  };
+}
+
+const ACESSO_FALSO = "token-falso-do-e2e";
+
+/**
+ * Assistente de primeira vez do E2E: cartório e WireGuard falsos. Sem `SABRE_E2E_BOAS_VINDAS=1` o PC já nasce
+ * configurado (as outras telas não veem o assistente). `SABRE_E2E_SEM_COFRE=1` tira o cofre do sistema. O convite com
+ * código `usado` é recusado como o cartório recusaria. Tudo que o "passo elevado" recebeu fica em
+ * `__sabreE2EBoasVindas` (chamadas, token guardado) para o teste conferir.
+ */
+export function depsBoasVindasE2E(dados: string): {
+  deps: DepsBoasVindas;
+  escolherPasta: () => Promise<string | undefined>;
+} {
+  const ligado = process.env["SABRE_E2E_BOAS_VINDAS"] === "1";
+  if (!ligado) {
+    mkdirSync(dados, { recursive: true });
+    writeFileSync(
+      join(dados, "boas-vindas.json"),
+      JSON.stringify({ grupo: { nome: "Grupo" }, concluido: true, pastaBase: join(dados, "base") }),
+    );
+  }
+  const registro = { entradas: [] as string[], tokens: [] as string[] };
+  (globalThis as Record<string, unknown>)["__sabreE2EBoasVindas"] = registro;
+  return {
+    deps: {
+      dados,
+      agora: Date.now,
+      gerarChaves: gerarChavesDoPc,
+      cofreDisponivel: () => process.env["SABRE_E2E_SEM_COFRE"] !== "1",
+      cofre: {
+        guardar: async (t) => void registro.tokens.push(t),
+        ler: async () => registro.tokens[0],
+      },
+      entrar: async (convite) => {
+        registro.entradas.push(convite.grupo);
+        if (convite.codigo === "usado")
+          throw Object.assign(new Error("O convite foi recusado."), { tipo: "acesso" });
+        return { token: ACESSO_FALSO };
+      },
+      lerGrupo: async () => ({ nome: "Amigos do E2E", endereco_jogar: "jogar.exemplo.org:25565" }),
+      pastaPadrao: () => join(dados, "padrao"),
+    },
+    escolherPasta: async () => join(dados, "escolhida"),
   };
 }
