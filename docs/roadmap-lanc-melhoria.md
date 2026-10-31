@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
 
 ## Bloco 2 — Depois do lanc-1.3 e do lanc-1.4
 
-- [ ] **2.1 — Tela "Mods do grupo" e ligar `sincronizarMods` no app**
+- [x] **2.1 — Tela "Mods do grupo" e ligar `sincronizarMods` no app** (PR #215, 31/10/2026; lado do jogo depende do 2.2)
   *O que fazer:* tela para o dono editar a lista de mods (GET/PUT `/grupo/mods` já existem); ligar `sincronizarMods` (instância do Prism e pasta mods do servidor) no arranque e ao mudar a lista, com estado "Atualizando mods…".
   *Arquivo:* `apps/desktop/src/ui/`, `apps/desktop/src/main/`, `packages/nucleo/src/launcher/mods.ts`
   **Tela no app:** Configurações › Grupo › "Mods do grupo" (só o dono edita).
@@ -25,3 +25,10 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* teste: redirect para outro host recusado; falha no download mantém o mod antigo.
   *Origem:* lanc-1.4 · PR #210 · qa
+
+- [ ] **2.4 — Mods do grupo: limpar avisos antigos na tela**
+  *O que fazer:* em `carregarMods` (`ui/configuracoes.ts`), `avisoMods` nunca é limpo quando o problema some e o `erroMods` de "Não consegui ler a lista…" fica depois de uma leitura bem-sucedida: limpar nos dois casos (sem apagar o erro de uma ação que acabou de falhar).
+  *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`
+  **Tela no app:** Configurações › Grupo › "Mods do grupo".
+  *Confirmação:* teste/e2e: aviso some quando a lista volta a carregar.
+  *Origem:* lancmel-2.1 · PR #215 · qa
