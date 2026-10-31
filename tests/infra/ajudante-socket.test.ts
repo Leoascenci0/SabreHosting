@@ -1,5 +1,13 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import {
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -19,8 +27,8 @@ afterEach(() => {
 const chaveNova = () => randomBytes(32).toString("base64");
 
 /** O systemd liga a conexão no stdin/stdout do wrapper; aqui o pedido vai direto no stdin. */
-function pedir(linha: string, extra: Record<string, string> = {}) {
-  const r = spawnSync("bash", [WRAPPER], {
+function pedir(linha: string, extra: Record<string, string> = {}, wrapper = WRAPPER) {
+  const r = spawnSync("bash", [wrapper], {
     input: linha,
     encoding: "utf8",
     env: {
@@ -142,5 +150,96 @@ describe("ajudante-socket.sh: pedido de uma linha JSON", () => {
     const r = pedir(json("entrada-trocar", ["10.66.0.201", "pc-a", chaveNova()]));
     expect(r.json?.["codigo"]).toBe(1);
     expect(String(r.json?.["erro"])).toMatch(/'pc-a' já existe/);
+  });
+
+  describe("com um ajudante falso ao lado do wrapper", () => {
+    /** Cópia do wrapper numa pasta com um `ajudante-entrada.sh` falso, que anota cada chamada. */
+    function comFalso(corpo: string) {
+      const pastaFalsa = mkdtempSync(join(estado, "falso-"));
+      const wrapper = join(pastaFalsa, "ajudante-socket.sh");
+      copyFileSync(WRAPPER, wrapper);
+      const chamadas = join(pastaFalsa, "chamadas");
+      writeFileSync(
+        join(pastaFalsa, "ajudante-entrada.sh"),
+        `echo "$*" >> ${JSON.stringify(chamadas)}\n${corpo}\n`,
+      );
+      return {
+        wrapper,
+        chamadas: () => (existsSync(chamadas) ? readFileSync(chamadas, "utf8") : ""),
+      };
+    }
+
+    it("erro sem linha 'ERRO:' (ex.: eco '+ wg set …') nunca volta; vira 'ERRO: falha interna do ajudante'", () => {
+      const k = chaveNova();
+      const f = comFalso(
+        `echo "+ wg set wg0 peer ${k} allowed-ips 10.66.0.200/32" >&2\necho "outra linha" >&2\nexit 1`,
+      );
+      const r = pedir(json("entrada-adicionar", [k]), {}, f.wrapper);
+      expect(f.chamadas()).toBe(`entrada-adicionar ${k}\n`);
+      expect(r.saida).toEqual(['{"codigo":1,"erro":"ERRO: falha interna do ajudante"}']);
+      expect(r.stdout).not.toContain("+ wg");
+      // Com a linha ERRO no meio do eco, só ela volta.
+      const g = comFalso(
+        `echo "+ wg set wg0 peer x" >&2\necho "ERRO: chave repetida." >&2\nexit 1`,
+      );
+      expect(pedir(json("entrada-adicionar", [k]), {}, g.wrapper).saida).toEqual([
+        '{"codigo":1,"erro":"ERRO: chave repetida."}',
+      ]);
+      // Linha que só contém 'ERRO:' no meio não conta.
+      const h = comFalso(`echo "+ wg set x # ERRO: falso" >&2\nexit 1`);
+      expect(pedir(json("entrada-adicionar", [k]), {}, h.wrapper).json?.["erro"]).toBe(
+        "ERRO: falha interna do ajudante",
+      );
+    });
+
+    it("linha gigante ou 2º pedido na mesma conexão → código 2 sem chamar o ajudante", () => {
+      const f = comFalso('echo \'{"ip":"10.66.0.200"}\'');
+      const k = chaveNova();
+      const valido = json("entrada-adicionar", [k]);
+      expect(pedir(valido, {}, f.wrapper).saida).toEqual(['{"ip":"10.66.0.200"}']); // o falso responde
+      const chamadasAntes = f.chamadas();
+      for (const linha of [
+        `${"x".repeat(100_000)}\n`,
+        `${valido.trim()}${" ".repeat(2000)}\n`,
+        `${valido}${valido}`,
+        `${valido}${json("entrada-remover", ["10.66.0.200"])}`,
+        `${valido}x`,
+      ]) {
+        const r = pedir(linha, {}, f.wrapper);
+        expect(r.status, linha.slice(0, 80)).toBe(0);
+        expect(r.saida, linha.slice(0, 80)).toEqual(['{"codigo":2,"erro":"pedido recusado"}']);
+      }
+      expect(f.chamadas()).toBe(chamadasAntes);
+    });
+  });
+
+  it("6 pedidos em paralelo (uma conexão cada) → 6 IPs distintos na sala de entrada", async () => {
+    const pedirAssincrono = (linha: string) =>
+      new Promise<string>((ok, falha) => {
+        const p = spawn("bash", [WRAPPER], {
+          env: {
+            PATH: process.env.PATH,
+            SABRE_SIMULAR: "1",
+            SABRE_ESTADO: estado,
+            SABRE_ENDPOINT_HUB: "hub.exemplo.org:51820",
+            SABRE_CHAVE_PUB_HUB: HUB_PUB,
+          },
+        });
+        let saida = "";
+        p.stdout.setEncoding("utf8").on("data", (d: string) => (saida += d));
+        p.on("error", falha);
+        p.on("close", () => ok(saida.trim()));
+        p.stdin.end(linha);
+      });
+    const respostas = await Promise.all(
+      Array.from({ length: 6 }, () => pedirAssincrono(json("entrada-adicionar", [chaveNova()]))),
+    );
+    const ips = respostas.map((r) => (JSON.parse(r) as { ip?: string }).ip);
+    expect(
+      ips.every((ip) => /^10\.66\.0\.2\d\d$/.test(ip ?? "")),
+      respostas.join(" | "),
+    ).toBe(true);
+    expect(new Set(ips).size).toBe(6);
+    expect(ler("pcs.tsv").match(/\tentrada\n/g)).toHaveLength(6);
   });
 });

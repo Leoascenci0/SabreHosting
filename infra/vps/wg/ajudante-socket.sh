@@ -5,6 +5,7 @@
 #   pedido (1 linha): {"comando":"entrada-adicionar|entrada-trocar|entrada-remover","args":["…"]}
 #   resposta (1 linha): o JSON do ajudante ({"ok":true} quando ele não imprime JSON);
 #     {"codigo":1,"erro":"<linha ERRO do ajudante>"} = ajudante recusou (nada mudou);
+#     {"codigo":1,"erro":"ERRO: falha interna do ajudante"} = falhou sem linha ERRO (o resto do stderr não volta);
 #     {"codigo":2,"erro":"pedido recusado"} = pedido fora do formato (o ajudante nem foi chamado).
 # Detalhes: infra/vps/LEIAME.md
 set -uo pipefail
@@ -47,7 +48,8 @@ if [ "$codigo" -eq 0 ]; then
 elif [ "$codigo" -eq 2 ]; then
   recusar
 else
-  erro=$(grep -m 1 '^ERRO: ' "$erros" || head -n 1 "$erros")
+  # Só a linha ERRO volta; qualquer outra coisa do stderr (ex.: eco "+ wg set …" com chave) fica aqui.
+  erro=$(grep -m 1 '^ERRO: ' "$erros") || erro='ERRO: falha interna do ajudante'
   erro=$(printf '%s' "$erro" | tr -d '\000-\037' | sed 's/\\/\\\\/g; s/"/\\"/g')
-  printf '{"codigo":1,"erro":"%s"}\n' "${erro:-ajudante falhou}"
+  printf '{"codigo":1,"erro":"%s"}\n' "$erro"
 fi
