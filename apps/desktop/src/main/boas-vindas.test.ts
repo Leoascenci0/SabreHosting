@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -257,5 +257,32 @@ describe("pastaPermitida", () => {
   it("recusa o que não é texto", () => {
     expect(pastaPermitida(42)).toBe(false);
     expect(pastaPermitida(undefined)).toBe(false);
+  });
+
+  it("PC já configurado com cofre corrompido: reabre no convite avisando; ausente/ok não", async () => {
+    writeFileSync(
+      join(dados, "boas-vindas.json"),
+      JSON.stringify({
+        grupo: { nome: "G" },
+        portaCartorio: 7710,
+        concluido: true,
+        pastaBase: base,
+      }),
+    );
+    const com = (tipo: "corrompido" | "ausente" | "indisponivel") =>
+      montar({
+        cofre: {
+          guardar: async () => {},
+          ler: async () => undefined,
+          estado: async () => ({ tipo }),
+        },
+      }).bv;
+    expect(await com("corrompido").estado()).toMatchObject({
+      aberto: true,
+      passo: "convite",
+      cofreCorrompido: true,
+    });
+    expect(await com("ausente").estado()).toEqual({ aberto: false });
+    expect(await com("indisponivel").estado()).toEqual({ aberto: false });
   });
 });

@@ -165,6 +165,7 @@ export function criarEntradaNoGrupo(op: OpcoesEntrada) {
         await esperarPronta(sessao);
       } catch (causa) {
         await sinalizar(SINAL.cancelar).catch(() => undefined);
+        await sessao.catch(() => undefined); // o script vê o cancelar e desinstala o túnel antes de a pasta ser limpa
         throw new Error(FALHA_INSTALAR, { cause: causa });
       }
       const cliente = criarCliente({

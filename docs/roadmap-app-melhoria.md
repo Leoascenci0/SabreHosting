@@ -98,7 +98,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Depende de:* appmel-1.8 e decisão do Eliel.
   *Origem:* appmel-1.8 · triagem · Máxima
 
-- [ ] **1.12 — Cofre: distinguir "não existe" de "corrompido"**
+- [x] **1.12 — Cofre: distinguir "não existe" de "corrompido"** (PR #223, 31/10/2026)
   *O que fazer:* `ler()` do cofre devolve `undefined` também quando o decrypt falha; devolver estado distinto para o assistente pedir novo convite em vez de achar que é a primeira vez.
   *Arquivo:* `apps/desktop/src/main/cofre.ts`
   **Tela no app:** não se aplica (mensagem no assistente do app-1.3b).
@@ -119,7 +119,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: falha na instalação definitiva, depois sucesso sem novo convite.
   *Origem:* app-1.3b · PR #211 · filha
 
-- [ ] **1.14 — Respeitar `level-name` e validar `SABRE_JAVA`/`SABRE_NEOFORGE`**
+- [x] **1.14 — Respeitar `level-name` e validar `SABRE_JAVA`/`SABRE_NEOFORGE`** (PR #225, 31/10/2026)
   *O que fazer:* `pastaMundo` em `config-pc.ts` é fixa `servidor/world`, mas `deps-reais.ts` lê `level-name` do `server.properties`: se não for "world", backup e espalhar apontam para a pasta errada (não apaga nada). `SABRE_JAVA`/`SABRE_NEOFORGE` do ambiente viram executável do servidor sem validação em modo normal: validar ou limitar a modo teste.
   *Arquivo:* `apps/desktop/src/main/config-pc.ts`, `deps-reais.ts`
   **Tela no app:** não se aplica.
@@ -133,7 +133,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste/e2e: região anuncia a cópia; um só normalizador de nome.
   *Origem:* app-1.3c-ii · PR #218 · qa
 
-- [ ] **1.16 — Entrada no grupo: esperar a sessão elevada antes de limpar; bloquear Jogar após trocar a pasta**
+- [x] **1.16 — Entrada no grupo: esperar a sessão elevada antes de limpar; bloquear Jogar após trocar a pasta** (PR #224, 31/10/2026; [P: parte (a) no Windows])
   *O que fazer:* (a) em `entrada-no-grupo.ts` (~172-196) no caminho de falha, `await sessao.catch(() => undefined)` antes de `limpar()`, para o script ver o `cancelar.flag` e desinstalar o túnel provisório na hora (hoje pode ficar até 150 s); (b) em `principal.ts` (~543-547), depois do sucesso da troca de pasta e antes do `app.exit(0)` (1,5 s), bloquear o botão Jogar.
   *Arquivo:* `apps/desktop/src/main/entrada-no-grupo.ts`, `principal.ts`
   **Tela no app:** não se aplica.
