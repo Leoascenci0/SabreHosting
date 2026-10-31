@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { depsReais } from "./deps-reais.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
-import { ehBooleano, navegacaoPermitida } from "./seguranca.js";
+import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
 
 const aqui = (relativo: string): string => fileURLToPath(new URL(relativo, import.meta.url));
 const PAGINA = pathToFileURL(aqui("../ui/index.html")).href;
@@ -134,11 +134,6 @@ function criarBandeja(): Tray {
   return nova;
 }
 
-// Só a página do próprio app pode falar com o processo principal.
-function veioDaPagina(evento: IpcMainInvokeEvent): boolean {
-  return navegacaoPermitida(evento.senderFrame?.url ?? "", PAGINA);
-}
-
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1")
     return criarInicio(depsReais(process.env, (t) => clipboard.writeText(t)));
@@ -153,7 +148,7 @@ async function criarInicioDoApp(): Promise<Inicio> {
 
 function registrarPonte(inicio: Inicio): void {
   const permitir = (evento: IpcMainInvokeEvent): void => {
-    if (!veioDaPagina(evento)) throw new Error("origem não permitida");
+    if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
   };
   inicio.aoMudar(() => janela?.webContents.send("sabre:inicio:mudou"));
   ipcMain.handle("sabre:inicio:estado", (evento) => (permitir(evento), inicio.estado()));
@@ -161,15 +156,15 @@ function registrarPonte(inicio: Inicio): void {
   ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), inicio.hospedar()));
   ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), inicio.parar()));
   ipcMain.handle("sabre:versao", (evento) => {
-    if (!veioDaPagina(evento)) throw new Error("origem não permitida");
+    if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
     return app.getVersion();
   });
   ipcMain.handle("sabre:abrir-com-windows:ler", (evento) => {
-    if (!veioDaPagina(evento)) throw new Error("origem não permitida");
+    if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
     return lerPreferencias(app.getPath("userData")).abrirComWindows;
   });
   ipcMain.handle("sabre:abrir-com-windows:definir", (evento, ligado: unknown) => {
-    if (!veioDaPagina(evento)) throw new Error("origem não permitida");
+    if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
     if (!ehBooleano(ligado)) throw new Error("valor inválido");
     salvarPreferencias(app.getPath("userData"), { abrirComWindows: ligado });
     // Só Windows e macOS têm essa função; no resto o estado guardado basta.

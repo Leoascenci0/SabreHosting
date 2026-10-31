@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ehBooleano, navegacaoPermitida } from "./seguranca.js";
+import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
 
 const pagina = "file:///app/dist/ui/index.html";
 
@@ -14,6 +14,26 @@ describe("navegação", () => {
     expect(navegacaoPermitida("https://exemplo.com", pagina)).toBe(false);
     expect(navegacaoPermitida("file:///etc/passwd", pagina)).toBe(false);
     expect(navegacaoPermitida("não é url", pagina)).toBe(false);
+  });
+});
+
+describe("remetente da ponte", () => {
+  const de = (url: string | undefined) => ({
+    senderFrame: url === undefined ? undefined : { url },
+  });
+
+  it("aceita chamada vinda da página do app", () => {
+    expect(veioDaPagina(de(pagina), pagina)).toBe(true);
+  });
+
+  it("recusa remetente ausente ou de outra origem", () => {
+    expect(veioDaPagina(de(undefined), pagina)).toBe(false);
+    expect(veioDaPagina({ senderFrame: null }, pagina)).toBe(false);
+    expect(veioDaPagina(de("file:///etc/passwd"), pagina)).toBe(false);
+    expect(veioDaPagina(de("file:///app/dist/ui/outra.html"), pagina)).toBe(false);
+    expect(veioDaPagina(de("https://exemplo.com/app/dist/ui/index.html"), pagina)).toBe(false);
+    expect(veioDaPagina(de("http://exemplo.com"), pagina)).toBe(false);
+    expect(veioDaPagina(de(pagina + ".evil"), pagina)).toBe(false);
   });
 });
 
