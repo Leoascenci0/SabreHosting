@@ -156,7 +156,7 @@ const CHAVES_DESINSTALACAO = [
 
 const PRAZO_REG_MS = 5000;
 
-const execReal: ExecArquivo = (arquivo, args) =>
+export const execReal: ExecArquivo = (arquivo, args) =>
   new Promise((ok, falha) => {
     execFile(
       arquivo,
