@@ -1,10 +1,12 @@
+// Capturas em docs/imagens/ só com SABRE_CAPTURAS=1 (ex.: SABRE_CAPTURAS=1 npm run test:e2e -w apps/desktop)
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { registrarCaptura } from "./captura.js";
 
 const pastaApp = fileURLToPath(new URL("..", import.meta.url));
 const imagens = fileURLToPath(new URL("../../../docs/imagens/", import.meta.url));
@@ -135,7 +137,6 @@ describe("janela do SabreHosting", () => {
   });
 
   it("grava as capturas nos temas claro e escuro", async () => {
-    mkdirSync(imagens, { recursive: true });
     for (const [tema, nome] of [
       ["light", "claro"],
       ["dark", "escuro"],
@@ -145,7 +146,7 @@ describe("janela do SabreHosting", () => {
       }, tema);
       await pagina.emulateMedia({ colorScheme: tema });
       await pagina.waitForTimeout(300);
-      await pagina.screenshot({ path: join(imagens, `app-1.1-janela-${nome}.png`) });
+      await registrarCaptura(pagina, join(imagens, `app-1.1-janela-${nome}.png`));
     }
   });
 
