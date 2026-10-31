@@ -64,6 +64,10 @@ describe("montarInstancia", () => {
     expect(nomeSeguroDoGrupo("CON")).toBe("CON_");
     expect(nomeSeguroDoGrupo("  turma.  ")).toBe("turma");
     expect(nomeSeguroDoGrupo("a".repeat(200)).length).toBeLessThanOrEqual(64);
+    // O corte não pode deixar a metade de um emoji (par substituto) no fim do nome.
+    const emoji = nomeSeguroDoGrupo("a".repeat(63) + "😀");
+    expect(emoji).toBe("a".repeat(63) + "😀");
+    expect(nomeSeguroDoGrupo("😀".repeat(70))).toBe("😀".repeat(64));
     expect(montarInstancia({ ...base, grupo: "A/B" }).nomeArquivo).toBe("AB.mrpack");
     // O nome exibido no Prism mantém o texto do grupo, sem controles.
     expect(montarInstancia({ ...base, grupo: "A\nB" }).indice.name).toBe("SabreHosting — A B");
@@ -99,6 +103,25 @@ describe("gravarInstancia", () => {
     await gravarInstancia({ ...base, versaoMinecraft: "1.21.4", pastaDestino: raiz });
     expect(await readFile(join(alheia, "instance.cfg"), "utf8")).toBe("name=Meu Modpack");
     expect(await readFile(join(raiz, "SabreHosting", "Outro.mrpack"), "utf8")).toBe("do amigo");
+  });
+
+  it("só trata 'não existe' como arquivo ausente; outros erros de leitura são repassados sem gravar", async () => {
+    const acesso = Object.assign(new Error("sem permissão"), { code: "EACCES" });
+    await expect(
+      gravarInstancia({ ...base, pastaDestino: raiz, lerArquivo: () => Promise.reject(acesso) }),
+    ).rejects.toBe(acesso);
+    expect(await readdir(raiz)).toEqual([]);
+  });
+
+  it("trata ENOENT na leitura como arquivo ainda não gravado", async () => {
+    const sumido = Object.assign(new Error("não existe"), { code: "ENOENT" });
+    const r = await gravarInstancia({
+      ...base,
+      pastaDestino: raiz,
+      lerArquivo: () => Promise.reject(sumido),
+    });
+    expect(r.alterado).toBe(true);
+    expect(await readFile(r.caminho)).toEqual(montarInstancia(base).bytes);
   });
 
   it("não deixa arquivo temporário para trás", async () => {
