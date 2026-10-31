@@ -8,7 +8,7 @@ estava desligado atualiza ao ligar.
 
 ## Bloco 1 — Transferência
 
-- [ ] **1.1 — Servir e pedir regiões pela rede privada**
+- [x] **1.1 — Servir e pedir regiões pela rede privada** (PR #156, 31/10/2026)
   *O que fazer:* pequeno servidor HTTP no app, só no IP da rede privada e autenticado pelo token do grupo, que entrega
   arquivos de uma versão por hash; cliente que pede, retoma do ponto onde parou e confere o hash.
   *Arquivo:* `packages/nucleo/src/sync/transferencia.ts`
@@ -16,7 +16,7 @@ estava desligado atualiza ao ligar.
   *Confirmação:* teste: conexão cortada no meio retoma; hash errado é descartado.
   *Depende de:* bkp-1.1, rede-1.3
 
-- [ ] **1.2 — Aplicar delta com troca atômica**
+- [x] **1.2 — Aplicar delta com troca atômica** (PR #158, 31/10/2026)
   *O que fazer:* da versão local N para a versão M: copiar N para temporária (hard link quando der), aplicar os arquivos
   que mudaram, conferir o manifesto de M inteiro, `rename`; informar o cartório.
   *Arquivo:* `packages/nucleo/src/sync/aplicar.ts`

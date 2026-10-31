@@ -6,6 +6,7 @@ import {
   gerarEula,
   gerarPropriedades,
   gravarConfiguracao,
+  validarDistancias,
   perguntaEula,
   podeSubir,
 } from "./configurar.js";
@@ -166,5 +167,15 @@ describe("podeSubir e gravarConfiguracao", () => {
     await mkdir(join(pasta, "server.properties"));
     await expect(gravarConfiguracao(pasta, base)).rejects.toThrow();
     expect((await readdir(pasta)).filter((n) => n.endsWith(".tmp"))).toEqual([]);
+  });
+});
+
+describe("validarDistancias", () => {
+  it("aceita as faixas e recusa fora delas ou simulação >= visão", () => {
+    expect(() => validarDistancias(10, 8)).not.toThrow();
+    expect(() => validarDistancias(2, 5)).toThrow("distância de visão");
+    expect(() => validarDistancias(10, 4)).toThrow("distância de simulação");
+    expect(() => validarDistancias(10.5, 8)).toThrow("inteiro");
+    expect(() => validarDistancias(8, 8)).toThrow("menor que a distância de visão");
   });
 });

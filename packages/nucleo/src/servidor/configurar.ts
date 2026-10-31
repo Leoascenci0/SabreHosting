@@ -32,20 +32,33 @@ function validarFaixa(valor: number, nome: string, min: number, max: number): vo
   }
 }
 
+export const DISTANCIA_VISAO_PADRAO = 10;
+export const DISTANCIA_SIMULACAO_PADRAO = 8;
+
+/** Faixas de Configurações › Servidor; a tela e o `server.properties` usam esta mesma conferência. */
+export function validarDistancias(visao: number, simulacao: number): void {
+  validarFaixa(visao, "distância de visão", 3, 32);
+  validarFaixa(simulacao, "distância de simulação", 5, 32);
+  if (simulacao >= visao) {
+    throw new Error("A distância de simulação precisa ser menor que a distância de visão.");
+  }
+}
+
 /** Texto do `server.properties`. O proxy confere a conta; aqui só se escuta na rede privada. */
 export function gerarPropriedades(opcoes: OpcoesServidor): string {
-  const { ipRedePrivada: ip, porta = 25565, distanciaVisao = 10, distanciaSimulacao = 8 } = opcoes;
+  const {
+    ipRedePrivada: ip,
+    porta = 25565,
+    distanciaVisao = DISTANCIA_VISAO_PADRAO,
+    distanciaSimulacao = DISTANCIA_SIMULACAO_PADRAO,
+  } = opcoes;
   if (!IP_PRIVADO.test(ip) || !octetosValidos(ip)) {
     throw new Error(
       "O IP do servidor precisa ser o de um PC na rede privada (10.66.0.2 a 10.66.0.199); nunca 0.0.0.0 nem IP público.",
     );
   }
   validarFaixa(porta, "porta", 1024, 65535);
-  validarFaixa(distanciaVisao, "distância de visão", 3, 32);
-  validarFaixa(distanciaSimulacao, "distância de simulação", 5, 32);
-  if (distanciaSimulacao >= distanciaVisao) {
-    throw new Error("A distância de simulação precisa ser menor que a distância de visão.");
-  }
+  validarDistancias(distanciaVisao, distanciaSimulacao);
   return [
     `server-ip=${ip}`,
     `server-port=${porta}`,

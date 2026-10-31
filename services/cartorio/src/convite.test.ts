@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { writeFileSync } from "node:fs";
 import { type AjudanteEntrada, type PacoteLigacao, gerarParProvisorio } from "./ajudante.js";
 import { ajudanteDoAmbiente } from "./ambiente.js";
-import { abrirBanco, apagarConvitesVencidos, criarConvite, donoAtual } from "./banco.js";
+import { abrirBanco, apagarConvitesVencidos, criarConvite, donoAtual, revogarPc } from "./banco.js";
 import { hashSegredo } from "./segredo.js";
 import { criarConviteDono, rodarComando, trocarDono } from "./comandos.js";
 import { type Grupo, limparProvisorios } from "./convite.js";
@@ -217,6 +217,92 @@ describe("convite do grupo: criar (só o dono)", () => {
     const r = await convidar({ authorization: "Bearer token-de-teste" }, { nomePc: "pc-b" });
     expect(r.statusCode).toBe(503);
     expect(banco.prepare("SELECT count(*) AS n FROM convites").get()).toEqual({ n: 0 });
+  });
+});
+
+describe("tirar PC do grupo: POST /pcs/:id/revogar (só o dono)", () => {
+  async function comAna() {
+    const m = montar();
+    const dono = await m.comDono();
+    const texto = (await m.convidar(dono.auth, { nomePc: "pc-da-ana" })).json<{
+      convite: string;
+    }>();
+    const ana = await m.entrar(texto.convite);
+    const idDe = (nome: string) =>
+      (m.banco.prepare("SELECT id FROM pcs WHERE nome = ?").get(nome) as { id: number }).id;
+    const revogar = (auth: Record<string, string>, id: number | string, ip = "10.66.0.2") =>
+      m.app.inject({ method: "POST", url: `/pcs/${id}/revogar`, headers: auth, remoteAddress: ip });
+    const eu = (a: { auth: Record<string, string>; pacote: PacoteLigacao }) =>
+      m.app.inject({ url: "/eu", headers: a.auth, remoteAddress: a.pacote.ip_pc });
+    return { m, dono, ana, idDe, revogar, eu };
+  }
+
+  it("dono revoga: o token do PC tirado vira 401 no /eu; o do dono continua valendo", async () => {
+    const { dono, ana, idDe, revogar, eu } = await comAna();
+    expect((await eu(ana)).statusCode).toBe(200);
+    const r = await revogar(dono.auth, idDe("pc-da-ana"));
+    expect(r.statusCode).toBe(204);
+    expect((await eu(ana)).statusCode).toBe(401);
+    expect((await eu(dono)).statusCode).toBe(200);
+  });
+
+  it("revogar duas vezes é inofensivo (204) e o PC continua sem acesso", async () => {
+    const { dono, ana, idDe, revogar, eu } = await comAna();
+    expect((await revogar(dono.auth, idDe("pc-da-ana"))).statusCode).toBe(204);
+    expect((await revogar(dono.auth, idDe("pc-da-ana"))).statusCode).toBe(204);
+    expect((await eu(ana)).statusCode).toBe(401);
+  });
+
+  it("quem não é dono → 403 e nada é revogado; sem token → 401", async () => {
+    const { dono, ana, idDe, revogar, eu } = await comAna();
+    const r = await revogar(ana.auth, idDe("pc-do-dono"), ana.pacote.ip_pc);
+    expect(r.statusCode).toBe(403);
+    expect(r.json<{ erro: string }>().erro).toMatch(/dono/);
+    expect((await revogar({}, idDe("pc-da-ana"))).statusCode).toBe(401);
+    expect((await eu(dono)).statusCode).toBe(200);
+    expect((await eu(ana)).statusCode).toBe(200);
+  });
+
+  it("o dono não se tira (409, só depois do trocar-dono); PC inexistente → 404; id inválido → 400", async () => {
+    const { dono, idDe, revogar, eu } = await comAna();
+    const r = await revogar(dono.auth, idDe("pc-do-dono"));
+    expect(r.statusCode).toBe(409);
+    expect(r.json<{ erro: string }>().erro).toMatch(/trocar-dono|posse/);
+    expect((await eu(dono)).statusCode).toBe(200);
+    expect((await revogar(dono.auth, 9999)).statusCode).toBe(404);
+    expect((await revogar(dono.auth, "abc")).statusCode).toBe(400);
+  });
+
+  it("revogarPc direto no banco recusa o dono e o PC inexistente (a conferência é da transação, não da rota)", async () => {
+    const { m, ana, idDe, eu } = await comAna();
+    expect(revogarPc(m.banco, idDe("pc-do-dono"), 1)).toBe("dono");
+    expect(revogarPc(m.banco, 9999, 1)).toBe("inexistente");
+    expect(revogarPc(m.banco, idDe("pc-da-ana"), 1)).toBe("revogado");
+    expect((await eu(ana)).statusCode).toBe(401);
+    expect(
+      m.banco.prepare("SELECT count(*) AS n FROM tokens WHERE revogado_em IS NULL").get(),
+    ).toEqual({ n: 1 });
+  });
+
+  it("PC tirado que segurava a trava a perde só no prazo (~20 s), não na hora", async () => {
+    const { m, dono, ana, idDe, revogar } = await comAna();
+    const pegar = await m.app.inject({
+      method: "POST",
+      url: "/trava/pegar",
+      headers: ana.auth,
+      remoteAddress: ana.pacote.ip_pc,
+    });
+    expect(pegar.statusCode).toBeLessThan(300);
+    await revogar(dono.auth, idDe("pc-da-ana"));
+    const t = await m.app.inject({ url: "/trava", headers: dono.auth, remoteAddress: "10.66.0.2" });
+    expect(t.json<{ dono: { nome: string } | null }>().dono?.nome).toBe("pc-da-ana");
+    m.relogio.agora += 60_000;
+    const depois = await m.app.inject({
+      url: "/trava",
+      headers: dono.auth,
+      remoteAddress: "10.66.0.2",
+    });
+    expect(depois.json<{ dono: unknown }>().dono).toBeNull();
   });
 });
 
@@ -521,5 +607,66 @@ describe("revisão do PR #84", () => {
         })
       ).statusCode,
     ).toBe(401);
+  });
+});
+
+describe("listar os PCs do grupo: GET /pcs (só o dono) e dono no /eu", () => {
+  async function comAna() {
+    const m = montar();
+    const dono = await m.comDono();
+    const texto = (await m.convidar(dono.auth, { nomePc: "pc-da-ana" })).json<{
+      convite: string;
+    }>();
+    const ana = await m.entrar(texto.convite);
+    const pcs = (a: { auth: Record<string, string>; pacote?: PacoteLigacao }) =>
+      m.app.inject({ url: "/pcs", headers: a.auth, remoteAddress: a.pacote?.ip_pc ?? "10.66.0.2" });
+    const eu = (a: { auth: Record<string, string>; pacote?: PacoteLigacao }) =>
+      m.app.inject({ url: "/eu", headers: a.auth, remoteAddress: a.pacote?.ip_pc ?? "10.66.0.2" });
+    return { m, dono, ana, pcs, eu };
+  }
+
+  it("dono lista só id, nome e dono, sem nenhum segredo", async () => {
+    const { dono, ana, pcs } = await comAna();
+    const r = await pcs(dono);
+    expect(r.statusCode).toBe(200);
+    const lista = r.json<Array<Record<string, unknown>>>();
+    expect(lista.map((p) => [p.nome, p.dono])).toEqual([
+      ["pc-do-dono", true],
+      ["pc-da-ana", false],
+    ]);
+    for (const p of lista) expect(Object.keys(p).sort()).toEqual(["dono", "id", "nome"]);
+    expect(r.body).not.toMatch(/token|hash|ip/i);
+    expect(ana).toBeDefined();
+  });
+
+  it("quem não é dono → 403; sem token → 401", async () => {
+    const { ana, pcs } = await comAna();
+    const r = await pcs(ana);
+    expect(r.statusCode).toBe(403);
+    expect(r.json<{ erro: string }>().erro).toMatch(/dono/);
+    expect((await pcs({ auth: {} })).statusCode).toBe(401);
+  });
+
+  it("PC revogado não aparece", async () => {
+    const { m, dono, pcs } = await comAna();
+    const id = (
+      m.banco.prepare("SELECT id FROM pcs WHERE nome = ?").get("pc-da-ana") as {
+        id: number;
+      }
+    ).id;
+    await m.app.inject({
+      method: "POST",
+      url: `/pcs/${id}/revogar`,
+      headers: dono.auth,
+      remoteAddress: "10.66.0.2",
+    });
+    const lista = (await pcs(dono)).json<Array<{ nome: string }>>();
+    expect(lista.map((p) => p.nome)).toEqual(["pc-do-dono"]);
+  });
+
+  it("/eu diz se o PC é o dono", async () => {
+    const { dono, ana, eu } = await comAna();
+    expect((await eu(dono)).json()).toMatchObject({ nome: "pc-do-dono", dono: true });
+    expect((await eu(ana)).json()).toMatchObject({ nome: "pc-da-ana", dono: false });
   });
 });

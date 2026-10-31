@@ -276,8 +276,46 @@ export function nomeOcupado(banco: Banco, nome: string, agora: number): boolean 
   );
 }
 
+/**
+ * Tira o acesso do PC ao cartório: revoga os tokens ativos dele (o filtro de `pcDoToken` faz o resto).
+ * A conferência de dono e de existência fica dentro da transação: o `trocar-dono` roda em outro processo e não
+ * pode passar no meio entre olhar e revogar.
+ */
+export function revogarPc(
+  banco: Banco,
+  pcId: number,
+  agora: number,
+): "revogado" | "dono" | "inexistente" {
+  return emTransacao(banco, () => {
+    const pc = banco.prepare("SELECT dono FROM pcs WHERE id = ?").get(pcId) as
+      { dono: number } | undefined;
+    if (!pc) return "inexistente";
+    if (pc.dono === 1) return "dono";
+    banco
+      .prepare("UPDATE tokens SET revogado_em = ? WHERE pc_id = ? AND revogado_em IS NULL")
+      .run(agora, pcId);
+    return "revogado";
+  });
+}
+
 export function donoAtual(banco: Banco): Pc | undefined {
   return banco.prepare("SELECT id, nome FROM pcs WHERE dono = 1").get() as Pc | undefined;
+}
+
+export function ehDono(banco: Banco, pcId: number): boolean {
+  return donoAtual(banco)?.id === pcId;
+}
+
+/** Os PCs do grupo: só os que têm token ativo; nunca devolve token, hash ou IP. */
+export function listarPcsAtivos(banco: Banco): Array<Pc & { dono: boolean }> {
+  const linhas = banco
+    .prepare(
+      `SELECT id, nome, dono FROM pcs
+       WHERE EXISTS (SELECT 1 FROM tokens WHERE pc_id = pcs.id AND revogado_em IS NULL)
+       ORDER BY id`,
+    )
+    .all() as Array<{ id: number; nome: string; dono: number }>;
+  return linhas.map((l) => ({ id: l.id, nome: l.nome, dono: l.dono === 1 }));
 }
 
 export function pcDoToken(banco: Banco, token: string): Pc | undefined {

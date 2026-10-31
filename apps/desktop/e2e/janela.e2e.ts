@@ -65,7 +65,7 @@ describe("janela do SabreHosting", () => {
       await pagina.evaluate(() =>
         Object.keys((globalThis as { sabre?: object }).sabre ?? {}).sort(),
       ),
-    ).toEqual(["abrirComWindows", "inicio", "versao"]);
+    ).toEqual(["abrirComWindows", "backups", "configuracoes", "inicio", "versao"]);
   });
 
   it("mostra a versão pela ponte", async () => {

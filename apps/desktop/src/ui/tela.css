@@ -31,7 +31,8 @@ body {
   border-radius: var(--raio);
 }
 
-h1 {
+h1,
+h2 {
   margin: 0;
   font-size: 1.75rem;
   color: var(--cor-destaque);
@@ -128,4 +129,99 @@ button:disabled {
 
 .confirmacao p {
   margin: 0;
+}
+
+button.link {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--cor-destaque);
+  text-decoration: underline;
+}
+
+.lista-backups {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--espaco-2);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.lista-backups li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-3);
+  padding: var(--espaco-2) var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  text-align: left;
+}
+
+.lista-backups .meta {
+  display: block;
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
+}
+
+.config {
+  display: grid;
+  gap: var(--espaco-3);
+  width: 100%;
+  text-align: left;
+}
+
+.config fieldset {
+  display: grid;
+  gap: var(--espaco-2);
+  margin: 0;
+  padding: var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+}
+
+.config legend {
+  padding: 0 var(--espaco-2);
+  font-weight: 600;
+}
+
+.config .opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+  min-height: 44px;
+}
+
+.config input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+}
+
+.config input[type="number"] {
+  font: inherit;
+  min-height: 44px;
+  max-width: 8rem;
+  padding: 0 var(--espaco-2);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.config input:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+.config input[aria-invalid="true"] {
+  border-color: var(--cor-erro);
+}
+
+.config .dica {
+  margin: 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
 }

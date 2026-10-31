@@ -8,7 +8,8 @@ import {
   validarEntradaNoGrupo,
   validarEstadoTrava,
   validarGrupo,
-  validarPc,
+  validarEu,
+  validarListaPcs,
   validarRespostaTrava,
 } from "./tipos.js";
 
@@ -232,7 +233,9 @@ export function criarCliente(opcoes: OpcoesCliente) {
     chamar<T>({ metodo: "GET", rota, repetir: true, validar });
 
   return {
-    eu: () => ler("/eu", validarPc),
+    eu: () => ler("/eu", validarEu),
+    /** Só o dono: os PCs com acesso ao cartório (tela Configurações › Grupo). */
+    listarPcs: () => ler("/pcs", validarListaPcs),
     estadoTrava: () => ler("/trava", validarEstadoTrava),
     pegar: () => trava("/trava/pegar", false),
     /** `sinal`: o renovador cancela ao soltar ou perder, e nenhuma tentativa nova sai. */
@@ -241,6 +244,9 @@ export function criarCliente(opcoes: OpcoesCliente) {
     passar: (epoca: number, para: number) => trava("/trava/passar", false, { epoca, para }),
     soltar: (epoca: number) => trava("/trava/soltar", false, { epoca }),
     grupo: () => ler("/grupo", validarGrupo),
+    /** Este PC diz que agora tem a versão N inteira (substitui a anterior). Repete: dizer duas vezes não muda nada. */
+    informarCopia: (versao: number) =>
+      chamar<undefined>({ metodo: "POST", rota: "/copias", corpo: { versao }, repetir: true }),
     /** Só o PC dono. Não repete: cada tentativa reservaria outro IP provisório na nuvem. */
     criarConvite: (nomePc: string, validadeHoras?: number) =>
       chamar({
