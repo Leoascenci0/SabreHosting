@@ -191,6 +191,9 @@ describe("tela de configurações", () => {
 
     await p.locator("#convite-copiar").click();
     await esperarTexto(p, "#convite-copiar", "Copiado");
+    // Região de status: é ela que o leitor de tela anuncia (o rótulo do botão sozinho não é).
+    expect(await p.locator("#convite-copiado").getAttribute("role")).toBe("status");
+    await esperarTexto(p, "#convite-copiado", "Convite copiado");
     expect(await aberto?.evaluate(({ clipboard }) => clipboard.readText())).toBe(texto);
 
     // Sair e voltar: o texto some da tela, e nada do convite foi gravado nas preferências.
