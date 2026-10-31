@@ -133,13 +133,25 @@ describe("tela inicial", () => {
     await expect(p.locator("#status").innerText()).resolves.toBe("Servidor no PC do Lucas");
     expect(await visiveis(p)).toEqual(["Jogar"]);
     await p.locator("#principal").click();
-    await expect(p.locator("#detalhe").innerText()).resolves.toContain("Endereço copiado");
+    await expect(p.locator("#aviso").innerText()).resolves.toContain("Endereço copiado");
+    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
     const copias = await viva().evaluate(
       () => (globalThis as { __sabreE2EInicio?: { copias: string[] } }).__sabreE2EInicio?.copias,
     );
     expect(copias).toEqual(["mundo.exemplo.net"]);
     expect((await espiao()).spawns).toEqual([]);
     await capturar(p, "outro");
+  });
+
+  it("depois de Jogar o endereço continua visível e o aviso some sozinho", async () => {
+    const p = await abrir("eu");
+    await p.locator("#principal").click();
+    await expect(p.locator("#aviso").innerText()).resolves.toContain("Endereço copiado");
+    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
+    await p.waitForFunction(() => document.getElementById("aviso")?.textContent === "", undefined, {
+      timeout: 8000,
+    });
+    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
   });
 
   it("eu hospedo: Jogar e Parar; Parar pede confirmação e devolve a vez", async () => {
