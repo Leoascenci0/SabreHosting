@@ -73,7 +73,7 @@ async function* percorrer(
   }
 }
 
-const MUDOU = "O mundo mudou durante a leitura; o servidor ainda está gravando?";
+export const MUDOU = "O mundo mudou durante a leitura; o servidor ainda está gravando?";
 
 /** Tamanho e hash vêm da mesma leitura; se o arquivo sumiu ou cresceu/encolheu no meio, recusa. */
 async function lerArquivo(caminho: string, completo: string): Promise<ArquivoDoManifesto> {
