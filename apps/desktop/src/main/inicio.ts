@@ -59,6 +59,8 @@ export const TROCANDO_VERSAO =
   "A versão do Minecraft está sendo trocada (com um backup antes). Espere terminar para hospedar o servidor.";
 export const ATUALIZANDO =
   "O seu mundo está sendo atualizado para a versão mais nova. Espere terminar para hospedar o servidor.";
+const ORFAO_VIVO =
+  "O servidor anterior ainda está rodando neste PC. Espere ele encerrar ou feche o Java no Gerenciador de Tarefas e tente de novo.";
 const GENERICA = "Não consegui fazer isso agora. Tente de novo em instantes.";
 
 /** Tempos de espera da liberação da trava e do servidor órfão; só os testes mexem. */
@@ -256,8 +258,10 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       if (deps.atualizando?.() !== undefined) return { ok: false, mensagem: ATUALIZANDO };
       if (ativo || ocupado)
         return { ok: false, mensagem: "O servidor já está subindo ou rodando." };
-      ocupado = true;
+      ocupado = true; // antes do primeiro `await`: dois cliques não passam juntos
       try {
+        // Servidor de uma sessão anterior vivo na pasta: subir outro duplicaria o mundo (regra de ouro 1).
+        if (await temOrfao()) return { ok: false, mensagem: ORFAO_VIVO };
         const { servidor } = await deps.hospedar(() => avisar());
         ativo = servidor;
         deps.aoServidor?.(servidor);
