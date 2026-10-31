@@ -194,6 +194,7 @@ function criarBandeja(): Tray {
 
 const avisoHistorico = criarAvisoHistorico();
 let backupsApp: Backups | undefined;
+let versaoApp: Versao | undefined;
 let agendaApp: AgendaBackups | undefined;
 const intervaloBackupMin = (): number =>
   lerPreferencias(app.getPath("userData")).intervaloBackupMin;
@@ -293,12 +294,14 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
   });
 }
 const restaurando = (): boolean => backupsApp?.restaurando() ?? false;
+const trocandoVersao = (): boolean => versaoApp?.trocando() ?? false;
 
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1")
     return criarInicio({
       ...depsReais(process.env, (t) => clipboard.writeText(t)),
       restaurando,
+      trocandoVersao,
       aoServidor: (s) => agendaApp?.observar(s),
     });
   const { criarDepsE2E } = await import("./fake-e2e.js");
@@ -308,6 +311,7 @@ async function criarInicioDoApp(): Promise<Inicio> {
   const inicio = criarInicio({
     ...criarDepsE2E(cenario as never, espiao),
     restaurando,
+    trocandoVersao,
     aoServidor: (s) => agendaApp?.observar(s),
   });
   if (cenario === "eu") await inicio.hospedar(); // "eu" = este PC já hospeda, pelo caminho normal
@@ -565,14 +569,15 @@ if (!app.requestSingleInstanceLock()) {
     }
     void ligarServidorDeArquivosDoApp();
     const inicioPronto = inicioApp;
+    versaoApp = await criarVersaoDoApp(
+      () => inicioPronto.ativo(),
+      () => inicioPronto.temOrfao(),
+    );
     registrarPonte(
       inicioApp,
       backupsApp,
       await criarGrupoDoApp(),
-      await criarVersaoDoApp(
-        () => inicioPronto.ativo(),
-        () => inicioPronto.temOrfao(),
-      ),
+      versaoApp,
       await criarImportacaoDoApp(inicioApp),
     );
     bandeja = criarBandeja();
