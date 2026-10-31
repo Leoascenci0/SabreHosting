@@ -18,7 +18,8 @@ import { validarManifesto, type ArquivoDoManifesto } from "../backup/manifesto.j
 import { exigirMundoNaPastaDoServidor } from "../backup/restaurar.js";
 import { Renovador, type ClienteDeTrava, type OpcoesRenovador } from "../cartorio/renovador.js";
 import { aplicarDelta, exigirForaDoHost, type Aplicado, type OpcoesAplicar } from "./aplicar.js";
-import { conferirEnderecoPrivado, pedirArquivo } from "./transferencia.js";
+import type { Copias } from "../cartorio/tipos.js";
+import { conferirEnderecoPrivado, pedirArquivo, PORTA_ESPALHAR } from "./transferencia.js";
 
 /** Quem já tem a versão e serve os arquivos (`servirArquivos`) na rede privada. */
 export interface Fonte {
@@ -35,6 +36,19 @@ export interface VersaoNova {
 
 const TETO_MANIFESTO = 32 * 1024 * 1024;
 const HASH_SHA256 = /^[0-9a-f]{64}$/;
+
+/**
+ * Fontes a partir de `quemTem`: os PCs com a versão, menos este (`euId`) e menos quem ainda não tem IP na rede privada
+ * (`ip === null`: PC recém-chegado; sem este filtro um só deles derrubaria a lista toda em `escolherFontes`). A nuvem
+ * não entra: ela serve só o pacote fechado, não arquivo por hash. Vazia é possível; quem chama decide.
+ */
+export function fontesDeCopias(copias: Copias, euId: number): Fonte[] {
+  return copias.pcs.flatMap((p) =>
+    p.id === euId || p.ip === null
+      ? []
+      : [{ tipo: "pc" as const, endereco: p.ip, porta: PORTA_ESPALHAR }],
+  );
+}
 
 /** Fontes válidas, sem repetida, PCs antes do host (o host é quem está jogando: poupá-lo). Vazia é erro. */
 export function escolherFontes(
@@ -131,6 +145,7 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
   const renovador = new Renovador({
     cliente: o.atualizacao,
     aoPerder: () => undefined, // `temTrava` passa a dizer não: o próximo arquivo e a troca param
+    trava: "atualização",
     ...o.relogioDaTrava,
   });
   // Só solta o que ESTA chamada pegou: recusado ou sem resposta, nada foi pego e nada é solto.
@@ -157,6 +172,7 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
       pastaDoServidor: o.pastaDoServidor,
       alvo,
       temAtualizacao: () => renovador.renovarAgora(),
+      temAtualizacaoLocal: () => renovador.temTrava(),
       hospedaAgora: o.hospedaAgora,
       servidorParado: o.servidorParado,
       avisarCopia: o.avisarCopia,
