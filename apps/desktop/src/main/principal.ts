@@ -39,7 +39,7 @@ import { criarGrupo, type Grupo } from "./grupo.js";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
-import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
+import { bytesPorSegundo, lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
 
 const aqui = (relativo: string): string => fileURLToPath(new URL(relativo, import.meta.url));
@@ -561,6 +561,8 @@ if (!app.requestSingleInstanceLock()) {
         env: process.env,
         inicio: inicioApp,
         aoAvisar: (texto) => console.warn(texto),
+        limiteBytesPorSeg: () =>
+          bytesPorSegundo(lerPreferencias(app.getPath("userData")).limiteBandaMBs),
       });
     }
     void ligarServidorDeArquivosDoApp();
