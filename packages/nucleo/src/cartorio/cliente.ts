@@ -1,4 +1,5 @@
 import { BlockList, isIP } from "node:net";
+import { IP_DO_HUB } from "../rede/wireguard.js";
 import type { Cofre } from "./cofre.js";
 import {
   type RespostaTrava,
@@ -42,13 +43,10 @@ export interface OpcoesCliente {
   sortear?: () => number;
 }
 
-/** Faixas onde `http` é aceito: o túnel WireGuard já cifra; fora dele, só `https`. */
+/** Onde `http` é aceito: o hub no túnel WireGuard (que já cifra) e o loopback; fora disso, só `https`. */
 const REDE_PRIVADA = new BlockList();
-REDE_PRIVADA.addSubnet("10.0.0.0", 8);
-REDE_PRIVADA.addSubnet("172.16.0.0", 12);
-REDE_PRIVADA.addSubnet("192.168.0.0", 16);
+REDE_PRIVADA.addAddress(IP_DO_HUB);
 REDE_PRIVADA.addSubnet("127.0.0.0", 8);
-REDE_PRIVADA.addSubnet("fc00::", 7, "ipv6");
 REDE_PRIVADA.addAddress("::1", "ipv6");
 
 function conferirUrl(url: string): string {
