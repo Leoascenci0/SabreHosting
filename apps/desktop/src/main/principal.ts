@@ -25,7 +25,7 @@ import { criarAvisoHistorico } from "./aviso-historico.js";
 import { criarRotacaoBackups, type RotacaoBackups } from "./rotacao-backups.js";
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
-import { depsBackupsReais } from "./deps-backups.js";
+import { backupParado, depsBackupsReais } from "./deps-backups.js";
 import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
 import { criarImportacao, type Importacao } from "./importar.js";
@@ -368,10 +368,23 @@ async function criarGrupoDoApp(): Promise<Grupo> {
   return criarGrupo(depsGrupoE2E());
 }
 
-async function criarVersaoDoApp(servidorRodando: () => boolean): Promise<Versao> {
+async function criarVersaoDoApp(
+  servidorRodando: () => boolean,
+  temOrfao: () => Promise<boolean>,
+): Promise<Versao> {
   if (process.env["SABRE_E2E"] !== "1") {
     const exigir = clienteDoAmbiente(process.env);
+    const rotacao = criarRotacaoDoApp(() => process.env["SABRE_PASTA_BACKUPS"]);
     return criarVersao({
+      backupAntes: () =>
+        backupParado({
+          pastaBackups: process.env["SABRE_PASTA_BACKUPS"],
+          pastaDoMundo: process.env["SABRE_PASTA_MUNDO"],
+          cliente: exigir(),
+          servidorRodando,
+          servidorOrfao: temOrfao,
+          aoBom: rotacao.aoBackupBom,
+        }),
       eu: async () => exigir().eu(),
       lerAtual: async () => (await exigir().lerConfigGrupo()).versaoMinecraft,
       listar: async () => (await listarVersoes()).map((v) => v.id),
@@ -507,7 +520,10 @@ if (!app.requestSingleInstanceLock()) {
       inicioApp,
       backupsApp,
       await criarGrupoDoApp(),
-      await criarVersaoDoApp(() => inicioPronto.ativo()),
+      await criarVersaoDoApp(
+        () => inicioPronto.ativo(),
+        () => inicioPronto.temOrfao(),
+      ),
       await criarImportacaoDoApp(inicioApp),
     );
     bandeja = criarBandeja();

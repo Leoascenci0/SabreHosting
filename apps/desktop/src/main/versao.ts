@@ -16,6 +16,11 @@ export interface DepsVersao {
   opcoes(versao: string): Promise<OpcoesBrutas>;
   /** sha1 do jar oficial da versão (plano da Mojang); o cartório o guarda junto. */
   sha1Do(versao: string): Promise<string>;
+  /**
+   * Backup bom do mundo (servidor parado) feito ANTES de trocar. Lança com o motivo em pt-BR se não conseguir;
+   * nesse caso a troca não acontece.
+   */
+  backupAntes(): Promise<void>;
   gravar(versao: string, sha1: string): Promise<void>;
   /** Servidor rodando (ou sobra dele) neste PC. */
   servidorRodando(): boolean;
@@ -102,7 +107,17 @@ export function criarVersao(deps: DepsVersao) {
         if (deps.servidorRodando()) return { ok: false, mensagem: RODANDO };
         const v = await naLista(versao);
         if (!v) return { ok: false, mensagem: "Essa versão não está na lista oficial." };
-        await deps.gravar(v, await deps.sha1Do(v));
+        const sha1 = await deps.sha1Do(v);
+        try {
+          await deps.backupAntes();
+        } catch (e) {
+          const motivo = e instanceof Error ? ` ${e.message}` : "";
+          return {
+            ok: false,
+            mensagem: `Não troquei a versão: o backup antes da troca falhou.${motivo}`,
+          };
+        }
+        await deps.gravar(v, sha1);
         return { ok: true };
       } catch (e) {
         return { ok: false, mensagem: mensagemDe(e) };
