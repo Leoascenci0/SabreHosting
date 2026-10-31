@@ -18,7 +18,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 **Próxima onda: 26**
 
-Onda 25 (31/10) — cartmel-2.5 · syncmel-1.9 · syncmel-1.7 · syncmel-1.3 · backup antes de trocar versão · migra-2.1 — sessão https://claude.ai/code/session_012qrjntCnjHafcdk8F9QU2a
+_(nenhuma onda aberta; bastão da coordenadora passado às 15:10 — ver docs/ops/rodadas/coordenacao-2026-10-31.md)_
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -71,6 +71,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Feito
 
+- 31/10/2026 (dia) — Onda 25: syncmel-1.7 #191, syncmel-1.9a #192, hostmel-3.2 #193, cartmel-2.5 #194, syncmel-1.10 #195, migra-2.1 #197, controle #198.
 - 31/10/2026 (dia) — Onda 24: piloto-1.1b #184, hostmel-3.1d #185, hostmel-3.1b #186, cartmel-2.4 #187, hostmel-3.1c #188, piloto-1.1c #189, controle #190.
 - 31/10/2026 (dia) — Onda 23: piloto-1.1a #177, syncmel-1.8a #178, appmel-1.11 #179, hostmel-3.1a #180, drive-1.1b #181, syncmel-1.8b #182, Dependabot #95/#96, controle #183.
 - 31/10/2026 (dia) — Onda 22: syncmel-1.5 #170, appmel-1.10 #171, syncmel-1.6 #172, sync-2.1a #173, drive-1.1a #174, controle #175.

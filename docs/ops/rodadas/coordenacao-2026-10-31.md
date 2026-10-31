@@ -15,7 +15,7 @@
 | 22 | appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 | session_012qrjntw8ggfpCSw7mg4UfD (1ª: …AzcormV8 falhou, hash curto, S-09) | 5f440cc | fechada 11:33 → main 722501a |
 | 23 | appmel-1.11 · syncmel-1.8 · piloto-1.1 · Dependabot #95/#96 · hostmel-3.1 · drive-1.1b | session_012qrjnrPqSYeU1jDzU3Fmqk | 37baba7 | fechada 13:34 → main 565b9ee |
 | 24 | hostmel-3.1b→c→d · piloto-1.1b→c · espalhar no app | session_012qrjntg73vm87TWPY1tzjP | 565b9ee | fechada 14:27 → main 0762634 |
-| 25 | cartmel-2.5 · syncmel-1.9 · syncmel-1.7 · syncmel-1.3 · backup antes de trocar versão · migra-2.1 | session_012qrjntCnjHafcdk8F9QU2a | 0762634 | aberta 14:27 |
+| 25 | cartmel-2.5 · syncmel-1.9 · syncmel-1.7 · syncmel-1.3 · backup antes de trocar versão · migra-2.1 | session_012qrjntCnjHafcdk8F9QU2a | 0762634 | fechada 15:08 → main 1253600 |
 
 ## Relatórios das ondas
 
@@ -40,8 +40,12 @@
   ⏸️ sync-2.1b → syncmel-1.9. P: sha1 do NeoForge 1.20.1 (maven.neoforged.net bloqueado na nuvem); importar o mundo real
   (tutorial docs/tutoriais/piloto-importar.md); PORTA_ESPALHAR=25570 → decidido pela coordenadora (fica). Custo ~US$ 15,2
   (1.1c em Opus 8,37). main 0762634 APROVADA. Ficha S-11 → CLAUDE.md.
+- **Onda 25** (15:08): ✅ cartmel-2.5 #194 · syncmel-1.7 #191 · syncmel-1.9a #192 · hostmel-3.2 #193 · syncmel-1.10 #195 ·
+  migra-2.1 #197 (Opus) · controle #198. P: nenhum. Decidi por você: banda padrão 10 MB/s; versão órfã fica registrada
+  sem prazo. Custo ~US$ 10,2. main 1253600 APROVADA. Sugeridos: syncmel-1.9b (tela de banda), syncmel-1.3, syncmel-1.11,
+  hostmel-3.3; migra-2.2 depende de rede-2.2.
 
 ## Bastão
 
-_(não passado)_ — plano: passar o bastão quando a Onda 25 fechar (6 ondas e contexto perto da meta de 30%).
+Passado às 15:10 (6 ondas, contexto 29%, custo US$ 5,09) → ver linha abaixo.
 Eliel (14:30): vai liberar maven.neoforged.net e repo.papermc.io; a Onda 26 confere com curl e puxa rede-2.2 + hashes NeoForge 1.20.1.
