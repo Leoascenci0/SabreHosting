@@ -1,7 +1,17 @@
-import type { ClienteCartorio } from "./cliente.js";
+type Resposta = { ok: true; epoca: number; renovarMs: number } | { ok: false; erro: string };
+
+/**
+ * O mínimo que o renovador usa de uma trava com prazo: a de host (`pegar`/`renovar`/`soltar` do cliente) ou a de
+ * atualização (`pegarAtualizacao`/… , syncmel-1.8b). Mesmo contrato no cartório: época, prazo, renovação.
+ */
+export interface ClienteDeTrava {
+  pegar(): Promise<Resposta>;
+  renovar(epoca: number, sinal?: AbortSignal): Promise<Resposta>;
+  soltar(epoca: number): Promise<unknown>;
+}
 
 export interface OpcoesRenovador {
-  cliente: Pick<ClienteCartorio, "pegar" | "renovar" | "soltar">;
+  cliente: ClienteDeTrava;
   /** Chamado uma vez só quando a trava se perde (recusa ou prazo local vencido). Quem para o servidor é o chamador. */
   aoPerder: (motivo: string) => void;
   /**
@@ -93,6 +103,15 @@ export class Renovador {
   /** Regra de ouro 1: só `true` com o último pedido aceito e o prazo local valendo. */
   async temTrava(): Promise<boolean> {
     return !this.perdida && !this.solta && !this.venceu();
+  }
+
+  /**
+   * Renova na hora (antes de um passo que não pode ser dado sem a trava, como um `rename` da troca) e diz se ela
+   * ainda vale. Renovação já em curso não é repetida: vale o prazo local. Perdida ou solta: `false`, sem pedido.
+   */
+  async renovarAgora(): Promise<boolean> {
+    await this.renovar();
+    return this.temTrava();
   }
 
   /** Pega a trava e começa a renovar. Recusa vira erro com o texto do cartório. */

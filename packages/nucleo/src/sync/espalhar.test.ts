@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo } from "../../test/ajuda/mundos.js";
 import { gerarManifesto, type Manifesto } from "../backup/manifesto.js";
 import { hashDoArquivo } from "../integridade/hash.js";
+import type { RespostaAtualizacao } from "../cartorio/tipos.js";
 import { escolherFontes, espalhar, type Fonte, type OpcoesEspalhar } from "./espalhar.js";
 import { servirArquivos, type Servidor } from "./transferencia.js";
 
@@ -17,6 +18,30 @@ afterEach(async () => {
 
 const LOOP = "127.0.0.1";
 const CREDENCIAL = "token-de-teste";
+
+const aceita = (epoca: number): RespostaAtualizacao => ({
+  ok: true,
+  epoca,
+  expiraEm: 0,
+  renovarMs: 20_000,
+});
+
+/** Cartório falso da trava de atualização: anota cada pedido; `renovar` responde o que o teste mandar. */
+function cartorioFalso() {
+  const eventos: string[] = [];
+  let epoca = 0;
+  const c = {
+    eventos,
+    respostaRenovar: (e: number): RespostaAtualizacao => aceita(e),
+    respostaPegar: (): RespostaAtualizacao => aceita(++epoca),
+    cliente: {
+      pegar: async () => (eventos.push("pegar"), c.respostaPegar()),
+      renovar: async (e: number) => (eventos.push(`renovar ${e}`), c.respostaRenovar(e)),
+      soltar: async (e: number) => (eventos.push(`soltar ${e}`), aceita(e)),
+    },
+  };
+  return c;
+}
 
 /** Um PC de teste: pasta do servidor com o mundo dentro (direto), e, se tiver M, serve os arquivos por hash. */
 async function pc(nome: string, semente: string, base: string) {
@@ -59,6 +84,7 @@ async function cenario() {
   const alvo = await gerarManifesto(host.mundo, { versao: 7, epoca: 2 });
   const { servidor, manifestoSha256 } = await servirMundo(host.mundo, alvo);
   const doHost: Fonte = { tipo: "host", endereco: LOOP, porta: servidor.porta };
+  const cartorio = cartorioFalso();
   const opcoes = (
     p: { pastaDoServidor: string; mundo: string },
     fontes: Fonte[],
@@ -71,11 +97,12 @@ async function cenario() {
     fontes,
     token: CREDENCIAL,
     permitirLoopbackParaTeste: true,
-    temTrava: async () => true,
+    atualizacao: cartorio.cliente,
+    hospedaAgora: async () => false,
     servidorParado: () => true,
     avisarCopia: vi.fn(async () => undefined),
   });
-  return { base, host, pc1, pc2, alvo, doHost, opcoes, manifestoSha256 };
+  return { base, host, pc1, pc2, alvo, doHost, opcoes, manifestoSha256, cartorio };
 }
 
 const sobras = (pasta: string) => readdirSync(pasta).filter((n) => n.startsWith("world."));
@@ -184,15 +211,142 @@ describe("espalhar", () => {
     expect(hashesDoMundo(c.pc1.mundo)).toEqual(antes);
   });
 
-  it("sem a trava confirmada não troca o mundo (regra de ouro 1)", async () => {
+  it("trava de atualização recusada (este PC hospeda no cartório): não troca nem solta", async () => {
+    const c = await cenario();
+    const antes = hashesDoMundo(c.pc1.mundo);
+    c.cartorio.respostaPegar = () => ({
+      ok: false,
+      erro: "Este PC está hospedando o servidor.",
+      motivo: "hospedando",
+      epoca: 0,
+      expiraEm: 0,
+    });
+    const o = c.opcoes(c.pc1, [c.doHost]);
+    await expect(espalhar(o)).rejects.toThrow(/vez de atualizar/i);
+    expect(hashesDoMundo(c.pc1.mundo)).toEqual(antes);
+    expect(c.cartorio.eventos).toEqual(["pegar"]); // nada pego, nada solto
+    expect(readdirSync(c.base).filter((n) => n.startsWith("tmp-pc1"))).toEqual([]);
+  });
+});
+
+describe("espalhar com a trava de atualização (syncmel-1.8b)", () => {
+  it("(a) PC que não hospeda atualiza com o host ativo em outro PC; o mundo do host fica intacto", async () => {
+    const c = await cenario();
+    const doHostAntes = hashesDoMundo(c.host.mundo);
+    const o = c.opcoes(c.pc1, [c.doHost]);
+    const r = await espalhar(o);
+    expect(r.estado).toBe("atualizado");
+    expect(hashesDoMundo(c.pc1.mundo)).toEqual(hashesDoMundo(c.host.mundo));
+    expect(hashesDoMundo(c.host.mundo)).toEqual(doHostAntes);
+    // pega, renova antes de cada passo da troca (início; pós-download = antes do 1º rename; 2º rename) e solta.
+    expect(c.cartorio.eventos).toEqual([
+      "pegar",
+      "renovar 1",
+      "renovar 1",
+      "renovar 1",
+      "soltar 1",
+    ]);
+  });
+
+  it("(b) servidor deste PC rodando (trava de host vencida, rede caiu): recusa ANTES de pegar a atualização", async () => {
     const c = await cenario();
     const antes = hashesDoMundo(c.pc1.mundo);
     const o = c.opcoes(c.pc1, [c.doHost]);
-    await expect(espalhar({ ...o, temTrava: async () => false, prazoTravaMs: 50 })).rejects.toThrow(
-      /trava/i,
-    );
+    await expect(espalhar({ ...o, servidorParado: () => false })).rejects.toThrow(/servidor/i);
+    expect(c.cartorio.eventos).toEqual([]);
     expect(hashesDoMundo(c.pc1.mundo)).toEqual(antes);
-    // a pasta temporária do manifesto não sobra
-    expect(readdirSync(c.base).filter((n) => n.startsWith("tmp-pc1"))).toEqual([]);
+  });
+
+  it("(b) este PC tem a trava de host (ou não dá para saber): recusa antes de pegar a atualização", async () => {
+    const c = await cenario();
+    const antes = hashesDoMundo(c.pc1.mundo);
+    const o = c.opcoes(c.pc1, [c.doHost]);
+    await expect(espalhar({ ...o, hospedaAgora: async () => true })).rejects.toThrow(/hospedando/i);
+    await expect(
+      espalhar({ ...o, hospedaAgora: () => Promise.reject(new Error("rede")) }),
+    ).rejects.toThrow(/hospedando/i);
+    expect(c.cartorio.eventos).toEqual([]);
+    expect(hashesDoMundo(c.pc1.mundo)).toEqual(antes);
+  });
+
+  it.each([
+    ["recusa do cartório (outra atualização começou)", "recusa"],
+    ["resposta com outra época", "outra-epoca"],
+  ])(
+    "(c) atualização perdida antes da troca — %s: nada renomeado, N intacto, vez solta",
+    async (_nome, como) => {
+      const c = await cenario();
+      const antes = hashesDoMundo(c.pc1.mundo);
+      let n = 0;
+      c.cartorio.respostaRenovar = (e) =>
+        ++n < 2
+          ? aceita(e)
+          : como === "recusa"
+            ? {
+                ok: false,
+                erro: "Outra atualização.",
+                motivo: "epoca_velha",
+                epoca: e + 1,
+                expiraEm: 0,
+              }
+            : aceita(e + 1);
+      const renomear = vi.fn(async () => undefined);
+      const o = c.opcoes(c.pc1, [c.doHost]);
+      await expect(espalhar({ ...o, renomear })).rejects.toThrow(/trava de atualização/i);
+      expect(renomear).not.toHaveBeenCalled();
+      expect(hashesDoMundo(c.pc1.mundo)).toEqual(antes);
+      expect(sobras(c.pc1.pastaDoServidor)).toEqual([]);
+      expect(o.avisarCopia).not.toHaveBeenCalled();
+      expect(c.cartorio.eventos.at(-1)).toBe("soltar 1");
+    },
+  );
+
+  it("(c) prazo local vencido no meio do download: o próximo arquivo não baixa e nada é trocado", async () => {
+    const c = await cenario();
+    const antes = hashesDoMundo(c.pc1.mundo);
+    const t = { agora: 1_000 };
+    let baixados = 0;
+    const o = c.opcoes(c.pc1, [c.doHost]);
+    await expect(
+      espalhar({
+        ...o,
+        relogioDaTrava: { agora: () => t.agora, agoraParede: () => t.agora },
+        aoBaixar: () => {
+          baixados++;
+          t.agora += 40_000; // rede caiu: nenhuma renovação em 40 s (prazo local 35 s)
+        },
+      }),
+    ).rejects.toThrow(/trava de atualização/i);
+    expect(baixados).toBe(1);
+    expect(hashesDoMundo(c.pc1.mundo)).toEqual(antes);
+    expect(sobras(c.pc1.pastaDoServidor)).toEqual([]);
+    expect(c.cartorio.eventos.at(-1)).toBe("soltar 1");
+  });
+
+  it("(d) erro no download: a vez é solta com a época pega, e o erro original sobe", async () => {
+    const c = await cenario();
+    const o = c.opcoes(c.pc1, [c.doHost]);
+    await expect(
+      espalhar({
+        ...o,
+        tentativas: 1,
+        aoBaixar: () => {
+          throw new Error("rede caiu");
+        },
+      }),
+    ).rejects.toThrow(/rede caiu/);
+    expect(c.cartorio.eventos[0]).toBe("pegar");
+    expect(c.cartorio.eventos.at(-1)).toBe("soltar 1");
+  });
+
+  it("(d) soltar que falha não esconde o erro original nem o resultado", async () => {
+    const c = await cenario();
+    const o = c.opcoes(c.pc1, [c.doHost]);
+    const soltar = vi.fn(async () => {
+      throw new Error("cartório fora");
+    });
+    const r = await espalhar({ ...o, atualizacao: { ...c.cartorio.cliente, soltar } });
+    expect(r.estado).toBe("atualizado");
+    expect(soltar).toHaveBeenCalledWith(1);
   });
 });

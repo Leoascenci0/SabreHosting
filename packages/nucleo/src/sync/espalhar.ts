@@ -2,16 +2,22 @@
  * Espalhar a versão nova: este PC leva o mundo da versão N para a M (a que o cartório diz ser a mais nova) puxando
  * só o que mudou de quem já tem (outro PC ou o host), pela rede privada, em segundo plano.
  *
- * Regras de ouro 1, 2, 3 e 5: nenhuma escrita aqui; quem troca o mundo é `aplicarDelta` (servidor parado, trava
- * confirmada, pasta temporária, manifesto de M inteiro conferido, `rename`). Falha em qualquer ponto antes da troca
- * deixa N intacto. As fontes e o manifesto vêm da rede: são entrada não confiável (endereço validado; manifesto
- * conferido pelo hash que o cartório registrou e pela versão). Sem relógio próprio: quem chama decide quando.
+ * Regras de ouro 1, 2, 3 e 5: nenhuma escrita aqui; quem troca o mundo é `aplicarDelta` (servidor parado, fora do
+ * host, trava de atualização confirmada, pasta temporária, manifesto de M inteiro conferido, `rename`). Falha em
+ * qualquer ponto antes da troca deixa N intacto. As fontes e o manifesto vêm da rede: são entrada não confiável
+ * (endereço validado; manifesto conferido pelo hash que o cartório registrou e pela versão). Quem chama decide quando.
+ *
+ * Trava de atualização (syncmel-1.8b): separada da de host, deixa este PC atualizar a PRÓPRIA cópia com outro PC
+ * hospedando, e enquanto vale o cartório não lhe dá o host. Pega só com o servidor parado e fora do host; um
+ * `Renovador` por chamada (um só relógio, parado no `finally`); renovada antes de cada passo da troca; perdida, o
+ * próximo arquivo não baixa e a troca não começa; sempre solta no fim (também em erro).
  */
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { validarManifesto, type ArquivoDoManifesto } from "../backup/manifesto.js";
 import { exigirMundoNaPastaDoServidor } from "../backup/restaurar.js";
-import { aplicarDelta, type Aplicado, type OpcoesAplicar } from "./aplicar.js";
+import { Renovador, type ClienteDeTrava, type OpcoesRenovador } from "../cartorio/renovador.js";
+import { aplicarDelta, exigirForaDoHost, type Aplicado, type OpcoesAplicar } from "./aplicar.js";
 import { conferirEnderecoPrivado, pedirArquivo } from "./transferencia.js";
 
 /** Quem já tem a versão e serve os arquivos (`servirArquivos`) na rede privada. */
@@ -53,8 +59,10 @@ export function escolherFontes(
 
 export interface OpcoesEspalhar extends Pick<
   OpcoesAplicar,
-  "temTrava" | "servidorParado" | "avisarCopia" | "prazoTravaMs" | "renomear" | "ligar"
+  "hospedaAgora" | "servidorParado" | "avisarCopia" | "prazoTravaMs" | "renomear" | "ligar"
 > {
+  /** `/atualizacao/{pegar,renovar,soltar}` do cartório (`pegarAtualizacao`… do cliente). */
+  atualizacao: ClienteDeTrava;
   pastaDoMundo: string;
   /** Obrigatória aqui: sem ela o marcador da troca não seria visto por `podeSubir`. */
   pastaDoServidor: string;
@@ -70,7 +78,12 @@ export interface OpcoesEspalhar extends Pick<
   permitirLoopbackParaTeste?: boolean;
   /** Só para os testes: roda antes de cada arquivo; o que lançar simula a rede caindo ali. */
   aoBaixar?: (arquivo: ArquivoDoManifesto) => void | Promise<void>;
+  /** Só para os testes: relógios do `Renovador` da trava de atualização. */
+  relogioDaTrava?: Pick<OpcoesRenovador, "agora" | "agoraParede">;
 }
+
+const SEM_VEZ =
+  "Este PC perdeu a trava de atualização do cartório; o mundo continua como estava. Tento de novo depois.";
 
 export type Espalhado =
   | { estado: "ja-tinha"; arquivosBaixados: 0; bytesBaixados: 0 }
@@ -86,12 +99,11 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
   if (o.versaoLocal >= o.versao.numero) {
     return { estado: "ja-tinha", arquivosBaixados: 0, bytesBaixados: 0 };
   }
-  // Barreiras baratas antes de qualquer rede; `aplicarDelta` confere tudo de novo antes de trocar.
+  // Barreiras antes de qualquer rede; `aplicarDelta` confere tudo de novo antes de trocar. Fora do host ANTES de
+  // pegar a atualização (1.8b b): trava de host vencida com o servidor ainda de pé não pode virar atualização.
   exigirMundoNaPastaDoServidor(resolve(o.pastaDoMundo), o.pastaDoServidor);
-  if (!o.servidorParado()) {
-    throw new Error("O servidor está rodando; pare o servidor antes de atualizar o mundo.");
-  }
   const fontes = escolherFontes(o.fontes, o.permitirLoopbackParaTeste);
+  await exigirForaDoHost(o);
 
   const pedir = async (sha256: string, destino: string, tamanhoMaximo: number) => {
     let ultimo: unknown;
@@ -116,9 +128,22 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
     });
   };
 
+  const renovador = new Renovador({
+    cliente: o.atualizacao,
+    aoPerder: () => undefined, // `temTrava` passa a dizer não: o próximo arquivo e a troca param
+    ...o.relogioDaTrava,
+  });
+  // Só solta o que ESTA chamada pegou: recusado ou sem resposta, nada foi pego e nada é solto.
+  await renovador.pegar().catch((erro: unknown) => {
+    throw new Error(
+      "Não consegui pegar a vez de atualizar o mundo deste PC (o cartório recusou ou não respondeu). Tento de novo depois.",
+      { cause: erro },
+    );
+  });
   // Pasta própria e nova; só ela é apagada no fim.
-  const dir = await mkdtemp(`${resolve(o.pastaTemporaria)}-`);
+  let dir: string | undefined;
   try {
+    dir = await mkdtemp(`${resolve(o.pastaTemporaria)}-`);
     const arquivo = join(dir, "manifesto.json");
     await pedir(o.versao.manifestoSha256, arquivo, TETO_MANIFESTO);
     const alvo = validarManifesto(JSON.parse(await readFile(arquivo, "utf8")));
@@ -131,19 +156,23 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
       pastaDoMundo: o.pastaDoMundo,
       pastaDoServidor: o.pastaDoServidor,
       alvo,
-      temTrava: o.temTrava,
+      temAtualizacao: () => renovador.renovarAgora(),
+      hospedaAgora: o.hospedaAgora,
       servidorParado: o.servidorParado,
       avisarCopia: o.avisarCopia,
       ...(o.prazoTravaMs !== undefined ? { prazoTravaMs: o.prazoTravaMs } : {}),
       ...(o.renomear ? { renomear: o.renomear } : {}),
       ...(o.ligar ? { ligar: o.ligar } : {}),
       baixar: async (a, destino) => {
+        if (!(await renovador.temTrava())) throw new Error(SEM_VEZ);
         await o.aoBaixar?.(a);
         await pedir(a.sha256, destino, a.tamanho);
       },
     });
     return { estado: "atualizado", ...aplicado };
   } finally {
-    await rm(dir, { recursive: true, force: true });
+    // Sempre: para o relógio e devolve a vez (falhar ao soltar não esconde o resultado; o prazo vence sozinho).
+    await renovador.soltar().catch(() => undefined);
+    if (dir) await rm(dir, { recursive: true, force: true });
   }
 }

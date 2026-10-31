@@ -49,7 +49,8 @@ async function cenario() {
       await mkdir(dirname(destino), { recursive: true });
       await copyFile(join(remoto, a.caminho), destino);
     },
-    temTrava: async () => true,
+    temAtualizacao: async () => true,
+    hospedaAgora: async () => false,
     servidorParado: () => true,
     avisarCopia: vi.fn(async () => undefined),
   };
@@ -88,9 +89,23 @@ describe("aplicarDelta", () => {
     expect(hashesDoMundo(c.mundo)).toEqual(hashesDoMundo(c.remoto));
   });
 
-  it("sem trava ou com servidor rodando: recusa antes de criar qualquer coisa", async () => {
+  it("sem a trava de atualização, hospedando ou com servidor rodando: recusa antes de criar qualquer coisa", async () => {
     const c = await cenario();
-    await expect(aplicarDelta({ ...c.o, temTrava: async () => false })).rejects.toThrow(/trava/i);
+    await expect(aplicarDelta({ ...c.o, temAtualizacao: async () => false })).rejects.toThrow(
+      /trava de atualização/i,
+    );
+    // Este PC hospeda (trava de host dele): o mundo vivo nunca é tocado (regra de ouro 1).
+    await expect(aplicarDelta({ ...c.o, hospedaAgora: async () => true })).rejects.toThrow(
+      /hospedando/i,
+    );
+    // Não deu para saber se hospeda (erro ou demora): fecha para o lado seguro.
+    const semResposta = { ...c.o, prazoTravaMs: 30 };
+    await expect(
+      aplicarDelta({ ...semResposta, hospedaAgora: () => Promise.reject(new Error("rede")) }),
+    ).rejects.toThrow(/hospedando/i);
+    await expect(
+      aplicarDelta({ ...semResposta, hospedaAgora: () => new Promise<boolean>(() => {}) }),
+    ).rejects.toThrow(/hospedando/i);
     await expect(aplicarDelta({ ...c.o, servidorParado: () => false })).rejects.toThrow(
       /servidor/i,
     );
@@ -103,8 +118,8 @@ describe("aplicarDelta", () => {
     const c = await cenario();
     let n = 0;
     await expect(
-      aplicarDelta({ ...c.o, temTrava: async () => ++n < 2 }), // 1ª confere, 2ª (antes da troca) não
-    ).rejects.toThrow(/trava/i);
+      aplicarDelta({ ...c.o, temAtualizacao: async () => ++n < 2 }), // 1ª confere, 2ª (após o download, antes do 1º rename) não
+    ).rejects.toThrow(/trava de atualização/i);
     expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
     expect(sobras(c.base)).toEqual([]);
     expect(c.o.avisarCopia).not.toHaveBeenCalled();
@@ -211,6 +226,54 @@ describe("aplicarDelta", () => {
     expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
     expect(sobras(c.base)).toEqual([]);
     expect(c.o.avisarCopia).not.toHaveBeenCalled();
+  });
+
+  it("trava de atualização perdida logo antes do 1º rename: nada renomeado, N intacto (1.8b a)", async () => {
+    const c = await cenario();
+    let n = 0;
+    const renomear = vi.fn(rename);
+    await expect(
+      aplicarDelta({ ...c.o, renomear, temAtualizacao: async () => ++n < 2 }), // 2ª = antes do 1º rename
+    ).rejects.toThrow(/trava de atualização/i);
+    expect(n).toBe(2);
+    expect(renomear).not.toHaveBeenCalled();
+    expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
+    expect(sobras(c.base)).toEqual([]);
+    expect(existsSync(join(c.base, "TROCA-EM-ANDAMENTO.json"))).toBe(false);
+    expect(c.o.avisarCopia).not.toHaveBeenCalled();
+  });
+
+  it("trava de atualização perdida entre os renames: não põe M no lugar, N volta (1.8b a)", async () => {
+    const c = await cenario();
+    let n = 0;
+    const renomear = vi.fn(rename);
+    await expect(
+      aplicarDelta({ ...c.o, renomear, temAtualizacao: async () => ++n < 3 }), // 3ª = antes do 2º rename
+    ).rejects.toThrow(/trava de atualização/i);
+    expect(n).toBe(3);
+    // mundo→antigo e, sem a trava, antigo→mundo (desfazer); temp→mundo nunca acontece.
+    expect(renomear.mock.calls.map(([de]) => String(de).split(/[\\/]/).pop())).toEqual([
+      "mundo",
+      "mundo.antigo-v7",
+    ]);
+    expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
+    expect(sobras(c.base)).toEqual([]);
+    expect(existsSync(join(c.base, "TROCA-EM-ANDAMENTO.json"))).toBe(false);
+    expect(c.o.avisarCopia).not.toHaveBeenCalled();
+  });
+
+  it("servidor deste PC ligado no meio da troca: para antes do 2º rename e N volta", async () => {
+    const c = await cenario();
+    let ligado = false;
+    await expect(
+      aplicarDelta({
+        ...c.o,
+        servidorParado: () => !ligado,
+        aposPrimeiroRename: () => void (ligado = true),
+      }),
+    ).rejects.toThrow(/servidor/i);
+    expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
+    expect(sobras(c.base)).toEqual([]);
   });
 
   it("falha no aviso ao cartório não desfaz a troca", async () => {

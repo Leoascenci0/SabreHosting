@@ -118,7 +118,8 @@ describe("kill entre os dois rename", () => {
           await mkdir(dirname(destino), { recursive: true });
           await copyFile(join(remoto, a.caminho), destino);
         },
-        temTrava: async () => true,
+        temAtualizacao: async () => true,
+        hospedaAgora: async () => false,
         servidorParado: () => true,
         avisarCopia: async () => undefined,
         aposPrimeiroRename: matar,
@@ -167,7 +168,8 @@ describe("kill entre os dois rename", () => {
         await mkdir(dirname(destino), { recursive: true });
         await copyFile(join(remoto, a.caminho), destino);
       },
-      temTrava: async () => true,
+      temAtualizacao: async () => true,
+      hospedaAgora: async () => false,
       servidorParado: () => true,
       avisarCopia: async () => undefined,
       renomear: rename,
@@ -209,7 +211,8 @@ describe("marcador forjado ou fora do lugar", () => {
         pastaDoServidor: outra,
         alvo,
         baixar: async () => undefined,
-        temTrava: async () => true,
+        temAtualizacao: async () => true,
+        hospedaAgora: async () => false,
         servidorParado: () => true,
         avisarCopia: async () => undefined,
       }),
