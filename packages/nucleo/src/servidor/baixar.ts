@@ -29,6 +29,8 @@ export interface OpcoesDownload {
   permitirHttpPrivado?: boolean;
   /** Cabeçalhos extras (ex.: Authorization). Vão só ao endereço pedido, nunca a um redirecionamento. */
   cabecalhos?: Record<string, string>;
+  /** Se informado, só estes endereços (host) servem o arquivo, inclusive em redirecionamento. Padrão: qualquer um. */
+  hostsPermitidos?: string[];
   /** Limite de velocidade em bytes por segundo (inteiro ≥ 1). Só atrasa o fluxo; o hash continua conferido. Padrão: sem limite. */
   limiteBytesPorSeg?: number;
 }
@@ -59,12 +61,16 @@ const IP_PRIVADO = /^10\.66\.0\.(?:\d{1,3})$/;
 const ehIpPrivado = (h: string) =>
   IP_PRIVADO.test(h) && h.split(".").every((n) => Number(n) <= 255);
 
+const hostPermitido = (host: string, lista: string[]) =>
+  lista.some((h) => h.toLowerCase() === host.toLowerCase());
+
 function validar({
   url,
   hashEsperado,
   permitirHttpLocal = false,
   permitirHttpPrivado = false,
   limiteBytesPorSeg,
+  hostsPermitidos,
 }: OpcoesDownload): string {
   if (
     limiteBytesPorSeg !== undefined &&
@@ -80,6 +86,9 @@ function validar({
     throw new ErroDownload(`O hash informado para o download é inválido (${algoritmo}).`);
   }
   const { protocol, hostname } = new URL(url);
+  if (hostsPermitidos && !hostPermitido(hostname, hostsPermitidos)) {
+    throw new ErroDownload("O endereço do download não está na lista permitida; recusei.");
+  }
   const local = hostname === "localhost" || hostname === "127.0.0.1";
   const liberado =
     protocol === "http:" &&
@@ -96,6 +105,7 @@ interface Limites {
   tempoTotal: number;
   cabecalhos: Record<string, string>;
   limiteBytesPorSeg: number | undefined;
+  hostsPermitidos: string[] | undefined;
 }
 
 const MAX_SALTOS = 5;
@@ -106,7 +116,12 @@ async function descartar(parcial: string): Promise<void> {
 }
 
 /** `fetch` seguindo redirecionamento à mão: cada salto precisa ser https. */
-async function buscar(url: string, cabecalhos: Record<string, string>, sinal: AbortSignal) {
+async function buscar(
+  url: string,
+  cabecalhos: Record<string, string>,
+  sinal: AbortSignal,
+  hostsPermitidos?: string[],
+) {
   for (let salto = 0; ; salto++) {
     const resposta = await fetch(url, { headers: cabecalhos, signal: sinal, redirect: "manual" });
     const destino = resposta.headers.get("location");
@@ -116,6 +131,11 @@ async function buscar(url: string, cabecalhos: Record<string, string>, sinal: Ab
     if (salto >= MAX_SALTOS || proximo.protocol !== "https:") {
       throw new ErroDownload(
         "O servidor redirecionou o download para um endereço não seguro; recusei.",
+      );
+    }
+    if (hostsPermitidos && !hostPermitido(proximo.hostname, hostsPermitidos)) {
+      throw new ErroDownload(
+        "O servidor redirecionou o download para outro endereço não permitido; recusei.",
       );
     }
     url = proximo.href;
@@ -156,7 +176,7 @@ async function baixarParcial(url: string, parcial: string, limites: Limites): Pr
   try {
     let resposta: Response;
     try {
-      resposta = await buscar(url, cabecalhos, controle.signal);
+      resposta = await buscar(url, cabecalhos, controle.signal, limites.hostsPermitidos);
     } catch (e) {
       if (e instanceof ErroDownload) throw e;
       throw (
@@ -247,7 +267,7 @@ const motivoDoAborto = (sinal: AbortSignal): ErroDownload | undefined =>
 
 /**
  * Baixa `url` para `destino` só depois de conferir o hash. O arquivo final nunca existe
- * sem ter sido conferido: baixa para `<destino>.parcial` e só então faz `rename` (atômico).
+ * sem ter sido conferido (um antigo de hash diferente fica até o novo conferir): baixa para `<destino>.parcial` e só então faz `rename` (atômico).
  */
 export async function baixarConferido(
   opcoes: OpcoesDownload,
@@ -259,6 +279,7 @@ export async function baixarConferido(
     tempoTotal: opcoes.tempoTotal ?? 30 * 60_000,
     cabecalhos: opcoes.cabecalhos ?? {},
     limiteBytesPorSeg: opcoes.limiteBytesPorSeg,
+    hostsPermitidos: opcoes.hostsPermitidos,
   };
   const esperado = validar(opcoes);
   const parcial = `${destino}.parcial`;
@@ -267,7 +288,8 @@ export async function baixarConferido(
     if ((await hashDoArquivo(destino, hashEsperado.algoritmo)) === esperado) {
       return { caminho: destino, doCache: true };
     }
-    await rm(destino, { force: true }); // final que não confere nunca fica no lugar
+    // Final que não confere (ex.: mod de versão antiga) fica onde está até o novo estar baixado e conferido;
+    // só então o rename o substitui. Falha no meio nunca deixa o destino sem arquivo.
   }
 
   const passar = async (): Promise<boolean> => {

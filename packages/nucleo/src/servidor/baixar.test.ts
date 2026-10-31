@@ -199,15 +199,38 @@ describe("baixarConferido", () => {
     expect(existsSync(destino)).toBe(false);
   });
 
-  it("final corrompido é apagado antes de baixar; se o download falha, ele não fica", async () => {
+  it("final desatualizado fica no lugar enquanto o novo baixa; se o download falha, o antigo continua", async () => {
     const destino = join(pasta, "a.jar");
-    await writeFile(destino, "lixo");
+    await writeFile(destino, "versao-antiga");
     manipulador = (_req, res) => {
       res.writeHead(500);
       res.end();
     };
     await expect(baixar({ url: url(), hashEsperado: hashCerto, destino })).rejects.toThrow(/500/);
-    expect(existsSync(destino)).toBe(false);
+    expect(await readFile(destino, "utf8")).toBe("versao-antiga");
+    expect(await readdir(pasta)).toEqual(["a.jar"]);
+  });
+
+  it("novo com hash errado: descarta o novo e o antigo continua intacto", async () => {
+    const destino = join(pasta, "a.jar");
+    await writeFile(destino, "versao-antiga");
+    const hashErrado = { algoritmo: "sha256", valor: "0".repeat(64) } as const;
+    await expect(baixar({ url: url(), hashEsperado: hashErrado, destino })).rejects.toThrow(
+      /não confere/,
+    );
+    expect(await readFile(destino, "utf8")).toBe("versao-antiga");
+    expect(await readdir(pasta)).toEqual(["a.jar"]);
+  });
+
+  it("final desatualizado é trocado de uma vez só quando o novo confere", async () => {
+    const destino = join(pasta, "a.jar");
+    await writeFile(destino, "versao-antiga");
+    expect(await baixar({ url: url(), hashEsperado: hashCerto, destino })).toEqual({
+      caminho: destino,
+      doCache: false,
+    });
+    expect(await readFile(destino)).toEqual(conteudo);
+    expect(await readdir(pasta)).toEqual(["a.jar"]);
   });
 
   it("416 na retomada: recomeça do zero sem Range", async () => {
@@ -317,6 +340,65 @@ describe("baixarConferido", () => {
     expect(await readdir(pasta)).toEqual([]);
   });
 
+  describe("hostsPermitidos", () => {
+    const redireciona = (para: string) => {
+      manipulador = (_req, res) => {
+        res.writeHead(302, { location: para });
+        res.end();
+      };
+    };
+
+    it("redirecionamento para host fora da lista: recusa sem seguir e não deixa nada", async () => {
+      const destino = join(pasta, "a.jar");
+      redireciona("https://outro.exemplo/a.jar");
+      await expect(
+        baixar({ url: url(), hashEsperado: hashCerto, destino, hostsPermitidos: ["127.0.0.1"] }),
+      ).rejects.toThrow(/outro endereço/);
+      expect(await readdir(pasta)).toEqual([]);
+    });
+
+    it("redirecionamento encadeado: o 2º salto para fora da lista também é recusado", async () => {
+      const destino = join(pasta, "a.jar");
+      manipulador = (req, res, n) => {
+        res.writeHead(302, {
+          location:
+            n === 1
+              ? `http://127.0.0.1:${(servidor.address() as AddressInfo).port}/2`
+              : "https://outro.exemplo/a.jar",
+        });
+        res.end();
+        void req;
+      };
+      // o 1º salto fica em http local (permitido no teste) e o 2º foge da lista
+      await expect(
+        baixar({ url: url(), hashEsperado: hashCerto, destino, hostsPermitidos: ["127.0.0.1"] }),
+      ).rejects.toThrow(/outro endereço|não seguro/);
+      expect(await readdir(pasta)).toEqual([]);
+    });
+
+    it("host da lista compara sem diferença de maiúscula e o antigo sobrevive à recusa", async () => {
+      const destino = join(pasta, "a.jar");
+      await writeFile(destino, "versao-antiga");
+      redireciona("https://OUTRO.exemplo/a.jar");
+      await expect(
+        baixar({ url: url(), hashEsperado: hashCerto, destino, hostsPermitidos: ["127.0.0.1"] }),
+      ).rejects.toThrow(/outro endereço/);
+      expect(await readFile(destino, "utf8")).toBe("versao-antiga");
+    });
+
+    it("lista que não inclui nem o endereço pedido: recusa antes de abrir a rede", async () => {
+      await expect(
+        baixar({
+          url: url(),
+          hashEsperado: hashCerto,
+          destino: join(pasta, "a.jar"),
+          hostsPermitidos: ["cdn.modrinth.com"],
+        }),
+      ).rejects.toThrow(/endereço/);
+      expect(requisicoes).toBe(0);
+    });
+  });
+
   describe("redirecionamento https e tempo total", () => {
     let https: Server;
     let pastaCert: string;
@@ -387,6 +469,19 @@ describe("baixarConferido", () => {
       expect(await readFile(destino)).toEqual(conteudo);
       expect(await readdir(pasta)).toEqual(["a.jar"]);
       expect(hopsHttps).toBe(5);
+    });
+
+    it("redirecionamento https para host da lista: segue normalmente", async () => {
+      const destino = join(pasta, "a.jar");
+      comSaltos(0);
+      const r = await baixar({
+        url: url(),
+        hashEsperado: hashCerto,
+        destino,
+        hostsPermitidos: ["127.0.0.1"],
+      });
+      expect(r.doCache).toBe(false);
+      expect(await readFile(destino)).toEqual(conteudo);
     });
 
     it("um salto além do limite (6): recusa, não segue o 6º e não deixa arquivo", async () => {

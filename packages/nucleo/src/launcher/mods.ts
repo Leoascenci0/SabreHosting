@@ -94,11 +94,12 @@ export async function sincronizarMods(opcoes: {
         hashEsperado: { algoritmo: "sha512", valor: m.sha512 },
         destino,
         tamanhoMaximo: TAMANHO_MAXIMO,
+        hostsPermitidos: [new URL(m.url).hostname], // redirect para outro host é recusado
       });
       nossos.add(m.arquivo);
       (doCache ? resultado.mantidos : resultado.baixados).push(m.arquivo);
     } catch (e) {
-      // Se havia um nosso com hash velho, o baixarConferido já o descartou: deixa de ser nosso.
+      // Se havia um nosso com hash velho, o baixarConferido o mantém até o novo conferir; só deixa de ser nosso se sumiu.
       if (!(await existe(destino))) nossos.delete(m.arquivo);
       resultado.falhas.push({
         arquivo: m.arquivo,
