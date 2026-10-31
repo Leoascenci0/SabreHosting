@@ -32,3 +32,10 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   **Tela no app:** Configurações › Grupo › "Mods do grupo".
   *Confirmação:* teste/e2e: aviso some quando a lista volta a carregar.
   *Origem:* lancmel-2.1 · PR #215 · qa
+
+- [ ] **2.5 — Mods do grupo: leitura pós-ação não sobrescreve o erro da ação**
+  *O que fazer:* no `catch` de `carregarMods`, não trocar a mensagem se `preservarMensagens` for `true` (a leitura que falha logo depois de uma ação com erro apaga o erro da ação).
+  *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`
+  **Tela no app:** Configurações › Grupo › "Mods do grupo".
+  *Confirmação:* E2E: leitura falhando logo após ação com erro mantém o erro da ação.
+  *Origem:* lancmel-2.4 · PR #226 · filha
