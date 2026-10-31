@@ -25,6 +25,9 @@ const FALSO = join(RAIZ, "packages/nucleo/test/ajuda/servidor-falso.mjs");
 const NEO = "21.1.172";
 // Tempos curtos de teste; a regra do cartório (prazo ≥ 3 × renovação) continua valendo.
 const TEMPOS = { prazoMs: 300, renovarMs: 100 };
+// Teste que exige a trava VIVA por vários prazos: o prazo local do renovador é 3 × renovação − 1,25 × renovação, então
+// com 100 ms a folga é de 75 ms e uma máquina ocupada atrasa a renovação e a trava cai (comportamento certo do código).
+const TEMPOS_FOLGADOS = { prazoMs: 1500, renovarMs: 500 };
 
 let pasta: string;
 let criados: ChildProcess[];
@@ -52,13 +55,13 @@ afterEach(async () => {
   await rm(pasta, { recursive: true, force: true });
 });
 
-async function subirCartorio() {
+async function subirCartorio(trava = TEMPOS, esperaHttpMs = 200) {
   const segredoAdmin = gerarSegredo();
   const app = criarCartorio({
     banco: abrirBanco(join(pasta, "cartorio.db")),
     segredoAdmin,
     logger: { level: "silent" },
-    trava: TEMPOS,
+    trava,
   });
   await app.listen({ host: "127.0.0.1", port: 0 });
   fechar.push(() => app.close());
@@ -78,7 +81,7 @@ async function subirCartorio() {
     });
     const cofre = cofreEmMemoria();
     await cofre.guardar(usado.json<{ token: string }>().token);
-    return criarCliente({ url, cofre, prazoMs: 200, esperaBaseMs: 10 });
+    return criarCliente({ url, cofre, prazoMs: esperaHttpMs, esperaBaseMs: 10 });
   }
   return { app, pc };
 }
@@ -126,13 +129,13 @@ const dormir = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
 
 describe("trava de host contra o cartório real", () => {
   it("renovando, a trava passa do prazo e outro PC continua recusado; parou, solta", async () => {
-    const { pc } = await subirCartorio();
+    const { pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000);
     const a = await pc("PC A");
     const b = await pc("PC B");
     const { servidor, renovador } = await hospedarFalso(a);
     await esperarEstado(servidor, "pronto");
 
-    await dormir(3 * TEMPOS.prazoMs); // sem renovação a trava já teria vencido 3 vezes
+    await dormir(2 * TEMPOS_FOLGADOS.prazoMs); // sem renovação a trava já teria vencido 2 vezes
     expect(await renovador.temTrava()).toBe(true);
     const recusa = await b.pegar();
     expect(recusa).toMatchObject({ ok: false, motivo: "ocupada" });
@@ -141,7 +144,7 @@ describe("trava de host contra o cartório real", () => {
     await dormir(50); // o `soltar` sai no evento de parada
     expect(await renovador.temTrava()).toBe(false);
     expect(await b.pegar()).toMatchObject({ ok: true });
-  });
+  }, 30_000);
 
   it("renovação para → prazo local vence → save-all e parada do servidor", async () => {
     const { app, pc } = await subirCartorio();
