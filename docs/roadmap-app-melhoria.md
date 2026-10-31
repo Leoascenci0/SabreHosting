@@ -38,7 +38,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste de integração com cartório devolvendo o endereço.
   *Origem:* app-1.2 · PR #74 · filha
 
-- [ ] **1.5 — Retomar a própria trava depois de reabrir o app**
+- [x] **1.5 — Retomar a própria trava depois de reabrir o app** (PR #101, 31/10/2026; prova no Windows [P])
   *O que fazer:* se este PC é dono da trava mas o app foi reaberto sem servidor rodando, a tela mostra "Servidor no PC do
   <este PC>" até a trava vencer (~60 s). Reconhecer "dono sou eu, sem servidor" e soltar a trava (ou oferecer "Hospedar"
   de novo pelo `hospedar()`).
