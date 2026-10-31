@@ -90,7 +90,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
 
 ## Bloco 3 — Versão do jogo escolhida pelo grupo
 
-- [ ] **3.1 — Qualquer versão do Minecraft, escolhida pelo dono** *(corte de 31/10, onda 23: **3.1a ✅ PR #180** núcleo (versões, plano Mojang, modo jar); restam **3.1b** cartório (config_grupo, migração 8→9 com sha1 e dono, 409 se há trava) e **3.1c** tela Configurações › Servidor › Versão; mais **3.1d** NeoForge legado da 1.20.1 e `redirect:"error"` + teto de corpo no `buscarPadrao`)* (decisão do Eliel, 31/10/2026)
+- [x] **3.1 — Qualquer versão do Minecraft, escolhida pelo dono** *(onda 24: 3.1a PR #180, 3.1b cartório PR #186, 3.1c tela PR #188, 3.1d NeoForge legado + `redirect:"error"` PR #185. **Pendente P:** sha1 do instalador do forge 1.20.1 em `HASHES_NEOFORGE` (Maven da NeoForged bloqueado na nuvem; nenhuma versão com mods hospedável até ser preenchida). Melhorias: backup automático antes de trocar a versão; tela mostrar "mods pendentes" enquanto a tabela estiver vazia)* (decisão do Eliel, 31/10/2026)
   *O que fazer:* lista de versões do Minecraft (da mais nova às antigas) vinda do manifesto oficial da Mojang; para cada
   uma, o que o servidor consegue rodar: NeoForge + Sinytra Connector (Fabric e Forge juntos), um loader só, ou sem mods.
   A versão escolhida vai para a configuração do grupo no cartório (todos os PCs usam a mesma); trocar de versão só com o

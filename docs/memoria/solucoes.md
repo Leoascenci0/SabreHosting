@@ -67,3 +67,6 @@ Prova: Onda 22 recriada com o hash completo (session_012qrjntw8ggfpCSw7mg4UfD) �
 
 ## S-10 — `qa` reprova PR de correção só por falta das linhas `Regressão:` e `Tela no app:`
 Sintoma: PR #181 (drive-1.1b) corrigia dois bugs achados pelo `qa` do #179 e o código estava certo, mas o `qa` reprovou: faltavam `Regressão:` e `Tela no app:` no corpo · Causa: o briefing não repetiu a regra do CLAUDE.md (correção de bug = regra + prova) para o item que "corrige antes de ligar" · Solução: a sessão de onda completou o corpo do PR (sem nova rodada da filha) e mergeou · Prova: PR #181 · Vezes: 1 · Regra: todo briefing de item que corrige bug ou cria tela manda a filha escrever `Regressão: <teste que falhava antes>` e `Tela no app: <caminho>` no PR.
+
+## S-11 — Gancho barra o comando inteiro por causa do TEXTO da flag que pula o pre-commit dentro de um heredoc
+Sintoma: `PreToolUse:Bash hook error … é proibido` ao gravar o texto-padrão da filha (ou esta ficha) com `cat <<EOF` · Causa: o gancho `bloquear-git-perigoso.sh` procura a flag no comando inteiro, inclusive em texto que só a cita · Solução: escrever "nem pular a trava do pre-commit" em vez da flag literal em prompts, briefings e fichas · Prova: Onda 24, template regravado e sessões criadas · Vezes: 1 · Origem: onda 24.
