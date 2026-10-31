@@ -276,6 +276,28 @@ export function nomeOcupado(banco: Banco, nome: string, agora: number): boolean 
   );
 }
 
+/**
+ * Tira o acesso do PC ao cartório: revoga os tokens ativos dele (o filtro de `pcDoToken` faz o resto).
+ * A conferência de dono e de existência fica dentro da transação: o `trocar-dono` roda em outro processo e não
+ * pode passar no meio entre olhar e revogar.
+ */
+export function revogarPc(
+  banco: Banco,
+  pcId: number,
+  agora: number,
+): "revogado" | "dono" | "inexistente" {
+  return emTransacao(banco, () => {
+    const pc = banco.prepare("SELECT dono FROM pcs WHERE id = ?").get(pcId) as
+      { dono: number } | undefined;
+    if (!pc) return "inexistente";
+    if (pc.dono === 1) return "dono";
+    banco
+      .prepare("UPDATE tokens SET revogado_em = ? WHERE pc_id = ? AND revogado_em IS NULL")
+      .run(agora, pcId);
+    return "revogado";
+  });
+}
+
 export function donoAtual(banco: Banco): Pc | undefined {
   return banco.prepare("SELECT id, nome FROM pcs WHERE dono = 1").get() as Pc | undefined;
 }
