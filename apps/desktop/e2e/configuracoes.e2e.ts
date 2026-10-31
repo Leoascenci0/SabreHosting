@@ -196,6 +196,26 @@ describe("tela de configurações", () => {
     await esperarTexto(p, "#convite-copiado", "Convite copiado");
     expect(await aberto?.evaluate(({ clipboard }) => clipboard.readText())).toBe(texto);
 
+    // Segunda cópia seguida: a região tem que mudar de novo (limpa e reescrita) para o leitor de tela anunciar.
+    await p.evaluate(() => {
+      const w = globalThis as unknown as { __mudancasConvite: number };
+      w.__mudancasConvite = 0;
+      new MutationObserver((registros) => {
+        w.__mudancasConvite += registros.length;
+      }).observe(document.querySelector("#convite-copiado") as Node, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    });
+    await p.locator("#convite-copiar").click();
+    await p.waitForTimeout(500);
+    const mudancas = await p.evaluate(
+      () => (globalThis as unknown as { __mudancasConvite: number }).__mudancasConvite,
+    );
+    expect(mudancas).toBeGreaterThanOrEqual(2);
+    await esperarTexto(p, "#convite-copiado", "Convite copiado");
+
     // Sair e voltar: o texto some da tela, e nada do convite foi gravado nas preferências.
     await p.locator("#config-voltar").click();
     await p.locator("#ver-config").click();
@@ -355,6 +375,53 @@ describe("tela de configurações", () => {
         timeout: 5000,
       },
     );
+  });
+
+  it("mods: leitura que falha logo após uma ação com erro mantém o erro da ação", async () => {
+    const p = await abrir(true);
+    await p.locator("#mods-adicionar:not([hidden])").waitFor();
+    // A ação lê a lista (passa), confere o link (erro de ação); a leitura logo depois da ação falha.
+    const interruptorMods = (campos: Record<string, boolean | number>): Promise<unknown> =>
+      aberto?.evaluate((_electron, c: Record<string, boolean | number>) => {
+        const falso = (globalThis as unknown as Record<string, Record<string, unknown>>)[
+          "__sabreE2EMods"
+        ];
+        if (falso) Object.assign(falso, c);
+      }, campos) as Promise<unknown>;
+    await p.locator("#mods-nome").fill("Lithium");
+    await p.locator("#mods-versao").fill("0.13.0");
+    await p.locator("#mods-arquivo").fill("lithium.jar");
+    await p.locator("#mods-url").fill("https://evil.example/lithium.jar");
+    await p.locator("#mods-hash").fill("b".repeat(128));
+    await interruptorMods({ falhaLer: true, leiturasOk: 1 });
+    await p.locator("#mods-adicionar-botao").click();
+    // Dá tempo de a ação e a leitura (que falha) terminarem; o erro da ação tem que continuar na tela.
+    await p.waitForTimeout(1000);
+    expect(await p.locator("#mods-erro").textContent()).toContain("cdn.modrinth.com");
+    expect(await p.locator("#mods-erro").textContent()).not.toContain("cartório");
+    await interruptorMods({ falhaLer: false, leiturasOk: 0 });
+  });
+
+  it("mods: releitura depois de ação bem-sucedida mostra a falha de leitura", async () => {
+    const p = await abrir(true);
+    await p.locator("#mods-adicionar:not([hidden])").waitFor();
+    const interruptorMods = (campos: Record<string, boolean | number>): Promise<unknown> =>
+      aberto?.evaluate((_electron, c: Record<string, boolean | number>) => {
+        const falso = (globalThis as unknown as Record<string, Record<string, unknown>>)[
+          "__sabreE2EMods"
+        ];
+        if (falso) Object.assign(falso, c);
+      }, campos) as Promise<unknown>;
+    await p.locator("#mods-nome").fill("Iris");
+    await p.locator("#mods-versao").fill("1.0.0");
+    await p.locator("#mods-arquivo").fill("iris2.jar");
+    await p.locator("#mods-url").fill("https://cdn.modrinth.com/data/x/versions/y/iris2.jar");
+    await p.locator("#mods-hash").fill("c".repeat(128));
+    // A ação lê (passa), grava com sucesso; a releitura logo depois falha e não há erro de ação na tela.
+    await interruptorMods({ falhaLer: true, leiturasOk: 1 });
+    await p.locator("#mods-adicionar-botao").click();
+    await esperarTexto(p, "#mods-erro", "cartório agora");
+    await interruptorMods({ falhaLer: false, leiturasOk: 0 });
   });
 
   it("versão: não-dono não vê a área", async () => {

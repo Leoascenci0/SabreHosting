@@ -275,12 +275,16 @@ export function depsModsE2E(servidorRodando: () => boolean): DepsModsGrupo {
   ];
   const listas: ModGrupo[][] = [];
   // Interruptores do teste: `semInstancia` deixa a pasta da instância do Prism inexistente; `falhaLer` faz a leitura falhar.
-  const interruptores = { listas, semInstancia: false, falhaLer: false };
+  // `leiturasOk`: quantas leituras passam antes de `falhaLer` começar a valer (a ação lê a lista antes de conferir).
+  const interruptores = { listas, semInstancia: false, falhaLer: false, leiturasOk: 0 };
   (globalThis as Record<string, unknown>)["__sabreE2EMods"] = interruptores;
   return {
     eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
     lerLista: async () => {
-      if (interruptores.falhaLer) throw new Error("cartório não respondeu");
+      if (interruptores.falhaLer) {
+        if (interruptores.leiturasOk > 0) interruptores.leiturasOk -= 1;
+        else throw new Error("cartório não respondeu");
+      }
       return lista;
     },
     gravarLista: async (nova) => void (listas.push(nova), (lista = nova)),
@@ -295,7 +299,8 @@ const ACESSO_FALSO = "token-falso-do-e2e";
 
 /**
  * Assistente de primeira vez do E2E: cartório e WireGuard falsos. Sem `SABRE_E2E_BOAS_VINDAS=1` o PC já nasce
- * configurado (as outras telas não veem o assistente). `SABRE_E2E_SEM_COFRE=1` tira o cofre do sistema. O convite com
+ * configurado (as outras telas não veem o assistente). `SABRE_E2E_SEM_COFRE=1` tira o cofre do sistema.
+ * `SABRE_E2E_COFRE_CORROMPIDO=1` faz o PC já configurado com um token guardado que não decifra. O convite com
  * código `usado` é recusado como o cartório recusaria. Tudo que o "passo elevado" recebeu fica em
  * `__sabreE2EBoasVindas` (chamadas, token guardado) para o teste conferir.
  */
@@ -304,7 +309,8 @@ export function depsBoasVindasE2E(dados: string): {
   escolherPasta: () => Promise<string | undefined>;
 } {
   const ligado = process.env["SABRE_E2E_BOAS_VINDAS"] === "1";
-  if (!ligado) {
+  const corrompido = process.env["SABRE_E2E_COFRE_CORROMPIDO"] === "1";
+  if (!ligado || corrompido) {
     mkdirSync(dados, { recursive: true });
     writeFileSync(
       join(dados, "boas-vindas.json"),
@@ -322,6 +328,8 @@ export function depsBoasVindasE2E(dados: string): {
       cofre: {
         guardar: async (t) => void registro.tokens.push(t),
         ler: async () => registro.tokens[0],
+        // `SABRE_E2E_COFRE_CORROMPIDO=1`: o token guardado existe e não decifra.
+        estado: async () => ({ tipo: corrompido ? "corrompido" : "ok" }),
       },
       entrar: async (convite) => {
         registro.entradas.push(convite.grupo);

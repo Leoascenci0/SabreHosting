@@ -150,6 +150,23 @@ describe("distâncias de Configurações vão para o server.properties ao hosped
     }
   });
 
+  it("trava ocupada (hostmel-3.4): o server.properties fica intacto e nada sobe", async () => {
+    const antes = "server-port=25565\nview-distance=10\nserver-ip=10.66.0.1\n";
+    writeFileSync(join(pasta, "server.properties"), antes);
+    const c = cartorio(true);
+    const spawnFn = vi.fn<NonNullable<ExtrasDepsReais["spawnFn"]>>(() => filho());
+    const d = depsReais(env(), () => {}, {
+      fetchFn: c.fetchFn,
+      spawnFn,
+      plataforma: "linux",
+      ipPrivado: TUNEL,
+    });
+    await expect(d.hospedar(() => {})).rejects.toThrow();
+    expect(c.rotas).toContain("/trava/pegar");
+    expect(spawnFn).not.toHaveBeenCalled();
+    expect(readFileSync(join(pasta, "server.properties"), "utf8")).toBe(antes);
+  });
+
   it("sem túnel privado: recusa em pt-BR, não grava nada e não cria processo", async () => {
     const c = cartorio(false);
     const spawnFn = vi.fn<NonNullable<ExtrasDepsReais["spawnFn"]>>(() => filho());
