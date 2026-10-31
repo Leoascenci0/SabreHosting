@@ -112,7 +112,7 @@ export async function podeSubir(pasta: string): Promise<{ pode: boolean; motivo?
     return {
       pode: false,
       motivo:
-        "A troca do mundo parou no meio; o app vai recuperar o mundo antes de ligar o servidor.",
+        "A troca do mundo parou no meio. Feche e abra o SabreHosting para recuperar o mundo antes de ligar o servidor.",
     };
   }
   const recusa = { pode: false, motivo: "Aceite o EULA da Mojang antes de ligar o servidor." };

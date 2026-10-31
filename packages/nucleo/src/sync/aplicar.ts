@@ -21,6 +21,7 @@ import {
 import {
   apagarMarcadorTroca,
   desfazer,
+  exigirMundoNaPastaDoServidor,
   gravarMarcadorTroca,
   haMundo,
 } from "../backup/restaurar.js";
@@ -41,6 +42,8 @@ export interface OpcoesAplicar {
   servidorParado: () => boolean;
   /** Diz ao cartório que este PC tem a versão M (cliente.informarCopia). */
   avisarCopia: (versao: number) => Promise<void>;
+  /** Pasta do servidor, onde `podeSubir` procura o marcador da troca: o mundo tem de ser filho direto dela. */
+  pastaDoServidor?: string;
   prazoTravaMs?: number;
   /** Só para os testes. */
   renomear?: (de: string, para: string) => Promise<void>;
@@ -118,6 +121,7 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
   const temp = `${mundo}.atualizando-v${alvo.versao}`;
   const antigo = `${mundo}.antigo-v${alvo.versao}`;
 
+  exigirMundoNaPastaDoServidor(mundo, o.pastaDoServidor);
   await exigirPodeTrocar(o);
   if (!(await haMundo(mundo))) {
     throw new Error("Não há mundo neste PC para atualizar; use a cópia completa do mundo.");
@@ -181,7 +185,6 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
   await o.aposPrimeiroRename?.();
   try {
     await renomear(temp, mundo);
-    await apagarMarcadorTroca(mundo);
   } catch (erro) {
     await desfazer(renomear, { mundo, antigo, temp, backup: undefined }, erro);
     await apagarMarcadorTroca(mundo);
@@ -194,6 +197,9 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
     );
   }
 
+  // O mundo novo já está no lugar: falhar ao apagar o marcador (ex.: antivírus) não pode virar "desfazer". O
+  // marcador sobra e a próxima partida (`recuperarTroca`) só o limpa.
+  await apagarMarcadorTroca(mundo).catch(() => undefined);
   const resultado: Aplicado = { diferenca, arquivosBaixados, bytesBaixados };
   try {
     await o.avisarCopia(alvo.versao);

@@ -8,7 +8,7 @@
  */
 import { existsSync } from "node:fs";
 import { lstat, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { MARCADOR_RESTAURACAO, MARCADOR_TROCA, gravarAtomico } from "../servidor/configurar.js";
 import { travaConfirmada } from "../servidor/processo.js";
 import { nomeDoBackup } from "./agendador.js";
@@ -33,6 +33,8 @@ export interface OpcoesRestaurar {
   /** Fica com o mundo de antes ao lado (`<mundo>.antigo-<data>`) em vez de apagar. */
   manterAntigo?: boolean;
   agora?: () => Date;
+  /** Pasta do servidor, onde `podeSubir` procura o marcador da troca: o mundo tem de ser filho direto dela. */
+  pastaDoServidor?: string;
   prazoTravaMs?: number;
   /** Só para os testes (injetar falha nos `rename`). */
   renomear?: (de: string, para: string) => Promise<void>;
@@ -84,6 +86,7 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
   const conferindo = `${mundo}.conferindo-${sufixo}`;
   const destinoBackup = join(o.pastaBackups, nome);
 
+  exigirMundoNaPastaDoServidor(mundo, o.pastaDoServidor);
   await exigirPodeTrocar(o);
   const haMundoAtual = await haMundo(mundo);
   // Regra 4: o rename do pacote trocaria um backup bom de mesmo nome.
@@ -130,7 +133,6 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
   }
   try {
     await renomear(temp, mundo);
-    if (haMundoAtual) await apagarMarcadorTroca(mundo);
   } catch (erro) {
     if (haMundoAtual) {
       await desfazer(renomear, { mundo, antigo, temp, backup: backupDoAtual }, erro);
@@ -142,6 +144,9 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
     });
   }
 
+  // O mundo novo já está no lugar: falhar ao apagar o marcador (ex.: antivírus) não pode virar "desfazer". O
+  // marcador sobra e a próxima partida (`recuperarTroca`) só o limpa.
+  if (haMundoAtual) await apagarMarcadorTroca(mundo).catch(() => undefined);
   if (haMundoAtual && o.manterAntigo === true) {
     return { backupDoAtual, restaurado, mundoAntigo: antigo };
   }
@@ -154,6 +159,21 @@ export interface CaminhosDaTroca {
   mundo: string;
   antigo: string;
   temp: string;
+}
+
+const mesmoLugar = (a: string, b: string) => relative(resolve(a), resolve(b)) === ""; // sem diferença de C:\ e c:\ no Windows
+
+/** O marcador fica em `dirname(mundo)` e `podeSubir` o lê na pasta do servidor: se forem diferentes, não protege. */
+export function exigirMundoNaPastaDoServidor(
+  mundo: string,
+  pastaDoServidor: string | undefined,
+): void {
+  if (pastaDoServidor === undefined) return;
+  if (!mesmoLugar(dirname(resolve(mundo)), pastaDoServidor)) {
+    throw new Error(
+      "O mundo precisa ficar dentro da pasta do servidor (não numa pasta de dentro dela nem em outro lugar) para a troca ser protegida; nada foi alterado.",
+    );
+  }
 }
 
 /** Grava (atômico) o que a troca vai mexer, ao lado do mundo, ANTES do primeiro `rename`. */
@@ -218,10 +238,17 @@ function lerMarcadorTroca(texto: string, pasta: string): CaminhosDaTroca {
     throw ruim();
   }
   const { mundo, antigo, temp } = (j ?? {}) as Record<string, unknown>;
-  const raiz = resolve(pasta);
   for (const p of [mundo, antigo, temp]) {
-    if (typeof p !== "string" || !isAbsolute(p) || dirname(resolve(p)) !== raiz) throw ruim();
+    if (typeof p !== "string" || !isAbsolute(p) || !mesmoLugar(dirname(resolve(p)), pasta))
+      throw ruim();
   }
+  // Os três distintos e a sobra com o nome do mundo + ".": `temp` forjado como o mundo (ou mods/, libraries/)
+  // faria a recuperação apagar o mundo vivo.
+  const nome = basename(mundo as string);
+  for (const p of [antigo, temp] as string[]) {
+    if (!basename(p).startsWith(`${nome}.`)) throw ruim();
+  }
+  if (antigo === temp) throw ruim();
   return { mundo, antigo, temp } as CaminhosDaTroca;
 }
 

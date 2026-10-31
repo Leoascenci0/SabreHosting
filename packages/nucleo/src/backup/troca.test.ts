@@ -175,3 +175,69 @@ describe("kill entre os dois rename", () => {
     expect(existsSync(join(base, MARCADOR_TROCA))).toBe(false);
   });
 });
+
+describe("marcador forjado ou fora do lugar", () => {
+  it("temp igual ao mundo ou apontando para mods/: recusa e não apaga nada", async () => {
+    const { base, mundo, antes } = await cenario();
+    mkdirSync(join(base, "mods"));
+    writeFileSync(join(base, "mods", "a.jar"), "x");
+    for (const temp of [mundo, join(base, "mods")]) {
+      writeFileSync(
+        join(base, MARCADOR_TROCA),
+        JSON.stringify({ mundo, antigo: `${mundo}.antigo-v7`, temp }),
+      );
+      await expect(recuperarTroca(base)).rejects.toThrow(/ilegível/);
+      expect(hashesDoMundo(mundo)).toEqual(antes);
+      expect(existsSync(join(base, "mods", "a.jar"))).toBe(true);
+    }
+    // antigo e temp iguais entre si também não vale
+    const igual = `${mundo}.antigo-v7`;
+    writeFileSync(
+      join(base, MARCADOR_TROCA),
+      JSON.stringify({ mundo, antigo: igual, temp: igual }),
+    );
+    await expect(recuperarTroca(base)).rejects.toThrow(/ilegível/);
+  });
+
+  it("mundo fora da pasta do servidor: aplicarDelta e restaurarBackup recusam antes de mexer", async () => {
+    const { base, mundo, remoto, alvo, antes } = await cenario();
+    const outra = join(base, "outra");
+    mkdirSync(outra);
+    await expect(
+      aplicarDelta({
+        pastaDoMundo: mundo,
+        pastaDoServidor: outra,
+        alvo,
+        baixar: async () => undefined,
+        temTrava: async () => true,
+        servidorParado: () => true,
+        avisarCopia: async () => undefined,
+      }),
+    ).rejects.toThrow(/dentro da pasta do servidor/);
+    const pacote = await criarPacote(remoto, join(base, "guardado.tar.gz"), {
+      versao: 4,
+      epoca: 1,
+    });
+    await expect(
+      restaurarBackup({
+        pacote: pacote.caminho,
+        sha256: pacote.sha256,
+        pastaDoMundo: mundo,
+        pastaDoServidor: outra,
+        pastaBackups: join(base, "backups"),
+        temTrava: async () => true,
+        servidorParado: () => true,
+        versao: 5,
+        epoca: 1,
+      }),
+    ).rejects.toThrow(/dentro da pasta do servidor/);
+    expect(hashesDoMundo(mundo)).toEqual(antes);
+    expect(readdirSync(base).sort()).toEqual([
+      "eula.txt",
+      "guardado.tar.gz",
+      "mundo",
+      "outra",
+      "remoto",
+    ]);
+  });
+});

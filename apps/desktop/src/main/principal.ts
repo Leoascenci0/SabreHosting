@@ -61,6 +61,17 @@ async function avisarFalhaSair(motivo: string): Promise<void> {
   else await dialog.showMessageBox(opcoes);
 }
 
+async function avisarProblemaDoMundo(motivo: string): Promise<void> {
+  if (process.env["SABRE_E2E"] === "1") return; // diálogo nativo não é clicável no E2E
+  const opcoes = {
+    type: "warning" as const,
+    title: "SabreHosting",
+    message: `Atenção com o mundo: ${motivo}`,
+  };
+  if (janela) await dialog.showMessageBox(janela, opcoes);
+  else await dialog.showMessageBox(opcoes);
+}
+
 /**
  * Sair com o servidor no ar: para (salva, para, devolve a trava) ANTES de fechar; senão o Java seguiria sem
  * renovar a trava e outro PC hospedaria o mesmo mundo (regra de ouro 1).
@@ -249,13 +260,18 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(async () => {
     nativeTheme.themeSource = "system";
-    // App morto entre os dois rename da troca do mundo: devolve o mundo antes de qualquer coisa. Falha não derruba o
-    // app; o servidor continua sem subir (o marcador fica) e o erro vai para o log.
+    // App morto entre os dois rename da troca do mundo: devolve o mundo antes de qualquer coisa. Falha não derruba
+    // o app (o marcador fica e o servidor não sobe), mas o amigo é avisado.
     const pastaDoServidor = process.env["SABRE_PASTA_SERVIDOR"];
-    if (pastaDoServidor) {
-      await recuperarTroca(pastaDoServidor).catch((erro: unknown) => {
-        console.error("Recuperar troca do mundo:", erro);
-      });
+    const falhaDaTroca = pastaDoServidor
+      ? await recuperarTroca(pastaDoServidor).then(
+          () => undefined,
+          (erro: unknown) => (erro instanceof Error ? erro.message : String(erro)),
+        )
+      : "A pasta do servidor não está configurada; não deu para conferir se a última troca do mundo terminou.";
+    if (falhaDaTroca !== undefined) {
+      console.error("Recuperar troca do mundo:", falhaDaTroca);
+      void avisarProblemaDoMundo(falhaDaTroca);
     }
     inicioApp = await criarInicioDoApp();
     backupsApp = await criarBackupsDoApp(inicioApp);
