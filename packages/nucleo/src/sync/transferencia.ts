@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { isIPv4, type AddressInfo } from "node:net";
 import { baixarConferido, type OpcoesDownload } from "../servidor/baixar.js";
@@ -148,7 +148,7 @@ export async function servirArquivos(opcoes: OpcoesServidor): Promise<Servidor> 
       return texto(resp, 404, "Arquivo não encontrado.");
     }
     const achado = opcoes.arquivos(hash);
-    const tamanho = await stat(achado?.caminho ?? "").then(
+    const tamanho = await lstat(achado?.caminho ?? "").then(
       (s) => (s.isFile() ? s.size : -1),
       () => -1,
     );

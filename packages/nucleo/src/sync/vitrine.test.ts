@@ -1,9 +1,20 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { gerarMundo } from "../../test/ajuda/mundos.js";
 import { criarPacote } from "../backup/pacote.js";
+import { servirArquivos, type Servidor } from "./transferencia.js";
 import { criarVitrine } from "./vitrine.js";
 
 const pastas: string[] = [];
@@ -92,5 +103,103 @@ describe("criarVitrine (syncmel-1.10)", () => {
       ["nao-e-minha.txt", ...readdirSync(pasta).filter((n) => n.startsWith("v-"))].sort(),
     );
     expect(readdirSync(pasta).filter((n) => n.startsWith("v-"))).toHaveLength(1);
+  });
+});
+
+describe("só pacote fechado sai pelo arquivos(hash) (syncmel-1.3)", () => {
+  it("cada hash servido é de arquivo regular dentro da vitrine, nunca da pasta do mundo vivo", async () => {
+    const p = await pacoteDeTeste(1);
+    const pasta = join(p.base, "vitrine");
+    const vitrine = criarVitrine(pasta);
+    await vitrine.publicar(p.caminho, p.sha256);
+    const m = JSON.parse(
+      readFileSync(vitrine.arquivos(p.manifesto.sha256)?.caminho ?? "", "utf8"),
+    ) as {
+      arquivos: { sha256: string }[];
+    };
+    expect(m.arquivos.length).toBeGreaterThan(0);
+    for (const hash of [p.manifesto.sha256, ...m.arquivos.map((a) => a.sha256)]) {
+      const { caminho } = vitrine.arquivos(hash) ?? { caminho: "" };
+      expect(caminho).not.toBe("");
+      expect(relative(pasta, caminho).startsWith("..")).toBe(false); // dentro da vitrine
+      expect(relative(p.mundo, caminho).startsWith("..")).toBe(true); // fora do mundo vivo
+      expect(lstatSync(caminho).isSymbolicLink()).toBe(false);
+      expect(lstatSync(caminho).isFile()).toBe(true);
+    }
+  });
+
+  it("arquivo do mundo vivo que não está no pacote não sai (nem pelo hash dele)", async () => {
+    const p = await pacoteDeTeste(1);
+    const vitrine = criarVitrine(join(p.base, "vitrine"));
+    await vitrine.publicar(p.caminho, p.sha256);
+    writeFileSync(join(p.mundo, "novo-depois-do-pacote.dat"), "criado depois do backup");
+    const { hashDoArquivo } = await import("../integridade/hash.js");
+    const hash = await hashDoArquivo(join(p.mundo, "novo-depois-do-pacote.dat"));
+    expect(vitrine.arquivos(hash)).toBeUndefined();
+  });
+
+  describe("pelo servidor", () => {
+    let servidor: Servidor | undefined;
+    afterEach(async () => {
+      await servidor?.fechar();
+      servidor = undefined;
+    });
+    const subir = async (vitrine: ReturnType<typeof criarVitrine>) =>
+      (servidor = await servirArquivos({
+        endereco: "127.0.0.1",
+        porta: 0,
+        permitirLoopbackParaTeste: true,
+        conferirToken: async () => "pc-teste",
+        arquivos: (h) => vitrine.arquivos(h),
+      }));
+    const pedir = (s: Servidor, hash: string) =>
+      fetch(`http://127.0.0.1:${s.porta}/arquivos/${hash}`, {
+        headers: { authorization: "Bearer t" },
+      });
+
+    it("serve arquivo do pacote registrado (200) e hash de fora dele dá 404", async () => {
+      const p = await pacoteDeTeste(1);
+      const vitrine = criarVitrine(join(p.base, "vitrine"));
+      await vitrine.publicar(p.caminho, p.sha256);
+      const s = await subir(vitrine);
+      expect((await pedir(s, p.manifesto.sha256)).status).toBe(200);
+      expect((await pedir(s, "0".repeat(64))).status).toBe(404);
+    });
+
+    it("pasta intermediária trocada por link simbólico para fora: 404 e nada de fora vaza", async () => {
+      const p = await pacoteDeTeste(1);
+      const vitrine = criarVitrine(join(p.base, "vitrine"));
+      await vitrine.publicar(p.caminho, p.sha256);
+      const m = JSON.parse(
+        readFileSync(vitrine.arquivos(p.manifesto.sha256)?.caminho ?? "", "utf8"),
+      ) as {
+        arquivos: { sha256: string; caminho: string }[];
+      };
+      const a = m.arquivos.find((x) => x.caminho.includes("/"));
+      expect(a).toBeDefined();
+      const caminho = vitrine.arquivos(a?.sha256 ?? "")?.caminho ?? "";
+      const subpasta = dirname(caminho);
+      const fora = join(p.base, "fora");
+      renameSync(subpasta, fora); // o arquivo "de fora" tem o mesmo nome e conteúdo; basta estar fora da vitrine
+      symlinkSync(fora, subpasta);
+      expect(vitrine.arquivos(a?.sha256 ?? "")).toBeUndefined();
+      const s = await subir(vitrine);
+      expect((await pedir(s, a?.sha256 ?? "")).status).toBe(404);
+    });
+
+    it("link simbólico para fora no lugar do arquivo da vitrine: 404 e nada de fora vaza", async () => {
+      const p = await pacoteDeTeste(1);
+      const vitrine = criarVitrine(join(p.base, "vitrine"));
+      await vitrine.publicar(p.caminho, p.sha256);
+      const alvo = vitrine.arquivos(p.manifesto.sha256)?.caminho ?? "";
+      const segredo = join(p.base, "fora-da-vitrine.txt");
+      writeFileSync(segredo, "conteudo de fora");
+      rmSync(alvo);
+      symlinkSync(segredo, alvo);
+      const s = await subir(vitrine);
+      const resp = await pedir(s, p.manifesto.sha256);
+      expect(resp.status).toBe(404);
+      expect(await resp.text()).not.toContain("conteudo de fora");
+    });
   });
 });
