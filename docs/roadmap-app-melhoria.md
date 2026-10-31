@@ -126,7 +126,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: level-name diferente aponta o mundo certo; env de executável fora do modo teste é ignorado.
   *Origem:* app-1.3c-i · PR #217 · qa
 
-- [ ] **1.15 — Criar convite: anúncio para leitor de tela e nome duplicado**
+- [x] **1.15 — Criar convite: anúncio para leitor de tela e nome duplicado** (PR #229, 31/10/2026; [P: conferir com leitor de tela real e e2e no Windows])
   *O que fazer:* o "Copiado" não está numa região `aria-live`; `nomeNaRede` (main) e `nomeComoFica` (UI) são duplicados e podem divergir; conferir que "vale uma vez" bate com o cartório (uso único).
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`, `index.html`, `main/grupo.ts`
   **Tela no app:** Configurações › Grupo › "Criar convite".
@@ -160,3 +160,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** não se aplica.
   *Confirmação:* teste: `level-name` muda com o app aberto e o backup segue o novo.
   *Origem:* appmel-1.14b · PR #225 · filha
+
+- [ ] **1.20 — Convite copiado: anunciar também a segunda cópia**
+  *O que fazer:* copiar duas vezes seguidas repete o mesmo texto em `#convite-copiado` e o leitor de tela pode não anunciar de novo; limpar a região e reescrever (ou acrescentar um contador invisível) a cada cópia.
+  *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`
+  **Tela no app:** Configurações › Grupo › "Criar convite".
+  *Confirmação:* e2e: duas cópias seguidas mudam o conteúdo da região entre as duas.
+  *Origem:* appmel-1.15 · PR #229 · qa
