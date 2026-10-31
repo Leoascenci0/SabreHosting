@@ -8,8 +8,8 @@
  * qualquer ponto antes da troca deixa N intacto. Falha ao avisar o cartório NÃO desfaz a troca (a cópia é válida).
  */
 import { constants } from "node:fs";
-import { copyFile, link, lstat, mkdir, rename, rm } from "node:fs/promises";
-import { dirname, resolve, sep } from "node:path";
+import { copyFile, link, lstat, mkdir, realpath, rename, rm } from "node:fs/promises";
+import { dirname, join, resolve, sep } from "node:path";
 import {
   compararManifestos,
   gerarManifesto,
@@ -82,13 +82,19 @@ function dentro(raiz: string, caminho: string): string {
 
 /** Hard link do arquivo de N; se não der (outro disco, Windows), copia. Nunca escreve no arquivo de origem. */
 async function trazerIgual(
+  raizReal: string,
+  relativo: string,
   de: string,
   para: string,
   ligar: (de: string, para: string) => Promise<void>,
 ): Promise<void> {
   const info = await lstat(de);
-  if (!info.isFile())
-    throw new Error("Um arquivo do mundo atual não é um arquivo comum; nada foi alterado.");
+  // lstat só olha o último componente: o realpath pega pasta intermediária que seja link simbólico para fora.
+  if (!info.isFile() || (await realpath(de)) !== join(raizReal, relativo)) {
+    throw new Error(
+      `O arquivo "${relativo}" do mundo atual não é um arquivo comum dentro do mundo (link simbólico?); nada foi alterado.`,
+    );
+  }
   await mkdir(dirname(para), { recursive: true });
   try {
     await ligar(de, para);
@@ -121,6 +127,7 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
   const diferenca = compararManifestos(local, alvo);
   const baixar = new Set([...diferenca.novos, ...diferenca.mudados]);
 
+  const mundoReal = await realpath(mundo);
   let arquivosBaixados = 0;
   let bytesBaixados = 0;
   try {
@@ -133,7 +140,7 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
         arquivosBaixados++;
         bytesBaixados += a.tamanho;
       } else {
-        await trazerIgual(dentro(mundo, a.caminho), destino, ligar);
+        await trazerIgual(mundoReal, a.caminho, dentro(mundo, a.caminho), destino, ligar);
       }
     }
     // M INTEIRO, inclusive os iguais: o que foi ligado/copiado também tem de bater com o hash de M.

@@ -1,10 +1,22 @@
-import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { copyFile, mkdir, rename } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo } from "../../test/ajuda/mundos.js";
 import { gerarManifesto, type ArquivoDoManifesto, type Manifesto } from "../backup/manifesto.js";
+import { MARCADOR_RESTAURACAO } from "../servidor/configurar.js";
 import { hashDoArquivo } from "../integridade/hash.js";
 import { aplicarDelta, type OpcoesAplicar } from "./aplicar.js";
 
@@ -238,5 +250,99 @@ describe("aplicarDelta", () => {
     expect(await hashDoArquivo(join(c.mundo, "level.dat"))).toBe(
       c.local.arquivos.find((a) => a.caminho === "level.dat")?.sha256,
     );
+  });
+});
+
+describe("aplicarDelta — queda em cada passo e proteção de N", () => {
+  it("montagem: ligar falha no meio, a cópia assume e N segue intacto", async () => {
+    const c = await cenario();
+    let n = 0;
+    const real = (await import("node:fs/promises")).link;
+    await aplicarDelta({
+      ...c.o,
+      ligar: async (de, para) => {
+        if (++n % 2 === 0) throw new Error("EXDEV");
+        await real(de, para);
+      },
+    });
+    expect(hashesDoMundo(c.mundo)).toEqual(hashesDoMundo(c.remoto));
+  });
+
+  it("conferência final recusa: N com os mesmos hashes e nada de aviso", async () => {
+    const c = await cenario();
+    const baixar = c.o.baixar;
+    await expect(
+      aplicarDelta({
+        ...c.o,
+        baixar: async (a, d) => {
+          await baixar(a, d);
+          writeFileSync(d, "corrompido depois de baixar");
+        },
+      }),
+    ).rejects.toThrow(/não confere/i);
+    expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
+    expect(sobras(c.base)).toEqual([]);
+    expect(c.o.avisarCopia).not.toHaveBeenCalled();
+  });
+
+  it("o desfazer também falha (rename 3): marcador gravado e .antigo/.atualizando preservados", async () => {
+    const c = await cenario();
+    let n = 0;
+    const renomear = vi.fn(async (de: string, para: string) => {
+      if (++n >= 2) throw new Error(`falhou o rename ${n}`);
+      await rename(de, para);
+    });
+    await expect(aplicarDelta({ ...c.o, renomear })).rejects.toThrow(/nem desfazer/i);
+    expect(renomear).toHaveBeenCalledTimes(3);
+    const marcador = join(c.base, MARCADOR_RESTAURACAO);
+    expect(existsSync(marcador)).toBe(true);
+    expect(readFileSync(marcador, "utf8")).toContain("mundo.antigo-v7");
+    expect(sobras(c.base)).toEqual(["mundo.antigo-v7", "mundo.atualizando-v7"]);
+    // N está inteiro no .antigo (fora do lugar, mas apontado pelo marcador); a temporária não foi apagada.
+    expect(hashesDoMundo(join(c.base, "mundo.antigo-v7"))).toEqual(c.antes);
+    expect(hashesDoMundo(join(c.base, "mundo.atualizando-v7"))).toEqual(hashesDoMundo(c.remoto));
+    expect(c.o.avisarCopia).not.toHaveBeenCalled();
+  });
+
+  it("arquivo mudado é arquivo NOVO: inode diferente do de N, e igual é o mesmo inode (link)", async () => {
+    const c = await cenario();
+    const inoN = (r: string) => statSync(join(c.mundo, r)).ino;
+    const mudado = inoN("region/r.0.0.mca");
+    const igual = inoN("level.dat");
+    const baixar = c.o.baixar;
+    let conferido = false;
+    await aplicarDelta({
+      ...c.o,
+      baixar: async (a, destino) => {
+        await baixar(a, destino);
+        if (a.caminho === "region/r.0.0.mca") {
+          expect(statSync(destino).ino).not.toBe(mudado);
+          expect(statSync(join(c.mundo, a.caminho)).ino).toBe(mudado);
+          expect(hashesDoMundo(c.mundo)).toEqual(c.antes); // N não mudou um byte
+          conferido = true;
+        }
+      },
+    });
+    expect(conferido).toBe(true);
+    // Depois da troca, o arquivo igual continua sendo o mesmo inode (hard link) e o mudado é outro.
+    expect(statSync(join(c.mundo, "level.dat")).ino).toBe(igual);
+    expect(statSync(join(c.mundo, "region/r.0.0.mca")).ino).not.toBe(mudado);
+  });
+
+  it("pasta dentro de N que é link simbólico para fora: recusa e não toca em nada", async () => {
+    const c = await cenario();
+    const fora = join(c.base, "fora");
+    mkdirSync(fora);
+    writeFileSync(join(fora, "segredo.txt"), "dado de fora do mundo");
+    symlinkSync(fora, join(c.mundo, "atalho"));
+    const hash = (await hashDoArquivo(join(fora, "segredo.txt"))) as string;
+    const arq = { caminho: "atalho/segredo.txt", tamanho: 21, sha256: hash };
+    // O manifesto de N (informado de fora) e o de M listam o arquivo como igual.
+    const local = { ...c.local, arquivos: [...c.local.arquivos, arq] };
+    const alvo = { ...c.alvo, arquivos: [...c.alvo.arquivos, arq] };
+    await expect(aplicarDelta({ ...c.o, local, alvo })).rejects.toThrow(/link simbólico/i);
+    expect(readFileSync(join(fora, "segredo.txt"), "utf8")).toBe("dado de fora do mundo");
+    expect(statSync(join(fora, "segredo.txt")).nlink).toBe(1); // nada foi ligado ao arquivo de fora
+    expect(sobras(c.base)).toEqual([]);
   });
 });
