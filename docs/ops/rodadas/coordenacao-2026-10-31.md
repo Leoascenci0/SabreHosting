@@ -3,7 +3,7 @@
 - Coordenadora: session_012qrjnuauHQWFgAgmdzp4Fv (ramo `claude/serene-pasteur-xy85h8`), aberta 09:10 com `/maxima retomar`.
 - Turno: dia. Autorizações do Eliel (09:12): Onda 20 com os 5 itens; merge pela Máxima com vistoria + `qa`; nada na
   máquina da nuvem de verdade nem no mundo real.
-- Próximo número de onda livre: 23.
+- Próximo número de onda livre: 24.
 - Autorização 10:00: "Pode, e siga sozinha" — rodar as próximas ondas sem perguntar; parar só em item P.
 
 ## Ondas
@@ -13,6 +13,7 @@
 | 20 | cartmel-1.1 · app-2.1 · sync-1.1 · app-2.2 · sync-1.2 | session_012qrjntSMKMZcY3GUuomfqa | bdee520 | fechada 09:59 → main 0b57326 |
 | 21 | syncmel-1.4 · appmel-1.7 · cartmel-2.2 · syncmel-1.1 · syncmel-1.2 · appmel-1.8 | session_012qrjnuVvPbMbr49Ryg8nY3 | 0b57326 | fechada 10:36 → main 5f440cc |
 | 22 | appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 | session_012qrjntw8ggfpCSw7mg4UfD (1ª: …AzcormV8 falhou, hash curto, S-09) | 5f440cc | fechada 11:33 → main 722501a |
+| 23 | appmel-1.11 · syncmel-1.8 · piloto-1.1 · Dependabot #95/#96 · hostmel-3.1 · drive-1.1b | session_012qrjnrPqSYeU1jDzU3Fmqk | 37baba7 | aberta 12:58 |
 
 ## Relatórios das ondas
 
