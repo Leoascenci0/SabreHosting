@@ -44,6 +44,11 @@ export interface OpcoesAplicar {
   /** Este PC tem a trava de host? Erro ou demora contam como "sim": o mundo vivo nunca é tocado. */
   hospedaAgora: () => Promise<boolean>;
   servidorParado: () => boolean;
+  /**
+   * Só a conta LOCAL do prazo da trava de atualização (sem rede). Usada entre os dois `rename`: ali cada segundo de
+   * espera de rede é um segundo sem mundo no lugar. Ausente: usa `temAtualizacao`.
+   */
+  temAtualizacaoLocal?: () => Promise<boolean>;
   /** Diz ao cartório que este PC tem a versão M (cliente.informarCopia). */
   avisarCopia: (versao: number) => Promise<void>;
   /** Pasta do servidor, onde `podeSubir` procura o marcador da troca: o mundo tem de ser filho direto dela. */
@@ -90,9 +95,16 @@ export async function exigirForaDoHost(
 }
 
 /** Antes de cada passo da troca: fora do host E trava de atualização confirmada (renovada) no prazo. */
-async function exigirPodeTrocar(o: OpcoesAplicar): Promise<void> {
-  await exigirForaDoHost(o);
-  const trava = await travaConfirmada(o.temAtualizacao, o.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS);
+async function exigirPodeTrocar(o: OpcoesAplicar, entreRenames = false): Promise<void> {
+  // Entre os renames: sem rede (a consulta ao cartório poderia levar ~20 s com o mundo fora do lugar). O host não
+  // muda ali: o cartório não dá o host enquanto a trava de atualização vale, e `temAtualizacaoLocal` é essa conta.
+  if (entreRenames) {
+    if (!o.servidorParado()) {
+      throw new Error("O servidor está rodando; pare o servidor antes de atualizar o mundo.");
+    }
+  } else await exigirForaDoHost(o);
+  const confere = entreRenames && o.temAtualizacaoLocal ? o.temAtualizacaoLocal : o.temAtualizacao;
+  const trava = await travaConfirmada(confere, o.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS);
   if (trava !== "sim") {
     throw new Error(
       "Este PC perdeu (ou não tem) a trava de atualização do cartório; o mundo continua como estava. Tento de novo depois.",
@@ -213,7 +225,7 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
     await apagar(temp);
   };
   // E antes do 2º: sem a trava (ou com o servidor de pé), M não entra e N volta ao lugar.
-  await exigirPodeTrocar(o).catch(async (erro: unknown) => {
+  await exigirPodeTrocar(o, true).catch(async (erro: unknown) => {
     await voltarN(erro);
     throw erro;
   });

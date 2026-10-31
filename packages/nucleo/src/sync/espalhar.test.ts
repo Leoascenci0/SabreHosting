@@ -6,7 +6,13 @@ import { gerarMundo, hashesDoMundo } from "../../test/ajuda/mundos.js";
 import { gerarManifesto, type Manifesto } from "../backup/manifesto.js";
 import { hashDoArquivo } from "../integridade/hash.js";
 import type { RespostaAtualizacao } from "../cartorio/tipos.js";
-import { escolherFontes, espalhar, type Fonte, type OpcoesEspalhar } from "./espalhar.js";
+import {
+  escolherFontes,
+  espalhar,
+  fontesDeCopias,
+  type Fonte,
+  type OpcoesEspalhar,
+} from "./espalhar.js";
 import { servirArquivos, type Servidor } from "./transferencia.js";
 
 const pastas: string[] = [];
@@ -238,14 +244,9 @@ describe("espalhar com a trava de atualização (syncmel-1.8b)", () => {
     expect(r.estado).toBe("atualizado");
     expect(hashesDoMundo(c.pc1.mundo)).toEqual(hashesDoMundo(c.host.mundo));
     expect(hashesDoMundo(c.host.mundo)).toEqual(doHostAntes);
-    // pega, renova antes de cada passo da troca (início; pós-download = antes do 1º rename; 2º rename) e solta.
-    expect(c.cartorio.eventos).toEqual([
-      "pegar",
-      "renovar 1",
-      "renovar 1",
-      "renovar 1",
-      "soltar 1",
-    ]);
+    // pega, renova pela rede antes do 1º rename (início; pós-download) e solta. Entre os dois renames a conferência
+    // é só local (1.9a): nenhuma ida ao cartório com o mundo fora do lugar.
+    expect(c.cartorio.eventos).toEqual(["pegar", "renovar 1", "renovar 1", "soltar 1"]);
   });
 
   it("(b) servidor deste PC rodando (trava de host vencida, rede caiu): recusa ANTES de pegar a atualização", async () => {
@@ -348,5 +349,22 @@ describe("espalhar com a trava de atualização (syncmel-1.8b)", () => {
     const r = await espalhar({ ...o, atualizacao: { ...c.cartorio.cliente, soltar } });
     expect(r.estado).toBe("atualizado");
     expect(soltar).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("fontesDeCopias (1.9a)", () => {
+  const pc = (id: number, ip: string | null) => ({ id, nome: `PC ${id}`, ip });
+  it("ip null (PC recém-chegado) e este PC saem da lista; a lista toda não cai", () => {
+    const copias = {
+      numero: 4,
+      nuvem: true,
+      pcs: [pc(1, "10.66.0.2"), pc(2, null), pc(3, "10.66.0.4")],
+    };
+    const fontes = fontesDeCopias(copias, 1);
+    expect(fontes).toEqual([{ tipo: "pc", endereco: "10.66.0.4", porta: 25570 }]);
+    expect(() => escolherFontes(fontes)).not.toThrow();
+  });
+  it("só PCs sem IP: lista vazia (a nuvem não é fonte)", () => {
+    expect(fontesDeCopias({ numero: 4, nuvem: true, pcs: [pc(2, null)] }, 1)).toEqual([]);
   });
 });
