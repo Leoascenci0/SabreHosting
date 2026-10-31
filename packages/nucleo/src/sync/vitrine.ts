@@ -1,5 +1,6 @@
+import { realpathSync } from "node:fs";
 import { readdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative, isAbsolute } from "node:path";
 import { abrirPacote } from "../backup/pacote.js";
 import { hashDoArquivo } from "../integridade/hash.js";
 
@@ -21,7 +22,15 @@ export function criarVitrine(pasta: string) {
     /** Acha o arquivo pelo hash; `undefined` se não está na vitrine. */
     arquivos(sha256: string): { caminho: string } | undefined {
       const caminho = atual?.indice.get(sha256);
-      return caminho === undefined ? undefined : { caminho };
+      if (atual === undefined || caminho === undefined) return undefined;
+      // Pasta intermediária trocada por link simbólico: o caminho real tem de continuar dentro da vitrine.
+      try {
+        const fora = relative(realpathSync(atual.dir), realpathSync(caminho));
+        if (fora === "" || fora.startsWith("..") || isAbsolute(fora)) return undefined;
+      } catch {
+        return undefined;
+      }
+      return { caminho };
     },
 
     /** Abre o pacote na vitrine. `false`: já havia uma publicação em curso (S-06), esta foi pulada. */

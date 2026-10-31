@@ -4,12 +4,13 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { gerarMundo } from "../../test/ajuda/mundos.js";
 import { criarPacote } from "../backup/pacote.js";
@@ -163,6 +164,27 @@ describe("só pacote fechado sai pelo arquivos(hash) (syncmel-1.3)", () => {
       const s = await subir(vitrine);
       expect((await pedir(s, p.manifesto.sha256)).status).toBe(200);
       expect((await pedir(s, "0".repeat(64))).status).toBe(404);
+    });
+
+    it("pasta intermediária trocada por link simbólico para fora: 404 e nada de fora vaza", async () => {
+      const p = await pacoteDeTeste(1);
+      const vitrine = criarVitrine(join(p.base, "vitrine"));
+      await vitrine.publicar(p.caminho, p.sha256);
+      const m = JSON.parse(
+        readFileSync(vitrine.arquivos(p.manifesto.sha256)?.caminho ?? "", "utf8"),
+      ) as {
+        arquivos: { sha256: string; caminho: string }[];
+      };
+      const a = m.arquivos.find((x) => x.caminho.includes("/"));
+      expect(a).toBeDefined();
+      const caminho = vitrine.arquivos(a?.sha256 ?? "")?.caminho ?? "";
+      const subpasta = dirname(caminho);
+      const fora = join(p.base, "fora");
+      renameSync(subpasta, fora); // o arquivo "de fora" tem o mesmo nome e conteúdo; basta estar fora da vitrine
+      symlinkSync(fora, subpasta);
+      expect(vitrine.arquivos(a?.sha256 ?? "")).toBeUndefined();
+      const s = await subir(vitrine);
+      expect((await pedir(s, a?.sha256 ?? "")).status).toBe(404);
     });
 
     it("link simbólico para fora no lugar do arquivo da vitrine: 404 e nada de fora vaza", async () => {
