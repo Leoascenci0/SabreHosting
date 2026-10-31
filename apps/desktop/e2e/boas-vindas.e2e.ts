@@ -105,6 +105,15 @@ describe("assistente de primeira vez", () => {
     expect(r.tokens).toEqual([]);
   });
 
+  it("cofre corrompido: explica que o acesso guardado não abre e pede convite novo", async () => {
+    const pagina = await abrir({ SABRE_E2E_COFRE_CORROMPIDO: "1" });
+    await expect(pagina.locator("#bv-erro").innerText()).resolves.toContain(
+      "Seu acesso guardado neste PC não abre mais; peça um convite novo.",
+    );
+    await expect(pagina.locator("#bv-texto").isVisible()).resolves.toBe(true);
+    expect((await registro()).tokens).toEqual([]);
+  });
+
   it("caminho feliz: convite → EULA (sem aceite não avança) → pasta; depois não abre mais", async () => {
     const pagina = await abrir();
     await conferir(pagina, convite());
