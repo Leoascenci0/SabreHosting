@@ -46,6 +46,7 @@ import { criarModsGrupo, type ModsGrupo } from "./mods-grupo.js";
 import { sincronizarMods } from "@sabrehosting/nucleo/launcher/mods";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
+import { criarEncaixeInicio } from "./encaixe-inicio.js";
 import { criarPastaBase } from "./pasta-base.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { bytesPorSegundo, lerPreferencias, salvarPreferencias } from "./preferencias.js";
@@ -552,18 +553,13 @@ function registrarPonte(
   });
   inicio.aoMudar(() => janela?.webContents.send("sabre:inicio:mudou"));
   ipcMain.handle("sabre:inicio:estado", (evento) => (permitir(evento), inicio.estado()));
-  // Depois de trocar a pasta o app reinicia em ~1,5 s: nada de Jogar/Hospedar com a pasta velha nesse intervalo.
-  const REINICIANDO = "O app está reiniciando para usar a pasta nova. Espere alguns segundos.";
-  ipcMain.handle("sabre:inicio:jogar", (evento) => {
-    permitir(evento);
-    if (pastaBase.trocada()) throw new Error(REINICIANDO);
-    return inicio.jogar();
+  const encaixe = criarEncaixeInicio({
+    trocada: () => pastaBase.trocada(),
+    jogar: () => inicio.jogar(),
+    hospedar: () => inicio.hospedar(),
   });
-  ipcMain.handle("sabre:inicio:hospedar", (evento) => {
-    permitir(evento);
-    if (pastaBase.trocada()) return { ok: false, mensagem: REINICIANDO };
-    return inicio.hospedar();
-  });
+  ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), encaixe.jogar()));
+  ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), encaixe.hospedar()));
   ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), inicio.parar()));
   ipcMain.handle(
     "sabre:config:escolher-pasta",
