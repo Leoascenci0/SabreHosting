@@ -151,6 +151,15 @@ describe("espalhar", () => {
     expect(sobras(c.pc2.pastaDoServidor)).toEqual([]);
   });
 
+  it("o limite de banda é lido a cada arquivo e o mundo chega igual (syncmel-1.9b)", async () => {
+    const c = await cenario();
+    const limite = vi.fn(() => 50_000_000);
+    const r = await espalhar({ ...c.opcoes(c.pc1, [c.doHost]), limiteBytesPorSeg: limite });
+    expect(r.estado).toBe("atualizado");
+    expect(limite).toHaveBeenCalledTimes(r.arquivosBaixados + 1); // 1 por arquivo + o manifesto
+    expect(hashesDoMundo(c.pc1.mundo)).toEqual(hashesDoMundo(c.host.mundo));
+  });
+
   it("fonte que não responde cai para a próxima", async () => {
     const c = await cenario();
     const morta: Fonte = { tipo: "pc", endereco: LOOP, porta: 1 };
