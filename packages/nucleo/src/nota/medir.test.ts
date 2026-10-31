@@ -12,6 +12,38 @@ describe("medirPc", () => {
     );
   });
 
+  it("corta com erro em português a fase de vários núcleos que passa do teto", async () => {
+    const inicio = Date.now();
+    await expect(
+      medirPc({ uploadMbps: 10, tetoMs: 300, janelaMs: 5000, cpuUmNucleo: async () => 1 }),
+    ).rejects.toThrow(/passou de/);
+    expect(Date.now() - inicio).toBeLessThan(2000);
+  });
+
+  it("ao um worker da fase de vários núcleos falhar, aborta os demais", async () => {
+    const sinais: AbortSignal[] = [];
+    const lenta = (sinal: AbortSignal) => {
+      sinais.push(sinal);
+      return new Promise<number>((_, rejeitar) =>
+        sinal.addEventListener("abort", () => rejeitar(sinal.reason)),
+      );
+    };
+    const cpuNucleos = (sinal: AbortSignal) =>
+      Promise.all([
+        lenta(sinal),
+        lenta(sinal),
+        new Promise<number>((_, rejeitar) =>
+          setTimeout(() => rejeitar(new Error("worker caiu")), 50),
+        ),
+      ]).then((v) => v.reduce((a, b) => a + b, 0));
+    const inicio = Date.now();
+    await expect(
+      medirPc({ uploadMbps: 10, tetoMs: 10_000, cpuUmNucleo: async () => 1, cpuNucleos }),
+    ).rejects.toThrow(/worker caiu/);
+    expect(Date.now() - inicio).toBeLessThan(2000);
+    expect(sinais.every((s) => s.aborted)).toBe(true);
+  });
+
   it("termina em menos de 15 s e devolve medidas plausíveis (medição real, curta)", async () => {
     const inicio = Date.now();
     const m = await medirPc({ uploadMbps: 20, janelaMs: 300 });
