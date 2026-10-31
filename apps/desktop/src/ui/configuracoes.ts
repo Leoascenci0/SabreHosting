@@ -248,7 +248,12 @@ conviteCopiar.addEventListener("click", () => {
     .writeText(conviteTexto.value)
     .then(() => {
       conviteCopiar.textContent = "Copiado";
-      conviteCopiado.textContent = "Convite copiado."; // região role="status": o leitor de tela anuncia
+      // Região role="status": o leitor de tela anuncia. Limpa e reescreve a cada cópia, para uma segunda cópia
+      // seguida (mesmo texto) também mudar a região.
+      conviteCopiado.textContent = "";
+      setTimeout(() => {
+        conviteCopiado.textContent = "Convite copiado.";
+      }, 100);
     })
     .catch(() => {
       conviteTexto.select(); // sem permissão para copiar: o texto fica selecionado para Ctrl+C

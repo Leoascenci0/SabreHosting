@@ -196,6 +196,26 @@ describe("tela de configurações", () => {
     await esperarTexto(p, "#convite-copiado", "Convite copiado");
     expect(await aberto?.evaluate(({ clipboard }) => clipboard.readText())).toBe(texto);
 
+    // Segunda cópia seguida: a região tem que mudar de novo (limpa e reescrita) para o leitor de tela anunciar.
+    await p.evaluate(() => {
+      const w = globalThis as unknown as { __mudancasConvite: number };
+      w.__mudancasConvite = 0;
+      new MutationObserver((registros) => {
+        w.__mudancasConvite += registros.length;
+      }).observe(document.querySelector("#convite-copiado") as Node, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    });
+    await p.locator("#convite-copiar").click();
+    await p.waitForTimeout(500);
+    const mudancas = await p.evaluate(
+      () => (globalThis as unknown as { __mudancasConvite: number }).__mudancasConvite,
+    );
+    expect(mudancas).toBeGreaterThanOrEqual(2);
+    await esperarTexto(p, "#convite-copiado", "Convite copiado");
+
     // Sair e voltar: o texto some da tela, e nada do convite foi gravado nas preferências.
     await p.locator("#config-voltar").click();
     await p.locator("#ver-config").click();
@@ -362,15 +382,12 @@ describe("tela de configurações", () => {
     await p.locator("#mods-adicionar:not([hidden])").waitFor();
     // A ação lê a lista (passa), confere o link (erro de ação); a leitura logo depois da ação falha.
     const interruptorMods = (campos: Record<string, boolean | number>): Promise<unknown> =>
-      aberto?.evaluate(
-        (_electron, c: Record<string, boolean | number>) => {
-          const falso = (globalThis as unknown as Record<string, Record<string, unknown>>)[
-            "__sabreE2EMods"
-          ];
-          if (falso) Object.assign(falso, c);
-        },
-        campos,
-      ) as Promise<unknown>;
+      aberto?.evaluate((_electron, c: Record<string, boolean | number>) => {
+        const falso = (globalThis as unknown as Record<string, Record<string, unknown>>)[
+          "__sabreE2EMods"
+        ];
+        if (falso) Object.assign(falso, c);
+      }, campos) as Promise<unknown>;
     await p.locator("#mods-nome").fill("Lithium");
     await p.locator("#mods-versao").fill("0.13.0");
     await p.locator("#mods-arquivo").fill("lithium.jar");
