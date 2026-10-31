@@ -15,6 +15,8 @@ const PASTA_DA_VITRINE = /^v-\d+-\d+$/;
 export function criarVitrine(pasta: string) {
   let atual: { dir: string; indice: Map<string, string> } | undefined;
   let emCurso = false;
+  let andamento: Promise<unknown> = Promise.resolve();
+  let fechada = false;
   let contador = 0;
   let limpou = false;
 
@@ -35,8 +37,10 @@ export function criarVitrine(pasta: string) {
 
     /** Abre o pacote na vitrine. `false`: já havia uma publicação em curso (S-06), esta foi pulada. */
     async publicar(pacote: string, sha256: string): Promise<boolean> {
-      if (emCurso) return false;
+      if (emCurso || fechada) return false;
       emCurso = true; // antes de qualquer await
+      let terminou!: () => void;
+      andamento = new Promise<void>((ok) => (terminou = ok));
       try {
         if (!limpou) {
           limpou = true; // sobras de sessão anterior: só as pastas com o nosso nome (S-07)
@@ -59,11 +63,14 @@ export function criarVitrine(pasta: string) {
         return true;
       } finally {
         emCurso = false;
+        terminou();
       }
     },
 
-    /** Para de servir e apaga a cópia aberta. */
+    /** Para de servir e apaga a cópia aberta; espera a publicação em curso para não deixar pasta `v-*` órfã. */
     async fechar(): Promise<void> {
+      fechada = true; // antes de qualquer await: nenhuma publicação nova começa
+      await andamento.catch(() => undefined);
       const velha = atual;
       atual = undefined;
       if (velha) await rm(velha.dir, { recursive: true, force: true }).catch(() => undefined);

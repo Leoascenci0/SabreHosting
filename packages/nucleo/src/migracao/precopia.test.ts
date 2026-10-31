@@ -188,6 +188,23 @@ describe("pedirPreCopia", () => {
   );
 
   it(
+    "candidato que já tem a versão recusa se o cartório diz que ele hospeda: não lê o mundo",
+    async () => {
+      const c = await cenario();
+      await pedirPreCopia(c.opcoes);
+      await expect(
+        pedirPreCopia({
+          ...c.opcoes,
+          versaoLocal: 7,
+          hospedaAgora: async () => true,
+          prazoTravaMs: 50,
+        }),
+      ).rejects.toThrow(/hospedando/);
+    },
+    PRAZO,
+  );
+
+  it(
     "recusa com o servidor do candidato rodando: nada pego no cartório, mundo intacto",
     async () => {
       const c = await cenario();

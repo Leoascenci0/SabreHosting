@@ -24,6 +24,7 @@ import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAvisoHistorico } from "./aviso-historico.js";
 import { criarRotacaoBackups, type RotacaoBackups } from "./rotacao-backups.js";
 import { ligarEspalhar } from "./ligar-espalhar.js";
+import { precisaEncerrarAntesDeSair } from "./saida.js";
 import {
   conferirTokenNoCartorio,
   criarServidorDeArquivos,
@@ -330,6 +331,7 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
   return criarBackups(depsBackupsE2E(servidorRodando));
 }
 
+const RELER_REDE_MS = 60_000;
 let servidorArquivosApp: ServidorDeArquivos | undefined;
 /** Disparo da atualização do mundo (relógio de 10 min, arranque e depois de cada backup bom). */
 let disparoEspalhar: (() => Promise<void>) | undefined;
@@ -355,7 +357,15 @@ async function ligarServidorDeArquivosDoApp(): Promise<void> {
     aoAvisar(e instanceof Error ? e.message : String(e));
     return;
   }
-  if (await servidorArquivosApp.ligar()) await servidorArquivosApp.publicarUltimoBom();
+  const servidor = servidorArquivosApp;
+  if (await servidor.tentarLigar()) return;
+  // Túnel que sobe depois do arranque: relê o IP até ligar (um relógio só; o aviso de "sem rede" sai uma vez).
+  const relogio = setInterval(() => {
+    void servidor.tentarLigar().then((ligou) => {
+      if (ligou) clearInterval(relogio);
+    });
+  }, RELER_REDE_MS);
+  relogio.unref();
 }
 
 /** Importar mundo (piloto-1.1c): seletor só de .zip; o caminho escolhido fica aqui no main, nunca vem da janela. */
@@ -532,7 +542,14 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   app.on("second-instance", mostrarJanela);
   app.on("before-quit", (evento) => {
-    if (!podeSair && (encerrando || inicioApp?.ativo())) {
+    if (
+      precisaEncerrarAntesDeSair({
+        podeSair,
+        encerrando,
+        servidorMinecraftAtivo: inicioApp?.ativo() === true,
+        servindoArquivos: servidorArquivosApp !== undefined,
+      })
+    ) {
       evento.preventDefault(); // saída por fora da bandeja (ex.: desligar o Windows): para o servidor antes
       void sairDoApp(false);
       return;

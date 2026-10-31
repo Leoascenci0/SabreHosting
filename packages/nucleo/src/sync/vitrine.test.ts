@@ -67,6 +67,18 @@ describe("criarVitrine (syncmel-1.10)", () => {
     expect(readdirSync(join(p1.base, "vitrine"))).toHaveLength(1); // a tentativa falha não deixa pasta
   });
 
+  it("fechar durante uma publicação espera por ela e não deixa pasta v-* órfã", async () => {
+    const p = await pacoteDeTeste(1);
+    const pasta = join(p.base, "vitrine");
+    const vitrine = criarVitrine(pasta);
+    const publicando = vitrine.publicar(p.caminho, p.sha256);
+    await vitrine.fechar(); // sem esperar, a pasta nasceria depois do rm
+    await publicando.catch(() => undefined);
+    expect(readdirSync(pasta).filter((n) => n.startsWith("v-"))).toEqual([]);
+    expect(vitrine.arquivos(p.manifesto.sha256)).toBeUndefined();
+    expect(await vitrine.publicar(p.caminho, p.sha256)).toBe(false); // fechada não publica mais
+  });
+
   it("publicar a versão nova troca o índice e apaga a pasta da velha", async () => {
     const p1 = await pacoteDeTeste(1);
     const p2 = await pacoteDeTeste(2, "B");
