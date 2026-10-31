@@ -29,26 +29,6 @@ _(nenhuma onda aberta; leva de 6 ondas concluída em 31/10/2026 — retomar com 
 - Depois: app-1.2 · app-1.3 · redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
 - Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
 
-**M3 — Mundo em todos** | mundo chega sozinho a todos os PCs; quem voltou atualiza; instalador; botão Jogar abre o Prism já conectado | sync, app (blocos 2 e 3.1), lanc (bloco 1) |
-| **M4 — Troca sem queda** | servidor muda sozinho para o PC mais forte; host que cai é substituído | migra |
-| **M5 — Adeus hospedagem** | histórico no Drive, atualização automática, piloto e cancelamento da hospedagem | drive, app 3.2, piloto |
-| **M6 — Launcher próprio** | o SabreHosting abre o jogo sozinho, sem o Prism (depende da aprovação da Microsoft) | lanc (bloco 2) |
-
-## Em curso
-
-## Fila
-
-**M1 — Fundação**
-_(nenhuma onda aberta; leva de 6 ondas concluída em 31/10/2026)_
-- **Onda 6b:** bkp-2.1 · rede-1.1
-- **Onda 8:** bkp-2.2 · cart-1.4 · host-3.1 [P: teste no PC]
-
-**M2 — Primeira partida**
-- **Onda 9:** rede-1.3 · rede-2.2 · app-1.1
-- **Onda 10:** rede-2.3 · app-1.2 · rede-1.2 [P: criar a VM]
-- **Onda 11:** app-1.3 · cart-2.2 [P: máquina real]
-- Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
-
 **M3 — Mundo em todos** (ondas montadas pela Máxima ao chegar aqui): sync-1.1 → sync-1.2 → sync-2.1 → sync-2.2;
 app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → lanc-1.4 (se D5 tiver mods).
   **lanc-2.1 [P]** (pedido à Microsoft) entra cedo, no começo do M3, porque a resposta pode demorar.
