@@ -57,7 +57,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   *Confirmação:* remover `octetosValidos` faz um teste falhar; `server.properties` tem `enable-query=false`.
   *Origem:* host-1.2 · PR #20 · qa
 
-- [ ] **2.3 — Processo do servidor mais robusto**
+- [x] **2.3 — Processo do servidor mais robusto** (PR #89, 31/10/2026)
   *O que fazer:* validar `javaPath` e `pasta` como caminhos absolutos; guarda contra duas chamadas de
   `iniciarServidor` na mesma pasta no mesmo PC; estado "pronto" só pela linha `Done (` vinda da thread do servidor (não
   do chat); evitar aviso duplo quando o Java não existe.
