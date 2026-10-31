@@ -74,6 +74,8 @@ export async function servirArquivos(opcoes: OpcoesServidor): Promise<Servidor> 
   const agora = opcoes.agora ?? Date.now;
   const falhas = new Map<string, { n: number; inicio: number }>();
   const conferidos = new Map<string, { pc: string; ate: number }>();
+  // De propósito, pedido com sucesso NÃO zera as falhas do IP: quem erra e acerta alternando continua limitado.
+  // Limitação conhecida: uma rajada paralela passa por barrado() antes de contarFalha(); risco baixo na rede WireGuard.
   const barrado = (ip: string) => {
     const f = falhas.get(ip);
     return f !== undefined && f.n >= MAX_FALHAS && agora() - f.inicio < JANELA_FALHAS_MS;

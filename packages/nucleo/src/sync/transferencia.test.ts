@@ -158,6 +158,28 @@ describe("limite de tentativas erradas e cache de token", () => {
     agora += 60_000;
     expect((await comToken(CREDENCIAL)).status).toBe(200);
   });
+  it("a janela conta do 1º erro e os 429 não a prolongam", async () => {
+    await subirCom(valido);
+    const t0 = agora;
+    expect((await comToken("errado")).status).toBe(401);
+    for (const salto of [10_000, 10_000, 10_000, 20_000]) {
+      agora += salto;
+      expect((await comToken("errado")).status).toBe(401);
+    }
+    agora = t0 + 55_000;
+    expect((await comToken(CREDENCIAL)).status).toBe(429);
+    agora = t0 + 59_999;
+    expect((await comToken(CREDENCIAL)).status).toBe(429);
+    agora = t0 + 60_000;
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+  });
+  it("falhas vencidas são esquecidas: depois de 61 s o IP recomeça do zero e volta a ser limitado", async () => {
+    await subirCom(valido);
+    for (let i = 0; i < 4; i++) expect((await comToken("errado")).status).toBe(401);
+    agora += 61_000;
+    for (let i = 0; i < 5; i++) expect((await comToken("errado")).status).toBe(401);
+    expect((await comToken("errado")).status).toBe(429);
+  });
   it("token ausente também conta como tentativa errada", async () => {
     await subirCom(valido);
     for (let i = 0; i < 5; i++) expect((await fetch(url())).status).toBe(401);
