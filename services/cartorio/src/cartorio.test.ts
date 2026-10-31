@@ -32,29 +32,21 @@ function montar(relogio = { agora: 1_000_000 }) {
       pronto();
     },
   });
-  const segredoAdmin = gerarSegredo();
+  const banco = abrirBanco(join(pasta, "cartorio.db"));
   const app = criarCartorio({
-    banco: abrirBanco(join(pasta, "cartorio.db")),
-    segredoAdmin,
+    banco,
     logger: { level: "trace", stream: log },
     agora: () => relogio.agora,
   });
   fechar.push(() => app.close());
-  const admin = { authorization: `Bearer ${segredoAdmin}` };
-  async function convidar(nomePc = "PC de teste", validadeMinutos?: number) {
-    const r = await app.inject({
-      method: "POST",
-      url: "/convites",
-      headers: admin,
-      payload: { nomePc, validadeMinutos },
-    });
-    expect(r.statusCode).toBe(201);
-    return r.json<{ convite: string }>().convite;
+  /** Convite sem sala de entrada (o caminho com ajudante e dono está em convite.test.ts). */
+  function convidar(nomePc = "PC de teste", validadeMinutos = 30) {
+    return Promise.resolve(criarConvite(banco, nomePc, relogio.agora, validadeMinutos * 60_000));
   }
   function usar(convite: string) {
     return app.inject({ method: "POST", url: "/convites/usar", payload: { convite } });
   }
-  return { app, pasta, linhasDoLog, segredoAdmin, convidar, usar, relogio };
+  return { app, pasta, linhasDoLog, convidar, usar, relogio };
 }
 
 describe("cartório: saúde e token", () => {
@@ -79,14 +71,15 @@ describe("cartório: saúde e token", () => {
     expect(eu.json()).toMatchObject({ nome: "PC da Ana" });
   });
 
-  it("POST /convites exige o segredo de administrador", async () => {
+  // Quebra declarada (cart-1.5): o segredo de administrador saiu da rota; só o token de um PC dono cria convite.
+  it("POST /convites: sem token → 401; token de PC que não é dono → 403", async () => {
     const { app, convidar, usar } = montar();
-    const semAdmin = await app.inject({
+    const semToken = await app.inject({
       method: "POST",
       url: "/convites",
       payload: { nomePc: "x" },
     });
-    expect(semAdmin.statusCode).toBe(401);
+    expect(semToken.statusCode).toBe(401);
     const corpoInvalido = await app.inject({ method: "POST", url: "/convites", payload: {} });
     expect(corpoInvalido.statusCode).toBe(401);
     const { token } = (await usar(await convidar())).json<{ token: string }>();
@@ -96,17 +89,17 @@ describe("cartório: saúde e token", () => {
       headers: { authorization: `Bearer ${token}` },
       payload: { nomePc: "x" },
     });
-    expect(comTokenDePc.statusCode).toBe(401);
+    expect(comTokenDePc.statusCode).toBe(403);
   });
 
   it("token e convite em claro não aparecem no arquivo do banco nem no log", async () => {
-    const { app, pasta, linhasDoLog, segredoAdmin, convidar, usar } = montar();
+    const { app, pasta, linhasDoLog, convidar, usar } = montar();
     const convite = await convidar();
     const { token } = (await usar(convite)).json<{ token: string }>();
     await app.inject({ url: "/eu", headers: { authorization: `Bearer ${token}` } });
     await app.close();
 
-    const segredos = [token, convite, segredoAdmin];
+    const segredos = [token, convite];
     for (const arquivo of readdirSync(pasta)) {
       const bytes = readFileSync(join(pasta, arquivo)).toString("latin1");
       for (const s of segredos) expect(bytes).not.toContain(s);
@@ -224,7 +217,7 @@ describe("cartório: migrações", () => {
     const caminho = join(pasta, "m.db");
     const a = abrirBanco(caminho);
     const b = abrirBanco(caminho);
-    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 5 }]);
+    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 6 }]);
     a.close();
     b.close();
     abrirBanco(caminho).close();
@@ -249,7 +242,7 @@ describe("cartório: migrações", () => {
       INSERT INTO convites (hash, nome_pc, criado_em, expira_em) VALUES ('c1', 'Caio', 30, 40)`);
     v1.close();
     const banco = abrirBanco(caminho);
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 5 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 6 }]);
     expect(banco.prepare("SELECT id, nome, criado_em FROM pcs ORDER BY id").all()).toEqual([
       { id: 1, nome: "Ana", criado_em: 10 },
       { id: 2, nome: "Bia", criado_em: 20 },
@@ -368,17 +361,18 @@ describe("cartório: entrada endurecida", () => {
     expect((await app.inject({ url: "/eu", headers: auth(token) })).statusCode).toBe(429);
   });
 
-  it("segredo de administrador errado conta no mesmo limite e é barrado antes de conferir", async () => {
-    const { app, segredoAdmin } = montar();
-    const criar = (segredo: string) =>
+  it("token errado no POST /convites conta no mesmo limite e é barrado antes de conferir", async () => {
+    const { app, convidar, usar } = montar();
+    const { token } = (await usar(await convidar())).json<{ token: string }>();
+    const criar = (t: string) =>
       app.inject({
         method: "POST",
         url: "/convites",
-        headers: { authorization: `Bearer ${segredo}` },
-        payload: { nomePc: "PC" },
+        headers: { authorization: `Bearer ${t}` },
+        payload: { nomePc: "pc" },
       });
     for (let i = 0; i < 20; i++) expect((await criar(gerarSegredo())).statusCode).toBe(401);
-    expect((await criar(segredoAdmin)).statusCode).toBe(429);
+    expect((await criar(token)).statusCode).toBe(429);
   });
 
   it("limitador tira do mapa as entradas vencidas de qualquer IP", () => {

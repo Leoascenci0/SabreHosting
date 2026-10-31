@@ -1,6 +1,13 @@
 import { BlockList, isIP } from "node:net";
 import type { Cofre } from "./cofre.js";
-import type { EstadoTrava, Pc, RespostaTrava } from "./tipos.js";
+import type {
+  ConviteCriado,
+  EntradaNoGrupo,
+  EstadoTrava,
+  Grupo,
+  Pc,
+  RespostaTrava,
+} from "./tipos.js";
 
 export type TipoErroCartorio = "rede" | "servidor" | "acesso" | "resposta";
 
@@ -64,7 +71,13 @@ interface Pedido {
   repetir: boolean;
   /** Rotas da trava devolvem a recusa (409) como resposta, não como erro. */
   recusaE409?: boolean;
+  /** Prazo próprio da tentativa (o `usar` espera o ajudante do WireGuard na nuvem). */
+  prazoMs?: number;
 }
+
+const PRAZO_USAR_MS = 15_000;
+const CONVITE_RECUSADO =
+  "O cartório recusou o convite: inválido, já usado ou vencido. Peça um novo ao dono do grupo.";
 
 export type ClienteCartorio = ReturnType<typeof criarCliente>;
 
@@ -81,18 +94,19 @@ export function criarCliente(opcoes: OpcoesCliente) {
   const esperar = opcoes.esperar ?? ((ms: number) => new Promise<void>((ok) => setTimeout(ok, ms)));
 
   /** Uma tentativa. Erro com `tipo` "rede" ou "servidor" é o único que pode repetir. */
-  async function uma<T>(p: Pedido, token: string): Promise<T> {
+  /** Sem `token` (só o `usar` do convite), o pedido vai sem cabeçalho de autorização. */
+  async function uma<T>(p: Pedido, token: string | undefined): Promise<T> {
     let resposta: Response;
     try {
       resposta = await fetchFn(`${base}${p.rota}`, {
         method: p.metodo,
         headers: {
-          authorization: `Bearer ${token}`,
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
           ...(p.corpo ? { "content-type": "application/json" } : {}),
         },
         body: p.corpo ? JSON.stringify(p.corpo) : undefined,
         redirect: "error",
-        signal: AbortSignal.timeout(prazoMs),
+        signal: AbortSignal.timeout(p.prazoMs ?? prazoMs),
       });
     } catch (e) {
       throw new ErroCartorio("Sem resposta do cartório (rede ou tempo esgotado).", "rede", {
@@ -106,13 +120,24 @@ export function criarCliente(opcoes: OpcoesCliente) {
     if (resposta.status === 401) {
       await resposta.body?.cancel();
       throw new ErroCartorio(
-        "O cartório recusou o acesso deste PC. Peça um convite novo ao administrador do grupo.",
+        token
+          ? "O cartório recusou o acesso deste PC. Peça um convite novo ao administrador do grupo."
+          : CONVITE_RECUSADO,
         "acesso",
       );
     }
     if (!resposta.ok && !(p.recusaE409 && resposta.status === 409)) {
+      // A mensagem do cartório (pt-BR, para o amigo) vai junto: "Só o dono do grupo cria convites."
+      const corpo = (await resposta.json().catch(() => ({}))) as { erro?: unknown };
+      const erro = typeof corpo.erro === "string" ? ` ${corpo.erro}` : "";
+      throw new ErroCartorio(
+        `O cartório recusou o pedido (${resposta.status}).${erro}`,
+        "resposta",
+      );
+    }
+    if (resposta.status === 204) {
       await resposta.body?.cancel();
-      throw new ErroCartorio(`O cartório recusou o pedido (${resposta.status}).`, "resposta");
+      return undefined as T;
     }
     try {
       return (await resposta.json()) as T;
@@ -123,9 +148,9 @@ export function criarCliente(opcoes: OpcoesCliente) {
     }
   }
 
-  async function chamar<T>(p: Pedido): Promise<T> {
-    const token = await cofre.ler();
-    if (!token) {
+  async function chamar<T>(p: Pedido, semToken = false): Promise<T> {
+    const token = semToken ? undefined : await cofre.ler();
+    if (!token && !semToken) {
       throw new ErroCartorio(
         "Este PC ainda não entrou no grupo: use o convite do administrador.",
         "acesso",
@@ -155,5 +180,32 @@ export function criarCliente(opcoes: OpcoesCliente) {
     renovar: (epoca: number) => trava("/trava/renovar", true, { epoca }),
     passar: (epoca: number, para: number) => trava("/trava/passar", false, { epoca, para }),
     soltar: (epoca: number) => trava("/trava/soltar", false, { epoca }),
+    grupo: () => chamar<Grupo>({ metodo: "GET", rota: "/grupo", repetir: true }),
+    /** Só o PC dono. Não repete: cada tentativa reservaria outro IP provisório na nuvem. */
+    criarConvite: (nomePc: string, validadeHoras?: number) =>
+      chamar<ConviteCriado>({
+        metodo: "POST",
+        rota: "/convites",
+        corpo: { nomePc, validadeHoras },
+        repetir: false,
+      }),
+    /**
+     * Pelo túnel provisório, sem token. Repete: o cartório aceita a mesma chave de novo (mesmo IP, token novo), então
+     * uma resposta perdida não encalha o PC.
+     */
+    usarConvite: (convite: string, chavePublica: string) =>
+      chamar<EntradaNoGrupo>(
+        {
+          metodo: "POST",
+          rota: "/convites/usar",
+          corpo: { convite, chave_publica: chavePublica },
+          repetir: true,
+          prazoMs: PRAZO_USAR_MS,
+        },
+        true,
+      ),
+    /** Já pelo IP definitivo: o cartório tira o peer provisório. Pode repetir (confirmar duas vezes não muda nada). */
+    confirmarEntrada: () =>
+      chamar<undefined>({ metodo: "POST", rota: "/convites/confirmar", repetir: true }),
   };
 }

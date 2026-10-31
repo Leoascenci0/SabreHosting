@@ -15,7 +15,6 @@ import {
   pcDoToken,
   usarConvite,
 } from "./banco.js";
-import { gerarSegredo } from "./segredo.js";
 import { criarCartorio } from "./servidor.js";
 import { passar, pegar, soltar } from "./trava.js";
 import { registrarVersao } from "./versoes.js";
@@ -317,7 +316,7 @@ describe("armazém: migração v4 → v5", () => {
     v4.close();
     const banco = abrirBanco(caminho);
     fechar.push(() => banco.close());
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 5 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 6 }]);
     expect(banco.prepare("SELECT numero, epoca, pc_id FROM versoes").all()).toEqual([
       { numero: 1, epoca: 3, pc_id: 1 },
     ]);
@@ -338,12 +337,10 @@ describe("armazém: migração v4 → v5", () => {
 describe("rotas do pacote", () => {
   function montarApp(opcoes: { tetoBytes?: number } = {}) {
     const dados = pastaNova();
-    const segredoAdmin = gerarSegredo();
     const banco = abrirBanco(join(dados, "cartorio.db"));
     const relogio = { agora: 1_000 };
     const app = criarCartorio({
       banco,
-      segredoAdmin,
       logger: { level: "silent" },
       agora: () => relogio.agora,
       armazem: { pasta: join(dados, "mundo"), ...opcoes },

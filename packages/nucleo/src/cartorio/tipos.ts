@@ -1,6 +1,8 @@
 // Contrato escrito à mão a partir das rotas de `services/cartorio/src/servidor.ts` (o núcleo não importa o cartório).
 // Mudou uma resposta lá, muda aqui; o teste de `tests/integracao/` pega a diferença.
 
+import type { PacoteDeLigacao } from "../rede/wireguard.js";
+
 export type MotivoRecusa =
   | "ocupada"
   | "epoca_velha"
@@ -41,4 +43,22 @@ export interface EstadoTrava {
   expiraEm: number;
   prazoMs: number;
   renovarMs: number;
+}
+
+/** `GET /grupo`. */
+export interface Grupo {
+  nome: string;
+  endereco_jogar: string;
+}
+
+/** 201 de `POST /convites` (só o PC dono). `convite` é o texto `sabre://convite/1.…`; mostrar e esquecer. */
+export interface ConviteCriado {
+  convite: string;
+  expiraEm: number;
+}
+
+/** 200 de `POST /convites/usar`. O token vai para o cofre; o pacote, para o túnel definitivo. */
+export interface EntradaNoGrupo {
+  token: string;
+  pacote: PacoteDeLigacao;
 }
