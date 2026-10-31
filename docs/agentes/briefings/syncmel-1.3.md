@@ -1,6 +1,6 @@
 # Briefing syncmel-1.3
 
-BASE: be029a5bdaf3d2dbdd4f2a48fb0d028d3ac15743 · RAMO: roadmap/syncmel-1.3 · MODELO: sonnet
+BASE: 0c5c96d3aee87149c2809f075dbb8922ac552b24 · RAMO: roadmap/syncmel-1.3 · MODELO: sonnet
 SKILLS: using-superpowers, qualidade-sabre
 LEIA: qualidade-sabre › references pertinentes ao tipo (integridade/seguranca/enxugar); docs/arquitetura.md só se precisar.
 TRIAGEM: M1/M2 — acabamento em código existente; reaproveitar o que já há, escrever uma vez só (a filha confirma com grep antes).
