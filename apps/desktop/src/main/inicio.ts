@@ -33,6 +33,8 @@ export interface DepsInicio {
   trocandoVersao?(): boolean;
   /** Percentual do mundo sendo atualizado neste PC (sync-2.2); `undefined` = não está atualizando. */
   atualizando?(): number | undefined;
+  /** Último aviso de falha da atualização do mundo (syncmel-1.14); `undefined` = nenhum. */
+  avisoAtualizacao?(): string | undefined;
   /** Servidor deste PC criado (ainda pode estar subindo): quem agenda o backup passa a ouvir o estado dele. */
   aoServidor?(servidor: ServidorAtivo): void;
 }
@@ -214,10 +216,14 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
 
     async estado(): Promise<EstadoInicio> {
       const e = await estadoBase();
+      if (e.tipo !== "ninguem" && e.tipo !== "outro") return e;
       const pct = deps.atualizando?.();
-      return pct !== undefined && (e.tipo === "ninguem" || e.tipo === "outro")
-        ? { ...e, atualizando: pct }
-        : e;
+      const aviso = deps.avisoAtualizacao?.();
+      return {
+        ...e,
+        ...(pct !== undefined ? { atualizando: pct } : {}),
+        ...(aviso !== undefined && pct === undefined ? { aviso } : {}),
+      };
     },
 
     /** O app avisa a tela quando o percentual da atualização muda (o estado não tem relógio próprio). */
