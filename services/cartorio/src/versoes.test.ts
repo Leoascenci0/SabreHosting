@@ -99,7 +99,7 @@ describe("versões: só o dono da trava registra", () => {
     const banco = montarBanco();
     pegar(banco, 1, 0, PRAZO);
     expect(registrarVersao(banco, 1, 1, 10, DADOS)).toEqual({ ok: true, numero: 1 });
-    expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1" }]);
+    expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
     const outro = { manifestoSha256: "0123456789abcdef".repeat(4), arquivos: 0, bytes: 0 };
     expect(registrarVersao(banco, 1, 1, 20, outro)).toEqual({ ok: true, numero: 2 });
     expect(maisNova(banco)).toEqual({
@@ -112,7 +112,7 @@ describe("versões: só o dono da trava registra", () => {
       criadaEm: 20,
     });
     expect(quemTem(banco, 1)).toEqual([]);
-    expect(quemTem(banco, 2)).toEqual([{ id: 1, nome: "PC 1" }]);
+    expect(quemTem(banco, 2)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
   });
 
   it("troca de host: a numeração continua no novo dono, sem buraco nem repetição", () => {
@@ -189,7 +189,7 @@ describe("cópias: quem tem qual versão", () => {
     pegar(banco, 1, 0, PRAZO);
     registrarVersao(banco, 1, 1, 1, DADOS);
     expect(informarCopia(banco, 2, 2, 5)).toBe(false);
-    expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1" }]);
+    expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
   });
 
   it("cada PC tem uma linha (a versão de agora); quemTem devolve só quem tem exatamente N", () => {
@@ -201,18 +201,29 @@ describe("cópias: quem tem qual versão", () => {
     expect(informarCopia(banco, 3, 1, 10)).toBe(true);
     expect(informarCopia(banco, 2, 1, 11)).toBe(true);
     expect(quemTem(banco, 1)).toEqual([
-      { id: 2, nome: "PC 2" },
-      { id: 3, nome: "PC 3" },
+      { id: 2, nome: "PC 2", ip: null },
+      { id: 3, nome: "PC 3", ip: null },
     ]);
     expect(informarCopia(banco, 2, 2, 12)).toBe(true);
-    expect(quemTem(banco, 1)).toEqual([{ id: 3, nome: "PC 3" }]);
+    expect(quemTem(banco, 1)).toEqual([{ id: 3, nome: "PC 3", ip: null }]);
     expect(quemTem(banco, 2)).toEqual([
-      { id: 1, nome: "PC 1" },
-      { id: 2, nome: "PC 2" },
+      { id: 1, nome: "PC 1", ip: null },
+      { id: 2, nome: "PC 2", ip: null },
     ]);
     expect(quemTem(banco, 99)).toEqual([]);
     expect(contar(banco, "copias")).toBe(3);
     expect(maisNova(banco)?.numero).toBe(2);
+  });
+});
+
+describe("cópias: PC revogado não é fonte", () => {
+  it("quemTem não lista PC com token revogado (nem o IP dele)", () => {
+    const banco = montarBanco();
+    pegar(banco, 1, 0, PRAZO);
+    registrarVersao(banco, 1, 1, 1, DADOS);
+    informarCopia(banco, 2, 1, 10);
+    banco.prepare("UPDATE tokens SET revogado_em = 20 WHERE pc_id = 2").run();
+    expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
   });
 });
 
@@ -259,7 +270,7 @@ describe("versões: rotas do cartório", () => {
       const r = await app.inject({ method: "POST", url: "/convites/usar", payload: { convite } });
       return { authorization: `Bearer ${r.json<{ token: string }>().token}` };
     }
-    return { app, relogio, ana: await novoPc("Ana"), bia: await novoPc("Bia") };
+    return { app, banco, relogio, ana: await novoPc("Ana"), bia: await novoPc("Bia") };
   }
 
   it("sem token → 401 em todas as rotas de versão", async () => {
@@ -348,7 +359,7 @@ describe("versões: rotas do cartório", () => {
   });
 
   it("fluxo: pega a trava, envia, outro PC informa a cópia, consultas; envio sem trava → 409", async () => {
-    const { app, ana, bia } = await montarApp();
+    const { app, banco, ana, bia } = await montarApp();
     const enviar = (headers: Record<string, string>, epoca: number) =>
       app.inject({
         method: "POST",
@@ -379,13 +390,28 @@ describe("versões: rotas do cartório", () => {
 
     const nova = await app.inject({ url: "/versoes/mais-nova", headers: bia });
     expect(nova.json()).toMatchObject({ versao: { numero: 2, epoca, manifestoSha256: SHA } });
-    const copias = await app.inject({ url: "/versoes/2/copias", headers: bia });
-    expect(copias.json()).toEqual({
+    // Só convite confirmado (rede privada pronta) mostra o IP; a Bia ainda não confirmou → ip null.
+    banco
+      .prepare("UPDATE convites SET ip_def = '10.66.0.5', confirmado_em = 1 WHERE pc_id = 1")
+      .run();
+    banco.prepare("UPDATE convites SET ip_def = '10.66.0.6' WHERE pc_id = 2").run();
+    const comIp = await app.inject({ url: "/versoes/2/copias", headers: bia });
+    expect(comIp.json()).toEqual({
       numero: 2,
+      nuvem: false,
       pcs: [
-        { id: 1, nome: "Ana" },
-        { id: 2, nome: "Bia" },
+        { id: 1, nome: "Ana", ip: "10.66.0.5" },
+        { id: 2, nome: "Bia", ip: null },
       ],
+    });
+    banco
+      .prepare("INSERT INTO copias_nuvem (versao, sha256, bytes, guardada_em) VALUES (2, ?, 1, 0)")
+      .run(SHA);
+    expect((await app.inject({ url: "/versoes/2/copias", headers: bia })).json()).toMatchObject({
+      nuvem: true,
+    });
+    expect((await app.inject({ url: "/versoes/1/copias", headers: bia })).json()).toMatchObject({
+      nuvem: false,
     });
     expect((await app.inject({ url: "/versoes/abc/copias", headers: bia })).statusCode).toBe(400);
   });

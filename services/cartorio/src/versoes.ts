@@ -66,12 +66,33 @@ export function maisNova(banco: Banco): Versao | null {
   );
 }
 
-/** PCs que têm exatamente a versão N agora. */
-export function quemTem(banco: Banco, versao: number): Pc[] {
+/** PC que tem a versão e o IP dele na rede privada (`null` até confirmar a entrada). Só para PC autenticado. */
+export interface PcComCopia extends Pc {
+  ip: string | null;
+}
+
+/**
+ * PCs que têm exatamente a versão N agora. Diferente de `listarPcs` (que nunca devolve IP), aqui o IP vai junto:
+ * é o endereço da fonte do espalhar. Só PC com token ativo e convite confirmado conta; a faixa é conferida por quem usa (`escolherFontes`).
+ */
+export function quemTem(banco: Banco, versao: number): PcComCopia[] {
   return banco
     .prepare(
-      `SELECT pcs.id, pcs.nome FROM copias JOIN pcs ON pcs.id = copias.pc_id
-       WHERE copias.versao = ? ORDER BY pcs.id`,
+      `SELECT pcs.id, pcs.nome,
+              (SELECT c.ip_def FROM convites c WHERE c.pc_id = pcs.id AND c.confirmado_em IS NOT NULL
+               ORDER BY c.confirmado_em DESC LIMIT 1) AS ip
+       FROM copias JOIN pcs ON pcs.id = copias.pc_id
+       WHERE copias.versao = ?
+         AND EXISTS (SELECT 1 FROM tokens WHERE pc_id = pcs.id AND revogado_em IS NULL)
+       ORDER BY pcs.id`,
     )
-    .all(versao) as unknown as Pc[];
+    .all(versao) as unknown as PcComCopia[];
+}
+
+/** A nuvem guarda a cópia da versão N. */
+export function nuvemTem(banco: Banco, versao: number): boolean {
+  return (
+    banco.prepare("SELECT EXISTS (SELECT 1 FROM copias_nuvem WHERE versao = ?) AS e").get(versao)
+      ?.e === 1
+  );
 }
