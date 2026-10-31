@@ -216,6 +216,17 @@ describe("cópias: quem tem qual versão", () => {
   });
 });
 
+describe("cópias: PC revogado não é fonte", () => {
+  it("quemTem não lista PC com token revogado (nem o IP dele)", () => {
+    const banco = montarBanco();
+    pegar(banco, 1, 0, PRAZO);
+    registrarVersao(banco, 1, 1, 1, DADOS);
+    informarCopia(banco, 2, 1, 10);
+    banco.prepare("UPDATE tokens SET revogado_em = 20 WHERE pc_id = 2").run();
+    expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
+  });
+});
+
 describe("versões: migração v3 → v4", () => {
   it("preserva PCs, tokens e trava (dono e época) e cria as tabelas vazias", () => {
     const caminho = caminhoNovo();

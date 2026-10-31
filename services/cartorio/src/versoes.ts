@@ -73,7 +73,7 @@ export interface PcComCopia extends Pc {
 
 /**
  * PCs que têm exatamente a versão N agora. Diferente de `listarPcs` (que nunca devolve IP), aqui o IP vai junto:
- * é o endereço da fonte do espalhar. Só convite confirmado conta; a faixa é conferida por quem usa (`escolherFontes`).
+ * é o endereço da fonte do espalhar. Só PC com token ativo e convite confirmado conta; a faixa é conferida por quem usa (`escolherFontes`).
  */
 export function quemTem(banco: Banco, versao: number): PcComCopia[] {
   return banco
@@ -82,7 +82,9 @@ export function quemTem(banco: Banco, versao: number): PcComCopia[] {
               (SELECT c.ip_def FROM convites c WHERE c.pc_id = pcs.id AND c.confirmado_em IS NOT NULL
                ORDER BY c.confirmado_em DESC LIMIT 1) AS ip
        FROM copias JOIN pcs ON pcs.id = copias.pc_id
-       WHERE copias.versao = ? ORDER BY pcs.id`,
+       WHERE copias.versao = ?
+         AND EXISTS (SELECT 1 FROM tokens WHERE pc_id = pcs.id AND revogado_em IS NULL)
+       ORDER BY pcs.id`,
     )
     .all(versao) as unknown as PcComCopia[];
 }
