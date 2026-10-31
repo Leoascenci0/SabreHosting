@@ -5,7 +5,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { type Banco, MIGRACOES, abrirBanco, criarConvite } from "./banco.js";
 import { criarCartorio } from "./servidor.js";
 import { pegar, renovar } from "./trava.js";
-import { informarCopia, maisNova, maisNovaGuardada, quemTem, registrarVersao } from "./versoes.js";
+import {
+  informarCopia,
+  maisNova,
+  maisNovaGuardada,
+  quemTem,
+  registrarVersao,
+  ultimoRegistrado,
+} from "./versoes.js";
 
 const PRAZO = 60_000;
 const SHA = "a".repeat(64);
@@ -128,6 +135,7 @@ describe("versões: só o dono da trava registra", () => {
     const banco = montarBanco();
     pegar(banco, 1, 0, PRAZO);
     expect(maisNovaGuardada(banco)).toBeNull();
+    expect(ultimoRegistrado(banco)).toBe(0);
     registrarVersao(banco, 1, 1, 10, DADOS);
     expect(maisNova(banco)?.numero).toBe(1); // o armazém precisa dela para aceitar o envio
     expect(maisNovaGuardada(banco)).toBeNull();
@@ -138,6 +146,7 @@ describe("versões: só o dono da trava registra", () => {
     registrarVersao(banco, 1, 1, 20, DADOS);
     expect(maisNova(banco)?.numero).toBe(2);
     expect(maisNovaGuardada(banco)?.numero).toBe(1);
+    expect(ultimoRegistrado(banco)).toBe(2); // a órfã conta para numerar a próxima
     guardarNaNuvem(banco, 2);
     expect(maisNovaGuardada(banco)?.numero).toBe(2);
   });
@@ -336,7 +345,7 @@ describe("versões: rotas do cartório", () => {
     });
     expect(r.statusCode).toBe(400);
     const v = await app.inject({ url: "/versoes/mais-nova", headers: ana });
-    expect(v.json()).toEqual({ versao: null });
+    expect(v.json()).toEqual({ versao: null, ultimoRegistrado: 0 });
   });
 
   it("número fora de inteiro exato (1e30, 2^53, -1, 1,5) em qualquer campo → 400 e nada gravado", async () => {
@@ -363,6 +372,7 @@ describe("versões: rotas do cartório", () => {
     }
     expect((await app.inject({ url: "/versoes/mais-nova", headers: ana })).json()).toEqual({
       versao: null,
+      ultimoRegistrado: 0,
     });
     const r = await app.inject({ method: "POST", url: "/versoes", headers: ana, payload: certo });
     expect(r.json()).toEqual({ numero: 1 });
@@ -386,6 +396,7 @@ describe("versões: rotas do cartório", () => {
     expect(r.json()).toMatchObject({ motivo: "epoca_velha", epoca: velha + 1 });
     expect((await app.inject({ url: "/versoes/mais-nova", headers: ana })).json()).toEqual({
       versao: null,
+      ultimoRegistrado: 0,
     });
   });
 
@@ -422,6 +433,7 @@ describe("versões: rotas do cartório", () => {
     // Sem pacote guardado na nuvem a 2 não é a mais nova (regressão cartmel-2.5); a 1 também não.
     expect((await app.inject({ url: "/versoes/mais-nova", headers: bia })).json()).toEqual({
       versao: null,
+      ultimoRegistrado: 2,
     });
     banco
       .prepare("INSERT INTO copias_nuvem (versao, sha256, bytes, guardada_em) VALUES (2, ?, 1, 0)")

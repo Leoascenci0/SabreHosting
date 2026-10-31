@@ -83,6 +83,12 @@ export function maisNovaGuardada(banco: Banco): Versao | null {
   );
 }
 
+/** Maior número já registrado (0 se nenhum), com ou sem pacote: é de onde o importador numera a próxima. */
+export function ultimoRegistrado(banco: Banco): number {
+  return (banco.prepare("SELECT coalesce(max(numero), 0) AS n FROM versoes").get() as { n: number })
+    .n;
+}
+
 /** PC que tem a versão e o IP dele na rede privada (`null` até confirmar a entrada). Só para PC autenticado. */
 export interface PcComCopia extends Pc {
   ip: string | null;

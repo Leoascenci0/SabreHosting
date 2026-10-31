@@ -59,6 +59,7 @@ import {
   nuvemTem,
   quemTem,
   registrarVersao,
+  ultimoRegistrado,
 } from "./versoes.js";
 
 export interface OpcoesCartorio {
@@ -521,7 +522,11 @@ export function criarCartorio({
       return r.ok ? resp.code(201).send({ numero: r.numero }) : recusar(resp, r);
     },
   );
-  app.get("/versoes/mais-nova", { onRequest: soPc }, () => ({ versao: maisNovaGuardada(banco) }));
+  // `versao`: a mais nova COM pacote (a que manda); `ultimoRegistrado`: o maior número, órfã inclusive.
+  app.get("/versoes/mais-nova", { onRequest: soPc }, () => ({
+    versao: maisNovaGuardada(banco),
+    ultimoRegistrado: ultimoRegistrado(banco),
+  }));
   app.post<{ Body: { versao: number } }>(
     "/copias",
     {
