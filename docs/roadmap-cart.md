@@ -41,7 +41,7 @@ Objetivo: um serviço pequeno na nuvem que sabe qual é a versão mais nova do m
   *Confirmação:* teste: queda no meio do envio deixa a cópia anterior intacta.
   *Depende de:* cart-1.3, bkp-1.2
 
-- [ ] **1.5 — Convite completo: dono, chave provisória e grupo**
+- [x] **1.5 — Convite completo: dono, chave provisória e grupo** (PR #84, 31/10/2026; transporte do ajudante muda no rede-1.5)
   *Desenho aprovado:* `docs/superpowers/specs/2026-10-31-convite-do-grupo-design.md` §5.1, §5.2, §5.5–§5.7.
   *O que fazer:* coluna `dono` no PC; `POST /convites` só para PC dono (403 para os outros; sai o segredo de
   administrador), gera par provisório, reserva IP da sala de entrada pelo ajudante (rede-1.4) e devolve o texto
