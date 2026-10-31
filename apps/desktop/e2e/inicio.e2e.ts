@@ -1,10 +1,12 @@
+// Capturas em docs/imagens/ só com SABRE_CAPTURAS=1 (ex.: SABRE_CAPTURAS=1 npm run test:e2e -w apps/desktop)
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { registrarCaptura } from "./captura.js";
 
 const pastaApp = fileURLToPath(new URL("..", import.meta.url));
 const imagens = fileURLToPath(new URL("../../../docs/imagens/", import.meta.url));
@@ -54,11 +56,10 @@ const espiao = (): Promise<Espiao> =>
   viva().evaluate(() => (globalThis as { __sabreE2EEspiao?: unknown }).__sabreE2EEspiao as Espiao);
 
 async function capturar(pagina: Page, nome: string): Promise<void> {
-  mkdirSync(imagens, { recursive: true });
   await viva().evaluate(({ nativeTheme }) => void (nativeTheme.themeSource = "light"));
   await pagina.emulateMedia({ colorScheme: "light" });
   await pagina.waitForTimeout(200);
-  await pagina.screenshot({ path: join(imagens, `app-1.2-${nome}.png`) });
+  await registrarCaptura(pagina, join(imagens, `app-1.2-${nome}.png`));
 }
 
 afterEach(async () => {
