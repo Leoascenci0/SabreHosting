@@ -16,7 +16,7 @@ Melhorias achadas durante os itens do `docs/roadmap-bkp.md` (skill `maxima` › 
   *Confirmação:* testes com cada caso recusado; manifesto com campo extra volta sem ele.
   *Origem:* bkp-1.1 · PR #21 · qa segurança + qa integridade · **feito no PR #29 (30/10/2026)**
 
-- [ ] **1.2 — Colisões de nome além de maiúscula**
+- [x] **1.2 — Colisões de nome além de maiúscula** (PR #90, 31/10/2026)
   *O que fazer:* normalizar Unicode (NFC) antes de comparar colisões (macOS trata `é` e `e`+acento como o mesmo nome);
   recusar arquivo `a` junto de pasta `a/b` no mesmo manifesto.
   *Arquivo:* `packages/nucleo/src/backup/manifesto.ts`
