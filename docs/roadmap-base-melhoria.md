@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
 
 ## Bloco 1 — Esqueleto
 
-- [ ] **1.1 — Fixar as actions do CI por hash de commit**
+- [x] **1.1 — Fixar as actions do CI por hash de commit** (PR #93, 31/10/2026; Dependabot ligado)
   *O que fazer:* trocar `actions/checkout@v4` e `actions/setup-node@v4` por hash de commit (com o número da versão em
   comentário) e ligar o Dependabot só para GitHub Actions, para atualizar os hashes por PR.
   *Arquivo:* `.github/workflows/vistoria.yml`, `.github/dependabot.yml`
