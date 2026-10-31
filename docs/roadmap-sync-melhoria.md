@@ -83,3 +83,10 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* teste com 2 PCs simulados (mundo inventado): um serve, o outro atualiza; IP fora da faixa é ignorado sem derrubar a rodada; servidor não escuta fora da rede privada.
   *Depende de:* syncmel-1.9a ✅ (PR #192). Libera 1.3, 1.9b e migra-2.1.
   *Origem:* syncmel-1.9a · PR #192 · filha + qa
+
+- [ ] **1.11 — Acabamentos do servir/espalhar (notas do qa da onda 25)**
+  *O que fazer:* (a) `vitrine.fechar()` esperar a publicação em curso (hoje deixa pasta `v-*` órfã até o próximo arranque); (b) `before-quit` fechar o servidor de arquivos mesmo sem servidor Minecraft ativo; (c) reler o IP da rede privada quando o túnel sobe depois do arranque; (d) `ipDaRedePrivada` aceitar só a interface do WireGuard; (e) testes: filtro de IP privado, link simbólico na vitrine, `ligarEspalharDoApp`; (f) `hospedaAgora`/`exigirForaDoHost` seguem indo à rede antes do 1º rename (baixa); (g) teste de `ultimoRegistrado` no `cliente.test.ts` do cartório; (h) teste de recusa do ramo "ja-tinha" da pré-cópia com `hospedaAgora` verdadeiro (migra-2.1).
+  *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/sync/`, `packages/nucleo/src/cartorio/cliente.test.ts`, `packages/nucleo/src/migracao/precopia.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* cada item com teste que falha ao remover a proteção.
+  *Origem:* syncmel-1.9a/1.10 · PRs #192, #195, #194, #197 · qa
