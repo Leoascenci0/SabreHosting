@@ -146,7 +146,10 @@ describe("tela de configurações", () => {
     expect(await p.locator("#grupo-lista button").first().textContent()).toBe("Tirar PC do grupo");
 
     // Cancelar: a pergunta cita o NOME do PC e nada é revogado.
-    await p.getByRole("button", { name: "Tirar PC do Lucas do grupo" }).click();
+    await p
+      .locator("#grupo-lista li", { hasText: "Lucas" })
+      .getByRole("button", { name: "Tirar PC do grupo" })
+      .click();
     await esperarTexto(p, "#grupo-pergunta", "PC do Lucas");
     expect(await p.locator("#grupo-confirmacao").textContent()).toContain("novo convite");
     await p.locator("#grupo-cancelar").click();
@@ -155,10 +158,16 @@ describe("tela de configurações", () => {
     expect(await p.locator("#grupo-lista li").count()).toBe(3);
 
     // Confirmar: chama revogarPc só desse PC e a lista perde o PC.
-    await p.getByRole("button", { name: "Tirar PC do Lucas do grupo" }).click();
+    await p
+      .locator("#grupo-lista li", { hasText: "Lucas" })
+      .getByRole("button", { name: "Tirar PC do grupo" })
+      .click();
     await p.locator("#grupo-confirmar").click();
     await esperarTexto(p, "#grupo-aviso", "PC do Lucas saiu do grupo");
     expect(await revogados()).toEqual([2]);
     expect(await p.locator("#grupo-lista li").count()).toBe(2);
+    // O foco não se perde: vai ao aviso; e o botão não tem aria-label que esconda o texto visível.
+    expect(await p.evaluate(() => document.activeElement?.id)).toBe("grupo-aviso");
+    expect(await p.locator("#grupo-lista button[aria-label]").count()).toBe(0);
   });
 });

@@ -65,6 +65,17 @@ describe("grupo (main)", () => {
     expect(r.ok ? "" : r.mensagem).toMatch(texto);
   });
 
+  it("falha de rede ao revogar não promete que nada foi alterado: manda atualizar a lista", async () => {
+    const { grupo } = montar(true, {
+      revogarPc: async () => Promise.reject(new Error("rede caiu")),
+    });
+    const r = await grupo.tirar(2);
+    expect(r).toEqual({
+      ok: false,
+      mensagem: "Não consegui falar com o cartório agora. Atualize a lista para conferir.",
+    });
+  });
+
   it("falha de rede na lista mostra o erro dentro da área; sem cartório esconde a área", async () => {
     const a = montar(true, { listarPcs: async () => Promise.reject(new Error("x")) });
     expect(await a.grupo.estado()).toMatchObject({ dono: true, pcs: [], erro: expect.any(String) });
