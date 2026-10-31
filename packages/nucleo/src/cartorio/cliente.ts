@@ -1,9 +1,12 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import { BlockList, isIP } from "node:net";
 import { Readable } from "node:stream";
+import { rm } from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
 import { IP_DO_HUB } from "../rede/wireguard.js";
 import type { Cofre } from "./cofre.js";
 import {
+  type ModGrupo,
   type RespostaAtualizacao,
   type RespostaTrava,
   cortarErro,
@@ -12,6 +15,7 @@ import {
   validarEstadoTrava,
   validarGrupo,
   validarConfigGrupo,
+  validarModsGrupo,
   validarEu,
   validarCopias,
   validarListaPcs,
@@ -310,6 +314,17 @@ export function criarCliente(opcoes: OpcoesCliente) {
         repetir: true,
         validar: validarConfigGrupo,
       }),
+    /** Lista de mods do grupo (todos os PCs baixam a mesma). */
+    lerModsGrupo: () => ler("/grupo/mods", validarModsGrupo),
+    /** Só o dono (403 com a mensagem em pt-BR para os outros). Troca a lista inteira; repetir dá o mesmo resultado. */
+    gravarModsGrupo: (mods: ModGrupo[]) =>
+      chamar({
+        metodo: "PUT",
+        rota: "/grupo/mods",
+        corpo: { mods },
+        repetir: true,
+        validar: validarModsGrupo,
+      }),
     /** Este PC diz que agora tem a versão N inteira (substitui a anterior). Repete: dizer duas vezes não muda nada. */
     informarCopia: (versao: number) =>
       chamar<undefined>({ metodo: "POST", rota: "/copias", corpo: { versao }, repetir: true }),
@@ -328,6 +343,73 @@ export function criarCliente(opcoes: OpcoesCliente) {
         repetir: false,
         validar: validarVersaoCriada,
       }),
+    /**
+     * Baixa o pacote fechado da versão N que a nuvem guarda, em fluxo, para `destino` (que não pode existir). Devolve o
+     * hash que a nuvem declara; quem abre o pacote (`abrirPacote`) confere esse hash e cada arquivo. `maximo`: teto
+     * em bytes (o tamanho que o catálogo diz); passou dele, cancela e apaga. Não repete (o arquivo parcial é apagado).
+     */
+    baixarPacote: async (
+      numero: number,
+      destino: string,
+      maximo: number,
+      sinal?: AbortSignal,
+    ): Promise<{ sha256: string }> => {
+      const token = await cofre.ler();
+      if (!token) {
+        throw new ErroCartorio(
+          "Este PC ainda não entrou no grupo: use o convite do administrador.",
+          "acesso",
+        );
+      }
+      let resposta: Response;
+      try {
+        resposta = await fetchFn(`${base}/versoes/${encodeURIComponent(numero)}/pacote`, {
+          headers: { authorization: `Bearer ${token}` },
+          redirect: "error",
+          signal: AbortSignal.any([
+            AbortSignal.timeout(prazoDoEnvio(maximo)),
+            ...(sinal ? [sinal] : []),
+          ]),
+        });
+      } catch (e) {
+        throw new ErroCartorio(
+          "Sem resposta da nuvem ao baixar o mundo (rede ou tempo esgotado).",
+          "rede",
+          {
+            cause: e,
+          },
+        );
+      }
+      const sha256 = resposta.headers.get("x-sabre-sha256") ?? "";
+      const tamanho = Number(resposta.headers.get("content-length") ?? NaN);
+      if (
+        !resposta.ok ||
+        !resposta.body ||
+        !/^[0-9a-f]{64}$/.test(sha256) ||
+        !(tamanho <= maximo)
+      ) {
+        await resposta.body?.cancel();
+        throw new ErroCartorio(
+          resposta.status === 404
+            ? "A nuvem não guarda essa versão do mundo."
+            : "A nuvem devolveu o pacote do mundo de um jeito inesperado; recusei.",
+          "resposta",
+          { status: resposta.status },
+        );
+      }
+      try {
+        await pipeline(
+          Readable.fromWeb(resposta.body as import("node:stream/web").ReadableStream),
+          createWriteStream(destino, { flags: "wx" }),
+        );
+      } catch (e) {
+        await rm(destino, { force: true });
+        throw new ErroCartorio("O download do mundo da nuvem foi interrompido.", "rede", {
+          cause: e,
+        });
+      }
+      return { sha256 };
+    },
     /**
      * Manda o pacote da versão N para a nuvem guardar (em fluxo). A nuvem confere tamanho e hash; aqui se confere que
      * ela confirmou exatamente o que foi mandado. Não repete. `sinal`: perdeu a trava, o envio cai na hora.

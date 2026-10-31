@@ -54,6 +54,22 @@ describe("hospedar durante uma restauração de backup", () => {
   });
 });
 
+describe("hospedar durante a atualização do mundo (sync-2.2)", () => {
+  it("Hospedar é recusado com o percentual no estado; Jogar segue liberado; volta ao acabar", async () => {
+    let pct: number | undefined = 40;
+    const hospedar = vi.fn(async () => ({ servidor: servidorFalso() }));
+    const inicio = criarInicio(deps({ hospedar, atualizando: () => pct }));
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem", atualizando: 40 });
+    const r = await inicio.hospedar();
+    expect(r.ok ? "" : r.mensagem).toMatch(/mundo está sendo atualizado/);
+    expect(hospedar).not.toHaveBeenCalled();
+    await expect(inicio.jogar()).resolves.toMatchObject({ copiado: true });
+    pct = undefined;
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+    expect(await inicio.hospedar()).toEqual({ ok: true });
+  });
+});
+
 describe("estado da tela inicial", () => {
   it("ninguém hospedando", async () => {
     expect(await criarInicio(deps()).estado()).toEqual({ tipo: "ninguem" });
@@ -247,6 +263,26 @@ describe("jogar", () => {
     const d = deps();
     expect(await criarInicio(d).jogar()).toEqual({ copiado: true, endereco: "10.0.0.5:25565" });
     expect(d.copiar).toHaveBeenCalledWith("10.0.0.5:25565");
+  });
+
+  it("com abrirJogo, abre o jogo no endereço e ainda copia", async () => {
+    const abrirJogo = vi.fn(async () => ({ ok: true as const }));
+    const d = deps({ abrirJogo });
+    expect(await criarInicio(d).jogar()).toEqual({
+      copiado: true,
+      endereco: "10.0.0.5:25565",
+      aberto: true,
+    });
+    expect(abrirJogo).toHaveBeenCalledWith("10.0.0.5:25565");
+  });
+
+  it("se o jogo não abre, devolve a mensagem e mantém o endereço copiado", async () => {
+    const d = deps({ abrirJogo: async () => ({ ok: false, mensagem: "Prism ausente." }) });
+    expect(await criarInicio(d).jogar()).toMatchObject({
+      copiado: true,
+      aberto: false,
+      aviso: "Prism ausente.",
+    });
   });
 
   it("sem endereço configurado, recusa sem copiar nada", async () => {

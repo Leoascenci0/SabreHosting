@@ -1,3 +1,6 @@
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ErroCartorio, criarCliente, type OpcoesCliente } from "./cliente.js";
@@ -694,5 +697,81 @@ describe("versões do mundo (piloto-1.1c)", () => {
     );
     expect(e.message).toContain("O pacote chegou diferente do declarado.");
     expect(chamadas).toHaveLength(1);
+  });
+});
+
+describe("baixarPacote (sync-2.2)", () => {
+  const SHA = "b".repeat(64);
+  const pacote = (corpo: string, cab: Record<string, string> = {}) =>
+    new Response(corpo, {
+      status: 200,
+      headers: { "content-length": String(corpo.length), "x-sabre-sha256": SHA, ...cab },
+    });
+
+  it("grava em fluxo no destino, devolve o hash declarado e manda o token só no cabeçalho", async () => {
+    const pasta = mkdtempSync(join(tmpdir(), "sabre-bp-"));
+    try {
+      const { cliente, chamadas } = montar([pacote("conteúdo do pacote")]);
+      const destino = join(pasta, "p.tar.gz");
+      expect(await cliente.baixarPacote(9, destino, 1000)).toEqual({ sha256: SHA });
+      expect(readFileSync(destino, "utf8")).toBe("conteúdo do pacote");
+      expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes/9/pacote`);
+      expect(chamadas[0]?.url).not.toContain(TOKEN);
+    } finally {
+      rmSync(pasta, { recursive: true, force: true });
+    }
+  });
+
+  it("recusa 404, hash torto e pacote maior que o teto, sem deixar arquivo", async () => {
+    const pasta = mkdtempSync(join(tmpdir(), "sabre-bp-"));
+    try {
+      const destino = join(pasta, "p.tar.gz");
+      for (const r of [
+        new Response("{}", { status: 404 }),
+        pacote("x", { "x-sabre-sha256": "curto" }),
+        pacote("x".repeat(50)),
+      ]) {
+        const { cliente } = montar([r]);
+        await erroDe(cliente.baixarPacote(9, destino, 10));
+        expect(existsSync(destino)).toBe(false);
+      }
+    } finally {
+      rmSync(pasta, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("mods do grupo (lanc-1.4)", () => {
+  const MOD = {
+    nome: "Sodium",
+    versao: "0.6.0",
+    arquivo: "sodium.jar",
+    url: "https://cdn.modrinth.com/data/x/sodium.jar",
+    sha512: "c".repeat(128),
+    lado: "cliente",
+  };
+
+  it("lê a lista e envia a troca inteira no PUT", async () => {
+    const { cliente, chamadas } = montar([json(200, { mods: [MOD] }), json(200, { mods: [] })]);
+    expect(await cliente.lerModsGrupo()).toEqual([MOD]);
+    expect(await cliente.gravarModsGrupo([])).toEqual([]);
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/grupo/mods`);
+    expect(chamadas[1]?.init.method).toBe("PUT");
+    expect(JSON.parse(String(chamadas[1]?.init.body))).toEqual({ mods: [] });
+  });
+
+  it("resposta com host fora do Modrinth ou hash torto é recusada", async () => {
+    const { cliente } = montar([
+      json(200, { mods: [{ ...MOD, url: "https://exemplo.com/a.jar" }] }),
+      json(200, { mods: [{ ...MOD, sha512: "abc" }] }),
+    ]);
+    await expect(cliente.lerModsGrupo()).rejects.toThrow(/ilegível/);
+    await expect(cliente.lerModsGrupo()).rejects.toThrow(/ilegível/);
+  });
+
+  it("403 de quem não é dono vem com a mensagem do cartório", async () => {
+    const { cliente } = montar([json(403, { erro: "Só o dono do grupo muda a lista de mods." })]);
+    const e = await erroDe(cliente.gravarModsGrupo([]));
+    expect(e.message).toMatch(/dono/);
   });
 });

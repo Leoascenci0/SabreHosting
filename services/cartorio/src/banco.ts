@@ -133,6 +133,18 @@ export const MIGRACOES = [
    BEGIN SELECT RAISE(ABORT, 'A configuração do grupo é uma linha só e não se recria.'); END;
    CREATE TRIGGER config_grupo_nao_apaga BEFORE DELETE ON config_grupo
    BEGIN SELECT RAISE(ABORT, 'A configuração do grupo não se apaga.'); END;`,
+  // Mods do grupo (lanc-1.4): a lista que todos baixam igual. Só o dono troca (a regra mora em `mods.ts`, na mesma
+  // transação); o arquivo é único (sem diferenciar maiúscula) porque o Windows trataria dois como o mesmo.
+  `CREATE TABLE mods_grupo (
+     nome TEXT NOT NULL,
+     versao TEXT NOT NULL,
+     arquivo TEXT NOT NULL COLLATE NOCASE UNIQUE,
+     url TEXT NOT NULL,
+     sha512 TEXT NOT NULL CHECK (length(sha512) = 128 AND sha512 NOT GLOB '*[^0-9a-f]*'),
+     lado TEXT NOT NULL CHECK (lado IN ('cliente', 'servidor', 'ambos')),
+     dono_pc_id INTEGER REFERENCES pcs(id),
+     atualizado_em INTEGER NOT NULL CHECK (typeof(atualizado_em) = 'integer' AND atualizado_em >= 0)
+   );`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */

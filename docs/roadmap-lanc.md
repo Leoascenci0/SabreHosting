@@ -35,7 +35,7 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
   *Confirmação:* teste gera a instância numa pasta falsa; conferência manual no Prism real. **[P: teste no PC]**
   *Depende de:* lanc-1.1, cart-1.3 · D1 e D5 decididas (loader NeoForge)
 
-- [ ] **1.3 — Botão Jogar abre o jogo já conectado**
+- [x] **1.3 — Botão Jogar abre o jogo já conectado** (PR #206, 31/10/2026; código+teste; **[P: conferir no PC com Prism real]**; ligação em depsReais = lancmel-2.2)
   *O que fazer:* chamar o Prism pela linha de comando para abrir a instância do grupo e entrar direto no endereço do
   proxy; se o Prism estiver aberto, reaproveitar.
   *Arquivo:* `packages/nucleo/src/launcher/abrir.ts`, `apps/desktop/src/telas/inicio.*`
@@ -43,7 +43,7 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
   *Confirmação:* teste com executável falso confere os argumentos; no PC, o jogo abre no servidor. **[P: teste no PC]**
   *Depende de:* lanc-1.2, app-1.2, rede-2.1
 
-- [ ] **1.4 — Mods do grupo iguais para todos**
+- [x] **1.4 — Mods do grupo iguais para todos** (PR #210, 31/10/2026; cartório + núcleo; a tela "Mods do grupo" e a ligação no app = lancmel-2.1)
   *O que fazer:* lista de mods do grupo (nome, versão, hash) guardada no cartório; o SabreHosting baixa do Modrinth com hash
   conferido e coloca na instância e no servidor (mods Fabric rodam pelo Sinytra Connector, D5).
   *Arquivo:* `packages/nucleo/src/launcher/mods.ts`

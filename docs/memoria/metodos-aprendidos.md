@@ -36,6 +36,12 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 | rede-2.3 | script limbo | M3 | ~120 | ~170 (+~200 teste) | não | #62 |
 | basemel-1.4 | checagem do verificador | M3 | ~30 | ~40 (+~50 teste) | não | #65 |
 | bkp-2.2 | restauração | M1+M7 | ~120 | ~230 (+~300 teste) | não | #64 |
+| lanc-1.3 | abrir Prism por linha de comando | M1+M7 | ~100–150 | ~120 (com teste) | não | #206 |
+| app-1.3a | parser do convite + cofre | M7+M6 | ~220 | ~330 | não | #207 |
+| syncmel-1.12 | sobras do servir/espalhar | M4+M7 | ~70 (+~90 teste) | ~176 no total | não | #209 |
+| lanc-1.4 | mods do grupo (cartório+núcleo) | M1+M7 | ~150–200 | ~690 com teste | não | #210 |
+| app-1.3b | assistente de primeira vez | M5+M1 | ~250 | ~1100 (HTML/E2E/testes) | não; estourou 4x: tela+segredo+UAC subestimados | #211 |
+| sync-2.2 | alcançar a versão mais nova | M1+M3 | ~160 (+~220 teste) | ~650 | não | #212 |
 
 ## Lições
 - **L-01** Item de trava/tempo (renovação, prazo, parada) precisa da CONTA de tempo no briefing: prazo do cartório, margem

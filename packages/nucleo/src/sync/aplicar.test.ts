@@ -280,6 +280,24 @@ describe("aplicarDelta", () => {
     expect(hashesDoMundo(c.mundo)).toEqual(hashesDoMundo(c.remoto));
   });
 
+  it("a rede é consultada de propósito ANTES do 1º rename (host e trava), nunca entre os renames (1.12 b)", async () => {
+    const c = await cenario();
+    const hospedaAgora = vi.fn(async () => false);
+    const temAtualizacao = vi.fn(async () => true);
+    let redeAntes = 0;
+    await aplicarDelta({
+      ...c.o,
+      hospedaAgora,
+      temAtualizacao,
+      temAtualizacaoLocal: async () => true,
+      aposPrimeiroRename: () => {
+        redeAntes = hospedaAgora.mock.calls.length;
+      },
+    });
+    expect(redeAntes).toBeGreaterThan(0); // fora do host confirmado na rede antes de mexer no mundo
+    expect(hospedaAgora.mock.calls.length).toBe(redeAntes); // e nenhuma consulta depois
+  });
+
   it("trava local perdida entre os renames: M não entra e N volta (1.9a)", async () => {
     const c = await cenario();
     await expect(aplicarDelta({ ...c.o, temAtualizacaoLocal: async () => false })).rejects.toThrow(

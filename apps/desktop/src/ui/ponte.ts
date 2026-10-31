@@ -4,10 +4,11 @@ export type MotivoSemCartorio = "rede" | "servidor" | "acesso";
 export type EstadoInicio =
   | { tipo: "carregando" }
   | { tipo: "sem-cartorio"; motivo: MotivoSemCartorio }
-  | { tipo: "ninguem" }
+  /** `atualizando`: percentual (0–100) do mundo sendo atualizado neste PC; Hospedar fica fechado, Jogar não. */
+  | { tipo: "ninguem"; atualizando?: number }
   /** Servidor de uma sessão anterior do app ainda vivo neste PC, sem sair sozinho. */
   | { tipo: "orfao" }
-  | { tipo: "outro"; nomePc: string; endereco: string }
+  | { tipo: "outro"; nomePc: string; endereco: string; atualizando?: number }
   | { tipo: "eu"; endereco: string; parando?: boolean };
 
 export type CampoComErro =
@@ -74,7 +75,31 @@ export type OpcoesDaVersao =
   | { ok: true; neoforge: boolean; fabricForge: boolean; texto: string }
   | { ok: false; mensagem: string };
 
+export type EstadoBoasVindas =
+  | { aberto: false }
+  | {
+      aberto: true;
+      passo: "convite" | "eula" | "pasta";
+      grupo?: { nome: string; endereco?: string };
+      pastaPadrao: string;
+    };
+export type ConviteConferido =
+  { ok: true; grupo: string; venceEm: number } | { ok: false; mensagem: string };
+export type EntradaNoGrupo =
+  { ok: true; grupo: string; endereco?: string } | { ok: false; mensagem: string };
+
 export interface PonteSabre {
+  boasVindas: {
+    estado(): Promise<EstadoBoasVindas>;
+    conferirConvite(texto: string): Promise<ConviteConferido>;
+    entrar(): Promise<EntradaNoGrupo>;
+    eula(): Promise<{ texto: string; link: string }>;
+    /** Abre o contrato da Mojang no navegador; o endereço é fixo no main. */
+    abrirEula(): Promise<void>;
+    aceitarEula(aceito: boolean): Promise<Resultado>;
+    escolherPasta(): Promise<string | undefined>;
+    concluir(pasta: string): Promise<Resultado>;
+  };
   versao(): Promise<string>;
   abrirComWindows: {
     ler(): Promise<boolean>;
@@ -108,7 +133,7 @@ export interface PonteSabre {
   };
   inicio: {
     estado(): Promise<EstadoInicio>;
-    jogar(): Promise<{ copiado: boolean; endereco: string }>;
+    jogar(): Promise<{ copiado: boolean; endereco: string; aberto?: boolean; aviso?: string }>;
     hospedar(): Promise<Resultado>;
     parar(): Promise<Resultado>;
     /** Avisa quando o estado mudou por conta própria (servidor caiu, vez de hospedar perdida). */

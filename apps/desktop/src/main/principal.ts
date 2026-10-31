@@ -31,11 +31,13 @@ import {
   ipDaRedePrivada,
   pastaDaVitrine,
   type ServidorDeArquivos,
+  religarAteLigar,
 } from "./servir-arquivos.js";
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { backupParado, depsBackupsReais } from "./deps-backups.js";
 import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
+import { registrarBoasVindas } from "./boas-vindas-app.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
@@ -110,7 +112,11 @@ async function sairDoApp(perguntar: boolean): Promise<void> {
     if (r.falha !== undefined) await avisarFalhaSair(r.falha);
     return;
   }
-  await servidorArquivosApp?.fechar().catch(() => undefined); // para de servir ao sair
+  pararRelogioRede?.(); // o relógio de 60 s não pode religar o servidor depois de fechado
+  pararRelogioRede = undefined;
+  const servindo = servidorArquivosApp;
+  servidorArquivosApp = undefined;
+  await servindo?.fechar().catch(() => undefined); // para de servir ao sair
   podeSair = true;
   saindo = true;
   app.quit();
@@ -296,6 +302,9 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
 }
 const restaurando = (): boolean => backupsApp?.restaurando() ?? false;
 const trocandoVersao = (): boolean => versaoApp?.trocando() ?? false;
+/** Percentual da atualização do mundo em curso (sync-2.2); `undefined` = nenhuma. */
+let atualizandoMundo: number | undefined;
+const atualizando = (): number | undefined => atualizandoMundo;
 
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1")
@@ -303,6 +312,7 @@ async function criarInicioDoApp(): Promise<Inicio> {
       ...depsReais(process.env, (t) => clipboard.writeText(t)),
       restaurando,
       trocandoVersao,
+      atualizando,
       aoServidor: (s) => agendaApp?.observar(s),
     });
   const { criarDepsE2E } = await import("./fake-e2e.js");
@@ -333,6 +343,7 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
 
 const RELER_REDE_MS = 60_000;
 let servidorArquivosApp: ServidorDeArquivos | undefined;
+let pararRelogioRede: (() => void) | undefined;
 /** Disparo da atualização do mundo (relógio de 10 min, arranque e depois de cada backup bom). */
 let disparoEspalhar: (() => Promise<void>) | undefined;
 
@@ -360,12 +371,7 @@ async function ligarServidorDeArquivosDoApp(): Promise<void> {
   const servidor = servidorArquivosApp;
   if (await servidor.tentarLigar()) return;
   // Túnel que sobe depois do arranque: relê o IP até ligar (um relógio só; o aviso de "sem rede" sai uma vez).
-  const relogio = setInterval(() => {
-    void servidor.tentarLigar().then((ligou) => {
-      if (ligou) clearInterval(relogio);
-    });
-  }, RELER_REDE_MS);
-  relogio.unref();
+  pararRelogioRede = religarAteLigar(servidor, RELER_REDE_MS);
 }
 
 /** Importar mundo (piloto-1.1c): seletor só de .zip; o caminho escolhido fica aqui no main, nunca vem da janela. */
@@ -582,6 +588,10 @@ if (!app.requestSingleInstanceLock()) {
         env: process.env,
         inicio: inicioApp,
         aoAvisar: (texto) => console.warn(texto),
+        aoProgresso: (p) => {
+          atualizandoMundo = p;
+          inicioApp?.mudou();
+        },
         limiteBytesPorSeg: () =>
           bytesPorSegundo(lerPreferencias(app.getPath("userData")).limiteBandaMBs),
       });
@@ -599,6 +609,13 @@ if (!app.requestSingleInstanceLock()) {
       versaoApp,
       await criarImportacaoDoApp(inicioApp),
     );
+    await registrarBoasVindas({
+      dados: app.getPath("userData"),
+      janela: () => janela,
+      permitir: (evento) => {
+        if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
+      },
+    });
     bandeja = criarBandeja();
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {

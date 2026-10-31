@@ -51,7 +51,7 @@ describe("config do grupo: migração 8 → 9", () => {
     fechar.push(() => {
       if (banco.isOpen) banco.close();
     });
-    expect(banco.prepare("SELECT versao FROM esquema").get()).toEqual({ versao: 9 });
+    expect(banco.prepare("SELECT versao FROM esquema").get()).toEqual({ versao: 10 });
     expect(banco.prepare("SELECT dono_pc_id, epoca FROM trava").get()).toEqual({
       dono_pc_id: 1,
       epoca: 3,

@@ -25,10 +25,14 @@ export interface DepsInicio {
   /** Endereço para os amigos entrarem. Vazio: ainda não configurado. */
   endereco: string;
   copiar(texto: string): void;
+  /** Abre o jogo já no servidor (Prism, lanc-1.3). Ausente: o botão Jogar só copia o endereço. */
+  abrirJogo?(endereco: string): Promise<{ ok: true } | { ok: false; mensagem: string }>;
   /** Há um backup sendo restaurado? Hospedar espera (regra de ouro 2: nunca servidor com o mundo sendo trocado). */
   restaurando?(): boolean;
   /** Troca de versão em andamento (backup antes de gravar): o servidor não pode subir no meio. */
   trocandoVersao?(): boolean;
+  /** Percentual do mundo sendo atualizado neste PC (sync-2.2); `undefined` = não está atualizando. */
+  atualizando?(): number | undefined;
   /** Servidor deste PC criado (ainda pode estar subindo): quem agenda o backup passa a ouvir o estado dele. */
   aoServidor?(servidor: ServidorAtivo): void;
 }
@@ -49,6 +53,8 @@ export const RESTAURANDO =
   "Um backup está sendo restaurado. Espere terminar para hospedar o servidor.";
 export const TROCANDO_VERSAO =
   "A versão do Minecraft está sendo trocada (com um backup antes). Espere terminar para hospedar o servidor.";
+export const ATUALIZANDO =
+  "O seu mundo está sendo atualizado para a versão mais nova. Espere terminar para hospedar o servidor.";
 const GENERICA = "Não consegui fazer isso agora. Tente de novo em instantes.";
 
 /** Tempos de espera da liberação da trava e do servidor órfão; só os testes mexem. */
@@ -148,6 +154,33 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     return paradaEmCurso;
   }
 
+  async function estadoBase(): Promise<EstadoInicio> {
+    if (ativo) return { tipo: "eu", endereco: deps.endereco, ...(parando ? { parando } : {}) };
+    try {
+      const { dono } = await deps.lerTrava();
+      const outro = dono
+        ? { tipo: "outro" as const, nomePc: dono.nome, endereco: deps.endereco }
+        : undefined;
+      if (ocupado) return outro ?? { tipo: "ninguem" };
+      if (dono && outro && !(await souEu(dono.id))) return outro;
+      // Trava livre, ou ainda em nome deste PC (app reaberto: o cartório aceita o `pegar` de novo). Hospedar só
+      // sem servidor desta sessão e sem órfão na pasta (regra de ouro 1).
+      if (!(await temOrfao())) {
+        orfaoDesde = undefined;
+        return outro && (ocupado || ativo) ? outro : { tipo: "ninguem" };
+      }
+      semDono = !dono;
+      orfaoDesde ??= performance.now();
+      // Órfão de app sem vigia (versão antiga) que não sai no prazo: volta ao "servidor neste PC" (trava minha)
+      // ou diz o que fazer (trava livre); nunca oferece Hospedar.
+      if (!esperandoOrfao()) return outro ?? { tipo: "orfao" };
+      reconferirOrfao();
+      return { tipo: "eu", endereco: deps.endereco, parando: true };
+    } catch (e) {
+      return { tipo: "sem-cartorio", motivo: motivoDe(e) };
+    }
+  }
+
   return {
     parar,
 
@@ -180,41 +213,38 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     },
 
     async estado(): Promise<EstadoInicio> {
-      if (ativo) return { tipo: "eu", endereco: deps.endereco, ...(parando ? { parando } : {}) };
-      try {
-        const { dono } = await deps.lerTrava();
-        const outro = dono
-          ? { tipo: "outro" as const, nomePc: dono.nome, endereco: deps.endereco }
-          : undefined;
-        if (ocupado) return outro ?? { tipo: "ninguem" };
-        if (dono && outro && !(await souEu(dono.id))) return outro;
-        // Trava livre, ou ainda em nome deste PC (app reaberto: o cartório aceita o `pegar` de novo). Hospedar só
-        // sem servidor desta sessão e sem órfão na pasta (regra de ouro 1).
-        if (!(await temOrfao())) {
-          orfaoDesde = undefined;
-          return outro && (ocupado || ativo) ? outro : { tipo: "ninguem" };
-        }
-        semDono = !dono;
-        orfaoDesde ??= performance.now();
-        // Órfão de app sem vigia (versão antiga) que não sai no prazo: volta ao "servidor neste PC" (trava minha)
-        // ou diz o que fazer (trava livre); nunca oferece Hospedar.
-        if (!esperandoOrfao()) return outro ?? { tipo: "orfao" };
-        reconferirOrfao();
-        return { tipo: "eu", endereco: deps.endereco, parando: true };
-      } catch (e) {
-        return { tipo: "sem-cartorio", motivo: motivoDe(e) };
-      }
+      const e = await estadoBase();
+      const pct = deps.atualizando?.();
+      return pct !== undefined && (e.tipo === "ninguem" || e.tipo === "outro")
+        ? { ...e, atualizando: pct }
+        : e;
     },
 
-    async jogar(): Promise<{ copiado: boolean; endereco: string }> {
+    /** O app avisa a tela quando o percentual da atualização muda (o estado não tem relógio próprio). */
+    mudou: avisar,
+
+    async jogar(): Promise<{
+      copiado: boolean;
+      endereco: string;
+      aberto?: boolean;
+      aviso?: string;
+    }> {
       if (!deps.endereco) throw new Error("O endereço do servidor ainda não foi configurado.");
-      deps.copiar(deps.endereco);
-      return { copiado: true, endereco: deps.endereco };
+      deps.copiar(deps.endereco); // sempre copia: serve de reserva se o Prism não abrir
+      if (!deps.abrirJogo) return { copiado: true, endereco: deps.endereco };
+      const r = await deps.abrirJogo(deps.endereco).catch(() => ({
+        ok: false as const,
+        mensagem: GENERICA,
+      }));
+      return r.ok
+        ? { copiado: true, endereco: deps.endereco, aberto: true }
+        : { copiado: true, endereco: deps.endereco, aberto: false, aviso: r.mensagem };
     },
 
     async hospedar(): Promise<Resultado> {
       if (deps.restaurando?.()) return { ok: false, mensagem: RESTAURANDO };
       if (deps.trocandoVersao?.()) return { ok: false, mensagem: TROCANDO_VERSAO };
+      if (deps.atualizando?.() !== undefined) return { ok: false, mensagem: ATUALIZANDO };
       if (ativo || ocupado)
         return { ok: false, mensagem: "O servidor já está subindo ou rodando." };
       ocupado = true;

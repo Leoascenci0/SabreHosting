@@ -177,7 +177,7 @@
           <p class="dica" id="cfg-banda-dica">
             A velocidade máxima, em megabytes por segundo, com que este PC baixa o mundo novo dos
             outros PCs (padrão: 10). Menor deixa a internet livre para jogar; maior atualiza mais
-            rápido. Vale na próxima atualização.
+            rápido. Vale já a partir do próximo arquivo baixado.
           </p>
           <label class="opcao"
             ><input type="checkbox" id="cfg-historico" aria-describedby="cfg-historico-dica" />
@@ -249,9 +249,69 @@
         </div>
       </form>
     </main>
+    <main class="cartao" id="tela-boas-vindas" aria-labelledby="titulo-bv" aria-busy="false" hidden>
+      <h2 id="titulo-bv">Bem-vindo ao SabreHosting</h2>
+      <p class="detalhe" id="bv-passo" role="status"></p>
+      <div class="config" id="bv-convite">
+        <label for="bv-texto">Cole aqui o convite que você recebeu</label>
+        <input type="text" id="bv-texto" autocomplete="off" spellcheck="false" />
+        <p class="dica">
+          É o texto que o administrador do grupo te enviou. Ele vale por tempo limitado.
+        </p>
+        <div class="acoes">
+          <button type="button" class="principal" id="bv-conferir">Conferir convite</button>
+        </div>
+        <div
+          class="confirmacao"
+          id="bv-entrar-caixa"
+          role="alertdialog"
+          aria-labelledby="bv-entrar-pergunta"
+          hidden
+        >
+          <p id="bv-entrar-pergunta"></p>
+          <p class="detalhe">
+            O Windows vai pedir permissão de administrador para criar a conexão privada com o grupo.
+            Aceite o pedido.
+          </p>
+          <div class="acoes">
+            <button type="button" class="principal" id="bv-entrar">Entrar no grupo</button>
+          </div>
+        </div>
+      </div>
+      <div class="config" id="bv-eula" hidden>
+        <p id="bv-eula-texto"></p>
+        <button type="button" class="secundario" id="bv-eula-abrir">
+          Ler o contrato no navegador
+        </button>
+        <label class="opcao" for="bv-eula-aceito">
+          <input type="checkbox" id="bv-eula-aceito" />
+          Li e aceito o contrato (EULA) da Mojang
+        </label>
+        <div class="acoes">
+          <button type="button" class="principal" id="bv-eula-continuar" disabled>Continuar</button>
+        </div>
+      </div>
+      <div class="config" id="bv-pasta" hidden>
+        <label for="bv-pasta-caminho">Pasta do SabreHosting</label>
+        <div class="linha-pasta">
+          <input type="text" id="bv-pasta-caminho" autocomplete="off" spellcheck="false" />
+          <button type="button" class="secundario" id="bv-pasta-escolher">Escolher…</button>
+        </div>
+        <p class="dica">
+          O servidor e os mundos ficam nesta pasta (em “servidor” e “mundos”). Dá para deixar a
+          sugerida.
+        </p>
+        <div class="acoes">
+          <button type="button" class="principal" id="bv-concluir">Concluir</button>
+        </div>
+      </div>
+      <p class="detalhe" id="bv-status" role="status" hidden></p>
+      <p class="erro" id="bv-erro" role="alert" hidden></p>
+    </main>
     <script type="module" src="tela.js"></script>
     <script type="module" src="configuracoes.js"></script>
     <script type="module" src="backups.js"></script>
     <script type="module" src="importar.js"></script>
+    <script type="module" src="boas-vindas.js"></script>
   </body>
 </html>

@@ -12,7 +12,10 @@ import { hashDoArquivo } from "../integridade/hash.js";
  */
 const PASTA_DA_VITRINE = /^v-\d+-\d+$/;
 
-export function criarVitrine(pasta: string) {
+/** Prazo de `fechar()` para esperar uma publicação longa: o Windows não espera o app ao desligar. */
+const PRAZO_FECHAR_MS = 3_000;
+
+export function criarVitrine(pasta: string, opcoes: { prazoFecharMs?: number } = {}) {
   let atual: { dir: string; indice: Map<string, string> } | undefined;
   let emCurso = false;
   let andamento: Promise<unknown> = Promise.resolve();
@@ -70,7 +73,15 @@ export function criarVitrine(pasta: string) {
     /** Para de servir e apaga a cópia aberta; espera a publicação em curso para não deixar pasta `v-*` órfã. */
     async fechar(): Promise<void> {
       fechada = true; // antes de qualquer await: nenhuma publicação nova começa
-      await andamento.catch(() => undefined);
+      // Publicação travada não segura o desligar: a pasta v-* que sobrar é limpa no próximo arranque.
+      let prazo: NodeJS.Timeout | undefined;
+      await Promise.race([
+        andamento.catch(() => undefined),
+        new Promise<void>(
+          (ok) => (prazo = setTimeout(ok, opcoes.prazoFecharMs ?? PRAZO_FECHAR_MS)),
+        ),
+      ]);
+      clearTimeout(prazo);
       const velha = atual;
       atual = undefined;
       if (velha) await rm(velha.dir, { recursive: true, force: true }).catch(() => undefined);
