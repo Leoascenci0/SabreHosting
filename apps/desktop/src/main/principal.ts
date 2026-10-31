@@ -10,10 +10,16 @@ import {
   Tray,
 } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  listarVersoes,
+  opcoesDaVersao,
+  planoDaVersao,
+} from "@sabrehosting/nucleo/servidor/versoes";
 import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
+import { analisarZip, importarNoCartorio } from "@sabrehosting/nucleo/importar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAvisoHistorico } from "./aviso-historico.js";
 import { criarRotacaoBackups, type RotacaoBackups } from "./rotacao-backups.js";
@@ -22,6 +28,8 @@ import { criarBackups, type Backups } from "./backups.js";
 import { depsBackupsReais } from "./deps-backups.js";
 import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
+import { criarImportacao, type Importacao } from "./importar.js";
+import { criarVersao, type Versao } from "./versao.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
@@ -305,6 +313,43 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
   return criarBackups(depsBackupsE2E(servidorRodando));
 }
 
+/** Importar mundo (piloto-1.1c): seletor só de .zip; o caminho escolhido fica aqui no main, nunca vem da janela. */
+async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
+  const servidorRodando = (): boolean => inicio.ativo();
+  if (process.env["SABRE_E2E"] === "1") {
+    const { depsImportacaoE2E } = await import("./fake-e2e.js");
+    return criarImportacao(depsImportacaoE2E(servidorRodando, restaurando));
+  }
+  const exigir = clienteDoAmbiente(process.env);
+  return criarImportacao({
+    escolherArquivo: async () => {
+      const opcoes = {
+        title: "Escolha o .zip do mundo",
+        filters: [{ name: "Mundo em .zip", extensions: ["zip"] }],
+        properties: ["openFile"] as "openFile"[],
+      };
+      const r = janela
+        ? await dialog.showOpenDialog(janela, opcoes)
+        : await dialog.showOpenDialog(opcoes);
+      return r.canceled ? undefined : r.filePaths[0];
+    },
+    analisar: (zip) => analisarZip(zip),
+    situacao: async () => {
+      const cliente = exigir();
+      const [nova, eu] = await Promise.all([cliente.maisNova(), cliente.eu()]);
+      return { versaoNoGrupo: nova?.numero ?? null, dono: eu.dono };
+    },
+    importar: async (zip, aceitarVersaoNova) => {
+      // Pasta de trabalho do app (não a do mundo): a importação cria e apaga só a própria temporária dentro dela.
+      const pastaDeTrabalho = join(app.getPath("userData"), "importar");
+      mkdirSync(pastaDeTrabalho, { recursive: true });
+      return importarNoCartorio(zip, { cliente: exigir(), pastaDeTrabalho, aceitarVersaoNova });
+    },
+    servidorRodando,
+    restaurando,
+  });
+}
+
 const aplicarAbrirComWindows = (ligado: boolean): void => {
   // Só Windows e macOS têm essa função; no resto o estado guardado basta.
   app.setLoginItemSettings({ openAtLogin: ligado, args: ligado ? [INICIO_OCULTO] : [] });
@@ -323,7 +368,30 @@ async function criarGrupoDoApp(): Promise<Grupo> {
   return criarGrupo(depsGrupoE2E());
 }
 
-function registrarPonte(inicio: Inicio, backups: Backups, grupo: Grupo): void {
+async function criarVersaoDoApp(servidorRodando: () => boolean): Promise<Versao> {
+  if (process.env["SABRE_E2E"] !== "1") {
+    const exigir = clienteDoAmbiente(process.env);
+    return criarVersao({
+      eu: async () => exigir().eu(),
+      lerAtual: async () => (await exigir().lerConfigGrupo()).versaoMinecraft,
+      listar: async () => (await listarVersoes()).map((v) => v.id),
+      opcoes: (v) => opcoesDaVersao(v),
+      sha1Do: async (v) => (await planoDaVersao(v)).jar.hashEsperado.valor,
+      gravar: async (v, sha1) => void (await exigir().gravarConfigGrupo(v, sha1)),
+      servidorRodando,
+    });
+  }
+  const { depsVersaoE2E } = await import("./fake-e2e.js");
+  return criarVersao(depsVersaoE2E(servidorRodando));
+}
+
+function registrarPonte(
+  inicio: Inicio,
+  backups: Backups,
+  grupo: Grupo,
+  versao: Versao,
+  importacao: Importacao,
+): void {
   const configuracoes = criarConfiguracoes({
     pasta: app.getPath("userData"),
     aplicarAbrirComWindows,
@@ -356,10 +424,27 @@ function registrarPonte(inicio: Inicio, backups: Backups, grupo: Grupo): void {
     permitir(evento);
     return backups.restaurar(nome); // o nome só vale se estiver na lista; a cola confere
   });
+  ipcMain.handle(
+    "sabre:importar:escolherZip",
+    (evento) => (permitir(evento), importacao.escolher()),
+  );
+  ipcMain.handle("sabre:importar:executar", (evento, confirmado: unknown) => {
+    permitir(evento);
+    return importacao.executar(confirmado); // só `true` vale; o arquivo é o que o seletor do main deu
+  });
   ipcMain.handle("sabre:grupo:estado", (evento) => (permitir(evento), grupo.estado()));
   ipcMain.handle("sabre:grupo:tirar", (evento, id: unknown) => {
     permitir(evento);
     return grupo.tirar(id); // o main revalida dono, lista e "não é o dono" antes de revogar
+  });
+  ipcMain.handle("sabre:versoes:estado", (evento) => (permitir(evento), versao.estado()));
+  ipcMain.handle("sabre:versoes:opcoes", (evento, v: unknown) => {
+    permitir(evento);
+    return versao.opcoes(v); // o main confere dono e se a versão está na lista oficial
+  });
+  ipcMain.handle("sabre:versoes:gravar", (evento, v: unknown) => {
+    permitir(evento);
+    return versao.gravar(v); // dono, servidor parado e lista oficial são revalidados aqui
   });
   ipcMain.handle("sabre:config:ler", (evento) => (permitir(evento), configuracoes.ler()));
   ipcMain.handle("sabre:config:salvar", (evento, valor: unknown) => {
@@ -417,7 +502,14 @@ if (!app.requestSingleInstanceLock()) {
     agendaApp = await criarAgendaDoApp();
     inicioApp = await criarInicioDoApp();
     backupsApp = await criarBackupsDoApp(inicioApp);
-    registrarPonte(inicioApp, backupsApp, await criarGrupoDoApp());
+    const inicioPronto = inicioApp;
+    registrarPonte(
+      inicioApp,
+      backupsApp,
+      await criarGrupoDoApp(),
+      await criarVersaoDoApp(() => inicioPronto.ativo()),
+      await criarImportacaoDoApp(inicioApp),
+    );
     bandeja = criarBandeja();
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {

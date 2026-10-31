@@ -67,3 +67,11 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* teste: PC sem hospedar atualiza com o host ativo sem tocar no mundo vivo (A) ou fica em espera clara (B).
   *Depende de:* decisão do Eliel e sync-2.1a (PR #173).
   *Origem:* sync-2.1a · PR #173 · filha
+
+- [ ] **1.9 — Ligar o espalhar ao app (sync-2.1b)**
+  *O que fazer:* montar as fontes com `quemTem`/`PORTA_ESPALHAR` (filtrando `ip === null`, senão um PC recém-chegado derruba a lista toda no `escolherFontes`), decidir se a nuvem entra como fonte (hoje serve só o pacote fechado, não arquivo por hash), checar `servidorOrfao` além de `servidorRodando` antes de aplicar, disparar após o backup/versão nova e em segundo plano, e a tela Configurações › Backups › "Limite de banda para atualizar o mundo". Notas do qa do #182: janela de ~20 s de rede entre os dois renames no aplicar (prazo menor); textos do renovador falam em "trava de host"; teste de integração de `/atualizacao`.
+  *Arquivo:* `packages/nucleo/src/sync/espalhar.ts`, `aplicar.ts`, `apps/desktop/src/main/`, `apps/desktop/src/ui/`
+  **Tela no app:** Configurações › Backups › Limite de banda para atualizar o mundo.
+  *Confirmação:* teste com 3 PCs simulados: todos chegam à versão M sem tocar o mundo do host.
+  *Depende de:* cartmel-2.4 ✅ (PR #187), syncmel-1.8b ✅ (PR #182), piloto-1.1c ✅.
+  *Origem:* sync-2.1b · onda 24 (não coube: 7º item)

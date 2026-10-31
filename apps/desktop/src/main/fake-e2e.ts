@@ -13,6 +13,8 @@ import type { RespostaTrava } from "@sabrehosting/nucleo/cartorio/tipos";
 import { depsBackups } from "./deps-backups.js";
 import type { DepsBackups } from "./backups.js";
 import type { DepsGrupo } from "./grupo.js";
+import type { DepsImportacao } from "./importar.js";
+import type { DepsVersao } from "./versao.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 // "dono-eu*": app reaberto com a trava ainda em nome deste PC, sem servidor desta sessão (com ou sem órfão vivo).
@@ -188,5 +190,56 @@ export function depsGrupoE2E(): DepsGrupo {
       revogados.push(id);
       pcs = pcs.filter((p) => p.id !== id);
     },
+  };
+}
+
+/**
+ * Importar do E2E: o seletor "escolhe" um zip inventado e o cartório é falso. `SABRE_E2E_VERSAO_GRUPO=<n>` faz o
+ * grupo já ter mundo; `SABRE_E2E_DONO=1` faz este PC ser o dono. As importações ficam em
+ * `__sabreE2EImportar.chamadas` (zip e se aceitou virar a versão nova) para o teste conferir.
+ */
+export function depsImportacaoE2E(
+  servidorRodando: () => boolean,
+  restaurando: () => boolean,
+): DepsImportacao {
+  const versaoNoGrupo = Number(process.env["SABRE_E2E_VERSAO_GRUPO"] ?? "") || null;
+  const chamadas: Array<{ zip: string; aceitar: boolean }> = [];
+  (globalThis as Record<string, unknown>)["__sabreE2EImportar"] = { chamadas };
+  return {
+    escolherArquivo: async () => join(tmpdir(), "mundo-da-hospedagem.zip"),
+    analisar: async () => ({
+      arquivos: 1234,
+      versaoMinecraft: process.env["SABRE_E2E_VERSAO_MC"] ?? "1.21.1",
+      indicios: { plugins: true, mods: false },
+    }),
+    situacao: async () => ({ versaoNoGrupo, dono: process.env["SABRE_E2E_DONO"] === "1" }),
+    importar: async (zip, aceitar) => {
+      chamadas.push({ zip, aceitar });
+      await new Promise((ok) => setTimeout(ok, 300)); // dá tempo de a tela mostrar o progresso
+      return { versao: (versaoNoGrupo ?? 0) + 1 };
+    },
+    servidorRodando,
+    restaurando,
+  };
+}
+
+/** Versão do grupo falsa para o E2E: só o dono (SABRE_E2E_DONO=1) vê a área; gravações ficam em `__sabreE2EVersao`. */
+export function depsVersaoE2E(servidorRodando: () => boolean): DepsVersao {
+  const souDono = process.env["SABRE_E2E_DONO"] === "1";
+  let atual = "1.21.1";
+  const gravados: string[] = [];
+  (globalThis as Record<string, unknown>)["__sabreE2EVersao"] = { gravados };
+  return {
+    eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
+    lerAtual: async () => atual,
+    listar: async () => ["1.21.1", "1.20.4", "1.12.2"],
+    opcoes: async (v) => ({
+      neoforge: v !== "1.12.2",
+      fabricForge: v === "1.21.1",
+      consultou: true,
+    }),
+    sha1Do: async () => "b".repeat(40),
+    gravar: async (v) => void (gravados.push(v), (atual = v)),
+    servidorRodando,
   };
 }

@@ -70,6 +70,14 @@ export interface EstadoTrava {
   renovarMs: number;
 }
 
+/** `GET/PUT /grupo/config`: o que todos os PCs do grupo usam igual (hostmel-3.1b). */
+export interface ConfigGrupo {
+  versaoMinecraft: string;
+  /** sha1 do jar oficial da versão; vazio enquanto ninguém escolheu (padrão do cartório). */
+  sha1Manifesto: string | null;
+  atualizadoEm: number;
+}
+
 /** `GET /grupo`. */
 export interface Grupo {
   nome: string;
@@ -124,6 +132,63 @@ function texto(o: Campos, campo: string): string {
 export function validarPc(v: unknown): Pc {
   const o = objeto(v, "PC");
   return { id: inteiro(o, "id", 1), nome: texto(o, "nome") };
+}
+
+/** Versão registrada no cartório (`GET /versoes/mais-nova`). */
+export interface VersaoRegistrada {
+  numero: number;
+  epoca: number;
+  pcId: number;
+  manifestoSha256: string;
+  arquivos: number;
+  bytes: number;
+  criadaEm: number;
+}
+
+/** PC com a versão e o IP dele na rede privada (`null` até confirmar a entrada). */
+export interface PcComCopia extends Pc {
+  ip: string | null;
+}
+
+/** `GET /versoes/:n/copias`; `nuvem` diz só que a nuvem guarda a versão (não é fonte do espalhar ainda). */
+export interface Copias {
+  numero: number;
+  nuvem: boolean;
+  pcs: PcComCopia[];
+}
+
+export function validarMaisNova(v: unknown): VersaoRegistrada | null {
+  const o = objeto(v, "versão mais nova");
+  if (o.versao === null) return null;
+  const x = objeto(o.versao, "versão");
+  const sha = texto(x, "manifestoSha256");
+  if (!/^[0-9a-f]{64}$/.test(sha))
+    throw new Error("Resposta inválida do cartório: manifestoSha256.");
+  return {
+    numero: inteiro(x, "numero", 1),
+    epoca: inteiro(x, "epoca"),
+    pcId: inteiro(x, "pcId", 1),
+    manifestoSha256: sha,
+    arquivos: inteiro(x, "arquivos"),
+    bytes: inteiro(x, "bytes"),
+    criadaEm: inteiro(x, "criadaEm"),
+  };
+}
+
+export function validarCopias(v: unknown): Copias {
+  const o = objeto(v, "cópias");
+  if (typeof o.nuvem !== "boolean" || !Array.isArray(o.pcs))
+    throw new Error("Resposta inválida do cartório: cópias.");
+  return {
+    numero: inteiro(o, "numero", 1),
+    nuvem: o.nuvem,
+    pcs: o.pcs.map((p) => {
+      const c = objeto(p, "PC");
+      if (c.ip !== null && typeof c.ip !== "string")
+        throw new Error("Resposta inválida do cartório: ip.");
+      return { ...validarPc(c), ip: c.ip };
+    }),
+  };
 }
 
 export function validarEu(v: unknown): Eu {
@@ -199,6 +264,18 @@ export function validarGrupo(v: unknown): Grupo {
   return { nome: texto(o, "nome"), endereco_jogar: texto(o, "endereco_jogar") };
 }
 
+export function validarConfigGrupo(v: unknown): ConfigGrupo {
+  const o = objeto(v, "configuração do grupo");
+  const sha1 = o.sha1Manifesto;
+  if (sha1 !== null && !(typeof sha1 === "string" && /^[0-9a-f]{40}$/.test(sha1)))
+    throw new Error("Resposta inválida do cartório: sha1Manifesto.");
+  return {
+    versaoMinecraft: texto(o, "versaoMinecraft"),
+    sha1Manifesto: sha1,
+    atualizadoEm: inteiro(o, "atualizadoEm"),
+  };
+}
+
 export function validarConviteCriado(v: unknown): ConviteCriado {
   const o = objeto(v, "convite");
   return { convite: texto(o, "convite"), expiraEm: inteiro(o, "expiraEm") };
@@ -208,4 +285,21 @@ export function validarConviteCriado(v: unknown): ConviteCriado {
 export function validarEntradaNoGrupo(v: unknown): EntradaNoGrupo {
   const o = objeto(v, "entrada no grupo");
   return { token: texto(o, "token"), pacote: validarPacote(o.pacote) };
+}
+
+/** `201` de `POST /versoes`. */
+export function validarVersaoCriada(v: unknown): number {
+  return inteiro(objeto(v, "versão criada"), "numero", 1);
+}
+
+/** `201` de `PUT /versoes/:n/pacote`: o que a nuvem diz ter guardado. */
+export function validarPacoteGuardado(v: unknown): {
+  versao: number;
+  sha256: string;
+  bytes: number;
+} {
+  const o = objeto(v, "pacote guardado");
+  const sha256 = texto(o, "sha256");
+  if (!/^[0-9a-f]{64}$/.test(sha256)) throw new Error("Resposta inválida do cartório: sha256.");
+  return { versao: inteiro(o, "versao", 1), sha256, bytes: inteiro(o, "bytes") };
 }

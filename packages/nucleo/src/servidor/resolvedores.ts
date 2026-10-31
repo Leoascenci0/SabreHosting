@@ -81,6 +81,8 @@ export function resolverNeoForge(
   versao: string,
   sidecar: string,
   tabela: Readonly<Record<string, string>> = HASHES_NEOFORGE,
+  /** `'forge'` = instalador legado da 1.20.1 (`net.neoforged:forge`, versão `1.20.1-47.1.x`). */
+  artefato: "neoforge" | "forge" = "neoforge",
 ): Alvo {
   if (!/^\d[\w.+-]*$/.test(versao)) throw new Error("Informe a versão do NeoForge (sem padrão).");
   const fixado = Object.hasOwn(tabela, versao) ? tabela[versao] : undefined;
@@ -88,7 +90,7 @@ export function resolverNeoForge(
     throw new Error(
       `O NeoForge ${versao} ainda não tem o hash conferido pelo grupo; não vou baixar.`,
     );
-  const url = `https://maven.neoforged.net/releases/net/neoforged/neoforge/${versao}/neoforge-${versao}-installer.jar`;
+  const url = `https://maven.neoforged.net/releases/net/neoforged/${artefato}/${versao}/${artefato}-${versao}-installer.jar`;
   const lido = alvo(url, "sha1", sidecar.trim().split(/\s+/)[0], "Maven do NeoForge");
   const esperado = alvo(url, "sha1", fixado, "grupo");
   if (lido.hashEsperado.valor !== esperado.hashEsperado.valor)

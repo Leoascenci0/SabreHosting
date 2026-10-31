@@ -131,6 +131,27 @@ button:disabled {
   margin: 0;
 }
 
+/* Importar sem mundo no grupo não substitui nada: contorno neutro. Com mundo no grupo (data-substitui) volta o de perigo. */
+.confirmacao.importar {
+  border-color: var(--cor-borda);
+  text-align: left;
+}
+
+.confirmacao.importar .titulo {
+  font-weight: 600;
+}
+
+.confirmacao.importar[data-substitui] {
+  border-color: var(--cor-erro);
+}
+
+.confirmacao .avisos {
+  margin: 0;
+  padding-left: var(--espaco-4);
+  display: grid;
+  gap: var(--espaco-1);
+}
+
 button.link {
   min-height: 44px;
   border: 0;
@@ -233,7 +254,24 @@ button.link {
   min-width: 0;
 }
 
-.config input:disabled {
+.config select {
+  font: inherit;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 var(--espaco-2);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.config select:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+.config input:disabled,
+.config select:disabled {
   opacity: 0.6;
 }
 

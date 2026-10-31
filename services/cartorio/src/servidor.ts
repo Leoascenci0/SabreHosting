@@ -51,7 +51,15 @@ import {
   renovar,
   soltar,
 } from "./trava.js";
-import { type DadosVersao, informarCopia, maisNova, quemTem, registrarVersao } from "./versoes.js";
+import { type MotivoConfig, gravarConfig, lerConfig } from "./configuracao.js";
+import {
+  type DadosVersao,
+  informarCopia,
+  maisNova,
+  nuvemTem,
+  quemTem,
+  registrarVersao,
+} from "./versoes.js";
 
 export interface OpcoesCartorio {
   banco: Banco;
@@ -109,6 +117,21 @@ const RECUSA_TRAVA: Record<MotivoRecusa, (dono: string) => string> = {
   destino_invalido: () => "O servidor já está neste PC. Escolha outro PC para receber.",
   atualizando: () =>
     "Esse PC está terminando de atualizar a cópia do mundo. Espere a atualização acabar e tente de novo.",
+};
+const SO_DONO_CONFIG = { erro: "Só o dono do grupo muda a versão do Minecraft." };
+const RECUSA_CONFIG: Record<
+  Exclude<MotivoConfig, "nao_e_dono">,
+  { status: number; erro: string }
+> = {
+  invalida: { status: 400, erro: "Versão do Minecraft ou código de conferência inválido." },
+  servidor_no_ar: {
+    status: 409,
+    erro: "O servidor está no ar. Pare o servidor (e faça o backup) antes de trocar a versão.",
+  },
+  atualizando: {
+    status: 409,
+    erro: "Algum PC está atualizando a cópia do mundo. Espere acabar para trocar a versão.",
+  },
 };
 const RECUSA_ATUALIZACAO: Record<MotivoAtualizacao, string> = {
   hospedando:
@@ -292,6 +315,32 @@ export function criarCartorio({
     grupo
       ? { nome: grupo.nome, endereco_jogar: grupo.enderecoJogar }
       : resp.code(503).send(SEM_AJUDANTE),
+  );
+
+  app.get("/grupo/config", { onRequest: soPc }, () => lerConfig(banco));
+  app.put<{ Body: { versaoMinecraft: string; sha1Manifesto: string } }>(
+    "/grupo/config",
+    {
+      onRequest: soPc,
+      schema: {
+        body: {
+          type: "object",
+          required: ["versaoMinecraft", "sha1Manifesto"],
+          additionalProperties: false,
+          properties: {
+            versaoMinecraft: { type: "string", pattern: "^1\\.\\d{1,2}(\\.\\d{1,2})?$" },
+            sha1Manifesto: { type: "string", pattern: "^[0-9a-f]{40}$" },
+          },
+        },
+      },
+    },
+    (req, resp) => {
+      const r = gravarConfig(banco, pcDe(req).id, req.body, agora());
+      if (r.ok) return lerConfig(banco);
+      if (r.motivo === "nao_e_dono") return resp.code(403).send(SO_DONO_CONFIG);
+      const { status, erro } = RECUSA_CONFIG[r.motivo];
+      return resp.code(status).send({ erro });
+    },
   );
 
   app.post<{ Body: { nomePc: string; validadeHoras?: number } }>(
@@ -492,7 +541,11 @@ export function criarCartorio({
       onRequest: soPc,
       schema: { params: { type: "object", required: ["n"], properties: { n: EPOCA } } },
     },
-    (req) => ({ numero: req.params.n, pcs: quemTem(banco, req.params.n) }),
+    (req) => ({
+      numero: req.params.n,
+      nuvem: nuvemTem(banco, req.params.n),
+      pcs: quemTem(banco, req.params.n),
+    }),
   );
 
   if (opcoesArmazem) {

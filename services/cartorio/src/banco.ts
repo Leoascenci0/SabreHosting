@@ -119,6 +119,20 @@ export const MIGRACOES = [
    WHEN NEW.epoca < OLD.epoca BEGIN SELECT RAISE(ABORT, 'A época da atualização nunca desce.'); END;
    CREATE TRIGGER atualizacao_nao_apaga BEFORE DELETE ON atualizacao
    BEGIN SELECT RAISE(ABORT, 'A atualização não se apaga.'); END;`,
+  // Configuração do grupo (hostmel-3.1b): linha única, como a trava. Quem grava (o dono) e quando ficam anotados; o sha1 é
+  // o do jar oficial da versão, conferido pelo núcleo no download. O padrão 1.21.1 mora só aqui.
+  `CREATE TABLE config_grupo (
+     id INTEGER PRIMARY KEY CHECK (id = 1),
+     versao_minecraft TEXT NOT NULL DEFAULT '1.21.1',
+     sha1_manifesto TEXT CHECK (sha1_manifesto IS NULL OR (length(sha1_manifesto) = 40 AND sha1_manifesto NOT GLOB '*[^0-9a-f]*')),
+     dono_pc_id INTEGER REFERENCES pcs(id),
+     atualizado_em INTEGER NOT NULL DEFAULT 0 CHECK (typeof(atualizado_em) = 'integer' AND atualizado_em >= 0)
+   );
+   INSERT INTO config_grupo (id) VALUES (1);
+   CREATE TRIGGER config_grupo_nao_recria BEFORE INSERT ON config_grupo
+   BEGIN SELECT RAISE(ABORT, 'A configuração do grupo é uma linha só e não se recria.'); END;
+   CREATE TRIGGER config_grupo_nao_apaga BEFORE DELETE ON config_grupo
+   BEGIN SELECT RAISE(ABORT, 'A configuração do grupo não se apaga.'); END;`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */
@@ -317,7 +331,7 @@ export function ehDono(banco: Banco, pcId: number): boolean {
   return donoAtual(banco)?.id === pcId;
 }
 
-/** Os PCs do grupo: só os que têm token ativo; nunca devolve token, hash ou IP. */
+/** Os PCs do grupo: só os que têm token ativo; nunca devolve token, hash ou IP (o IP só sai em `quemTem`, para PC autenticado). */
 export function listarPcsAtivos(banco: Banco): Array<Pc & { dono: boolean }> {
   const linhas = banco
     .prepare(

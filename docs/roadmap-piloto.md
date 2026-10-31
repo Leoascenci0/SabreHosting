@@ -5,7 +5,7 @@ hospedagem.
 
 **Sigla `piloto`.** Ramos `roadmap/piloto-<id>`. Quase tudo aqui é **P** (precisa do Eliel e dos amigos).
 
-- [ ] **1.1 — Importar o mundo da hospedagem atual** *(corte de 31/10, onda 23: **1.1a ✅ PR #177** — núcleo `importarMundoZip` (yauzl 3.4.0 fixo, zip hostil recusado antes de gravar, extrai em temporária, entrega a versão 1 por callback); restam **1.1b** (ler `level.dat`: versão do Minecraft e plugins, precisa leitor NBT) e **1.1c** (tela Backups › "Importar mundo" + tutorial `docs/tutoriais/piloto-importar.md`, ligando o callback ao envio da versão ao cartório; o cliente do núcleo ainda não tem método de versão))*
+- [x] **1.1 — Importar o mundo da hospedagem atual** *(código e tutorial prontos: 1.1a PR #177, 1.1b PR #184 (level.dat), 1.1c PR #189 (tela Backups › Importar mundo + `docs/tutoriais/piloto-importar.md`). Falta só a Confirmação com o mundo real, que é **P** do Eliel. O mundo importado ainda não chega sozinho ao host: depende do sync-2.1b)*
   *O que fazer:* ferramenta que importa um zip/pasta de mundo baixado da hospedagem (checa versão do Minecraft,
   plugins, tamanho), gera a versão 1 no cartório; tutorial de como baixar o mundo do painel da hospedagem.
   *Arquivo:* `packages/nucleo/src/importar.ts`, `docs/tutoriais/piloto-importar.md`

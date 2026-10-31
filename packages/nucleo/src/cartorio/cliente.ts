@@ -1,4 +1,6 @@
+import { createReadStream } from "node:fs";
 import { BlockList, isIP } from "node:net";
+import { Readable } from "node:stream";
 import { IP_DO_HUB } from "../rede/wireguard.js";
 import type { Cofre } from "./cofre.js";
 import {
@@ -9,10 +11,15 @@ import {
   validarEntradaNoGrupo,
   validarEstadoTrava,
   validarGrupo,
+  validarConfigGrupo,
   validarEu,
+  validarCopias,
   validarListaPcs,
+  validarMaisNova,
+  validarPacoteGuardado,
   validarRespostaAtualizacao,
   validarRespostaTrava,
+  validarVersaoCriada,
 } from "./tipos.js";
 
 /** "cancelado": quem pediu desistiu (trava solta ou perdida); nunca repete. */
@@ -71,9 +78,11 @@ function conferirUrl(url: string): string {
 }
 
 interface Pedido<T> {
-  metodo: "GET" | "POST";
+  metodo: "GET" | "POST" | "PUT";
   rota: string;
   corpo?: object;
+  /** Corpo em fluxo (`application/octet-stream`) lido do arquivo, nunca inteiro na memória (pacote do mundo). */
+  fluxo?: string;
   /** Só GETs e `/trava/renovar`: `pegar`/`passar`/`soltar` mudam a época e não podem ir duas vezes. */
   repetir: boolean;
   /** Rotas da trava devolvem a recusa (409) como resposta, não como erro. */
@@ -115,6 +124,9 @@ async function lerJson(resposta: Response): Promise<unknown> {
   return JSON.parse(Buffer.concat(partes).toString("utf8"));
 }
 
+/** Prazo do envio do pacote: 1 min + 1 s a cada 256 KB (aguenta conexão de ~2 Mbit/s sem cortar). */
+const prazoDoEnvio = (bytes: number) => 60_000 + Math.ceil(bytes / (256 * 1024)) * 1000;
+
 const CONVITE_ANTIGO =
   "Este convite é de uma versão antiga do cartório; peça um convite novo ao dono do grupo.";
 const PRAZO_USAR_MS = 15_000;
@@ -145,8 +157,15 @@ export function criarCliente(opcoes: OpcoesCliente) {
         headers: {
           ...(token ? { authorization: `Bearer ${token}` } : {}),
           ...(p.corpo ? { "content-type": "application/json" } : {}),
+          ...(p.fluxo ? { "content-type": "application/octet-stream" } : {}),
         },
-        body: p.corpo ? JSON.stringify(p.corpo) : undefined,
+        body: p.fluxo
+          ? (Readable.toWeb(createReadStream(p.fluxo)) as ReadableStream)
+          : p.corpo
+            ? JSON.stringify(p.corpo)
+            : undefined,
+        // Corpo em fluxo exige `duplex: "half"` no fetch do Node.
+        ...(p.fluxo ? ({ duplex: "half" } as RequestInit) : {}),
         redirect: "error",
         signal: AbortSignal.any([
           AbortSignal.timeout(p.prazoMs ?? prazoMs),
@@ -255,8 +274,12 @@ export function criarCliente(opcoes: OpcoesCliente) {
 
   return {
     eu: () => ler("/eu", validarEu),
-    /** Só o dono: os PCs com acesso ao cartório (tela Configurações › Grupo). */
+    /** Só o dono: os PCs com acesso ao cartório (tela Configurações › Grupo). Nunca traz IP; o IP só vem em `quemTem`. */
     listarPcs: () => ler("/pcs", validarListaPcs),
+    /** A versão mais nova do mundo (`null` se nenhuma foi registrada). */
+    maisNova: () => ler("/versoes/mais-nova", validarMaisNova),
+    /** Quem tem a versão `n` (IP na rede privada de cada PC) e se a nuvem a guarda: fontes do espalhar. */
+    quemTem: (n: number) => ler(`/versoes/${n}/copias`, validarCopias),
     estadoTrava: () => ler("/trava", validarEstadoTrava),
     pegar: () => trava("/trava/pegar", false),
     /** `sinal`: o renovador cancela ao soltar ou perder, e nenhuma tentativa nova sai. */
@@ -270,9 +293,69 @@ export function criarCliente(opcoes: OpcoesCliente) {
       atualizacao("/atualizacao/renovar", true, { epoca }, sinal),
     soltarAtualizacao: (epoca: number) => atualizacao("/atualizacao/soltar", false, { epoca }),
     grupo: () => ler("/grupo", validarGrupo),
+    /** Versão do Minecraft do grupo (todos os PCs usam a mesma). */
+    lerConfigGrupo: () => ler("/grupo/config", validarConfigGrupo),
+    /**
+     * Só o dono, com o servidor parado e ninguém atualizando (senão o cartório recusa com 409 e a mensagem em pt-BR
+     * vem no erro). Repete: gravar o mesmo par duas vezes dá o mesmo resultado.
+     */
+    gravarConfigGrupo: (versaoMinecraft: string, sha1Manifesto: string) =>
+      chamar({
+        metodo: "PUT",
+        rota: "/grupo/config",
+        corpo: { versaoMinecraft, sha1Manifesto },
+        repetir: true,
+        validar: validarConfigGrupo,
+      }),
     /** Este PC diz que agora tem a versão N inteira (substitui a anterior). Repete: dizer duas vezes não muda nada. */
     informarCopia: (versao: number) =>
       chamar<undefined>({ metodo: "POST", rota: "/copias", corpo: { versao }, repetir: true }),
+    /**
+     * Registra a próxima versão (só o dono da trava de host, com a época atual). Não repete: cada tentativa aceita
+     * criaria outra versão. Devolve o número dado pelo cartório.
+     */
+    criarVersao: (
+      epoca: number,
+      dados: { manifestoSha256: string; arquivos: number; bytes: number },
+    ) =>
+      chamar({
+        metodo: "POST",
+        rota: "/versoes",
+        corpo: { epoca, ...dados },
+        repetir: false,
+        validar: validarVersaoCriada,
+      }),
+    /**
+     * Manda o pacote da versão N para a nuvem guardar (em fluxo). A nuvem confere tamanho e hash; aqui se confere que
+     * ela confirmou exatamente o que foi mandado. Não repete. `sinal`: perdeu a trava, o envio cai na hora.
+     */
+    enviarPacote: async (
+      numero: number,
+      epoca: number,
+      pacote: { caminho: string; sha256: string; tamanho: number },
+      sinal?: AbortSignal,
+    ): Promise<void> => {
+      const consulta = new URLSearchParams({
+        epoca: String(epoca),
+        sha256: pacote.sha256,
+        bytes: String(pacote.tamanho),
+      });
+      const r = await chamar({
+        metodo: "PUT",
+        rota: `/versoes/${encodeURIComponent(numero)}/pacote?${consulta}`,
+        fluxo: pacote.caminho,
+        repetir: false,
+        prazoMs: prazoDoEnvio(pacote.tamanho),
+        validar: validarPacoteGuardado,
+        sinal,
+      });
+      if (r.versao !== numero || r.sha256 !== pacote.sha256 || r.bytes !== pacote.tamanho) {
+        throw new ErroCartorio(
+          "A nuvem confirmou um pacote diferente do que foi enviado; a importação não vale.",
+          "resposta",
+        );
+      }
+    },
     /** Só o PC dono. Não repete: cada tentativa reservaria outro IP provisório na nuvem. */
     criarConvite: (nomePc: string, validadeHoras?: number) =>
       chamar({

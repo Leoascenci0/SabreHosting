@@ -2,6 +2,8 @@ import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ErroCartorio, criarCliente, type OpcoesCliente } from "./cliente.js";
 import { cofreEmMemoria } from "./cofre.js";
+import { escolherFontes } from "../sync/espalhar.js";
+import { PORTA_ESPALHAR } from "../sync/transferencia.js";
 
 const TOKEN = randomBytes(16).toString("hex"); // gerado a cada execução
 const URL_CARTORIO = "http://10.66.0.1:7070";
@@ -246,6 +248,33 @@ describe("cliente do cartório", () => {
     expect(chamadas).toHaveLength(1);
   });
 
+  it("config do grupo: lê e grava (PUT com o corpo certo); 409 e 403 trazem a mensagem do cartório", async () => {
+    const ok = { versaoMinecraft: "1.20.1", sha1Manifesto: "a".repeat(40), atualizadoEm: 5 };
+    const { cliente, chamadas } = montar([json(200, ok), json(200, ok)]);
+    expect(await cliente.lerConfigGrupo()).toEqual(ok);
+    expect(await cliente.gravarConfigGrupo("1.20.1", "a".repeat(40))).toEqual(ok);
+    expect(chamadas[1]?.url).toBe(`${URL_CARTORIO}/grupo/config`);
+    expect(chamadas[1]?.init.method).toBe("PUT");
+    expect(JSON.parse(String(chamadas[1]?.init.body))).toEqual({
+      versaoMinecraft: "1.20.1",
+      sha1Manifesto: "a".repeat(40),
+    });
+    for (const status of [409, 403]) {
+      const r = montar([json(status, { erro: "Pare o servidor antes." })]);
+      const e = await erroDe(r.cliente.gravarConfigGrupo("1.20.1", "a".repeat(40)));
+      expect(e.message).toContain(`(${status})`);
+      expect(e.message).toContain("Pare o servidor antes.");
+    }
+    const torta = montar([
+      json(200, { versaoMinecraft: "1.20.1", sha1Manifesto: "xyz", atualizadoEm: 1 }),
+    ]);
+    expect((await erroDe(torta.cliente.lerConfigGrupo())).tipo).toBe("resposta");
+    const sem = montar([
+      json(200, { versaoMinecraft: "1.21.1", sha1Manifesto: null, atualizadoEm: 0 }),
+    ]);
+    expect((await sem.cliente.lerConfigGrupo()).sha1Manifesto).toBeNull();
+  });
+
   it("revogarPc: 204 tira; 403, 409 e 404 trazem o status e a mensagem; 401 é acesso; nunca repete", async () => {
     const { cliente, chamadas } = montar([new Response(null, { status: 204 })]);
     expect(await cliente.revogarPc(5)).toBeUndefined();
@@ -436,6 +465,66 @@ describe("cliente do cartório", () => {
   });
 });
 
+describe("descoberta de fontes (cartmel-2.4)", () => {
+  const SHA = "b".repeat(64);
+  const VERSAO = {
+    numero: 4,
+    epoca: 2,
+    pcId: 1,
+    manifestoSha256: SHA,
+    arquivos: 3,
+    bytes: 9,
+    criadaEm: 5,
+  };
+
+  it("maisNova: GET /versoes/mais-nova, com e sem versão", async () => {
+    const { cliente, chamadas } = montar([
+      json(200, { versao: VERSAO }),
+      json(200, { versao: null }),
+    ]);
+    expect(await cliente.maisNova()).toEqual(VERSAO);
+    expect(await cliente.maisNova()).toBeNull();
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes/mais-nova`);
+    expect(chamadas[0]?.init.method).toBe("GET");
+  });
+
+  it("quemTem: devolve IP de cada PC (ou null) e se a nuvem tem a versão", async () => {
+    const corpo = {
+      numero: 4,
+      nuvem: true,
+      pcs: [
+        { id: 1, nome: "Ana", ip: "10.66.0.5" },
+        { id: 2, nome: "Bia", ip: null },
+      ],
+    };
+    const { cliente, chamadas } = montar([json(200, corpo)]);
+    expect(await cliente.quemTem(4)).toEqual(corpo);
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes/4/copias`);
+  });
+
+  it.each([
+    ["sem o sinalizador da nuvem", { numero: 4, pcs: [] }],
+    ["ip que não é texto", { numero: 4, nuvem: false, pcs: [{ id: 1, nome: "Ana", ip: 5 }] }],
+    ["hash do manifesto inválido", { versao: { ...VERSAO, manifestoSha256: "xx" } }],
+  ])("resposta inválida (%s) vira erro do cartório", async (_nome, corpo) => {
+    const { cliente } = montar([json(200, corpo), json(200, corpo)]);
+    const p = "versao" in corpo ? cliente.maisNova() : cliente.quemTem(4);
+    expect((await erroDe(p)).tipo).toBe("resposta");
+  });
+
+  it("IP fora da rede privada devolvido pelo cartório é recusado ao escolher fontes", async () => {
+    const { cliente } = montar([
+      json(200, { numero: 4, nuvem: false, pcs: [{ id: 1, nome: "Ana", ip: "8.8.8.8" }] }),
+    ]);
+    const { pcs } = await cliente.quemTem(4);
+    expect(() =>
+      escolherFontes(
+        pcs.map((p) => ({ tipo: "pc" as const, endereco: String(p.ip), porta: PORTA_ESPALHAR })),
+      ),
+    ).toThrow(/rede privada/);
+  });
+});
+
 describe("informarCopia", () => {
   it("avisa a versão que este PC tem: POST /copias com a versão, sem corpo na resposta", async () => {
     const { cliente, chamadas } = montar([new Response(null, { status: 204 })]);
@@ -516,5 +605,84 @@ describe("trava de atualização (syncmel-1.8b)", () => {
     const { cliente, chamadas } = montar([json(200, OK_TRAVA)]);
     expect((await erroDe(cliente.renovarAtualizacao(7, parar.signal))).tipo).toBe("cancelado");
     expect(chamadas).toHaveLength(0);
+  });
+});
+
+describe("versões do mundo (piloto-1.1c)", () => {
+  const DADOS = { manifestoSha256: "a".repeat(64), arquivos: 3, bytes: 4096 };
+
+  it("criarVersao manda época e totais e devolve o número; não repete", async () => {
+    const { cliente, chamadas } = montar([json(201, { numero: 5 })]);
+    expect(await cliente.criarVersao(7, DADOS)).toBe(5);
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes`);
+    expect(JSON.parse(String(chamadas[0]?.init.body))).toEqual({ epoca: 7, ...DADOS });
+    const sem = montar([json(503, {}), json(201, { numero: 6 })]);
+    expect((await erroDe(sem.cliente.criarVersao(7, DADOS))).tipo).toBe("servidor");
+    expect(sem.chamadas).toHaveLength(1);
+  });
+
+  it("criarVersao recusada pela trava vira erro com a mensagem do cartório", async () => {
+    const { cliente } = montar([
+      json(409, {
+        erro: "A trava está com outro PC.",
+        motivo: "ocupada",
+        donoPcId: 2,
+        epoca: 3,
+        expiraEm: 1,
+      }),
+    ]);
+    const e = await erroDe(cliente.criarVersao(7, DADOS));
+    expect(e.status).toBe(409);
+    expect(e.message).toContain("A trava está com outro PC.");
+  });
+
+  it("enviarPacote manda o arquivo em fluxo, com época, hash e tamanho na rota", async () => {
+    const { mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { createHash } = await import("node:crypto");
+    const dir = mkdtempSync(join(tmpdir(), "sabre-cliente-"));
+    try {
+      const caminho = join(dir, "p.tar.gz");
+      const conteudo = randomBytes(70_000);
+      writeFileSync(caminho, conteudo);
+      const sha256 = createHash("sha256").update(conteudo).digest("hex");
+      const { cliente, chamadas } = montar([
+        json(201, { versao: 5, sha256, bytes: conteudo.length }),
+      ]);
+      await cliente.enviarPacote(5, 7, { caminho, sha256, tamanho: conteudo.length });
+      const { url, init } = chamadas[0] ?? { url: "", init: {} };
+      expect(init.method).toBe("PUT");
+      expect(url).toBe(
+        `${URL_CARTORIO}/versoes/5/pacote?epoca=7&sha256=${sha256}&bytes=${conteudo.length}`,
+      );
+      expect(new Headers(init.headers).get("content-type")).toBe("application/octet-stream");
+      expect(init.body).toBeInstanceOf(ReadableStream);
+      const lido = Buffer.from(await new Response(init.body as ReadableStream).arrayBuffer());
+      expect(lido.equals(conteudo)).toBe(true);
+
+      // A nuvem diz que guardou outra coisa: erro (o pacote não pode valer).
+      const torto = montar([
+        json(201, { versao: 5, sha256: "b".repeat(64), bytes: conteudo.length }),
+      ]);
+      const e = await erroDe(
+        torto.cliente.enviarPacote(5, 7, { caminho, sha256, tamanho: conteudo.length }),
+      );
+      expect(e.tipo).toBe("resposta");
+      expect(torto.chamadas).toHaveLength(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("enviarPacote recusado (hash errado na nuvem) traz a mensagem e não repete", async () => {
+    const { cliente, chamadas } = montar([
+      json(422, { erro: "O pacote chegou diferente do declarado.", motivo: "hash_errado" }),
+    ]);
+    const e = await erroDe(
+      cliente.enviarPacote(5, 7, { caminho: "/nao/existe", sha256: "c".repeat(64), tamanho: 1 }),
+    );
+    expect(e.message).toContain("O pacote chegou diferente do declarado.");
+    expect(chamadas).toHaveLength(1);
   });
 });

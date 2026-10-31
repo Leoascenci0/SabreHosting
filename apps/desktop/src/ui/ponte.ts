@@ -40,6 +40,24 @@ export interface EstadoBackups {
   avisoHistorico?: string;
 }
 
+/** O que a tela mostra do .zip escolhido (o caminho fica no main). */
+export type EscolhaDoZip =
+  | {
+      ok: true;
+      nome: string;
+      arquivos: number;
+      versaoMinecraft: string;
+      plugins: boolean;
+      mods: boolean;
+      /** Versão mais nova do grupo no cartório; `null` = o grupo ainda não tem mundo. */
+      versaoNoGrupo: number | null;
+      dono: boolean;
+    }
+  | { ok: false; cancelado: true }
+  | { ok: false; mensagem: string };
+
+export type ResultadoImportacao = { ok: true; versao: number } | { ok: false; mensagem: string };
+
 export interface PcDaTela {
   id: number;
   nome: string;
@@ -47,6 +65,13 @@ export interface PcDaTela {
 }
 
 export type EstadoGrupo = { dono: false } | { dono: true; pcs: PcDaTela[]; erro?: string };
+
+export type EstadoVersao =
+  { dono: false } | { dono: true; atual: string; versoes: string[]; erro?: string };
+
+export type OpcoesDaVersao =
+  | { ok: true; neoforge: boolean; fabricForge: boolean; texto: string }
+  | { ok: false; mensagem: string };
 
 export interface PonteSabre {
   versao(): Promise<string>;
@@ -64,9 +89,21 @@ export interface PonteSabre {
     listar(): Promise<EstadoBackups>;
     restaurar(nome: string): Promise<Resultado>;
   };
+  importar: {
+    /** Abre o seletor de .zip do Windows e confere o arquivo (só lê). */
+    escolherZip(): Promise<EscolhaDoZip>;
+    /** Importa o .zip escolhido; só `true` vale como confirmação. */
+    executar(confirmado: boolean): Promise<ResultadoImportacao>;
+  };
   grupo: {
     estado(): Promise<EstadoGrupo>;
     tirar(id: number): Promise<Resultado>;
+  };
+  versoes: {
+    estado(): Promise<EstadoVersao>;
+    /** Só ao selecionar uma versão: cada consulta vai à internet. */
+    opcoes(versao: string): Promise<OpcoesDaVersao>;
+    gravar(versao: string): Promise<Resultado>;
   };
   inicio: {
     estado(): Promise<EstadoInicio>;
