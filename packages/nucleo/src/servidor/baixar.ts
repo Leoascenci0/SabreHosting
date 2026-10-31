@@ -113,8 +113,11 @@ async function buscar(url: string, cabecalhos: Record<string, string>, sinal: Ab
   }
 }
 
-/** Uma passada: baixa (ou continua) o `.parcial`. Devolve quando o corpo terminou. */
-async function baixarParcial(url: string, parcial: string, limites: Limites): Promise<void> {
+/**
+ * Uma passada: baixa (ou continua) o `.parcial`. Devolve quando o corpo terminou;
+ * `true` se o parcial já estava completo (416 com content-range de tamanho igual ao do parcial) e nada foi baixado.
+ */
+async function baixarParcial(url: string, parcial: string, limites: Limites): Promise<boolean> {
   const meta = `${parcial}.meta`;
   let validador = await readFile(meta, "utf8").catch(() => "");
   let inicio = validador ? await tamanhoOuZero(parcial) : 0;
@@ -150,9 +153,11 @@ async function baixarParcial(url: string, parcial: string, limites: Limites): Pr
       );
     }
 
-    // 416: o servidor não aceita retomar; recomeça do zero (agora sem Range).
+    // 416: se o servidor diz que o arquivo tem o tamanho do parcial, ele já está completo: só confere o hash.
+    // Qualquer outro 416 não aceita retomar: recomeça do zero (agora sem Range).
     if (inicio > 0 && resposta.status === 416) {
       await resposta.body?.cancel();
+      if (resposta.headers.get("content-range") === `bytes */${inicio}`) return true;
       await descartar(parcial);
       return await baixarParcial(url, parcial, limites);
     }
@@ -205,6 +210,7 @@ async function baixarParcial(url: string, parcial: string, limites: Limites): Pr
       }
       throw motivo ?? new ErroDeConexao("A conexão caiu no meio do download.", { cause: e });
     }
+    return false;
   } finally {
     clearTimeout(totalTimer);
     clearTimeout(paradoTimer);
@@ -238,16 +244,23 @@ export async function baixarConferido(
     await rm(destino, { force: true }); // final que não confere nunca fica no lugar
   }
 
-  for (let n = 1; ; n++) {
-    try {
-      await baixarParcial(url, parcial, limites);
-      break;
-    } catch (e) {
-      if (!(e instanceof ErroDeConexao) || n >= tentativas) throw e;
+  const passar = async (): Promise<boolean> => {
+    for (let n = 1; ; n++) {
+      try {
+        return await baixarParcial(url, parcial, limites);
+      } catch (e) {
+        if (!(e instanceof ErroDeConexao) || n >= tentativas) throw e;
+      }
     }
+  };
+  const reaproveitado = await passar();
+  let obtido = await hashDoArquivo(parcial, hashEsperado.algoritmo);
+  if (obtido !== esperado && reaproveitado) {
+    // Parcial "completo" estava errado: descarta e baixa de novo, uma vez (o hash ainda decide).
+    await descartar(parcial);
+    await passar();
+    obtido = await hashDoArquivo(parcial, hashEsperado.algoritmo);
   }
-
-  const obtido = await hashDoArquivo(parcial, hashEsperado.algoritmo);
   if (obtido !== esperado) {
     await descartar(parcial);
     throw new ErroDownload(

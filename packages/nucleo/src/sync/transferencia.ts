@@ -42,7 +42,14 @@ export interface OpcoesServidor {
   permitirLoopbackParaTeste?: boolean;
   /** Relógio em ms; só o teste troca. */
   agora?: () => number;
+  /** Tempo ocioso do socket em ms (padrão 60 s, maior que os 30 s sem dados do cliente); só o teste troca. */
+  tempoOciosoMs?: number;
 }
+
+/** Cabeçalho lento, conexão parada e excesso de conexões não seguram o PC que hospeda. */
+const TEMPO_CABECALHO_MS = 10_000;
+const TEMPO_OCIOSO_MS = 60_000;
+const MAX_CONEXOES = 16;
 
 /** Tentativas erradas (token ausente ou inválido) por IP: 5 em 60 s, contadas do 1º erro. */
 const MAX_FALHAS = 5;
@@ -171,6 +178,11 @@ export async function servirArquivos(opcoes: OpcoesServidor): Promise<Servidor> 
       resp.headersSent ? resp.destroy() : texto(resp, 500, "Erro interno."),
     );
   });
+  servidor.headersTimeout = TEMPO_CABECALHO_MS;
+  servidor.requestTimeout = TEMPO_CABECALHO_MS;
+  servidor.keepAliveTimeout = 5_000;
+  servidor.timeout = opcoes.tempoOciosoMs ?? TEMPO_OCIOSO_MS;
+  servidor.maxConnections = MAX_CONEXOES;
   await new Promise<void>((ok, erro) => {
     servidor.once("error", erro);
     servidor.listen(opcoes.porta, endereco, ok);
