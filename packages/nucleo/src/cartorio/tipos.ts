@@ -79,6 +79,20 @@ export interface ConfigGrupo {
   atualizadoEm: number;
 }
 
+/** Um mod da lista do grupo (lanc-1.4). `arquivo` é só o nome do `.jar`; `sha512` é o hash que o download precisa bater. */
+export interface ModGrupo {
+  nome: string;
+  versao: string;
+  arquivo: string;
+  url: string;
+  sha512: string;
+  lado: "cliente" | "servidor" | "ambos";
+}
+
+/** Única origem aceita para baixar mod. Conferida aqui (resposta da rede) e de novo ao baixar. */
+export const HOST_MODS = "cdn.modrinth.com";
+export const ARQUIVO_MOD = /^[A-Za-z0-9][A-Za-z0-9._+()-]{0,127}\.jar$/;
+
 /** `GET /grupo`. */
 export interface Grupo {
   nome: string;
@@ -280,6 +294,36 @@ export function validarConfigGrupo(v: unknown): ConfigGrupo {
     sha1Manifesto: sha1,
     atualizadoEm: inteiro(o, "atualizadoEm"),
   };
+}
+
+export function validarModsGrupo(v: unknown): ModGrupo[] {
+  const o = objeto(v, "mods do grupo");
+  if (!Array.isArray(o.mods) || o.mods.length > 200)
+    throw new Error("Resposta inválida do cartório: lista de mods.");
+  return o.mods.map((m: unknown): ModGrupo => {
+    const x = objeto(m, "mod do grupo");
+    const url = texto(x, "url");
+    const arquivo = texto(x, "arquivo");
+    const sha512 = texto(x, "sha512");
+    const lado = x.lado;
+    let ok = false;
+    try {
+      const u = new URL(url);
+      ok = u.protocol === "https:" && u.hostname === HOST_MODS && !u.username && !u.password;
+    } catch {
+      /* url torta: ok continua falso */
+    }
+    if (
+      !ok ||
+      !ARQUIVO_MOD.test(arquivo) ||
+      arquivo.includes("..") ||
+      !/^[0-9a-f]{128}$/.test(sha512)
+    )
+      throw new Error("Resposta inválida do cartório: mod do grupo.");
+    if (lado !== "cliente" && lado !== "servidor" && lado !== "ambos")
+      throw new Error("Resposta inválida do cartório: lado do mod.");
+    return { nome: texto(x, "nome"), versao: texto(x, "versao"), arquivo, url, sha512, lado };
+  });
 }
 
 export function validarConviteCriado(v: unknown): ConviteCriado {
