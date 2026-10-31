@@ -55,3 +55,9 @@ o caminho vinha do JSON sem validar nome nem distinção entre as três pastas �
 diretos da pasta do servidor (via `path.relative`) e com nome `basename(mundo)+"."…`; apagar o marcador FORA do `try` do 2º rename ·
 Prova: testes de marcador forjado e de EPERM ao apagar o marcador · Vezes: 1 · Origem: syncmel-1.4, PR #164. Regra: tudo que um
 arquivo de estado manda apagar/renomear é entrada não confiável.
+
+## S-08 — Sessão de onda não abre: "branch or commit was not found"
+Sintoma: a sessão criada com `create_session` falha em "Repositório clonado" (`ref_not_found`) e não pode continuar ·
+Causa: `source_revision` com hash CURTO (`5f440cc`); a nuvem só aceita ramo ou hash completo · Solução: sempre
+`git rev-parse origin/main` (40 caracteres) no `source_revision`; arquivar a sessão morta, apagar o vigia dela e recriar ·
+Prova: Onda 22 recriada com o hash completo (session_012qrjntw8ggfpCSw7mg4UfD) · Vezes: 1 · Origem: coordenação 31/10.

@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | 20 | cartmel-1.1 · app-2.1 · sync-1.1 · app-2.2 · sync-1.2 | session_012qrjntSMKMZcY3GUuomfqa | bdee520 | fechada 09:59 → main 0b57326 |
 | 21 | syncmel-1.4 · appmel-1.7 · cartmel-2.2 · syncmel-1.1 · syncmel-1.2 · appmel-1.8 | session_012qrjnuVvPbMbr49Ryg8nY3 | 0b57326 | fechada 10:36 → main 5f440cc |
-| 22 | appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 | session_012qrjnuAzcormV8bzqcTQff | 5f440cc | aberta 10:37 |
+| 22 | appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 | session_012qrjntw8ggfpCSw7mg4UfD (1ª: …AzcormV8 falhou, hash curto, S-08) | 5f440cc | aberta 10:47 |
 
 ## Relatórios das ondas
 
