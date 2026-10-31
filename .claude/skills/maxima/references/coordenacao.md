@@ -24,7 +24,7 @@ O Eliel se guia pela lista de chats do claude.ai/code; cada sessão tem que dize
 - **Formato que o Eliel quer ver na lista** (ele abre **só** o chat da Máxima; o resto nasce dele):
   ```
   Máxima retomar (ou continuar)        ← o chat que o Eliel abre: coordenador
-    Onda 20 — cartmel-1.1 · hostmel-2.1
+    Onda 20 — cartório e backups
       Item 1 · cartmel-1.1 — revogar PC
       Item 2 · hostmel-2.1 — calibrar a nota
     Onda 21 — …
@@ -38,7 +38,8 @@ O Eliel se guia pela lista de chats do claude.ai/code; cada sessão tem que dize
   direto debaixo dele. A onda é **sempre outra sessão**, criada pelo coordenador; só ela cria os itens.
 - **Bastão:** a coordenadora seguinte é criada pela atual com o título `Máxima continuar — <data> (<n>º bastão)`; as
   ondas seguintes nascem dela e ficam debaixo dela.
-- **Título da sessão de onda:** `Onda <N> — <itens separados por " · ">`.
+- **Título da sessão de onda:** `Onda <N>` ou `Onda <N> — <resumo curto>` (nome do roadmap ou do que está sendo
+  implantado, ex.: `Onda 21 — convite no app`). Nunca a lista de itens: eles já aparecem logo abaixo.
 - **Título da sessão de item:** `Item <k> · <sigla-id> — <título curto>`, com `k` = 1, 2, 3… na ordem em que a onda
   despacha (recomeça em 1 em cada onda).
 - **Aninhamento:** quem cria as sessões de item é a sessão de onda, então elas aparecem dentro dela na lista lateral.
