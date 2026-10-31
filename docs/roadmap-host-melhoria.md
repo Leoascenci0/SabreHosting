@@ -21,7 +21,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   *Confirmação:* testes: `http://` recusado nos resolvedores e em localhost sem a opção; versão `..`/`-x` recusada.
   *Origem:* host-1.1 · PR #12 · filha + qa segurança
 
-- [ ] **1.3 — Testes de redirecionamento com sucesso e dos limites**
+- [x] **1.3 — Testes de redirecionamento com sucesso e dos limites** (PR #109, 31/10/2026)
   *O que fazer:* testes que seguem um redirecionamento https até o fim, que estouram o limite de 5 saltos e que
   estouram o tempo total.
   *Arquivo:* `packages/nucleo/src/servidor/baixar.test.ts`
