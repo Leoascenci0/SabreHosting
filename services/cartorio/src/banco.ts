@@ -67,6 +67,15 @@ export const MIGRACOES = [
      versao INTEGER NOT NULL REFERENCES versoes(numero),
      informada_em INTEGER NOT NULL CHECK (typeof(informada_em) = 'integer' AND informada_em >= 0)
    );`,
+  // Cópias do mundo guardadas na nuvem (arquivo `mundo/v<N>.tar.gz`); a rotação apaga as mais velhas.
+  `CREATE TABLE copias_nuvem (
+     versao INTEGER PRIMARY KEY REFERENCES versoes(numero),
+     sha256 TEXT NOT NULL CHECK (length(sha256) = 64 AND sha256 NOT GLOB '*[^0-9a-f]*'),
+     bytes INTEGER NOT NULL CHECK (typeof(bytes) = 'integer' AND bytes >= 0),
+     guardada_em INTEGER NOT NULL CHECK (typeof(guardada_em) = 'integer' AND guardada_em >= 0)
+   );
+   CREATE TRIGGER copias_nuvem_nao_muda BEFORE UPDATE ON copias_nuvem
+   BEGIN SELECT RAISE(ABORT, 'Cópia guardada não muda.'); END;`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */

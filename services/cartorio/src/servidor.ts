@@ -1,6 +1,14 @@
+import { createReadStream, openSync } from "node:fs";
 import { BlockList, isIP } from "node:net";
-import type { Writable } from "node:stream";
+import type { Readable, Writable } from "node:stream";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import {
+  type Declarado,
+  type MotivoPacote,
+  criarArmazem,
+  pacoteGuardado,
+  receberPacote,
+} from "./armazem.js";
 import { type Banco, type Pc, criarConvite, pcDoToken, usarConvite } from "./banco.js";
 import { iguais } from "./segredo.js";
 import {
@@ -22,6 +30,8 @@ export interface OpcoesCartorio {
   logger?: { level?: string; stream?: Writable };
   agora?: () => number;
   trava?: Partial<TemposTrava>;
+  /** Onde guardar a cópia do mundo (sem isto, as rotas do pacote não existem). */
+  armazem?: { pasta: string; tetoBytes?: number };
 }
 
 /** Caminhos que o log apaga: cabeçalho de autorização e qualquer token ou convite. */
@@ -47,6 +57,19 @@ const RECUSA_TRAVA: Record<MotivoRecusa, (dono: string) => string> = {
     "O PC para onde o servidor iria não faz parte do grupo ou perdeu o acesso.",
   destino_invalido: () => "O servidor já está neste PC. Escolha outro PC para receber.",
 };
+const RECUSA_PACOTE: Record<MotivoPacote, { status: number; erro: string }> = {
+  nao_e_a_mais_nova: {
+    status: 409,
+    erro: "Essa não é a versão mais nova do mundo. Atualize antes de enviar.",
+  },
+  nao_registrou: { status: 409, erro: "Essa versão do mundo foi registrada por outro PC." },
+  ja_guardada: { status: 409, erro: "A nuvem já tem essa versão do mundo guardada." },
+  grande_demais: { status: 413, erro: "O mundo passou do tamanho máximo que a nuvem guarda." },
+  tamanho_errado: { status: 422, erro: "O pacote chegou com tamanho diferente. Envie de novo." },
+  hash_errado: { status: 422, erro: "O pacote chegou diferente do enviado. Envie de novo." },
+  interrompido: { status: 400, erro: "O envio do mundo foi interrompido. Envie de novo." },
+};
+const SEM_COPIA = { erro: "A nuvem não tem essa versão do mundo guardada." };
 const VERSAO_INEXISTENTE = { erro: "Essa versão do mundo não existe no cartório." };
 /** Inteiro exato em JS (≤ 2^53 − 1): número maior viraria decimal e ficaria gravado para sempre em `versoes`. */
 const EPOCA = { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER };
@@ -79,6 +102,7 @@ export function criarCartorio({
   logger,
   agora = Date.now,
   trava,
+  armazem: opcoesArmazem,
 }: OpcoesCartorio) {
   if (segredoAdmin.length < 32)
     throw new Error("Segredo de administrador ausente ou curto (mínimo 32 caracteres).");
@@ -248,6 +272,61 @@ export function criarCartorio({
     },
     (req) => ({ numero: req.params.n, pcs: quemTem(banco, req.params.n) }),
   );
+
+  if (opcoesArmazem) {
+    const armazem = criarArmazem({ banco, agora, ...opcoesArmazem });
+    const paramN = { type: "object", required: ["n"], properties: { n: EPOCA } };
+    // O corpo do PUT chega como fluxo, direto para o disco (nunca o mundo inteiro na memória).
+    app.addContentTypeParser("application/octet-stream", (_req, corpo, pronto) =>
+      pronto(null, corpo),
+    );
+    app.put<{ Params: { n: number }; Querystring: Declarado & { epoca: number }; Body: Readable }>(
+      "/versoes/:n/pacote",
+      {
+        onRequest: soPc,
+        bodyLimit: armazem.tetoBytes,
+        schema: {
+          params: paramN,
+          querystring: {
+            type: "object",
+            required: ["epoca", "sha256", "bytes"],
+            properties: {
+              epoca: EPOCA,
+              sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+              bytes: TOTAL,
+            },
+          },
+        },
+      },
+      async (req, resp) => {
+        const { epoca, sha256, bytes } = req.query;
+        const r = await receberPacote(armazem, req.params.n, pcDe(req).id, epoca, req.body, {
+          sha256,
+          bytes,
+        });
+        if (r.ok)
+          return resp.code(201).send({ versao: r.versao, sha256: r.sha256, bytes: r.bytes });
+        if ("donoPcId" in r) return recusar(resp, r);
+        const { status, erro } = RECUSA_PACOTE[r.motivo];
+        return resp.code(status).send({ erro, motivo: r.motivo });
+      },
+    );
+    app.get<{ Params: { n: number } }>(
+      "/versoes/:n/pacote",
+      { onRequest: soPc, schema: { params: paramN } },
+      (req, resp) => {
+        const copia = pacoteGuardado(armazem, req.params.n);
+        if (!copia) return resp.code(404).send(SEM_COPIA);
+        // Aberto na mesma volta em que a linha foi lida: a rotação não apaga o arquivo no meio do download.
+        const fluxo = createReadStream("", { fd: openSync(copia.caminho, "r") });
+        return resp
+          .header("content-type", "application/octet-stream")
+          .header("content-length", copia.bytes)
+          .header("x-sabre-sha256", copia.sha256)
+          .send(fluxo);
+      },
+    );
+  }
 
   return app;
 }
