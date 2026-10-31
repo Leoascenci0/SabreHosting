@@ -70,6 +70,13 @@ async function conferir(pagina: Page, texto: string): Promise<void> {
 }
 
 describe("assistente de primeira vez", () => {
+  it("a dica do convite não usa termo técnico", async () => {
+    const pagina = await abrir();
+    const dica = await pagina.locator("#bv-convite .dica").first().innerText();
+    expect(dica).toContain("administrador do grupo");
+    expect(dica).not.toContain("sabre://");
+  });
+
   it("convite torto e convite vencido: mensagem clara e nada muda", async () => {
     const pagina = await abrir();
     await conferir(pagina, "isto não é um convite");
@@ -109,6 +116,14 @@ describe("assistente de primeira vez", () => {
     await expect(pagina.locator("#bv-texto").inputValue()).resolves.toBe("");
     await expect(pagina.locator("#bv-eula-continuar").isDisabled()).resolves.toBe(true);
     await expect(pagina.locator("#bv-pasta").isHidden()).resolves.toBe(true);
+    await pagina.locator("#bv-eula-abrir").click();
+    await expect
+      .poll(() =>
+        aberto?.evaluate(
+          () => (globalThis as { __sabreE2EEulaAberto?: number }).__sabreE2EEulaAberto,
+        ),
+      )
+      .toBe(1);
     await pagina.locator("#bv-eula-aceito").check();
     await pagina.locator("#bv-eula-continuar").click();
     await pagina.locator("#bv-pasta:not([hidden])").waitFor();

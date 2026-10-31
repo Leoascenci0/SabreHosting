@@ -1,5 +1,6 @@
 // Assistente de primeira vez (app-1.3b): Convite → EULA → Pasta. A janela nunca guarda o convite além do campo de
 // texto e nunca recebe chave nem token: quem entra no grupo é o main.
+import { executarOcupado } from "./executar-ocupado.js";
 import type { EstadoBoasVindas, PonteSabre } from "./ponte.js";
 
 declare global {
@@ -23,7 +24,7 @@ const pergunta = $("bv-entrar-pergunta");
 const entrar = $<HTMLButtonElement>("bv-entrar");
 const eula = $("bv-eula");
 const eulaTexto = $("bv-eula-texto");
-const eulaLink = $("bv-eula-link");
+const abrirEula = $<HTMLButtonElement>("bv-eula-abrir");
 const aceito = $<HTMLInputElement>("bv-eula-aceito");
 const continuar = $<HTMLButtonElement>("bv-eula-continuar");
 const pasta = $("bv-pasta");
@@ -47,12 +48,26 @@ function mostrarErro(t: string): void {
   erro.textContent = t;
   erro.hidden = t === "";
 }
-function ocupar(sim: boolean, aviso = ""): void {
+let avisoOcupado = "";
+function ocupar(sim: boolean): void {
   tela.setAttribute("aria-busy", String(sim));
-  for (const b of [conferir, entrar, continuar, escolher, concluir]) b.disabled = sim;
+  for (const b of [conferir, entrar, continuar, escolher, concluir, abrirEula]) b.disabled = sim;
   texto.disabled = caminho.disabled = aceito.disabled = sim;
-  mostrarStatus(sim ? aviso : "");
-  if (!sim) continuar.disabled = !aceito.checked;
+  if (sim) mostrarStatus(avisoOcupado);
+  else {
+    // Só apaga o aviso de "carregando"; mensagens de resultado ("Você entrou…") ficam.
+    if (status.textContent === avisoOcupado) mostrarStatus("");
+    continuar.disabled = !aceito.checked;
+  }
+}
+
+/** Toda ação passa por aqui: ocupa, e desocupa sempre (inclusive se a ponte lançar). */
+function rodar(aviso: string, fazer: () => Promise<void>): void {
+  avisoOcupado = aviso;
+  mostrarErro("");
+  void executarOcupado(ocupar, fazer, () =>
+    mostrarErro("Não consegui fazer isso agora. Nada foi alterado. Tente de novo."),
+  );
 }
 
 function irPara(passo: "convite" | "eula" | "pasta"): void {
@@ -68,9 +83,7 @@ async function aberto(e: Extract<EstadoBoasVindas, { aberto: true }>): Promise<v
   tela.hidden = false;
   caminho.value = e.pastaPadrao;
   if (e.passo !== "convite") {
-    const q = await window.sabre.boasVindas.eula();
-    eulaTexto.textContent = q.texto;
-    eulaLink.textContent = `Contrato: ${q.link}`;
+    mostrarContrato(await window.sabre.boasVindas.eula());
   }
   irPara(e.passo);
 }
@@ -85,21 +98,14 @@ async function iniciar(): Promise<void> {
   if (e.aberto) await aberto(e);
 }
 
-async function falhou(fazer: () => Promise<void>): Promise<void> {
-  try {
-    await fazer();
-  } catch {
-    mostrarErro("Não consegui fazer isso agora. Nada foi alterado. Tente de novo.");
-  }
+function mostrarContrato(q: { texto: string; link: string }): void {
+  eulaTexto.textContent = q.texto;
 }
 
 conferir.addEventListener("click", () => {
-  void falhou(async () => {
-    ocupar(true, "Conferindo o convite…");
-    mostrarErro("");
+  rodar("Conferindo o convite…", async () => {
     caixa.hidden = true;
     const r = await window.sabre.boasVindas.conferirConvite(texto.value);
-    ocupar(false);
     if (!r.ok) return mostrarErro(r.mensagem);
     const vence = new Date(r.venceEm).toLocaleString("pt-BR", {
       dateStyle: "short",
@@ -112,20 +118,20 @@ conferir.addEventListener("click", () => {
 });
 
 entrar.addEventListener("click", () => {
-  void falhou(async () => {
-    ocupar(true, "Entrando no grupo… aceite o pedido de administrador do Windows.");
-    mostrarErro("");
+  rodar("Entrando no grupo… aceite o pedido de administrador do Windows.", async () => {
     const r = await window.sabre.boasVindas.entrar();
-    ocupar(false);
     if (!r.ok) return mostrarErro(r.mensagem);
     texto.value = ""; // o convite já foi usado: não deixa o texto na janela
     caixa.hidden = true;
-    const q = await window.sabre.boasVindas.eula();
-    eulaTexto.textContent = q.texto;
-    eulaLink.textContent = `Contrato: ${q.link}`;
+    mostrarContrato(await window.sabre.boasVindas.eula());
     irPara("eula");
     mostrarStatus(`Você entrou no grupo ${r.grupo}.`);
   });
+});
+
+abrirEula.addEventListener("click", () => {
+  // O endereço do contrato é fixo no main: a janela só pede para abrir.
+  rodar("", async () => void (await window.sabre.boasVindas.abrirEula()));
 });
 
 aceito.addEventListener("change", () => {
@@ -133,30 +139,24 @@ aceito.addEventListener("change", () => {
 });
 
 continuar.addEventListener("click", () => {
-  void falhou(async () => {
-    ocupar(true, "Guardando o aceite…");
+  rodar("Guardando o aceite…", async () => {
     const r = await window.sabre.boasVindas.aceitarEula(aceito.checked);
-    ocupar(false);
     if (!r.ok) return mostrarErro(r.mensagem);
     irPara("pasta");
   });
 });
 
 escolher.addEventListener("click", () => {
-  void falhou(async () => {
+  rodar("", async () => {
     const p = await window.sabre.boasVindas.escolherPasta();
     if (p !== undefined) caminho.value = p;
   });
 });
 
 concluir.addEventListener("click", () => {
-  void falhou(async () => {
-    ocupar(true, "Preparando a pasta…");
+  rodar("Preparando a pasta…", async () => {
     const r = await window.sabre.boasVindas.concluir(caminho.value.trim());
-    if (!r.ok) {
-      ocupar(false);
-      return mostrarErro(r.mensagem);
-    }
+    if (!r.ok) return mostrarErro(r.mensagem);
     location.reload(); // o app abre normal, já configurado
   });
 });

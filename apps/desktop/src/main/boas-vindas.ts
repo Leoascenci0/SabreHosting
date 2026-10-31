@@ -20,7 +20,12 @@ export interface DepsBoasVindas {
   cofreDisponivel(): boolean;
   cofre: Cofre;
   /** Passo elevado: conexão provisória → usar o convite → conexão definitiva com a chave própria. Devolve o token. */
-  entrar(convite: Convite, chaves: ParDeChaves): Promise<{ token: string }>;
+  entrar(
+    convite: Convite,
+    chaves: ParDeChaves,
+    /** Guarda o token no cofre; o passo elevado chama assim que o cartório responde, antes de mexer na rede. */
+    guardarToken: (token: string) => Promise<void>,
+  ): Promise<{ token: string }>;
   /** `GET /grupo` já com o token novo. */
   lerGrupo(token: string, portaCartorio: number): Promise<{ nome: string; endereco_jogar: string }>;
   pastaPadrao(): string;
@@ -46,6 +51,26 @@ const SEM_GRUPO = "Entre no grupo com o convite antes de continuar.";
 const PASTA_INVALIDA =
   "Escolha uma pasta completa (por exemplo, C:\\Jogos\\SabreHosting), não a raiz do disco.";
 const FALHA_PASTA = "Não consegui preparar a pasta. Escolha outra.";
+
+/**
+ * A pasta-base vinda da janela: texto, caminho completo, sem `..`, fora da raiz do disco e das pastas do sistema
+ * (Windows, Program Files). Confere pelo texto, igual em qualquer sistema.
+ */
+export function pastaPermitida(pasta: unknown): pasta is string {
+  if (typeof pasta !== "string" || pasta.length === 0 || pasta.length > 240) return false;
+  if (pasta.includes("\0")) return false;
+  const completa = /^[A-Za-z]:[\\/]/.test(pasta) || isAbsolute(pasta);
+  if (!completa) return false;
+  const segmentos = pasta.split(/[\\/]+/).filter((x) => x !== "");
+  if (segmentos.includes("..") || segmentos.includes(".")) return false;
+  const util = segmentos.filter((x, i) => !(i === 0 && /^[A-Za-z]:$/.test(x)));
+  if (util.length === 0 || dirname(pasta) === pasta) return false; // raiz do disco
+  const primeiro = util[0]?.toLowerCase() ?? "";
+  return !(
+    /^[A-Za-z]:/.test(pasta) &&
+    ["windows", "program files", "program files (x86)", "programdata"].includes(primeiro)
+  );
+}
 
 function lerSalvo(dados: string): Salvo {
   try {
@@ -129,10 +154,22 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
       const chaves = deps.gerarChaves();
       const segredos = [usar.codigo, usar.chavePrivadaProvisoria, chaves.privada];
       try {
-        const { token } = await deps.entrar(usar, chaves);
+        let guardado = false;
+        const guardar = async (t: string): Promise<void> => {
+          segredos.push(t);
+          await deps.cofre.guardar(t);
+          guardado = true;
+        };
+        let token: string;
+        try {
+          ({ token } = await deps.entrar(usar, chaves, guardar));
+        } catch (e) {
+          // Falha depois do cartório aceitar: o convite foi gasto e não serve de novo.
+          if ((e as { conviteGasto?: unknown } | null)?.conviteGasto === true) convite = undefined;
+          throw e;
+        }
         convite = undefined; // usado: não serve de novo
-        segredos.push(token);
-        await deps.cofre.guardar(token);
+        if (!guardado) await guardar(token);
         let grupo: { nome: string; endereco?: string } = { nome: usar.grupo };
         try {
           const g = await deps.lerGrupo(token, usar.portaCartorio);
@@ -171,9 +208,8 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
       const salvo = lerSalvo(deps.dados);
       if (!salvo.grupo) return { ok: false, mensagem: SEM_GRUPO };
       if (!aceitoEm) return { ok: false, mensagem: SEM_ACEITE };
-      // A pasta vem da janela: absoluta e não pode ser a raiz do disco.
-      if (typeof pasta !== "string" || !isAbsolute(pasta) || dirname(pasta) === pasta)
-        return { ok: false, mensagem: PASTA_INVALIDA };
+      // A pasta vem da janela: validada aqui no main (nunca confiar na tela).
+      if (!pastaPermitida(pasta)) return { ok: false, mensagem: PASTA_INVALIDA };
       try {
         await mkdir(join(pasta, "servidor"), { recursive: true });
         await mkdir(join(pasta, "mundos"), { recursive: true });

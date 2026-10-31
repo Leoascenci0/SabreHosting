@@ -93,6 +93,8 @@ export interface PonteSabre {
     conferirConvite(texto: string): Promise<ConviteConferido>;
     entrar(): Promise<EntradaNoGrupo>;
     eula(): Promise<{ texto: string; link: string }>;
+    /** Abre o contrato da Mojang no navegador; o endereço é fixo no main. */
+    abrirEula(): Promise<void>;
     aceitarEula(aceito: boolean): Promise<Resultado>;
     escolherPasta(): Promise<string | undefined>;
     concluir(pasta: string): Promise<Resultado>;

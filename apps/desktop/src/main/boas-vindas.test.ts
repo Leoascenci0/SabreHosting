@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { gerarChavesDoPc } from "@sabrehosting/nucleo/rede/wireguard";
-import { criarBoasVindas, type DepsBoasVindas } from "./boas-vindas.js";
+import { criarBoasVindas, pastaPermitida, type DepsBoasVindas } from "./boas-vindas.js";
 
 const AGORA = 1_800_000_000_000;
 let dados: string;
@@ -205,5 +205,56 @@ describe("boas-vindas (main)", () => {
     const [a, b] = await Promise.all([bv.entrar(), bv.entrar()]);
     expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
     expect(chamadas.filter((c) => c === "chaves")).toHaveLength(1);
+  });
+
+  it("falha depois do convite gasto: avisa para pedir convite novo e não deixa o convite valer de novo", async () => {
+    const { bv, chamadas } = montar({
+      entrar: async () => {
+        chamadas.push("entrar");
+        throw Object.assign(new Error("Peça um convite novo."), { conviteGasto: true });
+      },
+    });
+    await bv.conferirConvite(texto());
+    const r = await bv.entrar();
+    expect(!r.ok && r.mensagem).toContain("convite novo");
+    expect((await bv.entrar()).ok).toBe(false);
+    expect(chamadas.filter((c) => c === "entrar")).toHaveLength(1);
+    expect(await bv.estado()).toMatchObject({ aberto: true, passo: "convite" });
+  });
+
+  it("o token chega ao cofre pelo passo elevado e não é guardado duas vezes", async () => {
+    const { bv, guardados } = montar({
+      entrar: async (_c, _k, guardar) => {
+        await guardar("token-do-pc");
+        return { token: "token-do-pc" };
+      },
+    });
+    await bv.conferirConvite(texto());
+    expect((await bv.entrar()).ok).toBe(true);
+    expect(guardados).toEqual(["token-do-pc"]);
+  });
+});
+
+describe("pastaPermitida", () => {
+  it.each([
+    "C:\\a\\..\\..",
+    "C:\\..\\Windows",
+    "C:\\Jogos\\..\\..\\x",
+    "C:\\",
+    "C:",
+    "/",
+    "pasta/relativa",
+    "C:\\Windows",
+    "c:/windows/system32/sabre",
+    "C:\\Program Files\\Sabre",
+    "C:\\Program Files (x86)\\Sabre",
+    "",
+  ])("recusa %s", (p) => expect(pastaPermitida(p)).toBe(false));
+  it.each(["C:\\Jogos\\SabreHosting", "D:/Amigos/Sabre", "/home/x/sabre"])("aceita %s", (p) =>
+    expect(pastaPermitida(p)).toBe(true),
+  );
+  it("recusa o que não é texto", () => {
+    expect(pastaPermitida(42)).toBe(false);
+    expect(pastaPermitida(undefined)).toBe(false);
   });
 });

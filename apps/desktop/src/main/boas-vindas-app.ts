@@ -1,4 +1,4 @@
-import { dialog, ipcMain, safeStorage } from "electron";
+import { dialog, ipcMain, safeStorage, shell } from "electron";
 import type { BrowserWindow, IpcMainInvokeEvent } from "electron";
 import { join } from "node:path";
 import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
@@ -62,6 +62,15 @@ export async function registrarBoasVindas(op: OpcoesBoasVindasDoApp): Promise<Bo
   ligar("sabre:bv:conferir", (texto: unknown) => bv.conferirConvite(texto));
   ligar("sabre:bv:entrar", () => bv.entrar());
   ligar("sabre:bv:eula", () => bv.eula());
+  // O endereço sai do núcleo, nunca da janela; no E2E só conta o pedido (não abre navegador).
+  ligar("sabre:bv:abrir-eula", async () => {
+    if (process.env["SABRE_E2E"] === "1") {
+      const g = globalThis as Record<string, unknown>;
+      g["__sabreE2EEulaAberto"] = ((g["__sabreE2EEulaAberto"] as number | undefined) ?? 0) + 1;
+      return;
+    }
+    await shell.openExternal(bv.eula().link);
+  });
   ligar("sabre:bv:aceitar-eula", (aceito: unknown) => bv.aceitarEula(aceito));
   ligar("sabre:bv:escolher-pasta", () => escolher());
   ligar("sabre:bv:concluir", (pasta: unknown) => bv.concluir(pasta));

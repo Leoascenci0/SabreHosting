@@ -255,7 +255,9 @@
       <div class="config" id="bv-convite">
         <label for="bv-texto">Cole aqui o convite que você recebeu</label>
         <input type="text" id="bv-texto" autocomplete="off" spellcheck="false" />
-        <p class="dica">O texto começa com sabre://convite/ e vale por tempo limitado.</p>
+        <p class="dica">
+          É o texto que o administrador do grupo te enviou. Ele vale por tempo limitado.
+        </p>
         <div class="acoes">
           <button type="button" class="principal" id="bv-conferir">Conferir convite</button>
         </div>
@@ -278,7 +280,9 @@
       </div>
       <div class="config" id="bv-eula" hidden>
         <p id="bv-eula-texto"></p>
-        <p class="detalhe" id="bv-eula-link"></p>
+        <button type="button" class="secundario" id="bv-eula-abrir">
+          Ler o contrato no navegador
+        </button>
         <label class="opcao" for="bv-eula-aceito">
           <input type="checkbox" id="bv-eula-aceito" />
           Li e aceito o contrato (EULA) da Mojang

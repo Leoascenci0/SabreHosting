@@ -23,6 +23,7 @@ electron.contextBridge.exposeInMainWorld("sabre", {
       electron.ipcRenderer.invoke("sabre:bv:conferir", texto),
     entrar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:bv:entrar"),
     eula: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:bv:eula"),
+    abrirEula: (): Promise<void> => electron.ipcRenderer.invoke("sabre:bv:abrir-eula"),
     aceitarEula: (aceito: boolean): Promise<unknown> =>
       electron.ipcRenderer.invoke("sabre:bv:aceitar-eula", aceito),
     escolherPasta: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:bv:escolher-pasta"),
