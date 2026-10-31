@@ -2,7 +2,8 @@
 import { spawnSync } from "node:child_process";
 
 const pasta = new URL("..", import.meta.url).pathname;
-const executa = (comando, args) => spawnSync(comando, args, { cwd: pasta, stdio: "inherit" }).status ?? 1;
+const executa = (comando, args) =>
+  spawnSync(comando, args, { cwd: pasta, stdio: "inherit" }).status ?? 1;
 
 if (executa("npm", ["run", "build"]) !== 0) process.exit(1);
 
