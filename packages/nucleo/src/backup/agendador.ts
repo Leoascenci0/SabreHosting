@@ -5,11 +5,10 @@
  * fim). Aqui não há outro fluxo de save: só o pacote (bkp-1.2) e o relógio. Rotação é bkp-2.1; envio ao cartório, outro item.
  */
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { salvarSeguro } from "../servidor/comandos.js";
 import type { ServidorMinecraft } from "../servidor/processo.js";
-import { criarPacote, type PacoteCriado } from "./pacote.js";
+import { PacoteDescartado, criarPacote, type PacoteCriado } from "./pacote.js";
 
 export interface OpcoesBackup {
   servidor: ServidorMinecraft;
@@ -21,6 +20,8 @@ export interface OpcoesBackup {
   agora?: () => Date;
   /** Prazo para o servidor confirmar o `save-all flush`. */
   prazoSalvarMs?: number;
+  /** Prazo para a cópia do mundo; estourou, o pacote é abortado e descartado. */
+  prazoCopiaMs?: number;
 }
 
 export interface BackupFeito extends PacoteCriado {
@@ -43,13 +44,21 @@ export async function fazerBackup(opcoes: OpcoesBackup): Promise<BackupFeito> {
   const inicio = Date.now();
   const pacote = await salvarSeguro(
     servidor,
-    () => criarPacote(pastaDoMundo, destino, { versao, epoca }),
+    (sinal) =>
+      criarPacote(pastaDoMundo, destino, {
+        versao,
+        epoca,
+        sinal,
+        confirmar: () => servidor.estado === "pronto",
+      }).catch((erro: unknown) => {
+        if (!(erro instanceof PacoteDescartado) || sinal.aborted) throw erro;
+        throw new Error("O servidor caiu durante o backup; descartei o pacote incompleto.", {
+          cause: erro,
+        });
+      }),
     opcoes.prazoSalvarMs,
+    opcoes.prazoCopiaMs,
   );
-  if (servidor.estado !== "pronto") {
-    await rm(pacote.caminho, { force: true });
-    throw new Error("O servidor caiu durante o backup; descartei o pacote incompleto.");
-  }
   return { ...pacote, duracaoMs: Date.now() - inicio };
 }
 

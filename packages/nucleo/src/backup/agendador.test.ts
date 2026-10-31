@@ -6,12 +6,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo } from "../../test/ajuda/mundos.js";
 import type { ServidorMinecraft } from "../servidor/processo.js";
 import { agendarBackups, fazerBackup } from "./agendador.js";
+import { rename } from "node:fs/promises";
 import * as pacote from "./pacote.js";
 
 // O espião deixa o `criarPacote` real rodar, mas anota em `eventos` quando ele começa.
 vi.mock("./pacote.js", async (original) => {
   const real = await original<typeof import("./pacote.js")>();
   return { ...real, criarPacote: vi.fn(real.criarPacote) };
+});
+
+// O espião anota todo rename para provar que o pacote nunca ganha o nome final de um servidor que caiu.
+vi.mock("node:fs/promises", async (original) => {
+  const real = await original<typeof import("node:fs/promises")>();
+  return { ...real, rename: vi.fn(real.rename) };
 });
 
 const PRAZO = 30_000;
@@ -154,17 +161,35 @@ describe("fazerBackup", () => {
   );
 
   it(
-    "servidor que cai durante a cópia: descarta o pacote e avisa em pt-BR",
+    "servidor que cai durante a cópia: o pacote nunca ganha o nome final e o aviso é em pt-BR",
     async () => {
       const s = servidorFalso(5);
       const o = base(s);
       vi.mocked(pacote.criarPacote).mockImplementationOnce(async (...a) => {
-        const r = await real(...a);
         s.estado = "caiu";
-        return r;
+        return real(...a);
       });
+      vi.mocked(rename).mockClear();
       await expect(fazerBackup(o)).rejects.toThrow(/servidor caiu/i);
+      expect(rename).not.toHaveBeenCalled();
       expect(readdirSync(o.pastaBackups)).toEqual([]);
+    },
+    PRAZO,
+  );
+
+  it(
+    "cópia que estoura o prazo é abortada: nada fica no destino, nem .parcial, e o save-on volta",
+    async () => {
+      const o = {
+        ...base(servidorFalso(5)),
+        pastaDoMundo: gerarMundo({ tamanho: "20MB", pasta: nova() }),
+        prazoCopiaMs: 30,
+      };
+      vi.mocked(rename).mockClear();
+      await expect(fazerBackup(o)).rejects.toThrow(/passou do prazo/);
+      expect(rename).not.toHaveBeenCalled();
+      expect(existsSync(o.pastaBackups) ? readdirSync(o.pastaBackups) : []).toEqual([]);
+      expect(eventos.at(-1)).toBe("enviar:save-on");
     },
     PRAZO,
   );

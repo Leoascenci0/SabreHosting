@@ -13,10 +13,23 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { c as criarTar } from "tar";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo } from "../../test/ajuda/mundos.js";
-import { gerarManifesto } from "./manifesto.js";
-import { abrirPacote, criarPacote } from "./pacote.js";
+import { MUDOU, gerarManifesto } from "./manifesto.js";
+import { rename } from "node:fs/promises";
+import { PacoteDescartado, abrirPacote, criarPacote } from "./pacote.js";
+
+// O manifesto também passa por um espião, para simular o arquivo que some no meio da leitura.
+vi.mock("./manifesto.js", async (original) => {
+  const real = await original<typeof import("./manifesto.js")>();
+  return { ...real, gerarManifesto: vi.fn(real.gerarManifesto) };
+});
+
+// O espião deixa o rename real rodar, mas anota para quem ele foi.
+vi.mock("node:fs/promises", async (original) => {
+  const real = await original<typeof import("node:fs/promises")>();
+  return { ...real, rename: vi.fn(real.rename) };
+});
 
 const pastas: string[] = [];
 const opcoes = { versao: 3, epoca: 1 };
@@ -246,5 +259,93 @@ describe("criarPacote / abrirPacote", () => {
     await expect(criarPacote(mundo, destino, opcoes)).rejects.toThrow(/nome reservado/);
     expect(existsSync(destino)).toBe(false);
     expect(existsSync(`${destino}.parcial`)).toBe(false);
+  });
+
+  it("a mensagem específica 'o mundo mudou durante a leitura' chega ao amigo", async () => {
+    const base = pasta();
+    const mundo = gerarMundo({ tamanho: "1MB", pasta: join(base, "mundo") });
+    const destino = join(base, "mundo.tar.gz");
+    vi.mocked(gerarManifesto).mockRejectedValueOnce(new Error(MUDOU));
+    const tarefa = criarPacote(mundo, destino, opcoes);
+    await expect(tarefa).rejects.toThrow(/O mundo mudou durante a leitura/);
+    expect(existsSync(destino)).toBe(false);
+  });
+
+  it("confirmar falso: nenhum rename, nada com nome final e sem .parcial", async () => {
+    const base = pasta();
+    const mundo = gerarMundo({ tamanho: "1MB", pasta: join(base, "mundo") });
+    const destino = join(base, "mundo.tar.gz");
+    vi.mocked(rename).mockClear();
+    await expect(
+      criarPacote(mundo, destino, { ...opcoes, confirmar: () => false }),
+    ).rejects.toThrow(/descartei|descartado/i);
+    expect(rename).not.toHaveBeenCalled();
+    expect(existsSync(destino)).toBe(false);
+    expect(existsSync(`${destino}.parcial`)).toBe(false);
+  });
+
+  it("sinal já abortado: não lê nem deixa pacote ou .parcial", async () => {
+    const base = pasta();
+    const mundo = gerarMundo({ tamanho: "1MB", pasta: join(base, "mundo") });
+    const destino = join(base, "a.tar.gz");
+    const sinal = AbortSignal.abort();
+    await expect(criarPacote(mundo, destino, { ...opcoes, sinal })).rejects.toThrow(
+      PacoteDescartado,
+    );
+    expect(existsSync(destino)).toBe(false);
+    expect(existsSync(`${destino}.parcial`)).toBe(false);
+  });
+
+  it("abortado DEPOIS que o .parcial existe: para a compactação, apaga o .parcial, nada com nome final", async () => {
+    const base = pasta();
+    const mundo = gerarMundo({ tamanho: "20MB", pasta: join(base, "mundo") });
+    const destino = join(base, "b.tar.gz");
+    const controle = new AbortController();
+    vi.mocked(rename).mockClear();
+    const tarefa = criarPacote(mundo, destino, { ...opcoes, sinal: controle.signal });
+    const vigia = setInterval(() => {
+      if (existsSync(`${destino}.parcial`)) controle.abort();
+    }, 1);
+    // A mensagem é a do worker derrubado: sem o sinal no worker a compactação iria até o fim.
+    await expect(tarefa).rejects.toThrow("cancelado durante a compactação");
+    clearInterval(vigia);
+    expect(rename).not.toHaveBeenCalled();
+    expect(existsSync(destino)).toBe(false);
+    expect(existsSync(`${destino}.parcial`)).toBe(false);
+  }, 30_000);
+
+  it("abortado durante o rename: remove o destino recém-criado e rejeita", async () => {
+    const base = pasta();
+    const mundo = gerarMundo({ tamanho: "1MB", pasta: join(base, "mundo") });
+    const destino = join(base, "c.tar.gz");
+    const controle = new AbortController();
+    const { rename: renomear } =
+      await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+    vi.mocked(rename).mockImplementationOnce(async (de, para) => {
+      await renomear(de, para);
+      controle.abort();
+    });
+    await expect(
+      criarPacote(mundo, destino, { ...opcoes, sinal: controle.signal }),
+    ).rejects.toThrow(PacoteDescartado);
+    expect(existsSync(destino)).toBe(false);
+    expect(existsSync(`${destino}.parcial`)).toBe(false);
+  });
+
+  it("servidor que cai durante o rename (confirmar vira falso): remove o destino", async () => {
+    const base = pasta();
+    const mundo = gerarMundo({ tamanho: "1MB", pasta: join(base, "mundo") });
+    const destino = join(base, "d.tar.gz");
+    let renomeou = false;
+    const { rename: renomear } =
+      await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+    vi.mocked(rename).mockImplementationOnce(async (de, para) => {
+      await renomear(de, para);
+      renomeou = true;
+    });
+    await expect(
+      criarPacote(mundo, destino, { ...opcoes, confirmar: () => !renomeou }),
+    ).rejects.toThrow(PacoteDescartado);
+    expect(existsSync(destino)).toBe(false);
   });
 });
