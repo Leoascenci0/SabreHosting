@@ -10,6 +10,7 @@ import {
   Tray,
 } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
+import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { depsReais } from "./deps-reais.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
@@ -19,6 +20,7 @@ import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
 const aqui = (relativo: string): string => fileURLToPath(new URL(relativo, import.meta.url));
 const PAGINA = pathToFileURL(aqui("../ui/index.html")).href;
 const ICONE = aqui("../../recursos/icone/icone-256.png");
+const PASTA_ICONE = aqui("../../recursos/icone/");
 const INICIO_OCULTO = "--oculto";
 
 let janela: BrowserWindow | null = null;
@@ -117,8 +119,27 @@ function criarJanela(oculta: boolean): BrowserWindow {
   return nova;
 }
 
+// Recorte só da cabeça do tigre: 16 px (100%), 24 px (150%), 32 px (200%) e 48 px (300%).
+function iconeDaBandeja(): Electron.NativeImage {
+  const imagem = nativeImage.createEmpty();
+  for (const [escala, lado] of [
+    [1, 16],
+    [1.5, 24],
+    [2, 32],
+    [3, 48],
+  ] as const) {
+    imagem.addRepresentation({
+      scaleFactor: escala,
+      width: lado,
+      height: lado,
+      buffer: readFileSync(`${PASTA_ICONE}bandeja-${lado}.png`),
+    });
+  }
+  return imagem;
+}
+
 function criarBandeja(): Tray {
-  const nova = new Tray(nativeImage.createFromPath(ICONE).resize({ width: 32, height: 32 }));
+  const nova = new Tray(iconeDaBandeja());
   nova.setToolTip("SabreHosting");
   nova.setContextMenu(
     Menu.buildFromTemplate([
