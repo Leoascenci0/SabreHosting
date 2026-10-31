@@ -46,7 +46,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   *Confirmação:* testes terminam rápido e nenhum worker fica vivo.
   *Origem:* host-2.3 · PR #16 · filha + qa
 
-- [ ] **2.5 — Servidor órfão nunca fica solto** (prioridade alta: regra de ouro 1, antes da v0.1)
+- [x] **2.5 — Servidor órfão nunca fica solto** (PR #114, 31/10/2026; prova no Windows [P]) (prioridade alta: regra de ouro 1, antes da v0.1)
   *O que fazer:* se o app morre (fechado à força, queda) com o servidor no ar, o Java fica sem quem renove a trava; ela
   vence em ~60 s e outro PC pode hospedar com o órfão ainda rodando (dois hosts). Garantir que o órfão se encerre com
   `save-all flush` + `stop` quando perde o app (ex.: vigia ligado ao app por pipe/PID que pede o stop), e que o app, ao
