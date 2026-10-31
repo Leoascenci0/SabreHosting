@@ -60,7 +60,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* teste novo que falha ao remover só um dos dois prazos; arquivo de teste mais rápido que os 31 s de hoje.
   *Origem:* syncmel-1.6 · PR #172 · filha + qa integridade
 
-- [ ] **1.8 — A trava de host impede o espalhar em segundo plano** *(decidido: opção A. Corte de 31/10, onda 23: **1.8a ✅ PR #178** — cartório com a trava de atualização; **1.8b** núcleo (aplicar/espalhar usam a nova trava) em andamento. Backlog: relógio do cartório voltando para trás pode reviver trava vencida — vale para as duas travas)*
+- [x] **1.8 — A trava de host impede o espalhar em segundo plano** *(decidido: opção A. Corte de 31/10, onda 23: **1.8a ✅ PR #178** — cartório com a trava de atualização; **1.8b ✅ PR #182** núcleo e app usam a nova trava; falta ligar o espalhar ao app (e checar `servidorOrfao` antes). Backlog: relógio do cartório voltando para trás pode reviver trava vencida — vale para as duas travas)*
   *O que fazer:* `aplicarDelta` exige a trava de host; enquanto o host a segura, um PC que não hospeda não consegue pegar a vez e só atualiza quando a trava está livre. **Pede decisão do Eliel (regra do grupo/trava):** (A) uma "trava de atualização" separada da de host; (B) aceitar atualizar só quando ninguém hospeda. A regra de ouro 1 (um host por vez) não pode ser contornada.
   *Arquivo:* `packages/nucleo/src/sync/espalhar.ts`, `aplicar.ts`, `services/cartorio/src/`
   **Tela no app:** não se aplica.
