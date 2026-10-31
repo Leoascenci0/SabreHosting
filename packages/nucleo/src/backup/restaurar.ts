@@ -61,7 +61,7 @@ async function exigirPodeTrocar(o: OpcoesRestaurar): Promise<void> {
 const apagar = (p: string) => rm(p, { recursive: true, force: true });
 
 /** Existe? Recusa o que não é pasta, inclusive link simbólico (quebrado ou não): o app nunca cria o mundo assim. */
-async function haMundo(pasta: string): Promise<boolean> {
+export async function haMundo(pasta: string): Promise<boolean> {
   const info = await lstat(pasta).catch((erro: NodeJS.ErrnoException) => {
     if (erro.code === "ENOENT") return undefined;
     throw erro;
@@ -143,7 +143,7 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
 }
 
 /** Devolve o mundo de antes ao lugar. Se nem isso der, trava o servidor e diz onde está cada coisa. */
-async function desfazer(
+export async function desfazer(
   renomear: (de: string, para: string) => Promise<void>,
   c: { mundo: string; antigo: string; temp: string; backup: PacoteCriado | undefined },
   causa: unknown,
