@@ -204,6 +204,16 @@ net.ipv4.ip_forward = 1
 FIM
 executar sysctl --system
 
+# ---------- 5b. Segredo do cartório: gerado AQUI (root, 0600), nunca impresso ----------
+
+SEGREDO_CARTORIO=/etc/sabre/cartorio.env
+if ! ja_feito segredo-cartorio grep -Eq '^SABRE_CARTORIO_SEGREDO_ADMIN=[0-9a-f]{64}$' "$SEGREDO_CARTORIO"; then
+  executar install -d -m 755 -o root -g root /etc/sabre
+  executar bash "$AQUI/gerar-segredo.sh" "$SEGREDO_CARTORIO"
+  executar chown root:root "$SEGREDO_CARTORIO"
+  marcar segredo-cartorio
+fi
+
 # ---------- 6. Unidades systemd de exemplo (instaladas, DESLIGADAS) ----------
 
 for unidade in sabre-cartorio.service sabre-proxy.service; do
