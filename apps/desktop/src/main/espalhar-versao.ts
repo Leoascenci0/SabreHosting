@@ -1,4 +1,4 @@
-import type { ClienteCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
+import { ErroCartorio, type ClienteCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
 import { alcancar } from "@sabrehosting/nucleo/sync/alcancar";
 import { ErroLocal } from "@sabrehosting/nucleo/sync/aplicar";
 import {
@@ -111,7 +111,15 @@ export interface OpcoesGatilho {
   versaoLocal: () => Promise<number>;
   /** Percentual da atualização em curso (a tela mostra); `undefined` = acabou. */
   aoProgresso?: (percentual: number | undefined) => void;
-  aoAvisar?: (texto: string) => void;
+  /** `texto` (com o erro bruto) é só para o console; `paraTela` é seguro de mostrar (sem caminho, IP ou porta). */
+  aoAvisar?: (texto: string, paraTela: string) => void;
+}
+
+const FALHA_GENERICA = "Não deu para atualizar seu mundo agora. Tento de novo em alguns minutos.";
+
+/** Só mensagens fixas em pt-BR do app (ErroLocal/ErroCartorio) vão à tela; o resto pode ter caminho ou endereço. */
+export function textoSeguroParaTela(erro: unknown): string {
+  return erro instanceof ErroLocal || erro instanceof ErroCartorio ? erro.message : FALHA_GENERICA;
 }
 
 /**
@@ -133,7 +141,10 @@ export function criarGatilhoEspalhar(o: OpcoesGatilho): () => Promise<void> {
         ...(o.aoProgresso ? { aoProgresso: o.aoProgresso } : {}),
       });
     } catch (erro) {
-      o.aoAvisar?.(`Atualização do mundo: ${erro instanceof Error ? erro.message : String(erro)}`);
+      o.aoAvisar?.(
+        `Atualização do mundo: ${erro instanceof Error ? erro.message : String(erro)}`,
+        textoSeguroParaTela(erro),
+      );
     } finally {
       emCurso = false;
     }

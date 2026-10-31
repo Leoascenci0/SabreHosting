@@ -591,9 +591,9 @@ if (!app.requestSingleInstanceLock()) {
       disparoEspalhar = ligarEspalhar({
         env: process.env,
         inicio: inicioApp,
-        aoAvisar: (texto) => {
-          console.warn(texto);
-          avisoAtualizacaoMundo = `Não consegui atualizar o mundo: ${texto.replace(/^\[atualizar\] Atualização do mundo: /, "")}`;
+        aoAvisar: (texto, paraTela) => {
+          console.warn(texto); // detalhe bruto só no console
+          avisoAtualizacaoMundo = `Não consegui atualizar o mundo: ${paraTela}`;
           inicioApp?.mudou();
         },
         aoProgresso: (p) => {

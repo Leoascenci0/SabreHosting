@@ -6,8 +6,9 @@ import { gerarMundo, hashesDoMundo } from "../../../../packages/nucleo/test/ajud
 import { gerarManifesto } from "@sabrehosting/nucleo/backup/manifesto";
 import { hashDoArquivo } from "@sabrehosting/nucleo/integridade/hash";
 import { servirArquivos, type Servidor } from "@sabrehosting/nucleo/sync/transferencia";
+import { ErroCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
 import { ErroLocal } from "@sabrehosting/nucleo/sync/aplicar";
-import { criarEspalhador, criarGatilhoEspalhar } from "./espalhar-versao.js";
+import { criarEspalhador, criarGatilhoEspalhar, textoSeguroParaTela } from "./espalhar-versao.js";
 
 const pastas: string[] = [];
 const servidores: Servidor[] = [];
@@ -308,5 +309,45 @@ describe("3 PCs simulados chegam à versão M (1.9a)", () => {
     expect(hashesDoMundo(c.mundo)).toEqual(hostAntes);
     expect(hashesDoMundo(mundo2)).toEqual(hostAntes);
     expect(hashesDoMundo(c.host)).toEqual(hostAntes);
+  });
+});
+
+describe("texto seguro para a tela (syncmel-1.14)", () => {
+  it("erro com caminho, IP ou porta vira texto genérico; só ErroLocal/ErroCartorio passam", () => {
+    for (const bruto of [
+      new Error("ENOENT: no such file or directory, open '/home/x/mundo/level.dat'"),
+      new Error('Porta "70000" recusada em 10.66.0.3'),
+      new Error("Caminho fora do mundo recusado: C:\\Users\\Lucas\\mundo"),
+      "string solta /home/x/mundo",
+    ]) {
+      const t = textoSeguroParaTela(bruto);
+      expect(t).toMatch(/^Não deu para atualizar seu mundo agora/);
+      expect(t).not.toMatch(/home|C:|10\.66|ENOENT|Porta/);
+    }
+    expect(textoSeguroParaTela(new ErroLocal("O servidor deste PC está no ar."))).toBe(
+      "O servidor deste PC está no ar.",
+    );
+    expect(textoSeguroParaTela(new ErroCartorio("Sem resposta da nuvem.", "rede"))).toBe(
+      "Sem resposta da nuvem.",
+    );
+  });
+
+  it("o gatilho manda o erro bruto só ao console e o texto seguro à tela", async () => {
+    const chamadas: [string, string][] = [];
+    const rodar = criarGatilhoEspalhar({
+      cliente: {
+        maisNova: async () => {
+          throw new Error("ENOENT /home/x/mundo");
+        },
+        quemTem: async () => ({}),
+        eu: async () => ({ id: 1 }),
+      } as never,
+      versaoLocal: async () => 1,
+      espalhar: (async () => undefined) as never,
+      aoAvisar: (t, tela) => chamadas.push([t, tela]),
+    });
+    await rodar();
+    expect(chamadas[0]?.[0]).toContain("ENOENT /home/x/mundo");
+    expect(chamadas[0]?.[1]).not.toContain("/home");
   });
 });
