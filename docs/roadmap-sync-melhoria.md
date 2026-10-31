@@ -68,10 +68,18 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Depende de:* decisão do Eliel e sync-2.1a (PR #173).
   *Origem:* sync-2.1a · PR #173 · filha
 
-- [ ] **1.9 — Ligar o espalhar ao app (sync-2.1b)**
+- [ ] **1.9 — Ligar o espalhar ao app (sync-2.1b)** *(onda 25: **1.9a ✅ PR #192** — núcleo+main: fontes sem ip null, órfão bloqueia, gatilho em segundo plano a cada 10 min, 2º rename local, integração `/atualizacao`; **falta 1.9b**: tela "Limite de banda" (padrão 10 MB/s) e limite real em `pedirArquivo`; nuvem NÃO é fonte, decidido 31/10)*
   *O que fazer:* montar as fontes com `quemTem`/`PORTA_ESPALHAR` (filtrando `ip === null`, senão um PC recém-chegado derruba a lista toda no `escolherFontes`), decidir se a nuvem entra como fonte (hoje serve só o pacote fechado, não arquivo por hash), checar `servidorOrfao` além de `servidorRodando` antes de aplicar, disparar após o backup/versão nova e em segundo plano, e a tela Configurações › Backups › "Limite de banda para atualizar o mundo". Notas do qa do #182: janela de ~20 s de rede entre os dois renames no aplicar (prazo menor); textos do renovador falam em "trava de host"; teste de integração de `/atualizacao`.
   *Arquivo:* `packages/nucleo/src/sync/espalhar.ts`, `aplicar.ts`, `apps/desktop/src/main/`, `apps/desktop/src/ui/`
   **Tela no app:** Configurações › Backups › Limite de banda para atualizar o mundo.
   *Confirmação:* teste com 3 PCs simulados: todos chegam à versão M sem tocar o mundo do host.
   *Depende de:* cartmel-2.4 ✅ (PR #187), syncmel-1.8b ✅ (PR #182), piloto-1.1c ✅.
   *Origem:* sync-2.1b · onda 24 (não coube: 7º item)
+
+- [ ] **1.10 — Servir os arquivos do mundo no app (sync-2.1c)**
+  *O que fazer:* nenhum código do app chama `servirArquivos`: nenhum PC escuta na `PORTA_ESPALHAR` (25570), então o espalhar (1.9a) não acha fonte de verdade. Iniciar o servidor de arquivos no app, só na IP da rede privada do PC (nunca em 0.0.0.0), com o token por PC conferido pelo cartório, servindo só pacotes fechados registrados (nunca a pasta do mundo vivo); parar ao sair. Também (notas do qa do #192): ignorar em `fontesDeCopias` IP fora da faixa (hoje um IP estranho derruba a rodada de todos); ligar o disparo também após backup bom; teste de `ligarEspalharDoApp`.
+  *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/sync/transferencia.ts`, `espalhar.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste com 2 PCs simulados (mundo inventado): um serve, o outro atualiza; IP fora da faixa é ignorado sem derrubar a rodada; servidor não escuta fora da rede privada.
+  *Depende de:* syncmel-1.9a ✅ (PR #192). Libera 1.3, 1.9b e migra-2.1.
+  *Origem:* syncmel-1.9a · PR #192 · filha + qa
