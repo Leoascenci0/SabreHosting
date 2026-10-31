@@ -201,6 +201,14 @@ o que se repete). No máximo 10 linhas:
   do aviso de "pronto" da filha, e conferir `git log origin/main..origin/<ramo>` vazio depois do merge.
 - **S-05** worktree com `node_modules` em atalho da pasta principal dá `Cannot find module '@sabrehosting/...'`: rode
   `npm ci` no próprio worktree.
+- **S-06** dois agendadores/relógios ativos depois de "religar" assíncrono: tomar a geração (`++geracao`) e guardar o
+  antigo ANTES de qualquer `await`.
+- **S-07** marcador/caminho lido do disco é entrada não confiável: validar que as pastas são distintas e filhas diretas
+  antes de apagar qualquer coisa a partir dele.
+- **S-08** teste de socket cru: `s.resume()` no cliente, senão o `close` nunca chega; o prazo de cabeçalho do Node
+  só corta em ~30 s (janela do teste com folga).
+- **S-09** sessão nova falha com "branch or commit was not found": `source_revision` com hash curto; usar sempre o hash
+  completo (`git rev-parse origin/main`).
 
 ## Skills sob demanda
 

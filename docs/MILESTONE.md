@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 20** (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
+**Próxima onda: 23** — entra o appmel-1.11 (destravado 31/10: rotação 10 + 7 dias, DECISOES) e o hostmel-3.1 (versão escolhida pelo dono); Dependabot #95 e #96 (merge autônomo, DECISOES 31/10) (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
 
-_(nenhum item aberto; rodada da madrugada de 31/10 encerrada às 04:15 — 33 PRs; retomar com `/maxima retomar`)_
+Onda 22 (31/10) — appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 — sessão https://claude.ai/code/session_012qrjntw8ggfpCSw7mg4UfD (a 1ª tentativa falhou: S-09)
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -45,11 +45,11 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 ## Pendente do Eliel
 
+- **redemel-1.3** — tirar o PC revogado da rede privada: precisa do WireGuard instalado de verdade na máquina da nuvem.
+
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
 
-- **Liberar `repo.papermc.io`** na rede do ambiente da nuvem (Allowed domains). *Trava:* rede-2.2.
-- **Versão do Minecraft** (e do NeoForge): escolha do Eliel antes do host-3.1 (teste no PC).
-- **Dependabot #95 e #96** (actions do CI 4→7): PR de autor externo, merge é do Eliel.
+- **Liberar `repo.papermc.io`** na rede do ambiente da nuvem (Allowed domains). *Trava:* rede-2.2. Eliel disse 31/10 que libera; a próxima onda confere com `curl` antes de despachar.
 - **Provas no PC Windows:** appmel-1.5, hostmel-2.5, appmel-1.1 (passo a passo nos PRs #101, #114, #144).
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
   assinatura (pago, ~US$ 100+/ano). *Trava:* app-3.2.
@@ -67,6 +67,10 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 31/10/2026 (dia) — Onda 22: syncmel-1.5 #170, appmel-1.10 #171, syncmel-1.6 #172, sync-2.1a #173, drive-1.1a #174, controle #175.
+- 31/10/2026 (dia) — Onda 21: cartmel-2.2 #163, syncmel-1.4 #164, appmel-1.7 #165, syncmel-1.1 #166, appmel-1.8 #167, syncmel-1.2 #168, controle #169.
+- 31/10/2026 (dia) — Onda 20: cartmel-1.1 #154, sync-1.1 #156, app-2.1 #157, sync-1.2 #158, app-2.2 #160, cartmel-2.3 #161, controle #162.
 
 - 31/10/2026 (madrugada) — 33 PRs: convite completo (rede-1.4 #85, cart-1.5 #84, rede-1.5 #97); correção do CI da main
   (corr-1.1 #118); host: 2.3 #89, 2.4 #99, 1.1 #102, 1.2 #106, 1.3 #109, 2.5 vigia #114, 1.4 #122, 2.2 #139; backup:

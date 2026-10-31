@@ -87,3 +87,15 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* testes: sem a confirmação do save-off a cópia não começa; cópia que passa do prazo leva ao `save-on`.
   *Origem:* host-2.2 · PR #30 · qa
+
+## Bloco 3 — Versão do jogo escolhida pelo grupo
+
+- [ ] **3.1 — Qualquer versão do Minecraft, escolhida pelo dono** (decisão do Eliel, 31/10/2026)
+  *O que fazer:* lista de versões do Minecraft (da mais nova às antigas) vinda do manifesto oficial da Mojang; para cada
+  uma, o que o servidor consegue rodar: NeoForge + Sinytra Connector (Fabric e Forge juntos), um loader só, ou sem mods.
+  A versão escolhida vai para a configuração do grupo no cartório (todos os PCs usam a mesma); trocar de versão só com o
+  servidor parado e backup feito antes. Hashes por versão (hostmel-1.1) e Java certo para cada versão.
+  *Arquivo:* `packages/nucleo/src/servidor/`, `services/cartorio/src/`, `apps/desktop/src/ui/configuracoes.*`
+  **Tela no app:** Configurações › Servidor › Versão (só o dono); padrão 1.21.1.
+  *Confirmação:* teste: versão sem Connector não oferece Fabric+Forge; trocar versão com servidor rodando é recusado.
+  *Depende de:* app-2.2 ✅ · pode virar 2–3 itens na triagem (nucleo, cartório, tela).
