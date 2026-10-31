@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 21** (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
+**Próxima onda: 22** (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
 
-Onda 20 (31/10) — cartmel-1.1 · app-2.1 · sync-1.1 · app-2.2 · sync-1.2 — sessão https://claude.ai/code/session_012qrjntSMKMZcY3GUuomfqa
+Onda 21 (31/10) — syncmel-1.4 · appmel-1.7 · cartmel-2.2 · syncmel-1.1 · syncmel-1.2 · appmel-1.8 — sessão https://claude.ai/code/session_012qrjnuVvPbMbr49Ryg8nY3
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -67,6 +67,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 31/10/2026 (dia) — Onda 20: cartmel-1.1 #154, sync-1.1 #156, app-2.1 #157, sync-1.2 #158, app-2.2 #160, cartmel-2.3 #161, controle #162.
 
 - 31/10/2026 (madrugada) — 33 PRs: convite completo (rede-1.4 #85, cart-1.5 #84, rede-1.5 #97); correção do CI da main
   (corr-1.1 #118); host: 2.3 #89, 2.4 #99, 1.1 #102, 1.2 #106, 1.3 #109, 2.5 vigia #114, 1.4 #122, 2.2 #139; backup:
