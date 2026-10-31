@@ -44,6 +44,8 @@ const PRAZO_PARADA_SEM_TRAVA_MS = 10_000;
 const PRAZO_TRAVA_PADRAO_MS = 10_000;
 /** Pastas com servidor deste PC em andamento (regra de ouro 1: um servidor por mundo). */
 const pastasEmUso = new Set<string>();
+/** Teto de uma linha de comando ao console. */
+const MAX_LINHA = 1024;
 /** "Pronto" só pela linha da thread do servidor (`[Server thread/INFO] [classe]: Done (`); chat vem como `<Nome> Done (`. */
 const LINHA_PRONTO = /\[Server thread\/INFO\](?: \[[^\]]*\])?: Done \(/;
 
@@ -205,6 +207,9 @@ export class ServidorMinecraft extends EventEmitter {
       throw new Error(
         "O comando tem quebra de linha ou caractere de controle; não enviei nada ao servidor.",
       );
+    }
+    if (linha.length > MAX_LINHA) {
+      throw new Error(`O comando passa de ${MAX_LINHA} caracteres; não enviei nada ao servidor.`);
     }
     if (this.estado !== "pronto")
       throw new Error("O servidor ainda não está pronto para comandos.");

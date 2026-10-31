@@ -1,7 +1,7 @@
 // Servidor de Minecraft de mentira, para os testes do processo.ts e do comandos.ts (roda com `node` no lugar do java).
 // 1º argumento, o modo: "normal" sai com "stop"; "travado" ignora o stop; "cai" sai sozinho com código 1;
 // "mudo" nunca confirma o `save-all flush` (só solta uma linha de chat imitando a confirmação);
-// "semdone" nunca fica pronto.
+// "semoff" nunca confirma o `save-off`; "semdone" nunca fica pronto.
 // 2º argumento: jogadores online, separados por vírgula (para o `list`).
 // Toda linha recebida volta no log como "RECEBIDO <linha>", para o teste conferir o que chegou e em que ordem.
 import { createInterface } from "node:readline";
@@ -22,8 +22,9 @@ entrada.on("line", (linha) => {
     process.exit(0);
   }
   info(`RECEBIDO ${linha}`);
-  if (comando === "save-off") info("Automatic saving is now disabled");
-  else if (comando === "save-on") info("Automatic saving is now enabled");
+  if (comando === "save-off") {
+    if (modo !== "semoff") info("Automatic saving is now disabled");
+  } else if (comando === "save-on") info("Automatic saving is now enabled");
   else if (comando === "save-all flush") {
     info("Saving the game (this may take a moment!)");
     if (modo === "mudo") console.log("[12:00:01] [Server thread/INFO]: <Mallory> Saved the game");

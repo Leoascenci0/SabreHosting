@@ -35,6 +35,16 @@ function servidorFalso(atrasoMs: number | null = 40): ServidorMinecraft & Falso 
     estado: "pronto",
     enviar(linha: string) {
       eventos.push(`enviar:${linha}`);
+      if (linha === "save-off") {
+        setTimeout(
+          () =>
+            s.emit("log", {
+              nivel: "info",
+              texto: "[12:00:00] [Server thread/INFO]: Automatic saving is now disabled",
+            }),
+          0,
+        );
+      }
       if (linha === "save-all flush" && atrasoMs !== null) {
         setTimeout(() => {
           eventos.push("log:Saved the game");
