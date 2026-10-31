@@ -31,7 +31,8 @@ body {
   border-radius: var(--raio);
 }
 
-h1 {
+h1,
+h2 {
   margin: 0;
   font-size: 1.75rem;
   color: var(--cor-destaque);
@@ -128,4 +129,40 @@ button:disabled {
 
 .confirmacao p {
   margin: 0;
+}
+
+button.link {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--cor-destaque);
+  text-decoration: underline;
+}
+
+.lista-backups {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--espaco-2);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.lista-backups li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-3);
+  padding: var(--espaco-2) var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  text-align: left;
+}
+
+.lista-backups .meta {
+  display: block;
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
 }

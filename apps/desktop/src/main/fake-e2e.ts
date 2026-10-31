@@ -6,8 +6,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
+import { criarPacote } from "@sabrehosting/nucleo/backup/pacote";
+import { nomeDoBackup } from "@sabrehosting/nucleo/backup/agendador";
 import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
 import type { RespostaTrava } from "@sabrehosting/nucleo/cartorio/tipos";
+import { depsBackups } from "./deps-backups.js";
+import type { DepsBackups } from "./backups.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 // "dono-eu*": app reaberto com a trava ainda em nome deste PC, sem servidor desta sessão (com ou sem órfão vivo).
@@ -99,7 +103,11 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
   };
 
   const copias: string[] = [];
-  (globalThis as Record<string, unknown>)["__sabreE2EInicio"] = { copias, dono: () => dono };
+  (globalThis as Record<string, unknown>)["__sabreE2EInicio"] = {
+    copias,
+    dono: () => dono,
+    cliente,
+  };
   return {
     lerTrava: cliente.estadoTrava,
     hospedar: async (aoPerder) => {
@@ -121,5 +129,40 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
     servidorOrfao: async () => cenario === "dono-eu-orfao",
     endereco: process.env["SABRE_E2E_SEM_ENDERECO"] === "1" ? "" : ENDERECO,
     copiar: (t) => void copias.push(t),
+  };
+}
+
+/**
+ * Backups do E2E: mundo e backup inventados em pasta temporária, com o `restaurarBackup` DE VERDADE e o cartório
+ * falso do cenário (a trava é pega e devolvida pelo caminho normal). `level.dat` guarda qual versão é o mundo.
+ */
+export function depsBackupsE2E(servidorRodando: () => boolean): DepsBackups {
+  const raiz = mkdtempSync(join(tmpdir(), "sabre-e2e-backups-"));
+  const mundo = join(raiz, "world");
+  const backups = join(raiz, "backups");
+  mkdirSync(mundo, { recursive: true });
+  mkdirSync(backups, { recursive: true });
+  writeFileSync(join(mundo, "level.dat"), "do-backup");
+  const nome = nomeDoBackup(new Date("2026-10-30T14:05:09.000Z"), 7);
+  const pronto = criarPacote(mundo, join(backups, nome), { versao: 7, epoca: 1 }).then(() =>
+    writeFileSync(join(mundo, "level.dat"), "atual"),
+  );
+  const compartilhado = (globalThis as Record<string, unknown>)["__sabreE2EInicio"] as {
+    cliente: Parameters<typeof depsBackups>[0]["cliente"];
+  };
+  (globalThis as Record<string, unknown>)["__sabreE2EBackups"] = { mundo, backups, nome };
+  const real = depsBackups({
+    pastaBackups: backups,
+    pastaDoMundo: mundo,
+    cliente: {
+      ...compartilhado.cliente,
+      estadoTrava: async () => ({ epoca: 1 }),
+    },
+    servidorRodando,
+  });
+  return {
+    ...real,
+    listar: async () => (await pronto, real.listar()),
+    restaurar: async (n) => (await pronto, real.restaurar(n)),
   };
 }

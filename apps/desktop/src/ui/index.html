@@ -42,7 +42,32 @@
         </div>
       </div>
       <p class="versao" id="versao"></p>
+      <button type="button" class="link" id="ver-backups">Backups</button>
+    </main>
+    <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>
+      <h2 id="titulo-backups">Backups</h2>
+      <p class="detalhe" id="backups-detalhe" role="status"></p>
+      <p class="erro" id="backups-erro" role="alert" hidden></p>
+      <ul class="lista-backups" id="lista-backups"></ul>
+      <div
+        class="confirmacao"
+        id="backups-confirmacao"
+        role="alertdialog"
+        aria-labelledby="backups-pergunta"
+        hidden
+      >
+        <p id="backups-pergunta"></p>
+        <p class="detalhe">
+          O mundo de agora é guardado num backup antes da troca, e dá para voltar a ele depois.
+        </p>
+        <div class="acoes">
+          <button type="button" class="perigo" id="backups-confirmar">Restaurar</button>
+          <button type="button" class="secundario" id="backups-cancelar">Cancelar</button>
+        </div>
+      </div>
+      <button type="button" class="secundario" id="voltar-backups">Voltar</button>
     </main>
     <script type="module" src="tela.js"></script>
+    <script type="module" src="backups.js"></script>
   </body>
 </html>

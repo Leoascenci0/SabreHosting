@@ -23,6 +23,8 @@ export interface DepsInicio {
   /** Endereço para os amigos entrarem. Vazio: ainda não configurado. */
   endereco: string;
   copiar(texto: string): void;
+  /** Há um backup sendo restaurado? Hospedar espera (regra de ouro 2: nunca servidor com o mundo sendo trocado). */
+  restaurando?(): boolean;
 }
 
 export const SEM_GRUPO = "Este PC ainda não entrou no grupo.";
@@ -37,6 +39,8 @@ function motivoDe(e: unknown): MotivoSemCartorio {
   return tipo === "rede" || tipo === "acesso" ? tipo : "servidor";
 }
 
+export const RESTAURANDO =
+  "Um backup está sendo restaurado. Espere terminar para hospedar o servidor.";
 const GENERICA = "Não consegui fazer isso agora. Tente de novo em instantes.";
 
 /** Tempos de espera da liberação da trava e do servidor órfão; só os testes mexem. */
@@ -139,6 +143,9 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
   return {
     parar,
 
+    /** Servidor de uma sessão anterior ainda vivo na pasta? Erro conta como vivo. */
+    temOrfao,
+
     /** Este PC está com o servidor no ar (ou subindo)? Quem fecha o app precisa saber. */
     ativo: (): boolean => ativo !== undefined || ocupado,
 
@@ -198,6 +205,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     },
 
     async hospedar(): Promise<Resultado> {
+      if (deps.restaurando?.()) return { ok: false, mensagem: RESTAURANDO };
       if (ativo || ocupado)
         return { ok: false, mensagem: "O servidor já está subindo ou rodando." };
       ocupado = true;

@@ -12,6 +12,8 @@ import {
 import type { IpcMainInvokeEvent } from "electron";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { criarBackups, type Backups } from "./backups.js";
+import { depsBackupsReais } from "./deps-backups.js";
 import { depsReais } from "./deps-reais.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
@@ -155,19 +157,34 @@ function criarBandeja(): Tray {
   return nova;
 }
 
+let backupsApp: Backups | undefined;
+const restaurando = (): boolean => backupsApp?.restaurando() ?? false;
+
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1")
-    return criarInicio(depsReais(process.env, (t) => clipboard.writeText(t)));
+    return criarInicio({
+      ...depsReais(process.env, (t) => clipboard.writeText(t)),
+      restaurando,
+    });
   const { criarDepsE2E } = await import("./fake-e2e.js");
   const espiao = { spawns: [] };
   (globalThis as Record<string, unknown>)["__sabreE2EEspiao"] = espiao;
   const cenario = process.env["SABRE_E2E_CENARIO"] ?? "ninguem";
-  const inicio = criarInicio(criarDepsE2E(cenario as never, espiao));
+  const inicio = criarInicio({ ...criarDepsE2E(cenario as never, espiao), restaurando });
   if (cenario === "eu") await inicio.hospedar(); // "eu" = este PC já hospeda, pelo caminho normal
   return inicio;
 }
 
-function registrarPonte(inicio: Inicio): void {
+async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
+  const servidorRodando = (): boolean => inicio.ativo();
+  if (process.env["SABRE_E2E"] !== "1") {
+    return criarBackups(depsBackupsReais(process.env, servidorRodando, () => inicio.temOrfao()));
+  }
+  const { depsBackupsE2E } = await import("./fake-e2e.js");
+  return criarBackups(depsBackupsE2E(servidorRodando));
+}
+
+function registrarPonte(inicio: Inicio, backups: Backups): void {
   const permitir = (evento: IpcMainInvokeEvent): void => {
     if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
   };
@@ -176,6 +193,11 @@ function registrarPonte(inicio: Inicio): void {
   ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), inicio.jogar()));
   ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), inicio.hospedar()));
   ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), inicio.parar()));
+  ipcMain.handle("sabre:backups:listar", (evento) => (permitir(evento), backups.estado()));
+  ipcMain.handle("sabre:backups:restaurar", (evento, nome: unknown) => {
+    permitir(evento);
+    return backups.restaurar(nome); // o nome só vale se estiver na lista; a cola confere
+  });
   ipcMain.handle("sabre:versao", (evento) => {
     if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
     return app.getVersion();
@@ -212,7 +234,8 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(async () => {
     nativeTheme.themeSource = "system";
     inicioApp = await criarInicioDoApp();
-    registrarPonte(inicioApp);
+    backupsApp = await criarBackupsDoApp(inicioApp);
+    registrarPonte(inicioApp, backupsApp);
     bandeja = criarBandeja();
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {

@@ -398,3 +398,19 @@ describe("cliente do cartório", () => {
     expect(chamadas).toHaveLength(1);
   });
 });
+
+describe("informarCopia", () => {
+  it("avisa a versão que este PC tem: POST /copias com a versão, sem corpo na resposta", async () => {
+    const { cliente, chamadas } = montar([new Response(null, { status: 204 })]);
+    await cliente.informarCopia(7);
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/copias`);
+    expect(chamadas[0]?.init.method).toBe("POST");
+    expect(JSON.parse(String(chamadas[0]?.init.body))).toEqual({ versao: 7 });
+  });
+
+  it("versão que o cartório não conhece (404) vira erro do cartório", async () => {
+    const { cliente } = montar([json(404, { erro: "Versão inexistente." })]);
+    const e = await erroDe(cliente.informarCopia(99));
+    expect(e.tipo).toBe("resposta");
+  });
+});

@@ -241,6 +241,9 @@ export function criarCliente(opcoes: OpcoesCliente) {
     passar: (epoca: number, para: number) => trava("/trava/passar", false, { epoca, para }),
     soltar: (epoca: number) => trava("/trava/soltar", false, { epoca }),
     grupo: () => ler("/grupo", validarGrupo),
+    /** Este PC diz que agora tem a versão N inteira (substitui a anterior). Repete: dizer duas vezes não muda nada. */
+    informarCopia: (versao: number) =>
+      chamar<undefined>({ metodo: "POST", rota: "/copias", corpo: { versao }, repetir: true }),
     /** Só o PC dono. Não repete: cada tentativa reservaria outro IP provisório na nuvem. */
     criarConvite: (nomePc: string, validadeHoras?: number) =>
       chamar({
