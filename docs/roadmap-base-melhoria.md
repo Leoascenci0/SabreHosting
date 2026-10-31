@@ -13,7 +13,7 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   *Confirmação:* o workflow segue verde com os hashes; o Dependabot abre PR quando sair versão nova.
   *Origem:* base-1.2 · PR #7 · filha
 
-- [ ] **1.2 — Vistoria em push na main também confere arquivos**
+- [x] **1.2 — Vistoria em push na main também confere arquivos** (PR #111, 31/10/2026)
   *O que fazer:* em push na `main`, o verificador compara com a própria `main` e não confere nada de arquivo (só lint e
   testes valem). Fazer o CI passar `--base` do commit anterior (`github.event.before`) nesse caso.
   *Arquivo:* `.github/workflows/vistoria.yml`
