@@ -26,7 +26,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   *Confirmação:* teste: redirect para outro host recusado; falha no download mantém o mod antigo.
   *Origem:* lanc-1.4 · PR #210 · qa
 
-- [ ] **2.4 — Mods do grupo: limpar avisos antigos na tela**
+- [x] **2.4 — Mods do grupo: limpar avisos antigos na tela** (PR #226, 31/10/2026)
   *O que fazer:* em `carregarMods` (`ui/configuracoes.ts`), `avisoMods` nunca é limpo quando o problema some e o `erroMods` de "Não consegui ler a lista…" fica depois de uma leitura bem-sucedida: limpar nos dois casos (sem apagar o erro de uma ação que acabou de falhar).
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`
   **Tela no app:** Configurações › Grupo › "Mods do grupo".

@@ -119,7 +119,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: falha na instalação definitiva, depois sucesso sem novo convite.
   *Origem:* app-1.3b · PR #211 · filha
 
-- [ ] **1.14 — Respeitar `level-name` e validar `SABRE_JAVA`/`SABRE_NEOFORGE`**
+- [x] **1.14 — Respeitar `level-name` e validar `SABRE_JAVA`/`SABRE_NEOFORGE`** (PR #225, 31/10/2026)
   *O que fazer:* `pastaMundo` em `config-pc.ts` é fixa `servidor/world`, mas `deps-reais.ts` lê `level-name` do `server.properties`: se não for "world", backup e espalhar apontam para a pasta errada (não apaga nada). `SABRE_JAVA`/`SABRE_NEOFORGE` do ambiente viram executável do servidor sem validação em modo normal: validar ou limitar a modo teste.
   *Arquivo:* `apps/desktop/src/main/config-pc.ts`, `deps-reais.ts`
   **Tela no app:** não se aplica.
