@@ -3,6 +3,7 @@ import { access, readdir, readFile, readlink, realpath, stat } from "node:fs/pro
 import { join } from "node:path";
 import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
 import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
+import { gravarConfiguracao } from "@sabrehosting/nucleo/servidor/configurar";
 import { abrirJogo } from "@sabrehosting/nucleo/launcher/abrir";
 import { idDaInstancia, temMarcadorSabre } from "@sabrehosting/nucleo/launcher/instancia";
 import {
@@ -14,9 +15,15 @@ import {
 } from "@sabrehosting/nucleo/launcher/prism";
 import { ambienteLegado, ENDERECO_VALIDO, nomeDoMundo, type ConfigPc } from "./config-pc.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
+import { lerPreferencias, opcoesDoServidor } from "./preferencias.js";
+import { ipDaRedePrivada } from "./servir-arquivos.js";
 
 /** Ganchos só dos testes: rede e processo falsos no lugar dos reais. */
 export interface ExtrasDepsReais {
+  /** Pasta dos dados do app (onde mora `preferencias.json`); sem ela valem as distâncias padrão. */
+  pastaDados?: string;
+  /** IP deste PC no túnel privado; o padrão lê a interface do WireGuard. */
+  ipPrivado?: () => string | undefined;
   fetchFn?: typeof fetch;
   spawnFn?: (cmd: string, args: readonly string[], opcoes: SpawnOptions) => ChildProcess;
   prefixoArgs?: string[];
@@ -155,6 +162,16 @@ export function depsReais(
       if (!pasta || !java || !neoforge) {
         throw new Error("Este PC ainda não está configurado para hospedar o servidor.");
       }
+      // O servidor só escuta no IP do túnel privado (regra de segurança): sem túnel, nem grava nem sobe.
+      const ip = (extras.ipPrivado ?? ipDaRedePrivada)();
+      if (!ip) {
+        throw new Error(
+          "A rede privada do grupo não está ativa neste PC. Ative a conexão e tente Hospedar de novo.",
+        );
+      }
+      // As distâncias de Configurações › Servidor entram no server.properties antes de subir.
+      const prefs = extras.pastaDados ? opcoesDoServidor(lerPreferencias(extras.pastaDados)) : {};
+      await gravarConfiguracao(pasta, { ipRedePrivada: ip, ...prefs });
       return hospedar({
         cliente: exigir(),
         aoPerder,
