@@ -9,4 +9,8 @@
 
 | Onda | Itens | Sessão | Base | Estado |
 |---|---|---|---|---|
-| 26 | syncmel-1.9 (b) · syncmel-1.3 · syncmel-1.11 · hostmel-3.3 · lancmel-1.1 | (preencher) | be029a5 | aberta 15:15 |
+| 26 | syncmel-1.9 (b) · syncmel-1.3 · syncmel-1.11 · hostmel-3.3 · lancmel-1.1 | session_012qrjnudcWCDkN5r4UejEYE | be029a5 | fechada 15:48 → main 2b3560a |
+
+## Relatórios
+
+- **Onda 26** (15:48): ✅ syncmel-1.9b #202 · hostmel-3.3 #201 · lancmel-1.1 #200 · syncmel-1.3 #203 · syncmel-1.11 #204 (f → syncmel-1.12) · controle #205. P: nenhum. Decidi por você: 1.11f e sobras viraram syncmel-1.12; roadmap-lanc-melhoria → concluidos. Ficha S-13 (servir arquivo por hash: lstat+realpath) a promover ao CLAUDE.md. Custo n/d. main 2b3560a APROVADA.
