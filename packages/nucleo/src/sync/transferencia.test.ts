@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { connect, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -127,6 +127,22 @@ describe("servidor", () => {
   });
 });
 
+describe("conexões", () => {
+  it("conexão ociosa (sem enviar nada) é derrubada pelo servidor", async () => {
+    servidor = await servirArquivos({
+      endereco: "127.0.0.1",
+      porta: 0,
+      permitirLoopbackParaTeste: true,
+      conferirToken: async () => null,
+      arquivos: () => undefined,
+      tempoOciosoMs: 150,
+    });
+    const socket = connect(portaDoServidor(), "127.0.0.1");
+    await new Promise<void>((ok) => socket.once("close", () => ok()));
+    expect(socket.destroyed).toBe(true);
+  });
+});
+
 describe("limite de tentativas erradas e cache de token", () => {
   let agora = 1_000_000;
   let consultas = 0;
@@ -243,9 +259,10 @@ describe("cliente", () => {
   });
   it("conexão cortada no meio retoma com Range e o hash final é igual", async () => {
     const pedidos: Array<string | undefined> = [];
+    const autorizacoes: Array<string | undefined> = [];
     falso = createServer((req, res) => {
       pedidos.push(req.headers.range);
-      expect(req.headers.authorization).toBe(`Bearer ${CREDENCIAL}`);
+      autorizacoes.push(req.headers.authorization);
       if (!req.headers.range) {
         res.writeHead(200, { "content-length": conteudo.length, etag: `"${HASH}"` });
         return void res.write(conteudo.subarray(0, 3000), () =>
@@ -264,8 +281,39 @@ describe("cliente", () => {
     await new Promise<void>((ok) => f.listen(0, "127.0.0.1", ok));
     const destino = join(pasta, "saida.pacote");
     await baixar(destino);
+    expect(autorizacoes.length).toBeGreaterThan(1);
+    expect(autorizacoes.every((a) => a === `Bearer ${CREDENCIAL}`)).toBe(true);
     expect(pedidos[0]).toBeUndefined();
     expect(pedidos[1]).toMatch(/^bytes=[1-9]\d*-$/);
+    expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
+  });
+  it("arquivo completo como parcial não gera segundo download: só confere o hash", async () => {
+    await subir();
+    let corpos = 0;
+    const destino = join(pasta, "saida.pacote");
+    await writeFile(`${destino}.parcial`, conteudo);
+    await writeFile(`${destino}.parcial.meta`, `"${HASH}"`);
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (...a: Parameters<typeof fetch>) => {
+      const r = await original(...a);
+      if (r.status === 200 || r.status === 206) corpos++;
+      return r;
+    }) as typeof fetch;
+    try {
+      await baixar(destino);
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(corpos).toBe(0);
+    expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
+    expect(existsSync(`${destino}.parcial`)).toBe(false);
+  });
+  it("parcial do tamanho certo mas com conteúdo errado: descarta e baixa de novo", async () => {
+    await subir();
+    const destino = join(pasta, "saida.pacote");
+    await writeFile(`${destino}.parcial`, Buffer.alloc(conteudo.length, 1));
+    await writeFile(`${destino}.parcial.meta`, `"${HASH}"`);
+    await baixar(destino);
     expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
   });
   it("hash errado: apaga o parcial e não cria o destino", async () => {
