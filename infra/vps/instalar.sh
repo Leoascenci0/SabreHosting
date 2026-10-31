@@ -199,9 +199,9 @@ executar ufw allow "$PORTA_WG"/udp
 # Repasse só dentro da rede privada (PC ↔ PC passando pelo hub); nada de wg0 ↔ internet.
 # A sala de entrada (10.66.0.200–254) fica de fora: as before.rules abaixo a barram antes desta regra.
 executar ufw route allow in on wg0 out on wg0
-# Cartório: só pela rede privada, só no IP do hub. Vale para os PCs definitivos (10.66.0.2–199); a sala de entrada
-# já tem a regra própria nas before.rules abaixo.
-executar ufw allow in on wg0 to 10.66.0.1 port 7710 proto tcp
+# Cartório: só pela rede privada, só no IP do hub, só de origem 10.66.0.x. Na prática vale para os PCs definitivos
+# (.2–.199): a sala de entrada (.200–.254) é decidida antes, nas before.rules abaixo (só 7710; o resto cai).
+executar ufw allow in on wg0 from 10.66.0.0/24 to 10.66.0.1 port 7710 proto tcp
 
 # Sala de entrada (convite): só alcança o cartório em 10.66.0.1:7710; nada de repasse de/para outro PC. A faixa não é
 # um bloco CIDR, então vai por intervalo (-m iprange) nas before.rules do ufw, que valem antes das regras comuns.
@@ -287,10 +287,12 @@ fi
 
 # ---------- 6. Unidades systemd (de exemplo, DESLIGADAS; só o socket do ajudante fica ligado) ----------
 
+socket_mudou=
 for unidade in sabre-cartorio.service sabre-proxy.service sabre-ajudante-entrada.socket sabre-ajudante-entrada@.service; do
   if ! ja_feito "unidade-$unidade" cmp -s "$AQUI/systemd/$unidade" "/etc/systemd/system/$unidade"; then
     executar install -m 644 "$AQUI/systemd/$unidade" "/etc/systemd/system/$unidade"
     marcar "unidade-$unidade"
+    [ "$unidade" = sabre-ajudante-entrada.socket ] && socket_mudou=1
   fi
 done
 executar systemctl daemon-reload
@@ -299,6 +301,10 @@ socket_ativo() { systemctl is-enabled -q sabre-ajudante-entrada.socket && system
 if ! ja_feito socket-ajudante socket_ativo; then
   executar systemctl enable --now sabre-ajudante-entrada.socket
   marcar socket-ajudante
+elif [ -n "$socket_mudou" ]; then
+  # Já ligado e a unidade mudou (reinstalação): sem reiniciar, o socket seguiria com a configuração antiga. O
+  # @.service não precisa: cada conexão já sobe com a versão nova depois do daemon-reload.
+  executar systemctl restart sabre-ajudante-entrada.socket
 fi
 
 echo "Pronto. Falta: abrir as mesmas portas na 'Security List' da conta Oracle (tutorial rede-1.2)." >&2

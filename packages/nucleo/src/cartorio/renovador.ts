@@ -24,6 +24,8 @@ const RENOVAR_MIN_MS = 50;
 const RENOVAR_MAX_MS = 10 * 60_000;
 const PERDEU_PRAZO =
   "O cartório não respondeu a tempo e este PC perdeu a trava de host; parando o servidor.";
+const OUTRA_EPOCA =
+  "O cartório confirmou a trava com outra época; por segurança este PC deixa de hospedar.";
 
 const RELOGIO_PADRAO: NonNullable<OpcoesRenovador["relogio"]> = {
   repetir: (fn, ms) => {
@@ -60,6 +62,8 @@ export class Renovador {
   private perdida = false;
   private solta = false;
   private emCurso = false;
+  /** Abortado ao soltar ou perder: a renovação em curso cai e o cliente não tenta de novo. */
+  private readonly parar = new AbortController();
   private cancelarTique: () => void = () => {};
   private cancelarAlarme: () => void = () => {};
   private readonly agora: () => number;
@@ -132,9 +136,11 @@ export class Renovador {
     this.emCurso = true;
     const envio = this.marcar();
     try {
-      const r = await this.opcoes.cliente.renovar(this.epoca);
+      const r = await this.opcoes.cliente.renovar(this.epoca, this.parar.signal);
       if (this.perdida || this.solta) return;
       if (!r.ok) return this.perder(r.erro);
+      // Só a época que ESTE PC ganhou vale; outra (cartório torto ou trocado) é perda, nunca adoção.
+      if (r.epoca !== this.epoca) return this.perder(OUTRA_EPOCA);
       // Conta do ENVIO, e só avança (uma resposta velha nunca encurta nem estende além do que vale).
       if (!this.marca || envio.mono > this.marca.mono) this.marca = envio;
       this.armarAlarme();
@@ -148,6 +154,7 @@ export class Renovador {
   private perder(motivo: string): void {
     if (this.perdida) return;
     this.perdida = true;
+    this.parar.abort();
     this.cancelarTique();
     this.cancelarAlarme();
     this.opcoes.aoPerder(motivo);
@@ -155,6 +162,7 @@ export class Renovador {
 
   /** Para de renovar e devolve a trava (com a época deste PC). Uma vez só. */
   async soltar(): Promise<void> {
+    this.parar.abort();
     this.cancelarTique();
     this.cancelarAlarme();
     if (this.solta || this.epoca === undefined) return;

@@ -33,6 +33,7 @@ function montar(extra: Partial<OpcoesRenovador> = {}) {
   };
   const agenda: Agendado[] = [];
   const renovacoes: number[] = [];
+  const sinais: (AbortSignal | undefined)[] = [];
   const solturas: number[] = [];
   const perdas: string[] = [];
   let respostaPegar: () => Promise<RespostaTrava> = async () => aceita();
@@ -45,8 +46,9 @@ function montar(extra: Partial<OpcoesRenovador> = {}) {
   const r = new Renovador({
     cliente: {
       pegar: () => respostaPegar(),
-      renovar: (epoca) => {
+      renovar: (epoca, sinal) => {
         renovacoes.push(epoca);
+        sinais.push(sinal);
         return respostaRenovar();
       },
       soltar: async (epoca) => {
@@ -85,6 +87,7 @@ function montar(extra: Partial<OpcoesRenovador> = {}) {
     t,
     tiques,
     renovacoes,
+    sinais,
     solturas,
     perdas,
     andar,
@@ -254,5 +257,37 @@ describe("renovador da trava", () => {
     const m = montar();
     await m.r.pegar();
     await expect(m.r.pegar()).rejects.toThrow(/já/);
+  });
+
+  it("renovação aceita com outra época é perda; nunca adota a época da resposta", async () => {
+    const m = montar();
+    await m.r.pegar(); // época 4
+    m.renovarResponde(async () => aceita(5));
+    await m.andar(20_000);
+    expect(m.perdas).toHaveLength(1);
+    expect(m.perdas[0]).toMatch(/época/);
+    expect(await m.r.temTrava()).toBe(false);
+    await m.andar(60_000);
+    expect(m.renovacoes).toEqual([4]);
+  });
+
+  it("soltar cancela a renovação em curso: nenhuma tentativa nova depois", async () => {
+    const m = montar();
+    await m.r.pegar();
+    m.renovarResponde(() => new Promise(() => {})); // renovação pendurada (o cliente estaria repetindo)
+    await m.andar(20_000);
+    expect(m.sinais[0]?.aborted).toBe(false);
+    await m.r.soltar();
+    expect(m.sinais[0]?.aborted).toBe(true);
+  });
+
+  it("perder cancela a renovação em curso: nenhuma tentativa nova depois", async () => {
+    const m = montar();
+    await m.r.pegar();
+    m.renovarResponde(() => new Promise(() => {}));
+    await m.andar(20_000);
+    await m.andar(16_000); // alarme do prazo local
+    expect(m.perdas).toHaveLength(1);
+    expect(m.sinais[0]?.aborted).toBe(true);
   });
 });

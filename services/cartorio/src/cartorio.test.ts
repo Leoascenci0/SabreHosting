@@ -217,7 +217,7 @@ describe("cartório: migrações", () => {
     const caminho = join(pasta, "m.db");
     const a = abrirBanco(caminho);
     const b = abrirBanco(caminho);
-    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 6 }]);
+    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 7 }]);
     a.close();
     b.close();
     abrirBanco(caminho).close();
@@ -242,7 +242,7 @@ describe("cartório: migrações", () => {
       INSERT INTO convites (hash, nome_pc, criado_em, expira_em) VALUES ('c1', 'Caio', 30, 40)`);
     v1.close();
     const banco = abrirBanco(caminho);
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 6 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 7 }]);
     expect(banco.prepare("SELECT id, nome, criado_em FROM pcs ORDER BY id").all()).toEqual([
       { id: 1, nome: "Ana", criado_em: 10 },
       { id: 2, nome: "Bia", criado_em: 20 },
@@ -258,6 +258,24 @@ describe("cartório: migrações", () => {
       { id: 1, dono_pc_id: null, epoca: 0 },
     ]);
     expect(() => banco.exec("INSERT OR REPLACE INTO trava (id) VALUES (1)")).toThrow();
+    banco.close();
+  });
+
+  it("v6 → v7 com a trava em uso preserva dono e época e passa a barrar época que não é inteira", () => {
+    const { pasta } = montar();
+    const caminho = join(pasta, "m.db");
+    const v6 = abrirBanco(caminho, MIGRACOES.slice(0, 6));
+    v6.exec(`INSERT INTO pcs (id, nome, criado_em) VALUES (1, 'Ana', 10);
+      UPDATE trava SET dono_pc_id = 1, expira_em = 500, epoca = 3`);
+    v6.close();
+    const banco = abrirBanco(caminho);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 7 }]);
+    expect(banco.prepare("SELECT dono_pc_id, expira_em, epoca FROM trava").all()).toEqual([
+      { dono_pc_id: 1, expira_em: 500, epoca: 3 },
+    ]);
+    expect(() => banco.exec("UPDATE trava SET epoca = 'abc'")).toThrow(/inteiro/);
+    banco.exec("UPDATE trava SET epoca = 4");
+    expect(banco.prepare("SELECT epoca FROM trava").get()).toEqual({ epoca: 4 });
     banco.close();
   });
 
@@ -292,10 +310,10 @@ describe("cartório: endereço de escuta", () => {
       expect(() => conferirEndereco(e)).toThrow();
     }
     expect(conferirEndereco("127.0.0.1")).toBe("127.0.0.1");
-    expect(conferirEndereco("10.8.0.1")).toBe("10.8.0.1");
+    expect(conferirEndereco("10.66.0.1")).toBe("10.66.0.1");
   });
 
-  it("recusa IP público, IPv4 mapeado em IPv6, CGNAT e link-local; aceita só loopback e faixas privadas", () => {
+  it("recusa IP público, IPv4 mapeado em IPv6, CGNAT, link-local e outra rede privada; aceita só loopback e o hub", () => {
     for (const e of [
       "8.8.8.8",
       "200.160.2.3",
@@ -306,13 +324,21 @@ describe("cartório: endereço de escuta", () => {
       "169.254.1.1",
       "fe80::1",
       "172.32.0.1",
+      "10.8.0.1",
+      "10.66.0.5",
+      "172.16.0.1",
+      "192.168.1.1",
+      "fd00::1",
     ]) {
       expect(() => conferirEndereco(e), e).toThrow(/recusado/);
     }
-    for (const e of ["127.0.0.1", "127.1.2.3", "::1", "10.66.0.1", "172.16.0.1", "172.31.255.1"]) {
+    for (const e of ["127.0.0.1", "127.1.2.3", "::1", "10.66.0.1"]) {
       expect(conferirEndereco(e)).toBe(e);
     }
-    for (const e of ["192.168.1.1", "fd00::1", "fc00::1"]) expect(conferirEndereco(e)).toBe(e);
+  });
+
+  it("a mensagem de recusa dá como exemplo o IP do hub na rede privada", () => {
+    expect(() => conferirEndereco("10.8.0.1")).toThrow(/\(ex\.: 10\.66\.0\.1\)/);
   });
 });
 

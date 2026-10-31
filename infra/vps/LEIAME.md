@@ -21,7 +21,10 @@ SABRE_SIMULAR=1 bash infra/vps/instalar.sh   # só mostra o que faria; não muda
 - SSH só por chave, sem senha e sem login de root. Se nenhum usuário comum tiver chave autorizada, o script **para
   antes de mudar qualquer coisa** (senão você ficaria trancado fora).
 - Firewall: entrada negada; abertas na internet só `22/tcp` (SSH), `25565/tcp` (Minecraft) e `51820/udp` (WireGuard);
-  o cartório (`7710/tcp`) só pela rede privada, no IP do hub (`ufw allow in on wg0 to 10.66.0.1 port 7710 proto tcp`). Repasse de
+  o cartório (`7710/tcp`) só pela rede privada, no IP do hub e de origem `10.66.0.x`
+  (`ufw allow in on wg0 from 10.66.0.0/24 to 10.66.0.1 port 7710 proto tcp`). Uma regra só basta para os PCs
+  definitivos (`.2`–`.199`): a sala de entrada (`.200`–`.254`) já é decidida antes, nas `before.rules` (abaixo), que o
+  ufw confere antes das regras comuns; por isso não são precisas várias regras para a faixa `.2`–`.199`. Repasse de
   IP só entre PCs da rede privada (`wg0` ↔ `wg0`), **fora a sala de entrada** (abaixo).
 - Deixa instaladas, **desligadas**, as unidades `sabre-cartorio` e `sabre-proxy` (os itens seguintes as completam).
 
@@ -62,7 +65,9 @@ O cartório roda como `sabre`, blindado (`NoNewPrivileges`, `ProtectSystem=stric
 privada o PC de quem recebeu um convite, ele pede ao **ajudante**, um serviço próprio do systemd que roda como root:
 
 - `sabre-ajudante-entrada.socket` escuta em `/run/sabre/ajudante.sock` (dono `root`, grupo `sabre`, `0660`): só o
-  root e o cartório conectam. Uma conexão = um pedido = uma execução de `sabre-ajudante-entrada@.service`.
+  root e o cartório conectam. Uma conexão = um pedido = uma execução de `sabre-ajudante-entrada@.service`. Numa
+  reinstalação, se a unidade `.socket` mudou, o instalador a reinicia (`systemctl restart`); a resposta tem teto de
+  4096 bytes no cartório.
 - O serviço roda `/opt/sabre/wg/ajudante-socket.sh`, que lê **uma linha** em até 10 s, confere só o formato e chama o
   `ajudante-entrada.sh` com ambiente limpo (`env -i`). Blindagem: só escreve em `/etc/wireguard` e
   `/var/lib/sabre-wg`, só tem a capacidade de mexer na rede (`CAP_NET_ADMIN`), `NoNewPrivileges`, até 10 s por pedido.
@@ -72,7 +77,8 @@ pedido:   {"comando":"entrada-adicionar","args":["<chave-pub-provisória>"]}
           {"comando":"entrada-trocar","args":["<ip-prov>","<nome-do-pc>","<chave-pub-definitiva>"]}
           {"comando":"entrada-remover","args":["<ip-prov>"]}
 resposta: {"ip":"10.66.0.2xx"} · pacote do PC (ip_pc, chave_publica_hub, endpoint, allowed_ips) · {"ok":true} (remover)
-erro:     {"codigo":1,"erro":"ERRO: …"} = o ajudante recusou (nada mudou)
+erro:     {"codigo":1,"erro":"ERRO: …"} = o ajudante recusou (nada mudou); só a linha "ERRO: …" volta; sem
+          ela, "ERRO: falha interna do ajudante" (o resto do stderr, ex.: eco "+ wg set …", nunca sai)
           {"codigo":2,"erro":"pedido recusado"} = JSON torto, comando fora da lista ou argumento fora de
           [A-Za-z0-9+/=.:-] (o ajudante nem foi chamado)
 ```

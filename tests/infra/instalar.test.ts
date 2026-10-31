@@ -74,7 +74,7 @@ describe("infra/vps/instalar.sh em simulação", () => {
         "ufw allow 22/tcp",
         "ufw allow 25565/tcp",
         "ufw allow 51820/udp",
-        "ufw allow in on wg0 to 10.66.0.1 port 7710 proto tcp",
+        "ufw allow in on wg0 from 10.66.0.0/24 to 10.66.0.1 port 7710 proto tcp",
       ]);
     }
   });
@@ -319,6 +319,23 @@ describe("instalar.sh: ajudante da sala de entrada (rede-1.4)", () => {
     expect(dois.some((x) => /ajudante-entrada\.sh \/opt/.test(x))).toBe(false);
   });
 
+  it("reinstalação com a unidade .socket mudada reinicia o socket (depois do daemon-reload); sem mudança, não", () => {
+    const reinicia = (c: string[]) =>
+      c.filter((x) => /systemctl restart sabre-ajudante-entrada/.test(x));
+    expect(reinicia(rodar().comandos)).toEqual([]); // 1ª vez: enable --now basta
+    expect(reinicia(rodar().comandos)).toEqual([]); // nada mudou
+    // A unidade do socket mudou no repositório (na simulação, apagar a marca = arquivo diferente).
+    rmSync(join(estado, "unidade-sabre-ajudante-entrada.socket"));
+    const c = rodar().comandos;
+    expect(reinicia(c)).toEqual(["systemctl restart sabre-ajudante-entrada.socket"]);
+    expect(c.indexOf("systemctl restart sabre-ajudante-entrada.socket")).toBeGreaterThan(
+      c.indexOf("systemctl daemon-reload"),
+    );
+    // Só o @.service mudou: vale na próxima conexão, sem derrubar o socket.
+    rmSync(join(estado, "unidade-sabre-ajudante-entrada@.service"));
+    expect(reinicia(rodar().comandos)).toEqual([]);
+  });
+
   it("endereço do hub vai para /etc/sabre/hub.env só quando informado; torto para o instalador", () => {
     expect(gravado(rodar().stdout, /hub\.env$/)).toBeUndefined();
     const g = gravado(
@@ -409,7 +426,7 @@ describe("instalar.sh: ajudante da sala de entrada (rede-1.4)", () => {
     it("nenhuma porta nova na internet: o cartório só é liberado em wg0, no IP do hub", () => {
       const c = rodar().comandos;
       expect(c.filter((x) => /^ufw .*7710/.test(x))).toEqual([
-        "ufw allow in on wg0 to 10.66.0.1 port 7710 proto tcp",
+        "ufw allow in on wg0 from 10.66.0.0/24 to 10.66.0.1 port 7710 proto tcp",
       ]);
     });
   });

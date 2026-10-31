@@ -14,6 +14,7 @@ const $ = <T extends HTMLElement>(id: string): T => {
 const cartao = $("cartao");
 const status = $("status");
 const detalhe = $("detalhe");
+const aviso = $("aviso");
 const erro = $("erro");
 const principal = $<HTMLButtonElement>("principal");
 const parar = $<HTMLButtonElement>("parar");
@@ -30,10 +31,17 @@ const MOTIVOS = {
 
 let atual: EstadoInicio = { tipo: "carregando" };
 let ocupado: string | undefined;
-let copiado = false;
+let copiadoAte: ReturnType<typeof setTimeout> | undefined;
 let ocupadoRemoto: string | undefined; // parada em curso iniciada por fora da tela (ex.: Sair na bandeja)
 const SEM_ENDERECO = "Endereço do grupo ainda não configurado";
 const COPIADO = "Endereço copiado. Cole no Minecraft para entrar.";
+const AVISO_MS = 4000;
+
+function mostrarAviso(texto: string): void {
+  clearTimeout(copiadoAte);
+  aviso.textContent = texto;
+  if (texto !== "") copiadoAte = setTimeout(() => mostrarAviso(""), AVISO_MS);
+}
 
 function mostrarErro(mensagem: string): void {
   erro.textContent = mensagem;
@@ -67,24 +75,21 @@ function desenhar(): void {
       principal.dataset["acao"] = "hospedar";
       principal.hidden = false;
       break;
+    case "orfao":
+      status.textContent = "O servidor anterior não parou";
+      detalhe.textContent = "Feche o Java no Gerenciador de Tarefas ou reinicie o PC.";
+      tentar.hidden = false;
+      break;
     case "outro":
       status.textContent = `Servidor no PC do ${e.nomePc}`;
-      detalhe.textContent = copiado
-        ? COPIADO
-        : e.endereco
-          ? `Endereço: ${e.endereco}`
-          : SEM_ENDERECO;
+      detalhe.textContent = e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO;
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
       principal.hidden = e.endereco === "";
       break;
     case "eu":
       status.textContent = "Você está hospedando";
-      detalhe.textContent = copiado
-        ? COPIADO
-        : e.endereco
-          ? `Endereço: ${e.endereco}`
-          : SEM_ENDERECO;
+      detalhe.textContent = e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO;
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
       principal.hidden = e.endereco === "";
@@ -116,7 +121,7 @@ async function atualizar(): Promise<void> {
 async function agir(texto: string, fazer: () => Promise<void>): Promise<void> {
   if (ocupado !== undefined) return;
   ocupado = texto;
-  copiado = false;
+  mostrarAviso("");
   mostrarErro("");
   desenhar();
   try {
@@ -137,7 +142,7 @@ principal.addEventListener("click", () => {
   } else if (principal.dataset["acao"] === "jogar") {
     void agir("Copiando…", async () => {
       await window.sabre.inicio.jogar();
-      copiado = true;
+      mostrarAviso(COPIADO);
     });
   }
 });

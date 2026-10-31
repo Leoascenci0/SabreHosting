@@ -118,6 +118,25 @@ describe("ajudante pelo socket (rede-1.5)", () => {
     await expect(criarAjudanteSocket(enorme).adicionar(CHAVE)).rejects.toThrow(/ilegível/);
   });
 
+  it("resposta passa de 4096 bytes antes do \\n → erro, mesmo com o \\n no mesmo pedaço ou em vários pedaços", async () => {
+    // JSON válido, só que enorme: sem o teto no total, seria aceito.
+    const valido = `{"ip":"10.66.0.201"${" ".repeat(5000)}}`;
+    const umPedaco = await socket((c) => c.end(`${valido}\n`));
+    await expect(criarAjudanteSocket(umPedaco).adicionar(CHAVE)).rejects.toThrow(/ilegível/);
+    const doisPedacos = await socket((c) => {
+      c.write(valido.slice(0, 3000));
+      setTimeout(() => c.end(`${valido.slice(3000)}\n`), 20);
+    });
+    await expect(criarAjudanteSocket(doisPedacos).adicionar(CHAVE)).rejects.toThrow(/ilegível/);
+    // No limite (4096 bytes antes do \n) ainda vale; o teto conta bytes, não letras.
+    const noLimite = `{"ip":"10.66.0.201"${" ".repeat(4096 - 20)}}`;
+    expect(Buffer.byteLength(noLimite)).toBe(4096);
+    const ok = await socket((c) => c.end(`${noLimite}\n`));
+    expect(await criarAjudanteSocket(ok).adicionar(CHAVE)).toBe("10.66.0.201");
+    const acentos = await socket((c) => c.end(`{"ip":"10.66.0.201","x":"${"é".repeat(2100)}"}\n`));
+    await expect(criarAjudanteSocket(acentos).adicionar(CHAVE)).rejects.toThrow(/ilegível/);
+  });
+
   it("ponta a ponta: cliente → ajudante-socket.sh → ajudante-entrada.sh (simulado)", async () => {
     const estado = pasta();
     const hub = Buffer.alloc(32, 7).toString("base64");

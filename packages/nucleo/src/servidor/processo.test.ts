@@ -12,6 +12,7 @@ import {
   type OpcoesIniciar,
   type ServidorMinecraft,
 } from "./processo.js";
+import { ARGS_VIGIA_TESTE } from "../../test/ajuda/vigia.js";
 
 const FALSO = join(dirname(fileURLToPath(import.meta.url)), "../../test/ajuda/servidor-falso.mjs");
 const GB = 1024 ** 3;
@@ -38,6 +39,7 @@ function opcoes(modo = "normal", extra: Partial<OpcoesIniciar> = {}): OpcoesInic
     temTrava: async () => true,
     prefixoArgs: [FALSO, modo],
     spawnFn: espiao,
+    vigiaArgs: ARGS_VIGIA_TESTE,
     memoriaTotalBytes: 16 * GB,
     plataforma: "linux",
     prazoParadaMs: 5000,
@@ -60,6 +62,15 @@ function esperarEstado(s: ServidorMinecraft, alvo: EstadoServidor): Promise<void
   });
 }
 
+function vivo(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 beforeEach(async () => {
   pasta = await mkdtemp(join(tmpdir(), "sabre-proc-"));
   await writeFile(join(pasta, "eula.txt"), "eula=true\n");
@@ -75,6 +86,8 @@ beforeEach(async () => {
 
 afterEach(async () => {
   for (const s of servidores) await s.pararServidor().catch(() => {});
+  // Nem o Java (neto, atrás do vigia) pode sobrar.
+  for (const s of servidores) if (s.pidJava !== undefined) expect(vivo(s.pidJava)).toBe(false);
   for (const filho of criados) {
     if (filho.exitCode === null && filho.signalCode === null) filho.kill("SIGKILL");
   }
@@ -150,6 +163,63 @@ describe("parada", () => {
     expect(s.estado).toBe("parado");
     expect(s.codigoSaida).toBeNull();
     expect(logs.some((l) => l.startsWith("aviso:") && /encerr|prazo/i.test(l))).toBe(true);
+  });
+
+  it("prazo estourado mata também o Java pelo PID, não só o vigia", async () => {
+    const s = await subir("travado", { prazoParadaMs: 200 });
+    await esperarEstado(s, "pronto");
+    const pid = s.pidJava as number;
+    expect(pid).toBeGreaterThan(0);
+    expect(vivo(pid)).toBe(true);
+    await s.pararServidor();
+    await new Promise((r) => setTimeout(r, 100));
+    expect(vivo(pid)).toBe(false);
+  });
+
+  it("app morto (stdin do vigia fechado): o servidor recebe save e stop e sai sozinho", async () => {
+    const s = await subir();
+    await esperarEstado(s, "pronto");
+    const logs: string[] = [];
+    s.on("log", (l: { texto: string }) => logs.push(l.texto));
+    const inicio = Date.now();
+    criados[0]?.stdin?.end();
+    await esperarEstado(s, "caiu");
+    expect(s.codigoSaida).toBe(0); // o falso só sai com 0 pelo `stop`
+    expect(logs.some((l) => l.endsWith("RECEBIDO save-all flush"))).toBe(true);
+    expect(logs.some((l) => l.endsWith("]: Saved the game"))).toBe(true);
+    expect(Date.now() - inicio).toBeLessThan(20_000);
+  });
+
+  it("só a 1ª linha vale como PID: o Java imitando o vigia depois não troca o PID", async () => {
+    const s = await subir("finge-vigia");
+    await esperarEstado(s, "pronto");
+    const pid = s.pidJava;
+    await new Promise((r) => setTimeout(r, 100));
+    expect(pid).toBeGreaterThan(1);
+    expect(s.pidJava).toBe(pid);
+  });
+
+  it.each(["0", "-5", "1.5", "99999999999999999999", "abc"])(
+    "PID inválido do vigia (%s) é ignorado, nunca chega ao kill",
+    async (pid) => {
+      const script = `console.log("[sabre-vigia] pid ${pid}"); process.stdin.on("data", () => {}); process.stdin.on("end", () => process.exit(0));`;
+      const s = await subir("normal", {
+        spawnFn: (_c, _a, o) => espiao(process.execPath, ["-e", script], o),
+      });
+      await new Promise((r) => setTimeout(r, 300));
+      expect(s.pidJava).toBeUndefined();
+      criados.at(-1)?.stdin?.end();
+      await esperarEstado(s, "caiu");
+    },
+  );
+
+  it("a linha do vigia com o PID não aparece no log", async () => {
+    const logs: string[] = [];
+    const s = await subir();
+    s.on("log", (l: { texto: string }) => logs.push(l.texto));
+    await esperarEstado(s, "pronto");
+    await s.pararServidor();
+    expect(logs.some((l) => l.includes("sabre-vigia"))).toBe(false);
   });
 
   it("prazo dado na chamada vale no lugar do padrão (perda da trava)", async () => {
@@ -404,7 +474,14 @@ describe("comando e memória", () => {
     await esperarEstado(s, "pronto");
     const c = chamadas[0] as (typeof chamadas)[number];
     expect(c.cmd).toBe(process.execPath);
+    // O Electron roda o vigia como Node; o vigia sobe o Java com o resto dos argumentos.
+    expect(c.opcoes.env?.["ELECTRON_RUN_AS_NODE"]).toBe("1");
     expect(c.args).toEqual([
+      ...ARGS_VIGIA_TESTE,
+      "10000",
+      "10000",
+      "5000", // prazoParadaMs: o `stop` do app que morreu tem o prazo da parada normal
+      process.execPath,
       FALSO,
       "normal",
       "@user_jvm_args.txt",

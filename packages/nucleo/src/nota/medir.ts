@@ -36,6 +36,8 @@ export interface OpcoesMedicao {
   tetoMs?: number;
   /** Só para teste: troca a medição de um núcleo. */
   cpuUmNucleo?: (sinal: AbortSignal) => Promise<number>;
+  /** Só para teste: troca a medição de todos os núcleos. */
+  cpuNucleos?: (sinal: AbortSignal) => Promise<number>;
 }
 
 /** Mede o PC com teto de tempo; ao estourar, termina os workers e falha com mensagem para o amigo. */
@@ -52,12 +54,20 @@ export async function medirPc(op: OpcoesMedicao): Promise<Medicao> {
   );
   try {
     const cpuUmNucleo = await (op.cpuUmNucleo ?? ((s) => rodarLaco(janela, s)))(controle.signal);
-    const todos = await Promise.all(
-      Array.from({ length: availableParallelism() }, () => rodarLaco(janela, controle.signal)),
-    );
+    const cpuNucleos = await (
+      op.cpuNucleos ??
+      ((s) =>
+        Promise.all(
+          Array.from({ length: availableParallelism() }, () => rodarLaco(janela, s)),
+        ).then((todos) => todos.reduce((a, b) => a + b, 0)))
+    )(controle.signal).catch((erro: unknown) => {
+      // Um worker caiu: aborta os outros para não ficarem vivos até o fim da janela.
+      controle.abort(erro);
+      throw erro;
+    });
     return {
       cpuUmNucleo,
-      cpuNucleos: todos.reduce((a, b) => a + b, 0),
+      cpuNucleos,
       ramLivreMb: Math.round(freemem() / 1024 / 1024),
       uploadMbps: op.uploadMbps,
     };

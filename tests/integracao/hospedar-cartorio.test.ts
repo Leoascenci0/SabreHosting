@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { salvarSeguro } from "../../packages/nucleo/src/servidor/comandos.js";
+import { ARGS_VIGIA_TESTE } from "../../packages/nucleo/test/ajuda/vigia.js";
 import { criarCliente } from "../../packages/nucleo/src/cartorio/cliente.js";
 import { cofreEmMemoria } from "../../packages/nucleo/src/cartorio/cofre.js";
 import { hospedar } from "../../packages/nucleo/src/cartorio/hospedar.js";
@@ -94,6 +95,7 @@ async function hospedarFalso(
     javaPath: process.execPath,
     versaoNeoForge: NEO,
     prefixoArgs: [FALSO, modo],
+    vigiaArgs: ARGS_VIGIA_TESTE,
     spawnFn: espiao,
     memoriaTotalBytes: 16 * 1024 ** 3,
     plataforma: "linux",
@@ -137,7 +139,7 @@ describe("trava de host contra o cartório real", () => {
   }, 30_000);
 
   it("renovação para → prazo local vence → save-all e parada do servidor", async () => {
-    const { app, pc } = await subirCartorio();
+    const { app, pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000);
     const perdas: string[] = [];
     const { servidor, renovador } = await hospedarFalso(await pc("PC A"), perdas);
     const logs: string[] = [];
@@ -160,10 +162,10 @@ describe("trava de host contra o cartório real", () => {
     ].map((trecho) => logs.findIndex((l) => l.endsWith(trecho)));
     expect(ordem.every((i) => i >= 0)).toBe(true);
     expect(ordem).toEqual([...ordem].sort((x, y) => x - y));
-  }, 10_000);
+  }, 30_000);
 
   it("perdeu a trava e o servidor não sai com `stop`: morto no prazo da perda, não no da parada normal", async () => {
-    const { app, pc } = await subirCartorio();
+    const { app, pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000);
     const { servidor } = await hospedarFalso(await pc("PC A"), [], {
       modo: "travado",
       prazoParadaMs: 30_000,
@@ -175,10 +177,12 @@ describe("trava de host contra o cartório real", () => {
     await esperarEstado(servidor, "parado");
     expect(servidor.codigoSaida).toBeNull(); // morto: o `stop` foi ignorado
     expect(Date.now() - inicio).toBeLessThan(3_000);
-  }, 10_000);
+  }, 30_000);
 
   it("backup pendurado na fila não atrasa a parada: perda → parado em ≤ prazoSalvar + prazoParadaSemTrava", async () => {
-    const { app, pc } = await subirCartorio();
+    // Trava folgada só para a subida sobreviver a uma máquina ocupada; o que se mede (perda → parado) parte do
+    // `aoPerder` e depende só de prazoSalvarMs/prazoParadaSemTravaMs, então a prova continua a mesma.
+    const { app, pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000);
     let perdeuEm = 0;
     const { servidor } = await hospedar({
       cliente: await pc("PC A"),
@@ -186,6 +190,7 @@ describe("trava de host contra o cartório real", () => {
       javaPath: process.execPath,
       versaoNeoForge: NEO,
       prefixoArgs: [FALSO, "mudo"], // nunca confirma o `save-all flush`
+      vigiaArgs: ARGS_VIGIA_TESTE,
       spawnFn: espiao,
       memoriaTotalBytes: 16 * 1024 ** 3,
       plataforma: "linux",
@@ -203,10 +208,10 @@ describe("trava de host contra o cartório real", () => {
     expect(perdeuEm).toBeGreaterThan(0);
     expect(Date.now() - perdeuEm).toBeLessThan(300 + 300 + 700); // prazos + folga do teste
     await backup;
-  }, 10_000);
+  }, 30_000);
 
   it("aviso da tela que lança erro não impede a parada na perda", async () => {
-    const { app, pc } = await subirCartorio();
+    const { app, pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000); // folga só na subida; a parada segue pelos prazos abaixo
     const { servidor } = await hospedarFalso(await pc("PC A"), [], {
       modo: "travado",
       prazoParadaMs: 30_000,
@@ -224,5 +229,5 @@ describe("trava de host contra o cartório real", () => {
     await esperarEstado(servidor, "parado");
     expect(Date.now() - inicio).toBeLessThan(3_000);
     expect(logs.some((l) => /tela quebrou/.test(l))).toBe(true);
-  }, 10_000);
+  }, 30_000);
 });

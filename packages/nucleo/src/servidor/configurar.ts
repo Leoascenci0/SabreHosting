@@ -3,7 +3,7 @@ import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export interface OpcoesServidor {
-  /** IP deste PC na rede privada (WireGuard). Nunca 0.0.0.0 nem IP público. */
+  /** IP deste PC na rede privada (WireGuard), 10.66.0.2–199. Nunca 0.0.0.0 nem IP público. */
   ipRedePrivada: string;
   /** Porta do servidor; só vale dentro da rede privada. Padrão: 25565. */
   porta?: number;
@@ -19,7 +19,8 @@ export interface AceiteEula {
 }
 
 const LINK_EULA = "https://aka.ms/MinecraftEULA";
-const IP_PRIVADO = /^(10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)$/;
+/** PCs definitivos da rede privada: 10.66.0.2 a 10.66.0.199 (.1 é o hub; 200–254 é a sala de entrada). */
+const IP_PRIVADO = /^10\.66\.0\.(?:[2-9]|[1-9]\d|1\d\d)$/;
 
 function octetosValidos(ip: string): boolean {
   return ip.split(".").every((o) => Number(o) <= 255);
@@ -36,7 +37,7 @@ export function gerarPropriedades(opcoes: OpcoesServidor): string {
   const { ipRedePrivada: ip, porta = 25565, distanciaVisao = 10, distanciaSimulacao = 8 } = opcoes;
   if (!IP_PRIVADO.test(ip) || !octetosValidos(ip)) {
     throw new Error(
-      "O IP do servidor precisa ser o da rede privada (ex.: 10.x.x.x); nunca 0.0.0.0 nem IP público.",
+      "O IP do servidor precisa ser o de um PC na rede privada (10.66.0.2 a 10.66.0.199); nunca 0.0.0.0 nem IP público.",
     );
   }
   validarFaixa(porta, "porta", 1024, 65535);
@@ -52,6 +53,7 @@ export function gerarPropriedades(opcoes: OpcoesServidor): string {
     "white-list=true",
     "enforce-whitelist=true",
     "enable-rcon=false",
+    "enable-query=false",
     `view-distance=${distanciaVisao}`,
     `simulation-distance=${distanciaSimulacao}`,
     "",

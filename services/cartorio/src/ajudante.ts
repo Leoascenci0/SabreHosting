@@ -22,6 +22,7 @@ export interface AjudanteEntrada {
 /** Socket do serviço do ajudante (root:sabre 0660); o cartório não tem sudo (rede-1.5). */
 export const CAMINHO_SOCKET = "/run/sabre/ajudante.sock";
 const PRAZO_AJUDANTE_MS = 10_000;
+const TETO_RESPOSTA = 4096;
 
 /** 44 caracteres de base64 = 32 bytes (o 43º símbolo só pode ter os 2 bits finais zerados). */
 export const CHAVE_WG = /^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$/;
@@ -42,26 +43,28 @@ export function pedirAoSocket(
 ): Promise<string> {
   return new Promise((ok, falha) => {
     const conexao = createConnection(caminho);
+    let recebido = Buffer.alloc(0);
     let resposta = "";
     const acabar = (erro?: Error) => {
       conexao.destroy();
       if (erro) falha(erro);
       else ok(resposta);
     };
-    conexao.setEncoding("utf8");
     conexao.setTimeout(prazoMs, () =>
       acabar(new Error("Ajudante do WireGuard não respondeu a tempo.")),
     );
     conexao.on("error", acabar);
     conexao.on("end", () => acabar(new Error("Ajudante do WireGuard fechou sem responder.")));
-    conexao.on("data", (pedaco: string) => {
-      resposta += pedaco;
-      const fim = resposta.indexOf("\n");
-      if (fim >= 0) {
-        resposta = resposta.slice(0, fim);
-        acabar();
-      } else if (resposta.length > 4096)
+    // Teto de 4096 bytes antes do \n, contado no total (o \n pode vir no mesmo pedaço do excesso).
+    conexao.on("data", (pedaco: Buffer) => {
+      recebido = Buffer.concat([recebido, pedaco]);
+      const fim = recebido.indexOf(10);
+      if ((fim < 0 ? recebido.length : fim) > TETO_RESPOSTA)
         acabar(new Error("Ajudante do WireGuard devolveu uma saída ilegível."));
+      else if (fim >= 0) {
+        resposta = recebido.subarray(0, fim).toString("utf8");
+        acabar();
+      }
     });
     conexao.end(`${JSON.stringify({ comando, args })}\n`);
   });

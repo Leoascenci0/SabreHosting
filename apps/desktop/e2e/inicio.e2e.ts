@@ -1,10 +1,12 @@
+// Capturas em docs/imagens/ só com SABRE_CAPTURAS=1 (ex.: SABRE_CAPTURAS=1 npm run test:e2e -w apps/desktop)
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { registrarCaptura } from "./captura.js";
 
 const pastaApp = fileURLToPath(new URL("..", import.meta.url));
 const imagens = fileURLToPath(new URL("../../../docs/imagens/", import.meta.url));
@@ -54,11 +56,10 @@ const espiao = (): Promise<Espiao> =>
   viva().evaluate(() => (globalThis as { __sabreE2EEspiao?: unknown }).__sabreE2EEspiao as Espiao);
 
 async function capturar(pagina: Page, nome: string): Promise<void> {
-  mkdirSync(imagens, { recursive: true });
   await viva().evaluate(({ nativeTheme }) => void (nativeTheme.themeSource = "light"));
   await pagina.emulateMedia({ colorScheme: "light" });
   await pagina.waitForTimeout(200);
-  await pagina.screenshot({ path: join(imagens, `app-1.2-${nome}.png`) });
+  await registrarCaptura(pagina, join(imagens, `app-1.2-${nome}.png`));
 }
 
 afterEach(async () => {
@@ -119,10 +120,11 @@ describe("tela inicial", () => {
     expect((await espiao()).spawns).toHaveLength(1);
   });
 
-  it("dono sou eu com servidor órfão vivo: não oferece Hospedar", async () => {
-    const p = await abrir("dono-eu-orfao", {}, "outro");
-    await expect(p.locator("#status").innerText()).resolves.toBe("Servidor no PC do Este PC");
-    expect(await visiveis(p)).toEqual(["Jogar"]);
+  it("dono sou eu com servidor órfão vivo: espera ele encerrar, sem oferecer Hospedar", async () => {
+    const p = await abrir("dono-eu-orfao", {}, "eu");
+    await expect(p.locator("#principal").innerText()).resolves.toBe("Parando o servidor…");
+    await expect(p.locator("#principal").isDisabled()).resolves.toBe(true);
+    expect(await visiveis(p)).not.toContain("Hospedar");
     expect((await espiao()).spawns).toEqual([]);
   });
 
@@ -131,13 +133,25 @@ describe("tela inicial", () => {
     await expect(p.locator("#status").innerText()).resolves.toBe("Servidor no PC do Lucas");
     expect(await visiveis(p)).toEqual(["Jogar"]);
     await p.locator("#principal").click();
-    await expect(p.locator("#detalhe").innerText()).resolves.toContain("Endereço copiado");
+    await expect(p.locator("#aviso").innerText()).resolves.toContain("Endereço copiado");
+    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
     const copias = await viva().evaluate(
       () => (globalThis as { __sabreE2EInicio?: { copias: string[] } }).__sabreE2EInicio?.copias,
     );
     expect(copias).toEqual(["mundo.exemplo.net"]);
     expect((await espiao()).spawns).toEqual([]);
     await capturar(p, "outro");
+  });
+
+  it("depois de Jogar o endereço continua visível e o aviso some sozinho", async () => {
+    const p = await abrir("eu");
+    await p.locator("#principal").click();
+    await expect(p.locator("#aviso").innerText()).resolves.toContain("Endereço copiado");
+    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
+    await p.waitForFunction(() => document.getElementById("aviso")?.textContent === "", undefined, {
+      timeout: 8000,
+    });
+    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
   });
 
   it("eu hospedo: Jogar e Parar; Parar pede confirmação e devolve a vez", async () => {

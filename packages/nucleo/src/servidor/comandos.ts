@@ -11,7 +11,7 @@ export const MAX_FILA = 16;
 // jogador ("<Nick> Saved the game", ou texto com "]: ") passe por resposta do servidor.
 const PREFIXO = String.raw`^\[[^\]]*\] \[[^\]]*\]: `;
 const SALVO_DESLIGADO = new RegExp(`${PREFIXO}Automatic saving is now disabled\\s*$`);
-const SALVOU = new RegExp(`${PREFIXO}Saved the game\\s*$`);
+export const SALVOU = new RegExp(`${PREFIXO}Saved the game\\s*$`);
 const LISTA = new RegExp(
   `${PREFIXO}There are (\\d+) of a max of (\\d+) players online:\\s*(.*?)\\s*$`,
 );

@@ -4,7 +4,7 @@ import { ErroCartorio, criarCliente, type OpcoesCliente } from "./cliente.js";
 import { cofreEmMemoria } from "./cofre.js";
 
 const TOKEN = randomBytes(16).toString("hex"); // gerado a cada execução
-const URL_CARTORIO = "http://10.8.0.1:7070";
+const URL_CARTORIO = "http://10.66.0.1:7070";
 
 type Resposta = Response | Error | "pendurar";
 
@@ -134,6 +134,19 @@ describe("cliente do cartório", () => {
     expect(await cliente.pegar()).toEqual(recusa);
   });
 
+  it("409 com destino_sem_acesso (cartmel-1.6) é recusa válida", async () => {
+    const recusa = {
+      ok: false,
+      erro: "Sem acesso.",
+      motivo: "destino_sem_acesso",
+      donoPcId: 1,
+      epoca: 4,
+      expiraEm: 5,
+    };
+    const { cliente } = montar([json(409, recusa)]);
+    expect(await cliente.passar(4, 2)).toEqual(recusa);
+  });
+
   it("corpo que não é JSON vira erro de resposta", async () => {
     const { cliente } = montar([new Response("<html>", { status: 200 })]);
     expect((await erroDe(cliente.estadoTrava())).tipo).toBe("resposta");
@@ -147,18 +160,23 @@ describe("cliente do cartório", () => {
     expect(chamadas).toHaveLength(0);
   });
 
-  it.each(["http://203.0.113.5:7070", "ftp://10.8.0.1", "http://cartorio.exemplo"])(
-    "recusa endereço inseguro %s",
-    (url) => {
-      expect(() => criarCliente({ url, cofre: cofreEmMemoria() })).toThrow(/https/);
-    },
-  );
+  it.each([
+    "http://203.0.113.5:7070",
+    "ftp://10.66.0.1",
+    "http://cartorio.exemplo",
+    "http://10.0.0.5",
+    "http://10.66.0.5",
+    "http://192.168.0.9",
+    "http://[fd00::1]",
+  ])("recusa endereço inseguro %s", (url) => {
+    expect(() => criarCliente({ url, cofre: cofreEmMemoria() })).toThrow(/https/);
+  });
 
   it.each([
     "https://cartorio.exemplo",
     "http://127.0.0.1:1",
-    "http://192.168.0.9",
-    "http://[fd00::1]",
+    "http://[::1]:7070",
+    "http://10.66.0.1",
   ])("aceita %s", (url) => {
     expect(() => criarCliente({ url, cofre: cofreEmMemoria() })).not.toThrow();
   });
@@ -219,6 +237,164 @@ describe("cliente do cartório", () => {
     const r = montar([semRede(), json(201, {})]);
     expect((await erroDe(r.cliente.criarConvite("pc-x"))).tipo).toBe("rede");
     expect(r.chamadas).toHaveLength(1);
+    expect(chamadas).toHaveLength(1);
+  });
+
+  const PACOTE = {
+    ip_pc: "10.66.0.12",
+    chave_publica_hub: `${"A".repeat(43)}=`,
+    endpoint: "hub.exemplo:51820",
+    allowed_ips: "10.66.0.0/24",
+  };
+  const RECUSA = { ok: false, erro: "x", motivo: "ocupada", donoPcId: 2, epoca: 9, expiraEm: 5 };
+  const ESTADO = { dono: null, epoca: 0, expiraEm: 0, prazoMs: 60_000, renovarMs: 20_000 };
+
+  it.each([
+    ["renovar: época em texto", "renovar", json(200, { ...OK_TRAVA, epoca: "7" })],
+    ["renovar: época 0 na aceita", "renovar", json(200, { ...OK_TRAVA, epoca: 0 })],
+    ["renovar: renovarMs quebrado", "renovar", json(200, { ...OK_TRAVA, renovarMs: 1.5 })],
+    ["renovar: sem ok", "renovar", json(200, { epoca: 7, expiraEm: 1, renovarMs: 20_000 })],
+    ["renovar: lista", "renovar", json(200, [OK_TRAVA])],
+    ["renovar: null", "renovar", json(200, null)],
+    ["pegar: motivo inventado", "pegar", json(409, { ...RECUSA, motivo: "porque_sim" })],
+    ["pegar: recusa sem erro", "pegar", json(409, { ...RECUSA, erro: undefined })],
+    ["pegar: recusa com ok true no 409", "pegar", json(409, OK_TRAVA)],
+    ["pegar: dono em texto", "pegar", json(409, { ...RECUSA, donoPcId: "2" })],
+    ["estado: sem renovarMs", "estado", json(200, { ...ESTADO, renovarMs: undefined })],
+    ["estado: dono torto", "estado", json(200, { ...ESTADO, dono: { id: "1", nome: "a" } })],
+    ["eu: id em texto", "eu", json(200, { id: "1", nome: "pc" })],
+    ["grupo: nome número", "grupo", json(200, { nome: 1, endereco_jogar: "x" })],
+    ["convite: sem texto", "convite", json(201, { expiraEm: 1 })],
+    ["usar: sem token", "usar", json(200, { pacote: PACOTE })],
+    [
+      "usar: pacote torto",
+      "usar",
+      json(200, { token: "t", pacote: { ...PACOTE, allowed_ips: "0.0.0.0/0" } }),
+    ],
+  ])("resposta malformada recusada (%s)", async (_nome, rota, resposta) => {
+    const { cliente, chamadas } = montar([resposta, json(200, OK_TRAVA)]);
+    const chamar = {
+      renovar: () => cliente.renovar(7),
+      pegar: () => cliente.pegar(),
+      estado: () => cliente.estadoTrava(),
+      eu: () => cliente.eu(),
+      grupo: () => cliente.grupo(),
+      convite: () => cliente.criarConvite("pc"),
+      usar: () => cliente.usarConvite("c", "k"),
+    }[rota as "renovar"];
+    const e = await erroDe(chamar());
+    expect(e.tipo).toBe("resposta");
+    expect(chamadas).toHaveLength(1); // resposta torta não repete
+  });
+
+  it("respostas boas passam pela conferência", async () => {
+    const { cliente } = montar([
+      json(200, ESTADO),
+      json(200, { ...ESTADO, dono: { id: 3, nome: "pc-b" }, epoca: 4 }),
+      json(200, { id: 3, nome: "pc-b" }),
+      json(200, { ...OK_TRAVA, expiraEm: 0 }),
+    ]);
+    expect(await cliente.estadoTrava()).toEqual(ESTADO);
+    expect((await cliente.estadoTrava()).dono).toEqual({ id: 3, nome: "pc-b" });
+    expect(await cliente.eu()).toEqual({ id: 3, nome: "pc-b" });
+    expect((await cliente.soltar(7)).ok).toBe(true);
+  });
+
+  it("teto estourado recusado: content-length acima de 64 KB nem é lido", async () => {
+    let leituras = 0;
+    let cancelado = false;
+    const corpo = new ReadableStream<Uint8Array>({
+      pull(c) {
+        leituras += 1;
+        c.enqueue(new Uint8Array(1_024).fill(32));
+      },
+      cancel() {
+        cancelado = true;
+      },
+    });
+    const resposta = new Response(corpo, {
+      status: 200,
+      headers: { "content-length": String(70_000) },
+    });
+    const { cliente, chamadas } = montar([resposta]);
+    const e = await erroDe(cliente.renovar(7));
+    expect(e.tipo).toBe("resposta");
+    expect(e.message).toMatch(/grande/);
+    expect(chamadas).toHaveLength(1);
+    expect(cancelado).toBe(true);
+    expect(leituras).toBeLessThanOrEqual(1); // só o enchimento inicial do fluxo; ninguém leu o corpo
+  });
+
+  it("erro longo do cartório é cortado em 200 caracteres (4xx e recusa da trava)", async () => {
+    const longo = "z".repeat(500);
+    const { cliente } = montar([json(403, { erro: longo }), json(409, { ...RECUSA, erro: longo })]);
+    const e = await erroDe(cliente.criarConvite("pc"));
+    expect(e.message).toContain("z".repeat(150));
+    expect(e.message).not.toContain("z".repeat(250));
+    const recusa = await cliente.pegar();
+    if (recusa.ok) throw new Error("esperava recusa");
+    expect(recusa.erro.length).toBeLessThanOrEqual(201);
+    expect(recusa.erro.endsWith("…")).toBe(true);
+  });
+
+  it("convite antigo (só token, sem pacote) é recusado com mensagem clara", async () => {
+    const { cliente, chamadas } = montar([json(200, { token: "t-velho" }), json(200, OK_TRAVA)]);
+    const e = await erroDe(cliente.usarConvite("c", "k"));
+    expect(e.tipo).toBe("resposta");
+    expect(e.message).toBe(
+      "Este convite é de uma versão antiga do cartório; peça um convite novo ao dono do grupo.",
+    );
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it("teto estourado recusado: corpo sem content-length é contado e cortado", async () => {
+    let enviados = 0;
+    const corpo = new ReadableStream<Uint8Array>({
+      pull(c) {
+        enviados += 16_384;
+        c.enqueue(new Uint8Array(16_384).fill(32)); // espaços: JSON válido se lido inteiro
+        if (enviados > 1_000_000) c.close();
+      },
+    });
+    const { cliente } = montar([new Response(corpo, { status: 200 })]);
+    const e = await erroDe(cliente.estadoTrava());
+    expect(e.tipo).toBe("resposta");
+    expect(e.message).toMatch(/grande/);
+    expect(enviados).toBeLessThan(200_000); // parou logo depois do teto, não leu o megabyte
+  });
+
+  it("corpo de erro (4xx) também respeita o teto", async () => {
+    const { cliente } = montar([json(403, { erro: "y".repeat(70_000) })]);
+    const e = await erroDe(cliente.criarConvite("pc"));
+    expect(e.tipo).toBe("resposta");
+    expect(e.message).not.toContain("yyyy");
+  });
+
+  it("nenhuma tentativa depois de cancelar: na espera entre tentativas", async () => {
+    const parar = new AbortController();
+    const { cliente, chamadas } = montar([json(503, {}), json(200, OK_TRAVA)], {
+      esperar: async () => parar.abort(), // soltou/perdeu enquanto esperava a 2ª tentativa
+    });
+    const e = await erroDe(cliente.renovar(7, parar.signal));
+    expect(e.tipo).toBe("cancelado");
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it("nenhuma tentativa depois de cancelar: já cancelado não envia nada", async () => {
+    const parar = new AbortController();
+    parar.abort();
+    const { cliente, chamadas } = montar([json(200, OK_TRAVA)]);
+    expect((await erroDe(cliente.renovar(7, parar.signal))).tipo).toBe("cancelado");
+    expect(chamadas).toHaveLength(0);
+  });
+
+  it("cancelar aborta a tentativa pendurada e não repete", async () => {
+    const parar = new AbortController();
+    const { cliente, chamadas } = montar(["pendurar", json(200, OK_TRAVA)], { prazoMs: 60_000 });
+    const p = erroDe(cliente.renovar(7, parar.signal));
+    await new Promise((ok) => setImmediate(ok));
+    parar.abort();
+    expect((await p).tipo).toBe("cancelado");
     expect(chamadas).toHaveLength(1);
   });
 });
