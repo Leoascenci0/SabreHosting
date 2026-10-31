@@ -31,7 +31,7 @@ describe("listarBackups", () => {
 
     expect(lista.map((b) => b.nome)).toEqual([novo, antigo]);
     expect(lista[0]).toMatchObject({ versao: 4, tamanho: 1024 * 1024 + 1024 });
-    expect(new Date(lista[0]!.criadoEm).getTime()).toBeGreaterThan(0);
+    expect(new Date(lista[0]?.criadoEm ?? "").getTime()).toBeGreaterThan(0);
   });
 
   it("ignora o que não é pacote fechado (parcial, lixo, arquivo quebrado) sem apagar nada", async () => {

@@ -12,11 +12,29 @@ export type EstadoInicio =
 
 export type Resultado = { ok: true } | { ok: false; mensagem: string };
 
+export interface BackupDaTela {
+  nome: string;
+  criadoEm: string;
+  tamanho: number;
+  versao: number;
+  dePc: string;
+}
+
+export interface EstadoBackups {
+  itens: BackupDaTela[];
+  bloqueado: boolean;
+  erro?: string;
+}
+
 export interface PonteSabre {
   versao(): Promise<string>;
   abrirComWindows: {
     ler(): Promise<boolean>;
     definir(ligado: boolean): Promise<boolean>;
+  };
+  backups: {
+    listar(): Promise<EstadoBackups>;
+    restaurar(nome: string): Promise<Resultado>;
   };
   inicio: {
     estado(): Promise<EstadoInicio>;

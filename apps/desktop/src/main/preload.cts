@@ -10,6 +10,11 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     definir: (ligado: boolean): Promise<boolean> =>
       electron.ipcRenderer.invoke("sabre:abrir-com-windows:definir", ligado),
   },
+  backups: {
+    listar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:backups:listar"),
+    restaurar: (nome: string): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:backups:restaurar", nome),
+  },
   inicio: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:estado"),
     jogar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:jogar"),

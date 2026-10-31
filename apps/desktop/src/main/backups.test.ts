@@ -9,7 +9,9 @@ const item = (nome: string, extra: Partial<BackupItem> = {}): BackupItem => ({
   ...extra,
 });
 
-function deps(extra: Partial<DepsBackups> = {}): DepsBackups & { restaurar: ReturnType<typeof vi.fn> } {
+function deps(
+  extra: Partial<DepsBackups> = {},
+): DepsBackups & { restaurar: ReturnType<typeof vi.fn> } {
   return {
     listar: async () => [item("a.tar.gz"), item("b.tar.gz")],
     restaurar: vi.fn(async () => undefined),
@@ -28,7 +30,9 @@ describe("backups (cola da tela)", () => {
   });
 
   it("lista que não carrega vira mensagem em pt-BR, sem estourar", async () => {
-    const r = await criarBackups(deps({ listar: async () => Promise.reject(new Error("x")) })).estado();
+    const r = await criarBackups(
+      deps({ listar: async () => Promise.reject(new Error("x")) }),
+    ).estado();
     expect(r.itens).toEqual([]);
     expect(r.erro).toMatch(/backups/i);
   });
@@ -67,6 +71,9 @@ describe("backups (cola da tela)", () => {
 
   it("erro do núcleo chega à tela com a mensagem em pt-BR", async () => {
     const d = deps({ restaurar: vi.fn(async () => Promise.reject(new Error("Sem a trava."))) });
-    expect(await criarBackups(d).restaurar("a.tar.gz")).toEqual({ ok: false, mensagem: "Sem a trava." });
+    expect(await criarBackups(d).restaurar("a.tar.gz")).toEqual({
+      ok: false,
+      mensagem: "Sem a trava.",
+    });
   });
 });
