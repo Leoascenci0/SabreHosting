@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-Leva 31/10: app-1.1 ✅ (#70) · cartmel-1.2/1.3 🔄 (#69) · rede-2.2 ⏸️ [P: liberar repo.papermc.io na rede do ambiente]
+Leva 31/10: app-1.1 ✅ (#70) · cartmel-1.2/1.3 ✅ (#69) · app-1.2 🔄 · rede-2.2 ⏸️ [P: liberar repo.papermc.io na rede do ambiente]
 
 ## Fila
 
@@ -26,7 +26,7 @@ Leva 31/10: app-1.1 ✅ (#70) · cartmel-1.2/1.3 🔄 (#69) · rede-2.2 ⏸️ [
 **M2 — Primeira partida**
 - **Próxima onda (Eliel pediu app-1.1 primeiro, para ter prévia):** app-1.1 · rede-2.2 (plugin do proxy: trocar o host da vez + whitelist = redemel-2.1) ·
   cartmel-1.2/1.3 (endurecer a entrada do cartório; banco fora do diretório atual)
-- Depois: app-1.2 · app-1.3 · redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
+- Depois: app-1.3 · cartmel-1.7 (antes do cart-2.2) · redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
 - Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
 
 **M3 — Mundo em todos** (ondas montadas pela Máxima ao chegar aqui): sync-1.1 → sync-1.2 → sync-2.1 → sync-2.2;
@@ -53,7 +53,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Melhorias do launcher: `docs/roadmap-lanc-melhoria.md` (lancmel-1.1).
 - Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-1.1; 2.1 obrigatório antes de ligar o proxy; 2.2; 2.3 [P]).
 - Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
-- Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1 a 1.4 e 1.6; 1.5 feito).
+- Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1, 1.4, 1.6, 1.7 [antes do cart-2.2], 1.8; 1.2, 1.3, 1.5 feitos).
 - Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
 - Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1, 1.2 e 1.5, CI).
 
@@ -63,7 +63,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Feito
 
-- 31/10/2026 — app-1.1 janela, bandeja e design system (#70).
+- 31/10/2026 — app-1.1 janela, bandeja e design system (#70); cartmel-1.2/1.3 cartório endurecido e banco em /var/lib (#69).
 
 - 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
 

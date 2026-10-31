@@ -13,7 +13,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* token revogado → 401 no `/eu`.
   *Origem:* cart-1.1 · PR #15 · filha
 
-- [ ] **1.2 — Endurecer a entrada do cartório**
+- [x] **1.2 — Endurecer a entrada do cartório** (PR #69, 31/10/2026)
   *O que fazer:* `bodyLimit` explícito pequeno (ex.: 4 KB); escuta só em 127.0.0.1/::1 e faixas privadas; limite de
   tentativas falhas em `/convites/usar` e de token por IP (dependência nova pede linha em DECISOES).
   *Arquivo:* `services/cartorio/src/servidor.ts`
@@ -21,7 +21,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* corpo de 10 KB → 413; IP público → erro na partida; 20 tentativas erradas → 429.
   *Origem:* cart-1.1 · PR #15 · filha + qa segurança
 
-- [ ] **1.3 — Banco do cartório fora do diretório atual e convites vencidos limpos**
+- [x] **1.3 — Banco do cartório fora do diretório atual e convites vencidos limpos** (PR #69, 31/10/2026)
   *O que fazer:* `*.db` no `.gitignore`; caminho padrão do banco numa pasta de dados (ex.: `/var/lib/sabre-cartorio/`);
   apagar convites não usados vencidos há mais de N dias.
   *Arquivo:* `.gitignore`, `services/cartorio/src/iniciar.ts`, `services/cartorio/src/banco.ts`
@@ -65,3 +65,20 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* testes: resposta malformada recusada; nenhuma tentativa depois de soltar.
   *Origem:* cart-2.1 · PR #41 · qa segurança + qa integridade
+
+- [ ] **1.7 — Segredo do cartório num arquivo de ambiente**
+  *O que fazer:* a unidade `sabre-cartorio.service` não tem de onde tirar `SABRE_CARTORIO_SEGREDO_ADMIN` (sem ele o
+  cartório recusa a partida): `EnvironmentFile=/etc/sabre/cartorio.env` (0600, root) e o instalador cria o arquivo com
+  `openssl rand`, sem nunca imprimir o segredo. **Obrigatório antes do cart-2.2.**
+  *Arquivo:* `infra/vps/systemd/sabre-cartorio.service`, `infra/vps/instalar.sh`
+  **Tela no app:** não se aplica.
+  *Confirmação:* simulação do instalador: arquivo com 0600, unidade sobe com o segredo; rodar de novo não troca o segredo.
+  *Origem:* cartmel-1.2 · PR #69 · filha (achado médio)
+
+- [ ] **1.8 — Teto do PUT sem enfeite e exemplo de endereço coerente**
+  *O que fazer:* tirar o `bodyLimit` inerte da rota `PUT /versoes/:n/pacote` (o teto real é o do armazém, leitor em
+  fluxo) ou trocar por comentário; na mensagem de `conferirEndereco`, trocar o exemplo `10.8.0.1` por `10.66.0.1`.
+  *Arquivo:* `services/cartorio/src/servidor.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste do PUT igual; teste do texto do erro.
+  *Origem:* cartmel-1.2 · PR #69 · filha (achados baixos)
