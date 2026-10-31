@@ -14,7 +14,7 @@ TRIAGEM: M4 (+M3), ~30 linhas código + ~70 teste, RISCO alto (cartório, regra 
   *Origem:* piloto-1.1c · PR #189 · qa integridade
 
 ## Decisões que valem para este item
-cartmel-2.50
+Qa em integridade obrigatório. Decidido pela orquestradora (reversível): versão órfã sem pacote fica registrada e mais-nova segue na anterior; sem prazo de descarte.
 
 ## Soluções conhecidas que se aplicam
 S-01 (teste de tempo: folga/prazo explícito só no teste), S-06 (token de geração antes de qualquer await; agendador único), S-07 (caminho/marcador lido do disco é entrada não confiável), S-08 (socket cru: s.resume(); prazo de cabeçalho do Node corta em ~30 s), S-09 (hash completo), S-10 (PR de correção traz linhas "Regressão:" e "Tela no app:"), S-11 (no commit/PR, não escreva a flag que pula o pre-commit nem dentro de heredoc). Rodar vistorias uma de cada vez.

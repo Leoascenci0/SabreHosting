@@ -16,7 +16,7 @@ TRIAGEM: M1 (+M2 +M7), ~110 linhas + ~120 teste, RISCO alto (sync, trava de atua
 CORTE: esta sessão faz SÓ o 1.9a (tudo acima exceto a tela 'Limite de banda' e o limite real; isso é o 1.9b, depois).
 
 ## Decisões que valem para este item
-syncmel-1.9a0
+DECISOES 31/10: espalhar com trava de atualização separada da de host; o mundo que roda nunca é tocado. Decidido pela orquestradora (reversível): a nuvem NÃO entra como fonte no 1.9; PORTA_ESPALHAR=25570 confirmada (só rede privada). Qa com lente de integridade obrigatória (+ segurança).
 
 ## Soluções conhecidas que se aplicam
 S-01 (teste de tempo: folga/prazo explícito só no teste), S-06 (token de geração antes de qualquer await; agendador único), S-07 (caminho/marcador lido do disco é entrada não confiável), S-08 (socket cru: s.resume(); prazo de cabeçalho do Node corta em ~30 s), S-09 (hash completo), S-10 (PR de correção traz linhas "Regressão:" e "Tela no app:"), S-11 (no commit/PR, não escreva a flag que pula o pre-commit nem dentro de heredoc). Rodar vistorias uma de cada vez.
