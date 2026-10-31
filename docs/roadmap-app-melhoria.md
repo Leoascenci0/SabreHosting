@@ -90,7 +90,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* E2E: foco vai ao aviso depois de revogar; teste da mensagem de rede.
   *Origem:* appmel-1.7 · PR #165 · qa interface
 
-- [ ] **1.11 — ⏸️ P · Backups: ligar a rotação e expor "Quantos guardar"**
+- [x] **1.11 — Backups: ligar a rotação e expor "Quantos guardar"** (PR #179, 31/10/2026; regra: N mais novos + tudo dos últimos 7 dias; marcas bom/ruim no app)
   *O que fazer:* ligar `planejarRotacao`/`aplicarRotacao` ao app depois de cada backup bom e expor Configurações › Backups › "Quantos guardar". **Pede o OK do Eliel**: a rotação apaga backups dos amigos sozinha; e falta a fonte que marca cada backup como bom/ruim/não-conferido (rotacao.ts:4: cartório ou app). Padrão atual (10 recentes + 7 dias) e mínimo garantido não mudam sem ele.
   *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/backup/rotacao.ts`, `apps/desktop/src/ui/configuracoes.ts`
   **Tela no app:** Configurações › Backups › "Quantos guardar".
