@@ -19,7 +19,12 @@ import { exigirMundoNaPastaDoServidor } from "../backup/restaurar.js";
 import { Renovador, type ClienteDeTrava, type OpcoesRenovador } from "../cartorio/renovador.js";
 import { aplicarDelta, exigirForaDoHost, type Aplicado, type OpcoesAplicar } from "./aplicar.js";
 import type { Copias } from "../cartorio/tipos.js";
-import { conferirEnderecoPrivado, pedirArquivo, PORTA_ESPALHAR } from "./transferencia.js";
+import {
+  conferirEnderecoPrivado,
+  ehEnderecoPrivado,
+  pedirArquivo,
+  PORTA_ESPALHAR,
+} from "./transferencia.js";
 
 /** Quem já tem a versão e serve os arquivos (`servirArquivos`) na rede privada. */
 export interface Fonte {
@@ -39,12 +44,13 @@ const HASH_SHA256 = /^[0-9a-f]{64}$/;
 
 /**
  * Fontes a partir de `quemTem`: os PCs com a versão, menos este (`euId`) e menos quem ainda não tem IP na rede privada
- * (`ip === null`: PC recém-chegado; sem este filtro um só deles derrubaria a lista toda em `escolherFontes`). A nuvem
+ * (`ip === null`: PC recém-chegado) e quem tem IP fora da rede privada (sem estes filtros um só deles derrubaria a
+ * lista toda em `escolherFontes`). A nuvem
  * não entra: ela serve só o pacote fechado, não arquivo por hash. Vazia é possível; quem chama decide.
  */
 export function fontesDeCopias(copias: Copias, euId: number): Fonte[] {
   return copias.pcs.flatMap((p) =>
-    p.id === euId || p.ip === null
+    p.id === euId || p.ip === null || !ehEnderecoPrivado(p.ip)
       ? []
       : [{ tipo: "pc" as const, endereco: p.ip, porta: PORTA_ESPALHAR }],
   );
