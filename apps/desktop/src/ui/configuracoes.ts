@@ -77,7 +77,7 @@ function desenharGrupo(pcs: PcDaTela[]): void {
         botao.type = "button";
         botao.className = "secundario";
         botao.textContent = "Tirar PC do grupo";
-        botao.setAttribute("aria-label", `Tirar ${pc.nome} do grupo`);
+        // Sem aria-label: o nome acessível é o texto visível; o PC é o do item da lista.
         botao.addEventListener("click", () => {
           tirando = pc;
           botaoDoTirado = botao;
@@ -125,11 +125,14 @@ confirmarGrupo.addEventListener("click", () => {
       confGrupo.hidden = true;
       tirando = undefined;
       await carregarGrupo();
-      if (r.ok)
+      if (r.ok) {
         avisoGrupo.textContent = `${alvo.nome} saiu do grupo. Para voltar, precisa de um novo convite.`;
-      else mostrarErroGrupo(r.mensagem);
+        // O botão clicado sumiu com o redesenho: leva o foco ao aviso.
+        avisoGrupo.tabIndex = -1;
+        avisoGrupo.focus();
+      } else mostrarErroGrupo(r.mensagem);
     })
-    .catch(() => mostrarErroGrupo("Não consegui tirar o PC agora. Nada foi alterado."))
+    .catch(() => mostrarErroGrupo("Não consegui tirar o PC agora. Atualize a lista para conferir."))
     .finally(() => ocuparGrupo(false));
 });
 

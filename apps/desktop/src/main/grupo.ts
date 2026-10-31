@@ -20,17 +20,20 @@ export interface DepsGrupo {
 }
 
 const GENERICA = "Não consegui falar com o cartório agora. Nada foi alterado.";
+/** Revogar pode ter chegado ao cartório e a resposta se perdido: não dá para garantir "nada foi alterado". */
+const REVOGAR_SEM_RESPOSTA =
+  "Não consegui falar com o cartório agora. Atualize a lista para conferir.";
 const POR_STATUS: Record<number, string> = {
   403: "Só o dono do grupo pode tirar um PC do grupo.",
   409: "O PC do dono não pode ser tirado do grupo.",
   404: "Esse PC já não está no grupo. Atualize a lista.",
 };
 
-function mensagemDe(e: unknown): string {
+function mensagemDe(e: unknown, generica = GENERICA): string {
   const status = (e as { status?: unknown } | null)?.status;
   if (typeof status === "number" && POR_STATUS[status]) return POR_STATUS[status];
   if ((e as { tipo?: unknown } | null)?.tipo === "acesso" && e instanceof Error) return e.message;
-  return GENERICA;
+  return generica;
 }
 
 export function criarGrupo(deps: DepsGrupo) {
@@ -62,7 +65,7 @@ export function criarGrupo(deps: DepsGrupo) {
         await deps.revogarPc(alvo.id);
         return { ok: true };
       } catch (e) {
-        return { ok: false, mensagem: mensagemDe(e) };
+        return { ok: false, mensagem: mensagemDe(e, REVOGAR_SEM_RESPOSTA) };
       } finally {
         tirando = false;
       }
