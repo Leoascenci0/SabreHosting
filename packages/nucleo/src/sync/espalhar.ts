@@ -12,9 +12,12 @@
  * `Renovador` por chamada (um só relógio, parado no `finally`); renovada antes de cada passo da troca; perdida, o
  * próximo arquivo não baixa e a troca não começa; sempre solta no fim (também em erro).
  */
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { constants } from "node:fs";
+import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { validarManifesto, type ArquivoDoManifesto, type Manifesto } from "../backup/manifesto.js";
+import { abrirPacote } from "../backup/pacote.js";
 import { exigirMundoNaPastaDoServidor } from "../backup/restaurar.js";
 import { Renovador, type ClienteDeTrava, type OpcoesRenovador } from "../cartorio/renovador.js";
 import { aplicarDelta, exigirForaDoHost, type Aplicado, type OpcoesAplicar } from "./aplicar.js";
@@ -77,9 +80,21 @@ export function escolherFontes(
   return [...validas.filter((f) => f.tipo === "pc"), ...validas.filter((f) => f.tipo === "host")];
 }
 
+/** Pacote fechado da versão que a nuvem guarda (último recurso: só quando não há PC para puxar). */
+export interface PacoteDaNuvem {
+  /** Baixa para `destino` (que não existe) e devolve o hash declarado pela nuvem; quem abre confere. */
+  baixar: (destino: string) => Promise<{ sha256: string }>;
+}
+
 export interface OpcoesEspalhar extends Pick<
   OpcoesAplicar,
-  "hospedaAgora" | "servidorParado" | "avisarCopia" | "prazoTravaMs" | "renomear" | "ligar"
+  | "hospedaAgora"
+  | "servidorParado"
+  | "avisarCopia"
+  | "prazoTravaMs"
+  | "renomear"
+  | "ligar"
+  | "aoProgresso"
 > {
   /** `/atualizacao/{pegar,renovar,soltar}` do cartório (`pegarAtualizacao`… do cliente). */
   atualizacao: ClienteDeTrava;
@@ -92,6 +107,8 @@ export interface OpcoesEspalhar extends Pick<
   /** Versão do pacote que este PC tem agora. */
   versaoLocal: number;
   fontes: readonly Fonte[];
+  /** Usada SÓ com `fontes` vazia (a nuvem nunca é fonte por arquivo); com fontes, é ignorada. */
+  nuvem?: PacoteDaNuvem;
   /** Token deste PC (nunca vai para log nem para mensagem). */
   token: string;
   tentativas?: number;
@@ -128,7 +145,8 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
   // Barreiras antes de qualquer rede; `aplicarDelta` confere tudo de novo antes de trocar. Fora do host ANTES de
   // pegar a atualização (1.8b b): trava de host vencida com o servidor ainda de pé não pode virar atualização.
   exigirMundoNaPastaDoServidor(resolve(o.pastaDoMundo), o.pastaDoServidor);
-  const fontes = escolherFontes(o.fontes, o.permitirLoopbackParaTeste);
+  const daNuvem = o.fontes.length === 0 && o.nuvem !== undefined;
+  const fontes = daNuvem ? [] : escolherFontes(o.fontes, o.permitirLoopbackParaTeste);
   await exigirForaDoHost(o);
 
   const pedir = async (sha256: string, destino: string, tamanhoMaximo: number) => {
@@ -173,9 +191,31 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
   let dir: string | undefined;
   try {
     dir = await mkdtemp(`${resolve(o.pastaTemporaria)}-`);
-    const arquivo = join(dir, "manifesto.json");
-    await pedir(o.versao.manifestoSha256, arquivo, TETO_MANIFESTO);
-    const alvo = validarManifesto(JSON.parse(await readFile(arquivo, "utf8")));
+    let alvo: Manifesto;
+    let entregar = (a: ArquivoDoManifesto, destino: string): Promise<unknown> =>
+      pedir(a.sha256, destino, a.tamanho);
+    if (daNuvem) {
+      // Pacote fechado: hash do pacote e de cada arquivo conferidos por `abrirPacote`; o manifesto de dentro tem de ser
+      // o que o cartório registrou (hash do JSON). Os arquivos ficam extraídos ao lado e vão ao `aplicarDelta`.
+      const pacote = join(dir, "pacote.tar.gz");
+      const { sha256 } = await o.nuvem!.baixar(pacote);
+      const extraido = join(dir, "nuvem");
+      alvo = await abrirPacote(pacote, sha256, extraido);
+      await rm(pacote, { force: true });
+      if (
+        createHash("sha256").update(JSON.stringify(alvo)).digest("hex") !== o.versao.manifestoSha256
+      ) {
+        throw new Error(
+          "O pacote da nuvem não é o que o cartório registrou para essa versão; nada foi trocado.",
+        );
+      }
+      entregar = (a, destino) =>
+        copyFile(join(extraido, ...a.caminho.split("/")), destino, constants.COPYFILE_EXCL);
+    } else {
+      const arquivo = join(dir, "manifesto.json");
+      await pedir(o.versao.manifestoSha256, arquivo, TETO_MANIFESTO);
+      alvo = validarManifesto(JSON.parse(await readFile(arquivo, "utf8")));
+    }
     if (alvo.versao !== o.versao.numero) {
       throw new Error(
         `O manifesto recebido é da versão ${alvo.versao}, mas o cartório diz que a mais nova é a ${o.versao.numero}; nada foi trocado.`,
@@ -196,8 +236,9 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
       baixar: async (a, destino) => {
         if (!(await renovador.temTrava())) throw new Error(SEM_VEZ);
         await o.aoBaixar?.(a);
-        await pedir(a.sha256, destino, a.tamanho);
+        await entregar(a, destino);
       },
+      ...(o.aoProgresso ? { aoProgresso: o.aoProgresso } : {}),
     });
     return { estado: "atualizado", manifesto: alvo, ...aplicado };
   } finally {
