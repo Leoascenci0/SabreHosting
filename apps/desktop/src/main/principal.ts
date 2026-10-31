@@ -13,6 +13,11 @@ import type { IpcMainInvokeEvent } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  listarVersoes,
+  opcoesDaVersao,
+  planoDaVersao,
+} from "@sabrehosting/nucleo/servidor/versoes";
 import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAvisoHistorico } from "./aviso-historico.js";
@@ -22,6 +27,7 @@ import { criarBackups, type Backups } from "./backups.js";
 import { depsBackupsReais } from "./deps-backups.js";
 import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
+import { criarVersao, type Versao } from "./versao.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
@@ -323,7 +329,24 @@ async function criarGrupoDoApp(): Promise<Grupo> {
   return criarGrupo(depsGrupoE2E());
 }
 
-function registrarPonte(inicio: Inicio, backups: Backups, grupo: Grupo): void {
+async function criarVersaoDoApp(servidorRodando: () => boolean): Promise<Versao> {
+  if (process.env["SABRE_E2E"] !== "1") {
+    const exigir = clienteDoAmbiente(process.env);
+    return criarVersao({
+      eu: async () => exigir().eu(),
+      lerAtual: async () => (await exigir().lerConfigGrupo()).versaoMinecraft,
+      listar: async () => (await listarVersoes()).map((v) => v.id),
+      opcoes: (v) => opcoesDaVersao(v),
+      sha1Do: async (v) => (await planoDaVersao(v)).jar.hashEsperado.valor,
+      gravar: async (v, sha1) => void (await exigir().gravarConfigGrupo(v, sha1)),
+      servidorRodando,
+    });
+  }
+  const { depsVersaoE2E } = await import("./fake-e2e.js");
+  return criarVersao(depsVersaoE2E(servidorRodando));
+}
+
+function registrarPonte(inicio: Inicio, backups: Backups, grupo: Grupo, versao: Versao): void {
   const configuracoes = criarConfiguracoes({
     pasta: app.getPath("userData"),
     aplicarAbrirComWindows,
@@ -360,6 +383,15 @@ function registrarPonte(inicio: Inicio, backups: Backups, grupo: Grupo): void {
   ipcMain.handle("sabre:grupo:tirar", (evento, id: unknown) => {
     permitir(evento);
     return grupo.tirar(id); // o main revalida dono, lista e "não é o dono" antes de revogar
+  });
+  ipcMain.handle("sabre:versoes:estado", (evento) => (permitir(evento), versao.estado()));
+  ipcMain.handle("sabre:versoes:opcoes", (evento, v: unknown) => {
+    permitir(evento);
+    return versao.opcoes(v); // o main confere dono e se a versão está na lista oficial
+  });
+  ipcMain.handle("sabre:versoes:gravar", (evento, v: unknown) => {
+    permitir(evento);
+    return versao.gravar(v); // dono, servidor parado e lista oficial são revalidados aqui
   });
   ipcMain.handle("sabre:config:ler", (evento) => (permitir(evento), configuracoes.ler()));
   ipcMain.handle("sabre:config:salvar", (evento, valor: unknown) => {
@@ -417,7 +449,13 @@ if (!app.requestSingleInstanceLock()) {
     agendaApp = await criarAgendaDoApp();
     inicioApp = await criarInicioDoApp();
     backupsApp = await criarBackupsDoApp(inicioApp);
-    registrarPonte(inicioApp, backupsApp, await criarGrupoDoApp());
+    const inicioPronto = inicioApp;
+    registrarPonte(
+      inicioApp,
+      backupsApp,
+      await criarGrupoDoApp(),
+      await criarVersaoDoApp(() => inicioPronto.ativo()),
+    );
     bandeja = criarBandeja();
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {
