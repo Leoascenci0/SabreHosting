@@ -16,6 +16,10 @@ const REDE_PRIVADA = /^10\.66\.0\.(?:[2-9]|[1-9]\d|1\d\d)$/;
 export const PORTA_ESPALHAR = 25570;
 const HASH_SHA256 = /^[0-9a-f]{64}$/;
 
+/** O texto é um IP deste grupo na rede privada (10.66.0.2 a 10.66.0.199)? Não lança; serve para filtrar listas. */
+export const ehEnderecoPrivado = (endereco: string): boolean =>
+  isIPv4(endereco) && REDE_PRIVADA.test(endereco);
+
 /** Só o IP da rede privada do SabreHosting; loopback apenas quando o teste pede. */
 export function conferirEnderecoPrivado(
   endereco: string,
