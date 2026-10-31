@@ -357,6 +357,34 @@ describe("tela de configurações", () => {
     );
   });
 
+  it("mods: leitura que falha logo após uma ação com erro mantém o erro da ação", async () => {
+    const p = await abrir(true);
+    await p.locator("#mods-adicionar:not([hidden])").waitFor();
+    // A ação lê a lista (passa), confere o link (erro de ação); a leitura logo depois da ação falha.
+    const interruptorMods = (campos: Record<string, boolean | number>): Promise<unknown> =>
+      aberto?.evaluate(
+        (_electron, c: Record<string, boolean | number>) => {
+          const falso = (globalThis as unknown as Record<string, Record<string, unknown>>)[
+            "__sabreE2EMods"
+          ];
+          if (falso) Object.assign(falso, c);
+        },
+        campos,
+      ) as Promise<unknown>;
+    await p.locator("#mods-nome").fill("Lithium");
+    await p.locator("#mods-versao").fill("0.13.0");
+    await p.locator("#mods-arquivo").fill("lithium.jar");
+    await p.locator("#mods-url").fill("https://evil.example/lithium.jar");
+    await p.locator("#mods-hash").fill("b".repeat(128));
+    await interruptorMods({ falhaLer: true, leiturasOk: 1 });
+    await p.locator("#mods-adicionar-botao").click();
+    // Dá tempo de a ação e a leitura (que falha) terminarem; o erro da ação tem que continuar na tela.
+    await p.waitForTimeout(1000);
+    expect(await p.locator("#mods-erro").textContent()).toContain("cdn.modrinth.com");
+    expect(await p.locator("#mods-erro").textContent()).not.toContain("cartório");
+    await interruptorMods({ falhaLer: false, leiturasOk: 0 });
+  });
+
   it("versão: não-dono não vê a área", async () => {
     const p = await abrir();
     await p.locator("#cfg-visao").waitFor();

@@ -364,12 +364,13 @@ async function carregarMods(preservarMensagens = false): Promise<void> {
       mostrarErroMods("");
       avisoMods.textContent = "";
     }
-    if (e.erro) mostrarErroMods(e.erro);
+    // Erro da ação que acabou de rodar não sai para dar lugar à falha de leitura que veio logo depois.
+    if (e.erro && !(preservarMensagens && !erroMods.hidden)) mostrarErroMods(e.erro);
     if (e.aviso) avisoMods.textContent = e.aviso;
     // Atualizando no arranque: olha de novo até acabar, para o amigo ver o resultado.
     if (e.atualizando) aguardaMods = setTimeout(() => void carregarMods(true), 1500);
   } catch {
-    mostrarErroMods("Não consegui ler a lista de mods agora.");
+    if (!preservarMensagens) mostrarErroMods("Não consegui ler a lista de mods agora.");
   }
 }
 
