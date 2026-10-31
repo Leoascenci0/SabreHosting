@@ -14,6 +14,8 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     ler: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:config:ler"),
     salvar: (valor: unknown): Promise<unknown> =>
       electron.ipcRenderer.invoke("sabre:config:salvar", valor),
+    escolherPasta: (): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:config:escolher-pasta"),
   },
   backups: {
     listar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:backups:listar"),
