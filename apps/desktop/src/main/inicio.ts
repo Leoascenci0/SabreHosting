@@ -24,6 +24,8 @@ export interface DepsInicio {
   servidorOrfao(): Promise<boolean>;
   /** Endereço para os amigos entrarem. Vazio: ainda não configurado. */
   endereco: string;
+  /** Pergunta o endereço de novo ao cartório (`GET /grupo`) antes do Jogar; falha silenciosa mantém o último. */
+  atualizarEndereco?(): Promise<void>;
   copiar(texto: string): void;
   /** Abre o jogo já no servidor (Prism, lanc-1.3). Ausente: o botão Jogar só copia o endereço. */
   abrirJogo?(endereco: string): Promise<{ ok: true } | { ok: false; mensagem: string }>;
@@ -235,6 +237,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       aberto?: boolean;
       aviso?: string;
     }> {
+      await deps.atualizarEndereco?.().catch(() => undefined);
       if (!deps.endereco) throw new Error("O endereço do servidor ainda não foi configurado.");
       deps.copiar(deps.endereco); // sempre copia: serve de reserva se o Prism não abrir
       if (!deps.abrirJogo) return { copiado: true, endereco: deps.endereco };

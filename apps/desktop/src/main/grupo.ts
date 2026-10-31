@@ -7,16 +7,22 @@ export interface PcDaTela {
 }
 
 /** O que a tela mostra: `dono: false` esconde a área Grupo inteira. */
-export type EstadoGrupo =
+export type EstadoGrupo = (
   | { dono: false }
   | { dono: true; pcs: PcDaTela[]; erro?: undefined }
-  | { dono: true; pcs: []; erro: string };
+  | { dono: true; pcs: []; erro: string }
+) & {
+  /** "Endereço do servidor" (só leitura): o que os amigos digitam no Minecraft; vem do cartório. Ausente: não deu. */
+  endereco?: string;
+};
 
 export interface DepsGrupo {
   /** `cliente.eu()`: o cartório diz se este PC é o dono; a tela não decide isso. */
   eu(): Promise<{ id: number; dono: boolean }>;
   listarPcs(): Promise<PcDaTela[]>;
   revogarPc(id: number): Promise<void>;
+  /** `GET /grupo`: endereço do Jogar. Qualquer PC do grupo vê; falha só some com o campo. */
+  lerEndereco?(): Promise<string>;
 }
 
 const GENERICA = "Não consegui falar com o cartório agora. Nada foi alterado.";
@@ -40,16 +46,18 @@ export function criarGrupo(deps: DepsGrupo) {
   let tirando = false;
   return {
     async estado(): Promise<EstadoGrupo> {
+      const lido = await deps.lerEndereco?.().catch(() => undefined);
+      const endereco = lido ? { endereco: lido } : {};
       try {
-        if (!(await deps.eu()).dono) return { dono: false };
+        if (!(await deps.eu()).dono) return { dono: false, ...endereco };
       } catch {
         // Sem cartório não dá para saber: na dúvida, não mostra a área (o Início já avisa do cartório).
-        return { dono: false };
+        return { dono: false, ...endereco };
       }
       try {
-        return { dono: true, pcs: await deps.listarPcs() };
+        return { dono: true, pcs: await deps.listarPcs(), ...endereco };
       } catch (e) {
-        return { dono: true, pcs: [], erro: mensagemDe(e) };
+        return { dono: true, pcs: [], erro: mensagemDe(e), ...endereco };
       }
     },
 

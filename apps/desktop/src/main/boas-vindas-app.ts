@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
 import { gerarChavesDoPc, IP_DO_HUB } from "@sabrehosting/nucleo/rede/wireguard";
 import { criarBoasVindas, type BoasVindas, type DepsBoasVindas } from "./boas-vindas.js";
-import { criarCofreSeguro } from "./cofre.js";
+import { ARQUIVO_COFRE, criarCofreSeguro } from "./cofre.js";
 import { criarEntradaNoGrupo } from "./entrada-no-grupo.js";
 
 export interface OpcoesBoasVindasDoApp {
@@ -12,6 +12,8 @@ export interface OpcoesBoasVindasDoApp {
   janela(): BrowserWindow | null;
   /** Barra mensagem que não veio da nossa página (mesma regra das outras telas). */
   permitir(evento: IpcMainInvokeEvent): void;
+  /** Chamado depois que o assistente conclui com sucesso (o app reinicia para ler a configuração nova). */
+  aoConcluir?(): void;
 }
 
 /** Peças de verdade: cofre do Windows, WireGuard com administrador e seletor de pasta. */
@@ -21,7 +23,7 @@ function depsReais(op: OpcoesBoasVindasDoApp): DepsBoasVindas {
     agora: Date.now,
     gerarChaves: gerarChavesDoPc,
     cofreDisponivel: () => safeStorage.isEncryptionAvailable(),
-    cofre: criarCofreSeguro(safeStorage, join(op.dados, "cofre-token.bin")),
+    cofre: criarCofreSeguro(safeStorage, join(op.dados, ARQUIVO_COFRE)),
     entrar: criarEntradaNoGrupo({ pastaRede: join(op.dados, "rede") }),
     lerGrupo: (token, porta) =>
       criarCliente({
@@ -73,6 +75,10 @@ export async function registrarBoasVindas(op: OpcoesBoasVindasDoApp): Promise<Bo
   });
   ligar("sabre:bv:aceitar-eula", (aceito: unknown) => bv.aceitarEula(aceito));
   ligar("sabre:bv:escolher-pasta", () => escolher());
-  ligar("sabre:bv:concluir", (pasta: unknown) => bv.concluir(pasta));
+  ligar("sabre:bv:concluir", async (pasta: unknown) => {
+    const r = await bv.concluir(pasta);
+    if (r.ok) op.aoConcluir?.();
+    return r;
+  });
   return bv;
 }

@@ -31,6 +31,8 @@ const salvar = $<HTMLButtonElement>("config-salvar");
 const voltar = $<HTMLButtonElement>("config-voltar");
 const abrir = $<HTMLButtonElement>("ver-config");
 
+const areaEndereco = $("cfg-endereco");
+const campoEndereco = $<HTMLInputElement>("grupo-endereco");
 const areaGrupo = $("cfg-grupo");
 const listaGrupo = $("grupo-lista");
 const confGrupo = $("grupo-confirmacao");
@@ -173,12 +175,15 @@ async function carregarGrupo(): Promise<void> {
   mostrarErroGrupo("");
   try {
     const g = await window.sabre.grupo.estado();
+    campoEndereco.value = g.endereco ?? "";
+    areaEndereco.hidden = !g.endereco; // sem resposta do cartório, some em vez de mostrar campo vazio
     areaGrupo.hidden = !g.dono;
     if (g.dono) {
       desenharGrupo(g.pcs);
       if (g.erro) mostrarErroGrupo(g.erro);
     }
   } catch {
+    areaEndereco.hidden = true;
     areaGrupo.hidden = true; // sem resposta do app: não mostra uma área que talvez não valha
   }
 }

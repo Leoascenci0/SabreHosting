@@ -141,12 +141,22 @@ describe("tela de configurações", () => {
 
   it("não mostra a área Grupo a quem não é dono", async () => {
     const p = await abrir();
+    await p.locator("#cfg-endereco").waitFor(); // o endereço chega junto com o estado do grupo
     expect(await p.locator("legend:visible").allTextContents()).toEqual([
       "Geral",
       "Servidor",
       "Backups",
+      "Endereço do servidor",
       "Mods do grupo",
     ]);
+  });
+
+  it("Endereço do servidor: aparece para todos, só leitura, com o endereço do cartório", async () => {
+    const p = await abrir();
+    await p.locator("#cfg-endereco").waitFor();
+    const campo = p.locator("#grupo-endereco");
+    expect(await campo.inputValue()).toBe("mundo.exemplo.net");
+    expect(await campo.isEditable()).toBe(false);
   });
 
   const revogados = (): Promise<number[]> =>

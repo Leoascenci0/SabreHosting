@@ -170,6 +170,17 @@ describe("criarServidorDeArquivos (1.10)", () => {
     expect(c.s.vitrine.arquivos(c.p.manifesto.sha256)).toBeUndefined(); // ainda não publicou
   });
 
+  it("sair durante o primeiro ligar não deixa servidor escutando (syncmel-1.13)", async () => {
+    const c = await cenario("127.0.0.1");
+    const ligando = c.s.tentarLigar(); // em voo: ainda dentro do await servirArquivos
+    const fechando = c.s.fechar();
+    expect(await ligando).toBe(false);
+    await fechando;
+    expect(c.s.porta()).toBeUndefined();
+    expect(await c.s.ligar()).toBe(false); // fechado de vez
+    expect(c.s.vitrine.arquivos(c.p.manifesto.sha256)).toBeUndefined(); // nem publicou
+  });
+
   it("backup só marcado 'ruim' ou sem marca não vai para a vitrine", async () => {
     const c = await cenario("127.0.0.1");
     marcarBackup(join(c.base, "backups"), "2026-10-31T10-00-00-000Z-v4.tar.gz", "ruim", c.p.sha256);
