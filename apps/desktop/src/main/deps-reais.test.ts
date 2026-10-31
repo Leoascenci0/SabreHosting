@@ -98,7 +98,9 @@ describe("ligação real do Hospedar", () => {
 
 describe("quem sou eu e servidor órfão", () => {
   it("eu pergunta ao cartório (GET /eu)", async () => {
-    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ id: 7, nome: "Este PC" })));
+    const fetchFn = vi.fn(
+      async () => new Response(JSON.stringify({ id: 7, nome: "Este PC", dono: false })),
+    );
     const d = depsReais(env(), () => {}, { fetchFn: fetchFn as unknown as typeof fetch });
     await expect(d.eu()).resolves.toMatchObject({ id: 7 });
     expect(new URL(String(fetchFn.mock.calls[0]?.[0 as never])).pathname).toBe("/eu");

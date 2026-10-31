@@ -14,6 +14,8 @@ import {
   type Banco,
   type Pc,
   donoAtual,
+  ehDono,
+  listarPcsAtivos,
   lerConvite,
   nomeOcupado,
   pcDoToken,
@@ -70,6 +72,7 @@ const REDACT = [
 ];
 const NAO_AUTORIZADO = { erro: "Acesso negado. Peça um convite novo ao administrador do grupo." };
 const SO_DONO = { erro: "Só o dono do grupo cria convites." };
+const SO_DONO_LISTA = { erro: "Só o dono do grupo vê a lista de PCs." };
 const SO_DONO_TIRA = { erro: "Só o dono do grupo tira um PC do grupo." };
 const DONO_NAO_SE_TIRA = {
   erro: "O dono não pode se tirar do grupo. Passe a posse a outro PC antes (trocar-dono).",
@@ -379,7 +382,14 @@ export function criarCartorio({
     },
   );
 
-  app.get("/eu", { onRequest: soPc }, (req) => pcDe(req));
+  app.get("/pcs", { onRequest: soPc }, (req, resp) =>
+    ehDono(banco, pcDe(req).id) ? listarPcsAtivos(banco) : resp.code(403).send(SO_DONO_LISTA),
+  );
+
+  app.get("/eu", { onRequest: soPc }, (req) => ({
+    ...pcDe(req),
+    dono: ehDono(banco, pcDe(req).id),
+  }));
 
   app.get("/trava", { onRequest: soPc }, () => {
     const { donoPcId, epoca, expiraEm } = estadoTrava(banco, agora());
