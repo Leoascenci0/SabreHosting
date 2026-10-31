@@ -37,7 +37,7 @@ import {
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { backupParado, depsBackupsReais } from "./deps-backups.js";
-import { ambienteLegado, lerConfigPc, type ConfigPc } from "./config-pc.js";
+import { ambienteLegado, lerConfigPc, pastaDoMundoAgora, type ConfigPc } from "./config-pc.js";
 import { criarCofreSeguro, ARQUIVO_COFRE } from "./cofre.js";
 import { clienteDoPc, depsReais, pastaModsDaInstancia } from "./deps-reais.js";
 import { registrarBoasVindas } from "./boas-vindas-app.js";
@@ -267,6 +267,7 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
       iniciar: iniciarAgendaReal({
         pastaBackups: pc.pastaBackups,
         pastaDoMundo: pc.pastaMundo,
+        mundoAgora: () => pastaDoMundoAgora(pc.pastaServidor),
         epoca: async () => (await exigir().estadoTrava()).epoca,
         historicoLongo,
         avisoHistorico,
@@ -471,6 +472,7 @@ async function criarVersaoDoApp(
         backupParado({
           pastaBackups: pc.pastaBackups,
           pastaDoMundo: pc.pastaMundo,
+          mundoAgora: () => pastaDoMundoAgora(pc.pastaServidor),
           cliente: exigir(),
           servidorRodando,
           servidorOrfao: temOrfao,
