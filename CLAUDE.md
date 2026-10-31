@@ -143,6 +143,10 @@ qual parte detalhada (`references/*.md`) ler para o tipo da mudança.
   de ≤10 linhas de cada onda e passa o bastão a uma nova sessão coordenadora. Teto de contexto: meta **30%**, margem até
   **35%** para concluir a demanda em curso, até **40%** só para um item muito específico. Detalhe em
   `.claude/skills/maxima/references/coordenacao.md`.
+- **Ondas visíveis na lista de chats (regra do Eliel, 31/10/2026):** a sessão de onda se chama `Onda <N> — <itens>` e
+  cada sessão de item `O<N> · <sigla-id> — <título>`, criada **dentro** da sessão de onda (aparece aninhada) e com a
+  etiqueta `maxima-onda-<N>`; o número da onda é único no projeto e cada onda aberta tem uma linha em
+  `docs/MILESTONE.md` › Em curso.
 - **Autonomia da Máxima:** sozinha ela revisa, mergeia e gera a versão de teste; toma decisão **reversível** de
   detalhe (texto de tela, ordem de botão) e relata ("decidi por você", com o PR para desfazer). **Fica com o Eliel:**
   regra do grupo (quem pode hospedar, quem entra), custo ou cadastro em serviço externo (máquina na nuvem, domínio),
