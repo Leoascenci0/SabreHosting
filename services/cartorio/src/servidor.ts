@@ -11,6 +11,13 @@ import {
 } from "./armazem.js";
 import { type AjudanteEntrada, CHAVE_WG, naSalaDeEntrada } from "./ajudante.js";
 import {
+  type MotivoAtualizacao,
+  type ResultadoAtualizacao,
+  pegarAtualizacao,
+  renovarAtualizacao,
+  soltarAtualizacao,
+} from "./atualizacao.js";
+import {
   type Banco,
   type Pc,
   donoAtual,
@@ -100,6 +107,15 @@ const RECUSA_TRAVA: Record<MotivoRecusa, (dono: string) => string> = {
   destino_sem_acesso: () =>
     "O PC para onde o servidor iria perdeu o acesso ao grupo. Escolha outro PC ou peça um convite novo para ele.",
   destino_invalido: () => "O servidor já está neste PC. Escolha outro PC para receber.",
+  atualizando: () =>
+    "Esse PC está terminando de atualizar a cópia do mundo. Espere a atualização acabar e tente de novo.",
+};
+const RECUSA_ATUALIZACAO: Record<MotivoAtualizacao, string> = {
+  hospedando:
+    "Este PC está hospedando o servidor e já tem o mundo mais novo: não precisa atualizar.",
+  epoca_velha: "Outra atualização deste PC começou depois desta. Esta para aqui.",
+  nao_e_dono: "Este PC não tem atualização em andamento.",
+  vencida: "A atualização ficou tempo demais sem avisar o cartório e perdeu a vez. Comece de novo.",
 };
 const RECUSA_PACOTE: Record<MotivoPacote, { status: number; erro: string }> = {
   nao_e_a_mais_nova: {
@@ -412,6 +428,25 @@ export function criarCartorio({
   );
   app.post<{ Body: { epoca: number } }>("/trava/soltar", corpoTrava("epoca"), (req, resp) =>
     responderTrava(resp, soltar(banco, pcDe(req).id, req.body.epoca)),
+  );
+
+  // Trava de atualização: o PC é sempre o do token (sem campo `pc` no corpo), então só mexe na própria.
+  function responderAtualizacao(resp: FastifyReply, r: ResultadoAtualizacao) {
+    return r.ok
+      ? { ...r, renovarMs }
+      : resp.code(409).send({ erro: RECUSA_ATUALIZACAO[r.motivo], ...r });
+  }
+  app.post("/atualizacao/pegar", { onRequest: soPc }, (req, resp) =>
+    responderAtualizacao(resp, pegarAtualizacao(banco, pcDe(req).id, agora(), prazoMs)),
+  );
+  app.post<{ Body: { epoca: number } }>("/atualizacao/renovar", corpoTrava("epoca"), (req, resp) =>
+    responderAtualizacao(
+      resp,
+      renovarAtualizacao(banco, pcDe(req).id, req.body.epoca, agora(), prazoMs),
+    ),
+  );
+  app.post<{ Body: { epoca: number } }>("/atualizacao/soltar", corpoTrava("epoca"), (req, resp) =>
+    responderAtualizacao(resp, soltarAtualizacao(banco, pcDe(req).id, req.body.epoca)),
   );
 
   app.post<{ Body: DadosVersao & { epoca: number } }>(
