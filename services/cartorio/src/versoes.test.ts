@@ -5,7 +5,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { type Banco, MIGRACOES, abrirBanco, criarConvite } from "./banco.js";
 import { criarCartorio } from "./servidor.js";
 import { pegar, renovar } from "./trava.js";
-import { informarCopia, maisNova, quemTem, registrarVersao } from "./versoes.js";
+import {
+  informarCopia,
+  maisNova,
+  maisNovaGuardada,
+  quemTem,
+  registrarVersao,
+  ultimoRegistrado,
+} from "./versoes.js";
 
 const PRAZO = 60_000;
 const SHA = "a".repeat(64);
@@ -35,6 +42,12 @@ function montarBanco(n = 3): Banco {
     token.run(`hash-${i}`, i);
   }
   return banco;
+}
+
+function guardarNaNuvem(banco: Banco, versao: number) {
+  banco
+    .prepare("INSERT INTO copias_nuvem (versao, sha256, bytes, guardada_em) VALUES (?, ?, 1, 0)")
+    .run(versao, SHA);
 }
 
 function contar(banco: Banco, tabela: "versoes" | "copias") {
@@ -95,10 +108,12 @@ describe("versões: só o dono da trava registra", () => {
     expect(registrarVersao(banco, 1, 1, PRAZO + 10, DADOS)).toEqual({ ok: true, numero: 2 });
   });
 
-  it("dois envios seguidos do dono → N e N+1; guarda época, PC e totais; o PC passa a ter a cópia", () => {
+  it("dois envios seguidos do dono → N e N+1; guarda época, PC e totais; o PC só tem a cópia depois de informar", () => {
     const banco = montarBanco();
     pegar(banco, 1, 0, PRAZO);
     expect(registrarVersao(banco, 1, 1, 10, DADOS)).toEqual({ ok: true, numero: 1 });
+    expect(quemTem(banco, 1)).toEqual([]);
+    expect(informarCopia(banco, 1, 1, 11)).toBe(true);
     expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
     const outro = { manifestoSha256: "0123456789abcdef".repeat(4), arquivos: 0, bytes: 0 };
     expect(registrarVersao(banco, 1, 1, 20, outro)).toEqual({ ok: true, numero: 2 });
@@ -111,8 +126,29 @@ describe("versões: só o dono da trava registra", () => {
       bytes: 0,
       criadaEm: 20,
     });
+    expect(informarCopia(banco, 1, 2, 21)).toBe(true);
     expect(quemTem(banco, 1)).toEqual([]);
     expect(quemTem(banco, 2)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
+  });
+
+  it("regressão cartmel-2.5: versão sem pacote guardado não é a mais nova guardada; o importador não é fonte", () => {
+    const banco = montarBanco();
+    pegar(banco, 1, 0, PRAZO);
+    expect(maisNovaGuardada(banco)).toBeNull();
+    expect(ultimoRegistrado(banco)).toBe(0);
+    registrarVersao(banco, 1, 1, 10, DADOS);
+    expect(maisNova(banco)?.numero).toBe(1); // o armazém precisa dela para aceitar o envio
+    expect(maisNovaGuardada(banco)).toBeNull();
+    expect(contar(banco, "copias")).toBe(0);
+    guardarNaNuvem(banco, 1);
+    expect(maisNovaGuardada(banco)?.numero).toBe(1);
+    // A 2 foi registrada e o envio caiu: a mais nova guardada segue na 1; a órfã fica registrada.
+    registrarVersao(banco, 1, 1, 20, DADOS);
+    expect(maisNova(banco)?.numero).toBe(2);
+    expect(maisNovaGuardada(banco)?.numero).toBe(1);
+    expect(ultimoRegistrado(banco)).toBe(2); // a órfã conta para numerar a próxima
+    guardarNaNuvem(banco, 2);
+    expect(maisNovaGuardada(banco)?.numero).toBe(2);
   });
 
   it("troca de host: a numeração continua no novo dono, sem buraco nem repetição", () => {
@@ -189,7 +225,7 @@ describe("cópias: quem tem qual versão", () => {
     pegar(banco, 1, 0, PRAZO);
     registrarVersao(banco, 1, 1, 1, DADOS);
     expect(informarCopia(banco, 2, 2, 5)).toBe(false);
-    expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
+    expect(quemTem(banco, 1)).toEqual([]);
   });
 
   it("cada PC tem uma linha (a versão de agora); quemTem devolve só quem tem exatamente N", () => {
@@ -200,11 +236,14 @@ describe("cópias: quem tem qual versão", () => {
     registrarVersao(banco, 1, 1, 2, DADOS);
     expect(informarCopia(banco, 3, 1, 10)).toBe(true);
     expect(informarCopia(banco, 2, 1, 11)).toBe(true);
+    expect(informarCopia(banco, 1, 1, 9)).toBe(true);
     expect(quemTem(banco, 1)).toEqual([
+      { id: 1, nome: "PC 1", ip: null },
       { id: 2, nome: "PC 2", ip: null },
       { id: 3, nome: "PC 3", ip: null },
     ]);
     expect(informarCopia(banco, 2, 2, 12)).toBe(true);
+    expect(informarCopia(banco, 1, 2, 13)).toBe(true);
     expect(quemTem(banco, 1)).toEqual([{ id: 3, nome: "PC 3", ip: null }]);
     expect(quemTem(banco, 2)).toEqual([
       { id: 1, nome: "PC 1", ip: null },
@@ -221,6 +260,7 @@ describe("cópias: PC revogado não é fonte", () => {
     const banco = montarBanco();
     pegar(banco, 1, 0, PRAZO);
     registrarVersao(banco, 1, 1, 1, DADOS);
+    informarCopia(banco, 1, 1, 5);
     informarCopia(banco, 2, 1, 10);
     banco.prepare("UPDATE tokens SET revogado_em = 20 WHERE pc_id = 2").run();
     expect(quemTem(banco, 1)).toEqual([{ id: 1, nome: "PC 1", ip: null }]);
@@ -305,7 +345,7 @@ describe("versões: rotas do cartório", () => {
     });
     expect(r.statusCode).toBe(400);
     const v = await app.inject({ url: "/versoes/mais-nova", headers: ana });
-    expect(v.json()).toEqual({ versao: null });
+    expect(v.json()).toEqual({ versao: null, ultimoRegistrado: 0 });
   });
 
   it("número fora de inteiro exato (1e30, 2^53, -1, 1,5) em qualquer campo → 400 e nada gravado", async () => {
@@ -332,6 +372,7 @@ describe("versões: rotas do cartório", () => {
     }
     expect((await app.inject({ url: "/versoes/mais-nova", headers: ana })).json()).toEqual({
       versao: null,
+      ultimoRegistrado: 0,
     });
     const r = await app.inject({ method: "POST", url: "/versoes", headers: ana, payload: certo });
     expect(r.json()).toEqual({ numero: 1 });
@@ -355,6 +396,7 @@ describe("versões: rotas do cartório", () => {
     expect(r.json()).toMatchObject({ motivo: "epoca_velha", epoca: velha + 1 });
     expect((await app.inject({ url: "/versoes/mais-nova", headers: ana })).json()).toEqual({
       versao: null,
+      ultimoRegistrado: 0,
     });
   });
 
@@ -388,6 +430,14 @@ describe("versões: rotas do cartório", () => {
     expect((await informar(3)).statusCode).toBe(404);
     expect((await informar(2)).statusCode).toBe(204);
 
+    // Sem pacote guardado na nuvem a 2 não é a mais nova (regressão cartmel-2.5); a 1 também não.
+    expect((await app.inject({ url: "/versoes/mais-nova", headers: bia })).json()).toEqual({
+      versao: null,
+      ultimoRegistrado: 2,
+    });
+    banco
+      .prepare("INSERT INTO copias_nuvem (versao, sha256, bytes, guardada_em) VALUES (2, ?, 1, 0)")
+      .run(SHA);
     const nova = await app.inject({ url: "/versoes/mais-nova", headers: bia });
     expect(nova.json()).toMatchObject({ versao: { numero: 2, epoca, manifestoSha256: SHA } });
     // Só convite confirmado (rede privada pronta) mostra o IP; a Bia ainda não confirmou → ip null.
@@ -398,15 +448,9 @@ describe("versões: rotas do cartório", () => {
     const comIp = await app.inject({ url: "/versoes/2/copias", headers: bia });
     expect(comIp.json()).toEqual({
       numero: 2,
-      nuvem: false,
-      pcs: [
-        { id: 1, nome: "Ana", ip: "10.66.0.5" },
-        { id: 2, nome: "Bia", ip: null },
-      ],
+      nuvem: true,
+      pcs: [{ id: 2, nome: "Bia", ip: null }],
     });
-    banco
-      .prepare("INSERT INTO copias_nuvem (versao, sha256, bytes, guardada_em) VALUES (2, ?, 1, 0)")
-      .run(SHA);
     expect((await app.inject({ url: "/versoes/2/copias", headers: bia })).json()).toMatchObject({
       nuvem: true,
     });

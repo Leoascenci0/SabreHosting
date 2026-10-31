@@ -275,6 +275,7 @@ export type ClienteDeImportacao = Pick<
   | "renovar"
   | "soltar"
   | "maisNova"
+  | "ultimoRegistrado"
   | "criarVersao"
   | "enviarPacote"
 >;
@@ -359,9 +360,10 @@ export async function importarNoCartorio(
     if (epoca === undefined) throw new Error(SEM_TRAVA);
     const comTrava = epoca;
     // Com a trava ninguém mais registra versão: N+1 é certo daqui até o envio.
-    const n = await numeroMaisNovo(cliente);
-    conferirPermissao(n, eu.dono, aceitar);
-    const proxima = (n ?? 0) + 1;
+    conferirPermissao(await numeroMaisNovo(cliente), eu.dono, aceitar);
+    // Numera depois da maior registrada, não da guardada: versão órfã (envio que caiu) segue no histórico e o
+    // cartório não reaproveita número.
+    const proxima = (await cliente.ultimoRegistrado()) + 1;
     return await importarMundoZip(zip, {
       pastaDeTrabalho: o.pastaDeTrabalho,
       epoca: comTrava,
