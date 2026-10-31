@@ -109,3 +109,10 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* teste de limite de falhas contando token revogado (429).
   *Origem:* cartmel-1.1 · PR #154 · qa segurança + qa integridade
+
+- [ ] **2.4 — Descoberta de fontes do espalhar no cartório**
+  *O que fazer:* incluir o IP da rede privada de cada PC em `GET /versoes/:n/copias`; um sinalizador de que a nuvem tem a versão M; `maisNova()` e `quemTem()` em `cliente.ts`; e o método do cliente para registrar a versão (`POST /versoes`, hoje só existe `informarCopia`). O espalhar (sync-2.1a) recebe as fontes injetadas dali; só aceita IPs da rede privada.
+  *Arquivo:* `services/cartorio/src/servidor.ts`, `versoes.ts`, `packages/nucleo/src/cartorio/cliente.ts`, `tipos.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste do cliente com cartório de teste devolvendo IP e nuvem; teste de que IP fora da rede privada é recusado.
+  *Origem:* sync-2.1a · PR #173 · filha
