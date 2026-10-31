@@ -14,6 +14,7 @@ _Reescrito pela Máxima no fim de cada onda, ao pausar e no encerramento. Atuali
 - **Decidi por você:** formato .tar.gz com a lib `tar`; Prism mínimo 8.0; tipos do cartório copiados no app; teste de
   ponta a ponta em `tests/integracao/`; nuvem guarda 3 cópias do mundo; rede privada 10.66.0.0/24 com SSH aberto só com
   chave; limbo PicoLimbo (MIT); exceção à regra de 2 devoluções no cart-2.1 (regra de ouro 1).
+- **Próxima leva:** começa pelo app-1.1 (janela e ícone), com imagem da janela no chat assim que pronto (pedido do Eliel).
 - **Esperando você:**
   1. Ligar a proteção da `main` (PR #7) e criar os rótulos (`docs/ops/rotulos.md`).
   2. Escolher a versão do Minecraft/NeoForge (antes do teste no seu PC, host-3.1).
