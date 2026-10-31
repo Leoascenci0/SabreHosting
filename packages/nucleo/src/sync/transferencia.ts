@@ -40,7 +40,15 @@ export interface OpcoesServidor {
   arquivos: (sha256: string) => { caminho: string } | undefined;
   /** Só para teste: aceita 127.0.0.1. Nunca ligado pelo app. */
   permitirLoopbackParaTeste?: boolean;
+  /** Relógio em ms; só o teste troca. */
+  agora?: () => number;
 }
+
+/** Tentativas erradas (token ausente ou inválido) por IP: 5 em 60 s, contadas do 1º erro. */
+const MAX_FALHAS = 5;
+const JANELA_FALHAS_MS = 60_000;
+/** Token já conferido vale 30 s: revogar no cartório leva até isso para valer aqui. */
+const VALIDADE_TOKEN_MS = 30_000;
 
 export interface Servidor {
   porta: number;
@@ -63,17 +71,55 @@ const texto = (
 export async function servirArquivos(opcoes: OpcoesServidor): Promise<Servidor> {
   const endereco = conferirEnderecoPrivado(opcoes.endereco, opcoes.permitirLoopbackParaTeste);
 
+  const agora = opcoes.agora ?? Date.now;
+  const falhas = new Map<string, { n: number; inicio: number }>();
+  const conferidos = new Map<string, { pc: string; ate: number }>();
+  const barrado = (ip: string) => {
+    const f = falhas.get(ip);
+    return f !== undefined && f.n >= MAX_FALHAS && agora() - f.inicio < JANELA_FALHAS_MS;
+  };
+  const contarFalha = (ip: string) => {
+    const t = agora();
+    for (const [chave, f] of falhas) if (t - f.inicio >= JANELA_FALHAS_MS) falhas.delete(chave);
+    const f = falhas.get(ip);
+    if (f) f.n++;
+    else falhas.set(ip, { n: 1, inicio: t });
+  };
+  const guardar = (token: string, pc: string) => {
+    const t = agora();
+    for (const [chave, c] of conferidos) if (c.ate <= t) conferidos.delete(chave);
+    conferidos.set(token, { pc, ate: t + VALIDADE_TOKEN_MS });
+  };
+
   async function atender(req: IncomingMessage, resp: ServerResponse) {
+    // IP da conexão (cada PC tem o seu no WireGuard); sem X-Forwarded-For, que o cliente poderia forjar.
+    const ip = req.socket.remoteAddress ?? "";
+    // Barrado antes de ler o token e de falar com o cartório: token errado não vira amplificação.
+    if (barrado(ip)) {
+      return texto(resp, 429, "Muitas tentativas erradas. Espere 1 minuto e tente de novo.", {
+        "retry-after": "60",
+      });
+    }
     // 1º autentica (nada de revelar se o arquivo existe); servidor sem segredo: quem decide é o cartório.
     const token = bearer(req);
-    if (!token) return texto(resp, 401, "Token ausente.");
-    let pc: string | null;
-    try {
-      pc = await opcoes.conferirToken(token);
-    } catch {
-      return texto(resp, 503, "Não consegui conferir o token agora; tente de novo.");
+    if (!token) {
+      contarFalha(ip);
+      return texto(resp, 401, "Token ausente.");
     }
-    if (!pc) return texto(resp, 401, "Token inválido ou revogado.");
+    const guardado = conferidos.get(token);
+    if (!guardado || guardado.ate <= agora()) {
+      let pc: string | null;
+      try {
+        pc = await opcoes.conferirToken(token);
+      } catch {
+        return texto(resp, 503, "Não consegui conferir o token agora; tente de novo.");
+      }
+      if (!pc) {
+        contarFalha(ip);
+        return texto(resp, 401, "Token inválido ou revogado.");
+      }
+      guardar(token, pc);
+    }
 
     const caminhoUrl = (req.url ?? "").split("?")[0] ?? "";
     const hash = /^\/arquivos\/([^/]+)$/.exec(caminhoUrl)?.[1];

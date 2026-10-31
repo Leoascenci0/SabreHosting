@@ -127,6 +127,73 @@ describe("servidor", () => {
   });
 });
 
+describe("limite de tentativas erradas e cache de token", () => {
+  let agora = 1_000_000;
+  let consultas = 0;
+  const subirCom = async (conferir: (t: string) => Promise<string | null>) =>
+    (servidor = await servirArquivos({
+      endereco: "127.0.0.1",
+      porta: 0,
+      permitirLoopbackParaTeste: true,
+      agora: () => agora,
+      conferirToken: (t) => (consultas++, conferir(t)),
+      arquivos: (h) => (h === HASH ? { caminho: arquivo } : undefined),
+    }));
+  const comToken = (t: string) => fetch(url(), { headers: { authorization: `Bearer ${t}` } });
+  const valido = async (t: string) => (t === CREDENCIAL ? "pc-do-lucas" : null);
+  beforeEach(() => {
+    agora = 1_000_000;
+    consultas = 0;
+  });
+
+  it("6ª tentativa errada: 429 sem chamar o cartório, mesmo com token válido; libera após 60 s", async () => {
+    await subirCom(valido);
+    for (let i = 0; i < 5; i++) expect((await comToken("errado")).status).toBe(401);
+    expect(consultas).toBe(5);
+    consultas = 0;
+    expect((await comToken("errado")).status).toBe(429);
+    expect((await comToken(CREDENCIAL)).status).toBe(429);
+    expect((await fetch(url())).status).toBe(429);
+    expect(consultas).toBe(0);
+    agora += 60_000;
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+  });
+  it("token ausente também conta como tentativa errada", async () => {
+    await subirCom(valido);
+    for (let i = 0; i < 5; i++) expect((await fetch(url())).status).toBe(401);
+    expect((await fetch(url())).status).toBe(429);
+  });
+  it("token válido repetido consulta o cartório 1 vez; após 30 s consulta de novo", async () => {
+    await subirCom(valido);
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+    expect(consultas).toBe(1);
+    agora += 29_000;
+    await comToken(CREDENCIAL);
+    expect(consultas).toBe(1);
+    agora += 1_000;
+    await comToken(CREDENCIAL);
+    expect(consultas).toBe(2);
+  });
+  it("token inválido não entra no cache: cada tentativa consulta o cartório", async () => {
+    await subirCom(valido);
+    await comToken("errado");
+    await comToken("errado");
+    expect(consultas).toBe(2);
+  });
+  it("503 (cartório fora) não conta como erro nem entra no cache", async () => {
+    let fora = true;
+    await subirCom(async (t) => {
+      if (fora) throw new Error("cartório fora");
+      return valido(t);
+    });
+    for (let i = 0; i < 8; i++) expect((await comToken(CREDENCIAL)).status).toBe(503);
+    fora = false;
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+    expect(consultas).toBe(9);
+  });
+});
+
 describe("cliente", () => {
   const baixar = (destino: string, hash = HASH) =>
     pedirArquivo({
