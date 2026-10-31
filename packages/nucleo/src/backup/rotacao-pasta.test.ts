@@ -14,6 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { gerarMundo } from "../../test/ajuda/mundos.js";
 import { criarPacote } from "./pacote.js";
 import { nomeDoBackup } from "./agendador.js";
+import { conferirPacoteDetalhado } from "./rotacao.js";
 import { arquivoDeMarcas, lerMarcas, marcarBackup, rotacionarPasta } from "./rotacao-pasta.js";
 
 const AGORA = new Date(2026, 9, 30, 15, 0, 0);
@@ -143,6 +144,51 @@ describe("rotacionarPasta", () => {
 
   it("pasta que não existe: não faz nada", async () => {
     const r = await rotacionarPasta(join(raiz, "nao-existe"), { agora: AGORA });
+    expect(r.apagados).toEqual([]);
+  });
+});
+
+describe("falha de leitura não é backup ruim (drive-1.1b)", () => {
+  it("conferência indisponível (Drive baixando, disco cheio): nada apagado e NENHUMA marca ruim", async () => {
+    const nomes = Array.from({ length: 6 }, (_, i) => nomeEm(10 + i));
+    const pasta = cenario(nomes);
+    for (const n of nomes) marcarBackup(pasta, n, "bom", modelo.sha256);
+    await expect(
+      rotacionarPasta(pasta, {
+        recentes: 1,
+        agora: AGORA,
+        conferir: async () => "indisponivel",
+      }),
+    ).rejects.toThrow(/nenhum backup bom/i);
+    expect(restantes(pasta)).toEqual([...nomes].sort());
+    const estados = [...lerMarcas(arquivoDeMarcas(pasta)).values()].map((m) => m.estado);
+    expect(estados.every((e) => e === "bom")).toBe(true);
+  });
+
+  it("veredito do pacote: sumiu = indisponível; hash errado = ruim; íntegro = ok", async () => {
+    const pasta = cenario([nomeEm(0)]);
+    const b = { nome: nomeEm(0), data: AGORA, estado: "bom" as const, sha256: modelo.sha256 };
+    expect(await conferirPacoteDetalhado(pasta, b)).toBe("ok");
+    expect(await conferirPacoteDetalhado(pasta, { ...b, sha256: "0".repeat(64) })).toBe("ruim");
+    expect(await conferirPacoteDetalhado(pasta, { ...b, nome: nomeEm(5) })).toBe("indisponivel");
+    expect(await conferirPacoteDetalhado(pasta, { ...b, sha256: undefined })).toBe("indisponivel");
+  });
+
+  it("marcas em arquivo próprio (pasta de dados do app), não ao lado da pasta sincronizada", async () => {
+    const nomes = Array.from({ length: 5 }, (_, i) => nomeEm(10 + i));
+    const pasta = cenario(nomes);
+    const marcas = join(raiz, "dados-do-app", "marcas-historico.json");
+    for (const n of nomes) marcarBackup(pasta, n, "bom", modelo.sha256, marcas);
+    const r = await rotacionarPasta(pasta, { recentes: 2, agora: AGORA, arquivoMarcas: marcas });
+    expect(r.apagados).toHaveLength(3);
+    expect(existsSync(arquivoDeMarcas(pasta))).toBe(false);
+    expect(restantes(pasta)).toEqual([nomes[0], nomes[1]].sort());
+  });
+
+  it("pasta que some no meio: lista vazia, nada apagado, sem erro", async () => {
+    const pasta = cenario([]);
+    rmSync(pasta, { recursive: true });
+    const r = await rotacionarPasta(pasta, { recentes: 1, agora: AGORA });
     expect(r.apagados).toEqual([]);
   });
 });

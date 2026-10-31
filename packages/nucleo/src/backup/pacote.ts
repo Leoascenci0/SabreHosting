@@ -148,7 +148,8 @@ export async function criarPacote(
   }
 }
 
-class PacoteRecusado extends Error {}
+/** O pacote foi lido e está errado (hash ou manifesto não bate); diferente de falha de leitura. */
+export class PacoteRecusado extends Error {}
 
 function recusa(motivo: string): PacoteRecusado {
   return new PacoteRecusado(`Pacote do mundo recusado: ${motivo}`);

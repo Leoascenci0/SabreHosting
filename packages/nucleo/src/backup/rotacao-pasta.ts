@@ -13,10 +13,11 @@ import {
   NOME_DE_BACKUP,
   RECENTES_PADRAO,
   aplicarRotacao,
-  conferirPacote,
+  conferirPacoteDetalhado,
   planejarRotacao,
   type BackupDaRotacao,
   type ResultadoDaRotacao,
+  type Veredito,
 } from "./rotacao.js";
 
 export type EstadoMarcado = "bom" | "ruim";
@@ -68,8 +69,10 @@ export function marcarBackup(
   nome: string,
   estado: EstadoMarcado,
   sha256: string,
+  /** Onde ficam as marcas (padrão: ao lado da pasta). A pasta sincronizada usa a pasta de dados do app. */
+  arquivoMarcas: string = arquivoDeMarcas(pastaBackups),
 ): void {
-  const arquivo = arquivoDeMarcas(pastaBackups);
+  const arquivo = arquivoMarcas;
   const marcas = lerMarcas(arquivo);
   marcas.set(nome, { estado, sha256 });
   gravarMarcas(arquivo, marcas);
@@ -87,7 +90,9 @@ export interface OpcoesRotacaoPasta {
   /** Configurações › Backups › Quantos guardar. */
   recentes?: number;
   agora: Date;
-  conferir?: (pasta: string, backup: BackupDaRotacao) => Promise<boolean>;
+  /** Arquivo de marcas (padrão: `<pasta>.marcas.json`). */
+  arquivoMarcas?: string;
+  conferir?: (pasta: string, backup: BackupDaRotacao) => Promise<Veredito>;
 }
 
 /**
@@ -96,9 +101,14 @@ export interface OpcoesRotacaoPasta {
  */
 export async function rotacionarPasta(
   pastaBackups: string,
-  { recentes = RECENTES_PADRAO, agora, conferir = conferirPacote }: OpcoesRotacaoPasta,
+  {
+    recentes = RECENTES_PADRAO,
+    agora,
+    arquivoMarcas = arquivoDeMarcas(pastaBackups),
+    conferir = conferirPacoteDetalhado,
+  }: OpcoesRotacaoPasta,
 ): Promise<ResultadoDaRotacao> {
-  const arquivo = arquivoDeMarcas(pastaBackups);
+  const arquivo = arquivoMarcas;
   const marcas = lerMarcas(arquivo);
   const nomes = await readdir(pastaBackups).catch((e: NodeJS.ErrnoException) => {
     if (e.code === "ENOENT") return [];
@@ -120,11 +130,14 @@ export async function rotacionarPasta(
   const vazio: ResultadoDaRotacao = { apagados: [], ignorados: [], falhas: [] };
   if (plano.apagar.length === 0) return vazio;
 
-  // Só vira "ruim" o que falhou na conferência de agora (o pacote não abre mais); o hash da marca segue o mesmo.
+  // Só vira "ruim" o pacote que foi lido e não bate (hash/manifesto). Falha de leitura fica sem marca nova: nunca
+  // transforma um backup bom em apagável por causa de um Drive ainda baixando ou disco cheio.
   const conferirEMarcar = async (pasta: string, b: BackupDaRotacao): Promise<boolean> => {
-    const ok = await conferir(pasta, b);
-    if (!ok && b.sha256 !== undefined) marcarBackup(pastaBackups, b.nome, "ruim", b.sha256);
-    return ok;
+    const veredito = await conferir(pasta, b);
+    if (veredito === "ruim" && b.sha256 !== undefined) {
+      marcarBackup(pastaBackups, b.nome, "ruim", b.sha256, arquivo);
+    }
+    return veredito === "ok";
   };
   const resultado = await aplicarRotacao(pastaBackups, plano, { conferir: conferirEMarcar });
 
