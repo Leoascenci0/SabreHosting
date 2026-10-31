@@ -402,6 +402,28 @@ describe("tela de configurações", () => {
     await interruptorMods({ falhaLer: false, leiturasOk: 0 });
   });
 
+  it("mods: releitura depois de ação bem-sucedida mostra a falha de leitura", async () => {
+    const p = await abrir(true);
+    await p.locator("#mods-adicionar:not([hidden])").waitFor();
+    const interruptorMods = (campos: Record<string, boolean | number>): Promise<unknown> =>
+      aberto?.evaluate((_electron, c: Record<string, boolean | number>) => {
+        const falso = (globalThis as unknown as Record<string, Record<string, unknown>>)[
+          "__sabreE2EMods"
+        ];
+        if (falso) Object.assign(falso, c);
+      }, campos) as Promise<unknown>;
+    await p.locator("#mods-nome").fill("Iris");
+    await p.locator("#mods-versao").fill("1.0.0");
+    await p.locator("#mods-arquivo").fill("iris2.jar");
+    await p.locator("#mods-url").fill("https://cdn.modrinth.com/data/x/versions/y/iris2.jar");
+    await p.locator("#mods-hash").fill("c".repeat(128));
+    // A ação lê (passa), grava com sucesso; a releitura logo depois falha e não há erro de ação na tela.
+    await interruptorMods({ falhaLer: true, leiturasOk: 1 });
+    await p.locator("#mods-adicionar-botao").click();
+    await esperarTexto(p, "#mods-erro", "cartório agora");
+    await interruptorMods({ falhaLer: false, leiturasOk: 0 });
+  });
+
   it("versão: não-dono não vê a área", async () => {
     const p = await abrir();
     await p.locator("#cfg-visao").waitFor();

@@ -21,6 +21,13 @@
 - **Regressão:** o teste falha antes (só 1 mudança na segunda cópia, texto já igual) e passa depois.
 - **Fora:** sem região nova, sem elemento novo.
 
+## Decisão consciente (revisão do QA)
+
+**Primeiro erro visível vence durante a releitura.** Quando a tela relê a lista logo após uma ação (ou na espera de
+"atualizando"), o erro de ação que já está na tela não é trocado pela falha de leitura. Só quando não há erro de ação
+visível a falha de leitura aparece. Efeito colateral aceito: uma falha de leitura pode não aparecer enquanto um erro de
+ação ainda estiver visível; o amigo vê a explicação da ação, que é a que ele acabou de provocar.
+
 ## Ordem de commits
 
 1. Este plano (primeiro commit).
