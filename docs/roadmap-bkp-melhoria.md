@@ -23,3 +23,22 @@ Melhorias achadas durante os itens do `docs/roadmap-bkp.md` (skill `maxima` › 
   **Tela no app:** não se aplica.
   *Confirmação:* testes com `é` nas duas formas e com `a` + `a/b` recusados.
   *Origem:* bkpmel-1.1 · PR #29 · qa
+
+- [ ] **1.3 — Mensagens e sobras do backup agendado**
+  *O que fazer:* `criarPacote` preserva a mensagem específica do manifesto ("o mundo mudou durante a leitura") em vez
+  da genérica; quando o servidor cai no meio do backup, o pacote não chega a ganhar o nome final (descartar antes do
+  rename) em vez de ser apagado depois.
+  *Arquivo:* `packages/nucleo/src/backup/pacote.ts`, `packages/nucleo/src/backup/agendador.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes: mensagem específica chega ao amigo; servidor que cai não deixa arquivo com nome final em nenhum momento.
+  *Origem:* bkp-1.3 · PR #45 · qa
+
+## Bloco 2 — Guardar
+
+- [ ] **2.1 — Restauração: atalho no lugar do mundo e marcador garantido**
+  *O que fazer:* `haMundo` com `lstat` (um link quebrado no lugar da pasta do mundo é recusado, não tratado como
+  "inexistente"); se gravar o `RESTAURACAO-INCOMPLETA.txt` falhar, avisar em pt-BR em vez de engolir o erro.
+  *Arquivo:* `packages/nucleo/src/backup/restaurar.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes: link quebrado recusado; falha ao gravar o marcador vira aviso.
+  *Origem:* bkp-2.2 · PR #64 · qa

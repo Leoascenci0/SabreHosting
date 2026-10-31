@@ -54,3 +54,14 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* `UPDATE trava SET epoca='abc'` falha; passar para PC revogado devolve `destino_sem_acesso`.
   *Origem:* cartmel-1.5 · PR #27 · qa
+
+## Bloco 2 — Cliente do cartório
+
+- [ ] **2.1 — Cliente mais rígido**
+  *O que fazer:* validar as respostas do cartório (tipos, campos, teto de ~64 KB no corpo) em vez de `as T`; renovar
+  confere a época na resposta; parar as novas tentativas do renovar depois de soltar/perder; na perda, o salvar pode
+  furar a fila de comandos (hoje é só melhor esforço); considerar renovar a cada renovarMs/2.
+  *Arquivo:* `packages/nucleo/src/cartorio/cliente.ts`, `renovador.ts`, `hospedar.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes: resposta malformada recusada; nenhuma tentativa depois de soltar.
+  *Origem:* cart-2.1 · PR #41 · qa segurança + qa integridade

@@ -18,7 +18,7 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
 
 ## Bloco 1 — Integração com o Prism (marco M3)
 
-- [ ] **1.1 — Achar o Prism no PC**
+- [x] **1.1 — Achar o Prism no PC** (PR #36, 30/10/2026)
   *O que fazer:* detectar se o Prism está instalado (caminhos padrão no Windows e o escolhido pelo amigo), qual versão
   e onde fica a pasta de instâncias; sem Prism, mostrar o link oficial de download.
   *Arquivo:* `packages/nucleo/src/launcher/prism.ts`
@@ -26,7 +26,7 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
   *Confirmação:* testes com pastas falsas (instalado, ausente, versão antiga demais).
   *Depende de:* base-1.1
 
-- [ ] **1.2 — Instância do grupo no Prism**
+- [x] **1.2 — Instância do grupo no Prism** (PR #57, 30/10/2026; conferência no Prism real pendente [P])
   *O que fazer:* criar e manter atualizada uma instância "SabreHosting — <grupo>" com a versão do Minecraft e o loader do
   servidor (vindos do cartório), pelo formato de instância ou importação `.mrpack` documentados. Nunca mexer nas
   outras instâncias do amigo.

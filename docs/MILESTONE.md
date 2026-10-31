@@ -16,19 +16,17 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
+_(nenhuma onda aberta; leva de 6 ondas concluída em 31/10/2026 — retomar com `/maxima retomar`)_
 
 ## Fila
 
-**M1 — Fundação**
-- **Onda 6 (em curso):** cart-1.3 (aberto, filha session_012qrjnu4PytBLmUvN6JrB8r) · bkp-1.2 · lanc-1.1
-- **Onda 6b:** bkp-2.1 (espera D6) · rede-1.1 (espera D2, D3)
-- **Onda 7:** bkp-1.3 · cart-2.1 · rede-2.1
-- **Onda 8:** bkp-2.2 · cart-1.4 · host-3.1 [P: teste no PC]
+**M1 — Fundação** — tudo feito, falta só:
+- host-3.1 [P: teste no PC — precisa da versão do Minecraft escolhida pelo Eliel]
 
 **M2 — Primeira partida**
-- **Onda 9:** rede-1.3 · rede-2.2 · app-1.1 (espera D4)
-- **Onda 10:** rede-2.3 · app-1.2 · rede-1.2 [P: criar a VM]
-- **Onda 11:** app-1.3 · cart-2.2 [P: máquina real]
+- **Próxima onda (Eliel pediu app-1.1 primeiro, para ter prévia):** app-1.1 · rede-2.2 (plugin do proxy: trocar o host da vez + whitelist = redemel-2.1) ·
+  cartmel-1.2/1.3 (endurecer a entrada do cartório; banco fora do diretório atual)
+- Depois: app-1.2 · app-1.3 · redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
 - Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
 
 **M3 — Mundo em todos** (ondas montadas pela Máxima ao chegar aqui): sync-1.1 → sync-1.2 → sync-2.1 → sync-2.2;
@@ -45,20 +43,15 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
 
-- **D2 — Rede privada:** WireGuard próprio na máquina da nuvem (recomendado: grátis, sem limite de pessoas, nada de
-  terceiros) · Tailscale (mais fácil, mas o plano grátis limita usuários) · playit.gg (túnel pronto, menos controle).
-  *Trava:* rede-1.1.
-- **D3 — Máquina na nuvem:** Oracle Cloud Always Free em São Paulo (recomendado: grátis; às vezes demora para liberar
-  vaga) · VPS paga barata no Brasil (~R$ 20–40/mês, garantida). Envolve cadastro: só o Eliel faz. *Trava:* rede-1.1.
-- **D4 — Ícone do app:** o nome já foi decidido (SabreHosting); falta o ícone. *Trava:* app-1.1.
-- **D6 — Regras do grupo:** quantos backups guardar (padrão 10 + 7 diários), folga para trocar de host (padrão 30%),
-  quem pode hospedar (padrão: todos que ligarem a opção). *Trava:* bkp-2.1, migra-1.1.
+- **Versão do Minecraft** (e do NeoForge): escolha do Eliel antes do host-3.1 (teste no PC).
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
   assinatura (pago, ~US$ 100+/ano). *Trava:* app-3.2.
 
 ## Backlog
 
-- Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; bkpmel-1.2).
+- Melhorias do launcher: `docs/roadmap-lanc-melhoria.md` (lancmel-1.1).
+- Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-1.1; 2.1 obrigatório antes de ligar o proxy; 2.2; 2.3 [P]).
+- Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
 - Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1 a 1.4 e 1.6; 1.5 feito).
 - Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
 - Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1 e 1.2, CI).
@@ -69,6 +62,14 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Feito
 
+- 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
+
+- 31/10/2026 — Ondas 7–11: cart-2.1 cliente e trava (#41), basemel-1.3 testes estáveis (#43), rede-1.1 script da nuvem
+  (#42), bkp-1.3 backup agendado (#45), rede-2.1 Velocity (#48), bkp-2.1 rotação (#50), rede-1.2 tutorial (#51),
+  migra-1.1 quem hospeda (#54), lanc-1.2 instância Prism (#57), cart-1.4 cópia na nuvem (#58), rede-1.3 WireGuard (#60),
+  rede-2.3 limbo (#62), bkp-2.2 restaurar (#64), basemel-1.4 verificador (#65).
+- 30/10/2026 — Onda 6: cart-1.3 versões do mundo (PR #32), lanc-1.1 achar o Prism (PR #36), bkp-1.2 pacote
+  fechado (PR #38).
 - 30/10/2026 — Onda 5: host-2.1 subir/parar (PR #24), bkpmel-1.1 caminhos Windows (PR #29), cartmel-1.5 época
   blindada (PR #27); host-2.2 comandos pelo console (PR #30).
 - 30/10/2026 — Onda 4: host-1.2 EULA e configuração (PR #20), bkp-1.1 manifesto (PR #21), cart-1.2 trava de host

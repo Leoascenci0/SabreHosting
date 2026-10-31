@@ -17,7 +17,7 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
   *Confirmação:* testes com mundos de teste: muda 2 regiões → diff aponta só as 2.
   *Depende de:* base-1.3
 
-- [ ] **1.2 — Pacote fechado e conferido**
+- [x] **1.2 — Pacote fechado e conferido** (PR #38, 30/10/2026; .tar.gz com a lib `tar`)
   *O que fazer:* gerar pacote (zip ou tar.zst, escolher pelo desempenho e registrar) com o manifesto dentro; abrir e
   conferir todos os hashes; compactação em worker com prioridade baixa.
   *Arquivo:* `packages/nucleo/src/backup/pacote.ts`
@@ -25,7 +25,7 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
   *Confirmação:* teste: pacote corrompido (1 byte) é recusado; mundo de 20 MB empacota sem travar o processo.
   *Depende de:* bkp-1.1
 
-- [ ] **1.3 — Backup consistente com o servidor rodando**
+- [x] **1.3 — Backup consistente com o servidor rodando** (PR #45, 30/10/2026)
   *O que fazer:* orquestrar `save-off` → `save-all flush` → manifesto+pacote → `save-on` (sempre, mesmo em erro);
   agendado a cada X minutos.
   *Arquivo:* `packages/nucleo/src/backup/agendador.ts`
@@ -35,14 +35,14 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
 
 ## Bloco 2 — Guardar e restaurar
 
-- [ ] **2.1 — Rotação segura**
+- [x] **2.1 — Rotação segura** (PR #50, 30/10/2026)
   *O que fazer:* manter os N mais recentes + 1 por dia dos últimos 7; nunca apagar o último conferido; dry-run nos testes.
   *Arquivo:* `packages/nucleo/src/backup/rotacao.ts`
-  **Tela no app:** Configurações › Backups › Quantos guardar (padrão 10). **ESPERA DECISÃO D6** (padrões do grupo).
+  **Tela no app:** Configurações › Backups › Quantos guardar (padrão 10). D6 decidida (10 + 7 diários).
   *Confirmação:* testes de propriedade: em qualquer sequência, sobra ≥ 1 backup bom.
   *Depende de:* bkp-1.2
 
-- [ ] **2.2 — Restaurar com troca atômica**
+- [x] **2.2 — Restaurar com troca atômica** (PR #64, 31/10/2026)
   *O que fazer:* backup do estado atual → extrair em pasta temporária → conferir → `rename` → registrar. Exige trava (no
   modo local, trava local até o cartório existir).
   *Arquivo:* `packages/nucleo/src/backup/restaurar.ts`

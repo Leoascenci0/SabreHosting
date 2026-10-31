@@ -19,9 +19,28 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 | cartmel-1.5 | gatilhos+trava | M1+M7 | ~45 | ~40 (+~75 teste) | não | #27 |
 | bkpmel-1.1 | validação de caminho | M1+M7 | ~70 | ~90 (+~120 teste) | não | #29 |
 | host-2.2 | comandos console | M7+M1 | ~170 | ~200 (+~250 teste) | não | #30 |
+| cart-1.3 | versões+fencing | M1+M7 | ~130 | ~260 (+~330 teste) | não | #32 |
+| lanc-1.1 | detecção | M7 | ~120 | ~190 (+~200 teste) | não | #36 |
+| bkp-1.2 | pacote+extração | M6 | ~90 | ~280 (+~300 teste) | não | #38 |
+| rede-1.1 | script shell | M7 | ~150 | ~260 (+~250 teste) | não | #42 |
+| basemel-1.3 | teste instável | M4 | ~45 | ~40 | não | #43 |
+| bkp-1.3 | agendador | M1+M7 | ~100 | ~110 (+~200 teste) | não | #45 |
+| rede-2.1 | script+config | M3+M7 | ~150 | ~200 (+~300 teste) | não | #48 |
+| bkp-2.1 | rotação (apaga) | M7 | ~100 | ~150 (+~250 teste) | não | #50 |
+| rede-1.2 | tutorial | M3 | ~150 | ~260 | não | #51 |
+| cart-2.1 | cliente+renovador | M3+M7 | ~180 | ~420 (+~560 teste) | não (4 passadas de revisão) | #41 |
+| migra-1.1 | regra pura | M7 | ~80 | ~120 (+~250 teste) | não | #54 |
+| lanc-1.2 | gerador .mrpack | M7 | ~150 | ~130 (+~140 teste) | não | #57 |
+| rede-1.3 | wireguard hub+PC | M3+M7 | ~200 | ~300 (+~350 teste) | não | #60 |
+| cart-1.4 | armazém em fluxo | M1+M7 | ~180 | ~280 (+~400 teste) | não | #58 |
+| rede-2.3 | script limbo | M3 | ~120 | ~170 (+~200 teste) | não | #62 |
+| basemel-1.4 | checagem do verificador | M3 | ~30 | ~40 (+~50 teste) | não | #65 |
+| bkp-2.2 | restauração | M1+M7 | ~120 | ~230 (+~300 teste) | não | #64 |
 
 ## Lições
-_(nenhuma ainda)_
+- **L-01** Item de trava/tempo (renovação, prazo, parada) precisa da CONTA de tempo no briefing: prazo do cartório, margem
+  local, tempo de salvar e de parar, e todos os caminhos de perda (alarme, laço, fila, hibernação, callback que lança).
+  O cart-2.1 levou 4 passadas porque cada revisão achou mais um caminho. Vezes: 1.
 
 ## Anti-padrões
 - **A-01** Copiar a pasta do mundo com o servidor rodando "porque é rápido": corrompe o mundo. Sempre `save-off` + `save-all flush`.
