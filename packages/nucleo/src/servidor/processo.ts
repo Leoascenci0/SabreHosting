@@ -53,6 +53,8 @@ const MAX_LINHA = 1024;
 const PRAZO_SALVAR_ORFAO_MS = 10_000;
 /** 1ª linha do vigia (vigia.ts): o PID do Java ou por que ele não subiu. */
 const LINHA_VIGIA = /^\[sabre-vigia\] (pid|falhou) (.*)$/;
+/** PID aceito para o `process.kill`: inteiro positivo, sem sinal (0 e negativo atingiriam grupos de processos). */
+const PID_VALIDO = /^[1-9]\d{0,9}$/;
 /** "Pronto" só pela linha da thread do servidor (`[Server thread/INFO] [classe]: Done (`); chat vem como `<Nome> Done (`. */
 const LINHA_PRONTO = /\[Server thread\/INFO\](?: \[[^\]]*\])?: Done \(/;
 
@@ -179,8 +181,9 @@ export class ServidorMinecraft extends EventEmitter {
 
   private aoLinhaVigia(linha: string): boolean {
     const [, tipo, resto = ""] = LINHA_VIGIA.exec(linha) ?? [];
-    if (tipo === "pid") this.pidJava = Number(resto);
-    else if (tipo === "falhou") {
+    if (tipo === "pid") {
+      if (PID_VALIDO.test(resto) && Number(resto) <= 2 ** 31 - 1) this.pidJava = Number(resto);
+    } else if (tipo === "falhou") {
       this.falhouAoIniciar = true;
       this.registrar("aviso", `Não consegui iniciar o Java: ${resto}`);
     }
@@ -367,12 +370,14 @@ async function subirServidor(
   // Sobe o Java por trás do vigia (vigia.ts), que o salva e para se o app morrer. No app, `process.execPath` é o
   // Electron, que roda o vigia como Node com ELECTRON_RUN_AS_NODE=1; nos testes já é o Node.
   const prazoParadaSemTravaMs = opcoes.prazoParadaSemTravaMs ?? PRAZO_PARADA_SEM_TRAVA_MS;
+  const prazoParadaMs = opcoes.prazoParadaMs ?? PRAZO_PARADA_PADRAO_MS;
   const filho = (opcoes.spawnFn ?? spawnPadrao)(
     process.execPath,
     [
       ...(opcoes.vigiaArgs ?? [fileURLToPath(new URL("./vigia.js", import.meta.url))]),
       String(PRAZO_SALVAR_ORFAO_MS),
       String(prazoParadaSemTravaMs),
+      String(prazoParadaMs),
       opcoes.javaPath,
       ...(opcoes.prefixoArgs ?? []),
       "@user_jvm_args.txt",
@@ -396,7 +401,7 @@ async function subirServidor(
   };
   const servidor = new ServidorMinecraft(
     filho,
-    opcoes.prazoParadaMs ?? PRAZO_PARADA_PADRAO_MS,
+    prazoParadaMs,
     prazoParadaSemTravaMs,
     confirmar,
     relogio,

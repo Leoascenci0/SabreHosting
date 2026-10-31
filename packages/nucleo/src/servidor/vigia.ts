@@ -3,16 +3,17 @@
 // do cartório; o vigia percebe pelo fim do stdin e salva e para o servidor bem antes de a trava vencer (regra de
 // ouro 1). Nunca fala com o cartório e nunca copia o mundo (regra de ouro 2): só salva e para.
 //
-// Uso: vigia <prazoSalvarMs> <prazoPararMs> <java> <args do java…>. A 1ª linha da saída é
+// Uso: vigia <prazoSalvarMs> <prazoPararMs> <prazoStopPedidoMs> <java> <args do java…>. O último é quanto esperar
+// quando o app já tinha mandado `stop` antes de morrer (o prazo da parada normal: o save de mundo grande demora). A 1ª linha da saída é
 // `[sabre-vigia] pid <n>` (ou `[sabre-vigia] falhou <motivo>`); depois, a saída do Java como veio. Sai com o código
 // do Java.
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { SALVOU } from "./comandos.js";
 
-const [prazoSalvar, prazoParar, java, ...args] = process.argv.slice(2);
+const [prazoSalvar, prazoParar, prazoStopPedido, java, ...args] = process.argv.slice(2);
 if (java === undefined) {
-  console.error("Uso: vigia <prazoSalvarMs> <prazoPararMs> <java> <args…>");
+  console.error("Uso: vigia <prazoSalvarMs> <prazoPararMs> <prazoStopPedidoMs> <java> <args…>");
   process.exit(2);
 }
 const env = { ...process.env };
@@ -90,14 +91,17 @@ function esperarSaida(prazoMs: number): Promise<void> {
 /** O app sumiu: salva, para e só mata o Java se ele não sair (nunca matar sem salvar se há como salvar). */
 async function encerrarOrfao(): Promise<void> {
   if (saiu) return;
-  // `stop` já pedido pelo app (parada normal, ou o app saiu logo depois): não repete; só espera sair.
-  if (!pediuStop) {
+  // `stop` já pedido pelo app (parada normal, ou o app saiu logo depois): não repete; só espera sair, com o prazo
+  // da parada normal.
+  if (pediuStop) {
+    await esperarSaida(Number(prazoStopPedido));
+  } else {
     const salvou = esperarLinha(SALVOU, Number(prazoSalvar));
     servidor.stdin.write("save-all flush\n");
     await salvou;
     if (saiu) return;
     servidor.stdin.write("stop\n");
+    await esperarSaida(Number(prazoParar));
   }
-  await esperarSaida(Number(prazoParar));
   if (!saiu) servidor.kill("SIGKILL");
 }

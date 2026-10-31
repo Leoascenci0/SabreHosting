@@ -47,10 +47,13 @@ export interface TemposInicio {
   orfaoPassoMs?: number;
   /** Quanto esperar o órfão encerrar (o vigia salva e para em ≤ ~20 s). Padrão: 30 s. */
   orfaoPrazoMs?: number;
+  /** Com a trava livre, quanto esperar o órfão antes de dizer o que fazer. Padrão: 2 min. */
+  orfaoTetoMs?: number;
 }
 
 export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
-  const { passoMs = 300, tentativas = 20, orfaoPassoMs = 1000, orfaoPrazoMs = 30_000 } = tempos;
+  const { passoMs = 300, tentativas = 20 } = tempos;
+  const { orfaoPassoMs = 1000, orfaoPrazoMs = 30_000, orfaoTetoMs = 120_000 } = tempos;
   let ativo: ServidorAtivo | undefined;
   let ocupado = false;
   let parando = false;
@@ -85,9 +88,9 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
   let orfaoDesde: number | undefined;
   let semDono = false;
   let reconferindo = false;
-  /** Ainda esperando o órfão encerrar? Com a trava livre, espera sem prazo: Hospedar ali duplicaria o mundo. */
+  /** Ainda esperando o órfão encerrar? Com a trava livre, espera mais (até o teto): Hospedar ali duplicaria o mundo. */
   const esperandoOrfao = () =>
-    semDono || performance.now() - (orfaoDesde ?? performance.now()) < orfaoPrazoMs;
+    performance.now() - (orfaoDesde ?? performance.now()) < (semDono ? orfaoTetoMs : orfaoPrazoMs);
 
   /** Reconfere o órfão até ele sair ou o prazo vencer, e então avisa a tela. Um laço por vez. */
   function reconferirOrfao(): void {
@@ -178,8 +181,9 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
         }
         semDono = !dono;
         orfaoDesde ??= performance.now();
-        // Órfão de app sem vigia (versão antiga) que não sai no prazo: volta ao "servidor neste PC", sem Hospedar.
-        if (outro && !esperandoOrfao()) return outro;
+        // Órfão de app sem vigia (versão antiga) que não sai no prazo: volta ao "servidor neste PC" (trava minha)
+        // ou diz o que fazer (trava livre); nunca oferece Hospedar.
+        if (!esperandoOrfao()) return outro ?? { tipo: "orfao" };
         reconferirOrfao();
         return { tipo: "eu", endereco: deps.endereco, parando: true };
       } catch (e) {

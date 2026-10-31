@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { criarInicio, erroSemGrupo, mensagemFalhaSair, type DepsInicio } from "./inicio.js";
 
 const RAPIDO = { passoMs: 1, tentativas: 5 };
-const ORFAO = { orfaoPassoMs: 5, orfaoPrazoMs: 30 };
+const ORFAO = { orfaoPassoMs: 5, orfaoPrazoMs: 30, orfaoTetoMs: 150 };
 const encerrando = { tipo: "eu", endereco: "10.0.0.5:25565", parando: true };
 
 function servidorFalso() {
@@ -64,16 +64,27 @@ describe("estado da tela inicial", () => {
   });
 
   describe("trava livre com servidor órfão vivo na pasta", () => {
-    it("não oferece Hospedar, nem depois do prazo de espera", async () => {
+    it("segue esperando depois do prazo curto e oferece Hospedar quando o órfão sai", async () => {
       let vivo = true;
-      const servidorOrfao = vi.fn(async () => vivo);
-      const inicio = criarInicio(deps({ servidorOrfao }), ORFAO);
+      const inicio = criarInicio(deps({ servidorOrfao: async () => vivo }), ORFAO);
       expect(await inicio.estado()).toEqual(encerrando);
       await new Promise((ok) => setTimeout(ok, 60));
       expect(await inicio.estado()).toEqual(encerrando);
       const mudou = new Promise<void>((ok) => inicio.aoMudar(ok));
       vivo = false;
       await mudou; // segue reconferindo até o órfão sair
+      expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+    });
+
+    it("órfão que não sai até o teto: diz o que fazer, ainda sem Hospedar; Tentar de novo reconfere", async () => {
+      let vivo = true;
+      const inicio = criarInicio(deps({ servidorOrfao: async () => vivo }), ORFAO);
+      const mudou = new Promise<void>((ok) => inicio.aoMudar(ok));
+      expect(await inicio.estado()).toEqual(encerrando);
+      await mudou;
+      expect(await inicio.estado()).toEqual({ tipo: "orfao" });
+      expect(await inicio.estado()).toEqual({ tipo: "orfao" }); // não volta a "encerrando"
+      vivo = false;
       expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
     });
   });

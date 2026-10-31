@@ -20,11 +20,18 @@ function vivo(pid: number): boolean {
 }
 
 /** Sobe o vigia com o servidor falso no lugar do Java e junta tudo o que ele repassa. */
-function subir(modo: string, prazos: [number, number] = [10_000, 10_000], java = process.execPath) {
+/** `prazos`: salvar, parar (app morto) e parar quando o app já tinha mandado `stop`. */
+function subir(
+  modo: string,
+  prazos: [number, number, number?] = [10_000, 10_000],
+  java = process.execPath,
+  argsJava = [FALSO, modo],
+) {
+  const [salvar, parar, pararPedido = parar] = prazos;
   const filho = spawn(
     process.execPath,
-    [...ARGS_VIGIA_TESTE, String(prazos[0]), String(prazos[1]), java, FALSO, modo],
-    { stdio: "pipe" },
+    [...ARGS_VIGIA_TESTE, String(salvar), String(parar), String(pararPedido), java, ...argsJava],
+    { stdio: "pipe", env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" } },
   );
   vivos.push(filho);
   let saida = "";
@@ -119,6 +126,25 @@ describe("vigia do servidor", () => {
     const s = v.saida();
     expect(s).not.toContain("save-all");
     expect(s.match(/RECEBIDO stop/g)).toHaveLength(1);
+  });
+
+  it("app que já mandou `stop` e morre: espera o prazo da parada normal, não o curto", async () => {
+    const v = subir("travado", [10_000, 100, 800]);
+    const pid = await v.pronto();
+    const inicio = Date.now();
+    v.filho.stdin.end("stop\n");
+    await v.fim;
+    expect(Date.now() - inicio).toBeGreaterThanOrEqual(700); // mundo grande: o save do `stop` não é cortado
+    expect(vivo(pid)).toBe(false);
+  });
+
+  it("o Java não herda o ELECTRON_RUN_AS_NODE do vigia", async () => {
+    const v = subir("", undefined, process.execPath, [
+      "-e",
+      'console.log("ENV=" + (process.env.ELECTRON_RUN_AS_NODE ?? "nada"))',
+    ]);
+    await v.fim;
+    expect(v.saida()).toContain("ENV=nada\n");
   });
 
   it("Java que não existe: a 1ª linha diz a falha e o vigia sai com erro", async () => {

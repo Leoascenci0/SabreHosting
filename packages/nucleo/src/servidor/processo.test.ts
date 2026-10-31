@@ -190,6 +190,29 @@ describe("parada", () => {
     expect(Date.now() - inicio).toBeLessThan(20_000);
   });
 
+  it("só a 1ª linha vale como PID: o Java imitando o vigia depois não troca o PID", async () => {
+    const s = await subir("finge-vigia");
+    await esperarEstado(s, "pronto");
+    const pid = s.pidJava;
+    await new Promise((r) => setTimeout(r, 100));
+    expect(pid).toBeGreaterThan(1);
+    expect(s.pidJava).toBe(pid);
+  });
+
+  it.each(["0", "-5", "1.5", "99999999999999999999", "abc"])(
+    "PID inválido do vigia (%s) é ignorado, nunca chega ao kill",
+    async (pid) => {
+      const script = `console.log("[sabre-vigia] pid ${pid}"); process.stdin.on("data", () => {}); process.stdin.on("end", () => process.exit(0));`;
+      const s = await subir("normal", {
+        spawnFn: (_c, _a, o) => espiao(process.execPath, ["-e", script], o),
+      });
+      await new Promise((r) => setTimeout(r, 300));
+      expect(s.pidJava).toBeUndefined();
+      criados.at(-1)?.stdin?.end();
+      await esperarEstado(s, "caiu");
+    },
+  );
+
   it("a linha do vigia com o PID não aparece no log", async () => {
     const logs: string[] = [];
     const s = await subir();
@@ -457,6 +480,7 @@ describe("comando e memória", () => {
       ...ARGS_VIGIA_TESTE,
       "10000",
       "10000",
+      "5000", // prazoParadaMs: o `stop` do app que morreu tem o prazo da parada normal
       process.execPath,
       FALSO,
       "normal",
