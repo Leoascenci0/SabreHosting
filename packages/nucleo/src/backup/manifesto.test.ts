@@ -258,6 +258,36 @@ describe("validarManifesto", () => {
     ).toThrow(/maiúscula/);
   });
 
+  it("recusa o mesmo nome em Unicode composto (NFC) e decomposto (NFD)", () => {
+    const nfc = "region/café.mca";
+    const nfd = "region/café.mca";
+    expect(nfc).not.toBe(nfd);
+    expect(() => validarManifesto({ ...base, arquivos: [arq(nfc), arq(nfd)] })).toThrow(
+      /maiúscula/,
+    );
+    expect(() => validarManifesto({ ...base, arquivos: [arq(nfd), arq(nfc)] })).toThrow(
+      /maiúscula/,
+    );
+  });
+
+  it("recusa arquivo e pasta com o mesmo nome, nas duas ordens", () => {
+    for (const lista of [
+      ["a", "a/b"],
+      ["a/b", "a"],
+      ["x/a/b/c", "x/A"],
+      ["café", "café/b"],
+    ]) {
+      expect(() => validarManifesto({ ...base, arquivos: lista.map(arq) })).toThrow(
+        /arquivo e pasta/,
+      );
+    }
+  });
+
+  it("aceita nomes parecidos que não colidem (ab e a-b, a e a2/b)", () => {
+    const lista = ["ab", "a-b", "a", "a2/b", "a.mca", "d/a.dat", "d/a/x"];
+    expect(validarManifesto({ ...base, arquivos: lista.map(arq) }).arquivos).toHaveLength(7);
+  });
+
   it("recusa profundidade 33 e aceita 32", () => {
     const fundo = (n: number) => Array.from({ length: n }, () => "d").join("/");
     expect(() => validarManifesto({ ...base, arquivos: [arq(fundo(33))] })).toThrow(/profundidade/);
