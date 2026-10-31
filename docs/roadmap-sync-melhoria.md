@@ -39,16 +39,31 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* teste: kill simulado entre os dois renames → na partida seguinte N volta (ou M completa) e o servidor não sobe com mundo ausente.
   *Origem:* sync-1.2 · PR #158 · qa integridade
 
-- [ ] **1.5 — Acabamentos da recuperação da troca**
+- [x] **1.5 — Acabamentos da recuperação da troca** (PR #170, 31/10/2026; a parte (b) foi para o sync-2.1: feita no PR #173 como 1.5b)
   *O que fazer:* (a) teste próprio de falha ao apagar o marcador no fluxo `restaurarBackup` (hoje só o `aplicarDelta` tem); (b) quando o sync for ligado ao app (sync-2.1), passar `pastaDoServidor` a `aplicarDelta` no chamador de produção; (c) mensagem de `podeSubir`/recuperação sem o nome do arquivo `TROCA-EM-ANDAMENTO.json` nem caminho absoluto na tela; (d) pasta temporária órfã quando gravar o marcador falha antes do 1º rename; (e) conferir no Windows `C:\` vs `c:\` na comparação do pai do marcador.
   *Arquivo:* `packages/nucleo/src/backup/restaurar.ts`, `packages/nucleo/src/sync/aplicar.ts`, `packages/nucleo/src/servidor/configurar.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* testes de cada caso (falham antes, passam depois).
   *Origem:* syncmel-1.4 · PR #164 · qa integridade + qa segurança
 
-- [ ] **1.6 — Provas que faltaram no servidor de sync (syncmel-1.2)**
+- [x] **1.6 — Provas que faltaram no servidor de sync (syncmel-1.2)** (PR #172, 31/10/2026; removendo só um dos dois prazos de cabeçalho o teste ainda passa: ver 1.7)
   *O que fazer:* (a) o teste "parcial do tamanho certo mas com conteúdo errado" passaria sem o código novo: contar os corpos servidos e exigir exatamente 1 (prova a conferência do hash antes de renomear); (b) testes próprios de `headersTimeout` e de `maxConnections` (17ª conexão não é atendida enquanto as 16 estão abertas).
   *Arquivo:* `packages/nucleo/src/sync/transferencia.test.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* os testes falham ao remover cada opção do servidor.
   *Origem:* syncmel-1.2 · PR #168 · qa integridade
+
+- [ ] **1.7 — Isolar `headersTimeout` de `requestTimeout` num teste**
+  *O que fazer:* expor os prazos do servidor como opção de teste (ou usar valores diferentes) para que cada um tenha prova própria; o teste de cabeçalho lento de hoje gasta ~30 s reais (Node confere a cada ~30 s): com prazos injetáveis cai para segundos.
+  *Arquivo:* `packages/nucleo/src/sync/transferencia.ts`, `transferencia.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste novo que falha ao remover só um dos dois prazos; arquivo de teste mais rápido que os 31 s de hoje.
+  *Origem:* syncmel-1.6 · PR #172 · filha + qa integridade
+
+- [ ] **1.8 — ⏸️ P · A trava de host impede o espalhar em segundo plano**
+  *O que fazer:* `aplicarDelta` exige a trava de host; enquanto o host a segura, um PC que não hospeda não consegue pegar a vez e só atualiza quando a trava está livre. **Pede decisão do Eliel (regra do grupo/trava):** (A) uma "trava de atualização" separada da de host; (B) aceitar atualizar só quando ninguém hospeda. A regra de ouro 1 (um host por vez) não pode ser contornada.
+  *Arquivo:* `packages/nucleo/src/sync/espalhar.ts`, `aplicar.ts`, `services/cartorio/src/`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: PC sem hospedar atualiza com o host ativo sem tocar no mundo vivo (A) ou fica em espera clara (B).
+  *Depende de:* decisão do Eliel e sync-2.1a (PR #173).
+  *Origem:* sync-2.1a · PR #173 · filha

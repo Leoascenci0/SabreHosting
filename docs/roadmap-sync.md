@@ -26,7 +26,7 @@ estava desligado atualiza ao ligar.
 
 ## Bloco 2 — Espalhar e alcançar
 
-- [ ] **2.1 — Espalhar a versão nova após o backup**
+- [ ] **2.1 — Espalhar a versão nova após o backup** *(corte de 31/10: 2.1a feito no PR #173 — núcleo `espalhar.ts` com fontes injetadas + ligação ao app com `pastaDoServidor` (1.5b), SEM gatilho; resta 2.1b: limite de banda e tela, e o gatilho no app, depois da descoberta de fontes no cartório (`cartmel` 2.4))*
   *O que fazer:* host avisa o cartório; PCs online recebem "versão M pronta" e puxam de quem tem (host, outro PC ou
   nuvem), em segundo plano e com limite de banda.
   *Arquivo:* `packages/nucleo/src/sync/espalhar.ts`
