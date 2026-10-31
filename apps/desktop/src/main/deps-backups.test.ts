@@ -180,6 +180,29 @@ describe("backupParado (antes de trocar a versão)", () => {
     );
   });
 
+  it("restaurar relê o mundo na hora: level-name mudou com o app aberto, cai no mundo novo e guarda o estado de antes (appmel-1.21)", async () => {
+    const c = cenario();
+    const novo = gerarMundo({ tamanho: "1MB" });
+    pastas.push(novo);
+    const nome = nomeDoBackup(new Date("2026-10-30T10:00:00Z"), 2);
+    await criarPacote(c.mundo, join(c.backups, nome), { versao: 2, epoca: 1 });
+    const velhoAntes = readFileSync(join(c.mundo, "level.dat"));
+    writeFileSync(join(novo, "level.dat"), "mundo novo mexido depois do backup");
+
+    const d = depsBackups({
+      pastaBackups: c.backups,
+      pastaDoMundo: c.mundo, // valor velho, lido ao abrir o app
+      mundoAgora: async () => novo,
+      cliente: c.cliente,
+      servidorRodando: () => false,
+    });
+    await d.restaurar(nome);
+
+    expect(readFileSync(join(novo, "level.dat")).equals(velhoAntes)).toBe(true); // o novo foi restaurado
+    expect(readFileSync(join(c.mundo, "level.dat")).equals(velhoAntes)).toBe(true); // o velho nem foi tocado
+    expect(readdirSync(c.backups).filter((n) => n.endsWith(".tar.gz"))).toHaveLength(2); // regra 4
+  });
+
   it("já existe backup com o mesmo nome: recusa e não mexe no que existe (regra 4)", async () => {
     const c = cenario();
     const agora = () => new Date("2026-10-31T12:00:00.000Z");

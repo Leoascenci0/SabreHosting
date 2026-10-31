@@ -362,7 +362,12 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
   const servidorRodando = (): boolean => inicio.ativo();
   if (process.env["SABRE_E2E"] !== "1") {
     return criarBackups({
-      ...depsBackupsReais(ambientePc, servidorRodando, () => inicio.temOrfao()),
+      ...depsBackupsReais(
+        ambientePc,
+        servidorRodando,
+        () => inicio.temOrfao(),
+        () => pastaDoMundoAgora(pc.pastaServidor),
+      ),
       avisoHistorico: avisoHistorico.ler,
     });
   }
