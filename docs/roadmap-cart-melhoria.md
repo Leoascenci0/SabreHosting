@@ -47,7 +47,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   preserva os PCs.
   *Origem:* cart-1.2 · PR #22 · qa integridade + qa segurança · **feito no PR #27 (30/10/2026)**
 
-- [ ] **1.6 — Tipo da época garantido no banco e recusa mais clara na passagem**
+- [x] **1.6 — Tipo da época garantido no banco e recusa mais clara na passagem** (PR #127, 31/10/2026)
   *O que fazer:* numa migração nova, `CHECK (typeof(epoca) = 'integer')` na trava (hoje um UPDATE com texto passaria
   pelo gatilho; não se alcança pela API); recusa própria `destino_sem_acesso` quando o destino só tem token revogado.
   *Arquivo:* `services/cartorio/src/banco.ts`, `services/cartorio/src/trava.ts`
