@@ -1,4 +1,5 @@
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -158,6 +159,25 @@ describe("backupParado (antes de trocar a versão)", () => {
       backupParado({ ...base, servidorRodando: () => false, servidorOrfao: async () => true }),
     ).rejects.toThrow(/no ar/);
     expect(readdirSync(c.backups)).toEqual([]);
+  });
+
+  it("backupParado relê o mundo na hora: level-name mudou com o app aberto, o backup segue o novo (appmel-1.19)", async () => {
+    const c = cenario();
+    const novo = gerarMundo({ tamanho: "1MB" });
+    pastas.push(novo);
+    writeFileSync(join(novo, "region", "r.9.9.mca"), "novo");
+    const feitos: string[] = [];
+    await backupParado({
+      pastaBackups: c.backups,
+      pastaDoMundo: c.mundo, // valor velho, lido ao abrir o app
+      mundoAgora: async () => novo,
+      cliente: c.cliente,
+      servidorRodando: () => false,
+      aoBom: async (f) => void feitos.push(f.caminho),
+    });
+    expect(execFileSync("tar", ["-tzf", feitos[0] ?? ""], { encoding: "utf8" })).toContain(
+      "r.9.9.mca",
+    );
   });
 
   it("já existe backup com o mesmo nome: recusa e não mexe no que existe (regra 4)", async () => {

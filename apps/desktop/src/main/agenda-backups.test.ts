@@ -247,4 +247,69 @@ describe("histórico longo no backup agendado (drive-1.1a)", () => {
     rmSync(local, { recursive: true });
     rmSync(drive2, { recursive: true });
   });
+
+  it("level-name muda entre dois Hospedar: o backup agendado segue o mundo novo (appmel-1.19)", async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, readdirSync, rmSync } = await import("node:fs");
+    const { execFileSync } = await import("node:child_process");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { iniciarAgendaReal } = await import("./agenda-backups.js");
+    const raiz = mkdtempSync(join(tmpdir(), "sabre-ag-lvl-"));
+    const backups = join(raiz, "backups");
+    mkdirSync(backups);
+    for (const m of ["mundoA", "mundoB"]) {
+      mkdirSync(join(raiz, m, "region"), { recursive: true });
+      writeFileSync(join(raiz, m, "level.dat"), m);
+      writeFileSync(join(raiz, m, "region", m === "mundoA" ? "r.1.1.mca" : "r.9.9.mca"), m);
+    }
+    let atual = "mundoA"; // o que o server.properties diz agora
+    const servidor = Object.assign(new EventEmitter(), {
+      estado: "pronto",
+      enviar(linha: string) {
+        const texto =
+          linha === "save-off"
+            ? "[12:00:00] [Server thread/INFO]: Automatic saving is now disabled"
+            : linha === "save-all flush"
+              ? "[12:00:01] [Server thread/INFO]: Saved the game"
+              : "";
+        if (texto) setTimeout(() => servidor.emit("log", { nivel: "info", texto }), 0);
+      },
+    });
+    let tique: (() => void) | undefined;
+    const relogio = {
+      setInterval: (f: () => void) => ((tique = f), 1 as unknown as NodeJS.Timeout),
+      clearInterval: () => undefined,
+    };
+    const feitos: string[] = [];
+    const avisos: string[] = [];
+    const iniciar = iniciarAgendaReal({
+      pastaBackups: backups,
+      pastaDoMundo: join(raiz, "mundoA"), // valor velho, lido ao abrir o app
+      mundoAgora: async () => join(raiz, atual),
+      epoca: async () => 1,
+      relogio,
+      aoAvisar: (t) => void avisos.push(t),
+      aoBackupBom: async (f) => void feitos.push(f.caminho),
+    });
+    const conteudo = (caminho: string): string =>
+      execFileSync("tar", ["-tzf", caminho], { encoding: "utf8" });
+    const rodada = async (): Promise<string> => {
+      const agenda = await iniciar(servidor as unknown as ServidorObservado, 10);
+      const antes = feitos.length;
+      tique?.();
+      for (let i = 0; i < 200 && feitos.length === antes; i++)
+        await new Promise((r) => setTimeout(r, 25));
+      await agenda?.parar();
+      return conteudo(feitos[feitos.length - 1] ?? "");
+    };
+    expect(avisos).toEqual([]);
+    expect(await rodada()).toContain("r.1.1.mca");
+    atual = "mundoB"; // level-name mudou com o app aberto; o 2º Hospedar relê
+    await new Promise((r) => setTimeout(r, 5));
+    const segundo = await rodada();
+    expect(segundo).toContain("r.9.9.mca");
+    expect(segundo).not.toContain("r.1.1.mca");
+    expect(readdirSync(backups).filter((n) => n.endsWith(".tar.gz"))).toHaveLength(2); // o primeiro fica (regra 4)
+    rmSync(raiz, { recursive: true, force: true });
+  });
 });

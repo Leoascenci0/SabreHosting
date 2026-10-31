@@ -47,6 +47,13 @@ export async function nomeDoMundo(pastaServidor: string): Promise<string> {
   return simples ? nome : "world";
 }
 
+/** Pasta do mundo lida AGORA (o `level-name` pode ter mudado com o app aberto); `undefined` sem pasta do servidor. */
+export async function pastaDoMundoAgora(
+  pastaServidor: string | undefined,
+): Promise<string | undefined> {
+  return pastaServidor ? join(pastaServidor, await nomeDoMundo(pastaServidor)) : undefined;
+}
+
 /** `modoTeste`: só nele `SABRE_JAVA`/`SABRE_NEOFORGE` do ambiente viram executável do servidor (app empacotado ignora). */
 export async function lerConfigPc(
   dados: string,

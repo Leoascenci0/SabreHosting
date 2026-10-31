@@ -14,6 +14,8 @@ export interface OpcoesDepsBackups {
   pastaBackups: string | undefined;
   /** Pasta do mundo do servidor (até app-1.3: `SABRE_PASTA_MUNDO`). */
   pastaDoMundo: string | undefined;
+  /** Relê o mundo na hora de cada operação (o `level-name` pode mudar com o app aberto); vale mais que `pastaDoMundo` (sem resposta, fica o `pastaDoMundo`). */
+  mundoAgora?(): Promise<string | undefined>;
   /** Pasta do servidor (até app-1.3: `SABRE_PASTA_SERVIDOR`); o mundo tem de estar direto dentro dela. */
   pastaDoServidor?: string | undefined;
   cliente: OpcoesRenovador["cliente"] & {
@@ -94,7 +96,8 @@ export async function backupParado(
     aoBom?(feito: { caminho: string; sha256: string }): Promise<void>;
   },
 ): Promise<void> {
-  const { pastaBackups, pastaDoMundo } = o;
+  const { pastaBackups } = o;
+  const pastaDoMundo = (await o.mundoAgora?.()) ?? o.pastaDoMundo;
   if (!pastaBackups || !pastaDoMundo) throw new Error(SEM_PASTA);
   if (o.servidorRodando() || (await o.servidorOrfao?.().catch(() => true))) {
     throw new Error(
