@@ -325,7 +325,9 @@ const avisoAtualizacao = (): string | undefined => avisoAtualizacaoMundo;
 
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1") {
-    const reais = depsReais(pc, (t) => clipboard.writeText(t));
+    const reais = depsReais(pc, (t) => clipboard.writeText(t), {
+      pastaDados: app.getPath("userData"),
+    });
     void reais.atualizarEndereco?.(); // o endereço do Jogar é o que o cartório diz (GET /grupo)
     return criarInicio({
       ...reais,

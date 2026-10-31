@@ -1,6 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -30,6 +38,8 @@ const env = (): ConfigPc => ({
   java: "java-falso",
   neoforge: NEO,
 });
+/** IP de túnel de mentira: o servidor só sobe com o túnel privado ativo. */
+const TUNEL = () => "10.66.0.7";
 const semPasta = (): ConfigPc => ({ ...env(), pastaServidor: undefined });
 
 function filho(): ChildProcess {
@@ -66,7 +76,12 @@ describe("ligação real do Hospedar", () => {
       expect(c.rotas).toContain("/trava/pegar");
       return filho();
     });
-    const d = depsReais(env(), () => {}, { fetchFn: c.fetchFn, spawnFn, plataforma: "linux" });
+    const d = depsReais(env(), () => {}, {
+      fetchFn: c.fetchFn,
+      spawnFn,
+      plataforma: "linux",
+      ipPrivado: TUNEL,
+    });
     const { servidor } = await d.hospedar(() => {});
     expect(spawnFn).toHaveBeenCalledOnce();
     void servidor.pararServidor().catch(() => {}); // filho falso: sem `stop` real; o afterEach apaga a pasta
@@ -75,14 +90,22 @@ describe("ligação real do Hospedar", () => {
   it("trava ocupada: recusa e nunca inicia o processo do servidor", async () => {
     const c = cartorio(true);
     const spawnFn = vi.fn<NonNullable<ExtrasDepsReais["spawnFn"]>>(() => filho());
-    const d = depsReais(env(), () => {}, { fetchFn: c.fetchFn, spawnFn, plataforma: "linux" });
+    const d = depsReais(env(), () => {}, {
+      fetchFn: c.fetchFn,
+      spawnFn,
+      plataforma: "linux",
+      ipPrivado: TUNEL,
+    });
     await expect(d.hospedar(() => {})).rejects.toThrow();
     expect(spawnFn).not.toHaveBeenCalled();
   });
 
   it("sem cartório configurado: acesso negado e sem processo", async () => {
     const spawnFn = vi.fn<NonNullable<ExtrasDepsReais["spawnFn"]>>(() => filho());
-    const d = depsReais({ pastaServidor: pasta, java: "j", neoforge: NEO }, () => {}, { spawnFn });
+    const d = depsReais({ pastaServidor: pasta, java: "j", neoforge: NEO }, () => {}, {
+      spawnFn,
+      ipPrivado: TUNEL,
+    });
     await expect(d.lerTrava()).rejects.toMatchObject({ tipo: "acesso" });
     await expect(d.hospedar(() => {})).rejects.toThrow();
     expect(spawnFn).not.toHaveBeenCalled();
@@ -93,6 +116,53 @@ describe("ligação real do Hospedar", () => {
     const d = depsReais(semPasta(), () => {}, { fetchFn: c.fetchFn });
     await expect(d.hospedar(() => {})).rejects.toThrow("não está configurado");
     expect(c.rotas).not.toContain("/trava/pegar");
+  });
+});
+
+describe("distâncias de Configurações vão para o server.properties ao hospedar", () => {
+  const dados = (): string => mkdtempSync(join(tmpdir(), "sabre-dados-"));
+
+  it("visão 12 e simulação 6 salvas aparecem no arquivo, e o IP é o do túnel", async () => {
+    const pastaDados = dados();
+    try {
+      writeFileSync(
+        join(pastaDados, "preferencias.json"),
+        JSON.stringify({ distanciaVisao: 12, distanciaSimulacao: 6 }),
+      );
+      const c = cartorio(false);
+      const spawnFn = vi.fn<NonNullable<ExtrasDepsReais["spawnFn"]>>(() => filho());
+      const d = depsReais(env(), () => {}, {
+        fetchFn: c.fetchFn,
+        spawnFn,
+        plataforma: "linux",
+        ipPrivado: TUNEL,
+        pastaDados,
+      });
+      const { servidor } = await d.hospedar(() => {});
+      void servidor.pararServidor().catch(() => {});
+      const props = readFileSync(join(pasta, "server.properties"), "utf8");
+      expect(props).toContain("view-distance=12");
+      expect(props).toContain("simulation-distance=6");
+      expect(props).toContain("server-ip=10.66.0.7");
+      expect(readFileSync(join(pasta, "eula.txt"), "utf8")).toBe("eula=true\n"); // aceite antigo intacto
+    } finally {
+      rmSync(pastaDados, { recursive: true, force: true });
+    }
+  });
+
+  it("sem túnel privado: recusa em pt-BR, não grava nada e não cria processo", async () => {
+    const c = cartorio(false);
+    const spawnFn = vi.fn<NonNullable<ExtrasDepsReais["spawnFn"]>>(() => filho());
+    const d = depsReais(env(), () => {}, {
+      fetchFn: c.fetchFn,
+      spawnFn,
+      plataforma: "linux",
+      ipPrivado: () => undefined,
+    });
+    await expect(d.hospedar(() => {})).rejects.toThrow("rede privada");
+    expect(spawnFn).not.toHaveBeenCalled();
+    expect(c.rotas).not.toContain("/trava/pegar");
+    expect(() => readFileSync(join(pasta, "server.properties"))).toThrow();
   });
 });
 
@@ -231,7 +301,12 @@ describe("sem SABRE_ENDERECO/SABRE_CARTORIO_TOKEN no ambiente (app-1.3c-i)", () 
       expect(op.cwd).toBe(pasta);
       return filho();
     });
-    const d = depsReais(env(), () => {}, { fetchFn: c.fetchFn, spawnFn, plataforma: "linux" });
+    const d = depsReais(env(), () => {}, {
+      fetchFn: c.fetchFn,
+      spawnFn,
+      plataforma: "linux",
+      ipPrivado: TUNEL,
+    });
     const { servidor } = await d.hospedar(() => {});
     void servidor.pararServidor().catch(() => {});
     expect(spawnFn).toHaveBeenCalledOnce();

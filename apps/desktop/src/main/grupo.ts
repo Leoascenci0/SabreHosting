@@ -1,4 +1,7 @@
 import type { Resultado } from "../ui/ponte.js";
+import { nomeNaRede } from "../ui/nome-na-rede.js";
+
+export { nomeNaRede };
 
 export interface PcDaTela {
   id: number;
@@ -55,18 +58,6 @@ const CONVITE_POR_STATUS: Record<number, string> = {
 const CONVITE_GENERICA = "Não consegui falar com o cartório agora. Nenhum convite foi criado.";
 const CONVITE_DADOS = "Escolha um nome para o PC (letras ou números) e uma validade da lista.";
 const CONVITE_OCUPADO = "Já tem um convite sendo criado.";
-
-/** Nome digitado -> formato da rede do cartório (`^[a-z0-9][a-z0-9-]{0,31}$`): sem acento, minúsculas, hífen. */
-export function nomeNaRede(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+/, "")
-    .slice(0, 32)
-    .replace(/-+$/, "");
-}
 
 function mensagemDe(e: unknown, generica = GENERICA): string {
   const status = (e as { status?: unknown } | null)?.status;
