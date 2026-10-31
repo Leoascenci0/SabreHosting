@@ -29,7 +29,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* `git status` limpo após rodar o cartório na raiz; teste com relógio injetado apaga só os vencidos.
   *Origem:* cart-1.1 · PR #15 · filha
 
-- [ ] **1.4 — Prova de corrida com dois processos**
+- [x] **1.4 — Prova de corrida com dois processos** (PR #133, 31/10/2026)
   *O que fazer:* teste com 2 processos (ou worker_threads) abrindo um banco novo e usando o mesmo convite ao mesmo
   tempo; exatamente um vence.
   *Arquivo:* `services/cartorio/src/cartorio.test.ts`
