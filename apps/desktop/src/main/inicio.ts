@@ -25,6 +25,8 @@ export interface DepsInicio {
   /** Endereço para os amigos entrarem. Vazio: ainda não configurado. */
   endereco: string;
   copiar(texto: string): void;
+  /** Abre o jogo já no servidor (Prism, lanc-1.3). Ausente: o botão Jogar só copia o endereço. */
+  abrirJogo?(endereco: string): Promise<{ ok: true } | { ok: false; mensagem: string }>;
   /** Há um backup sendo restaurado? Hospedar espera (regra de ouro 2: nunca servidor com o mundo sendo trocado). */
   restaurando?(): boolean;
   /** Troca de versão em andamento (backup antes de gravar): o servidor não pode subir no meio. */
@@ -206,10 +208,22 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       }
     },
 
-    async jogar(): Promise<{ copiado: boolean; endereco: string }> {
+    async jogar(): Promise<{
+      copiado: boolean;
+      endereco: string;
+      aberto?: boolean;
+      aviso?: string;
+    }> {
       if (!deps.endereco) throw new Error("O endereço do servidor ainda não foi configurado.");
-      deps.copiar(deps.endereco);
-      return { copiado: true, endereco: deps.endereco };
+      deps.copiar(deps.endereco); // sempre copia: serve de reserva se o Prism não abrir
+      if (!deps.abrirJogo) return { copiado: true, endereco: deps.endereco };
+      const r = await deps.abrirJogo(deps.endereco).catch(() => ({
+        ok: false as const,
+        mensagem: GENERICA,
+      }));
+      return r.ok
+        ? { copiado: true, endereco: deps.endereco, aberto: true }
+        : { copiado: true, endereco: deps.endereco, aberto: false, aviso: r.mensagem };
     },
 
     async hospedar(): Promise<Resultado> {

@@ -108,7 +108,7 @@ export interface PonteSabre {
   };
   inicio: {
     estado(): Promise<EstadoInicio>;
-    jogar(): Promise<{ copiado: boolean; endereco: string }>;
+    jogar(): Promise<{ copiado: boolean; endereco: string; aberto?: boolean; aviso?: string }>;
     hospedar(): Promise<Resultado>;
     parar(): Promise<Resultado>;
     /** Avisa quando o estado mudou por conta própria (servidor caiu, vez de hospedar perdida). */

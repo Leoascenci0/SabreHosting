@@ -249,6 +249,26 @@ describe("jogar", () => {
     expect(d.copiar).toHaveBeenCalledWith("10.0.0.5:25565");
   });
 
+  it("com abrirJogo, abre o jogo no endereço e ainda copia", async () => {
+    const abrirJogo = vi.fn(async () => ({ ok: true as const }));
+    const d = deps({ abrirJogo });
+    expect(await criarInicio(d).jogar()).toEqual({
+      copiado: true,
+      endereco: "10.0.0.5:25565",
+      aberto: true,
+    });
+    expect(abrirJogo).toHaveBeenCalledWith("10.0.0.5:25565");
+  });
+
+  it("se o jogo não abre, devolve a mensagem e mantém o endereço copiado", async () => {
+    const d = deps({ abrirJogo: async () => ({ ok: false, mensagem: "Prism ausente." }) });
+    expect(await criarInicio(d).jogar()).toMatchObject({
+      copiado: true,
+      aberto: false,
+      aviso: "Prism ausente.",
+    });
+  });
+
   it("sem endereço configurado, recusa sem copiar nada", async () => {
     const d = deps({ endereco: "" });
     await expect(criarInicio(d).jogar()).rejects.toThrow("endereço");
