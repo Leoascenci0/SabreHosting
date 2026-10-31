@@ -144,12 +144,12 @@ qual parte detalhada (`references/*.md`) ler para o tipo da mudança.
   **35%** para concluir a demanda em curso, até **40%** só para um item muito específico. Detalhe em
   `.claude/skills/maxima/references/coordenacao.md`.
 - **Ondas visíveis na lista de chats (regra do Eliel, 31/10/2026):** o Eliel abre **só** o chat da Máxima (`/maxima
-  retomar` ou continuar); debaixo dele nascem as ondas, e debaixo de cada onda os itens. A sessão de onda se chama `Onda <N> — <itens>` e
+  retomar` ou continuar); debaixo dele nascem as ondas, e debaixo de cada onda os itens. A sessão de onda se chama `Onda <N>` (pode ter um resumo curto: `Onda 21 — convite no app`; sem lista de itens) e
   cada sessão de item `Item <k> · <sigla-id> — <título>` (k = 1, 2, 3… dentro da onda), criada **dentro** da sessão
   de onda (aparece aninhada debaixo dela) e com a
   etiqueta `maxima-onda-<N>`; o número da onda é único no projeto e cada onda aberta tem uma linha em
   `docs/MILESTONE.md` › Em curso. Bastão do coordenador: `Máxima continuar — <data> (<n>º bastão)`.
-  Exemplo certo (aprovado pelo Eliel, 31/10): `Maxima retomar` › `Onda 20 — cartmel-1.1 · app-2.1 · …` › `Item 1 ·
+  Exemplo certo (aprovado pelo Eliel, 31/10): `Maxima retomar` › `Onda 20` › `Item 1 ·
   cartmel-1.1 — Revogar token de PC`, `Item 2 · app-2.1 — …`. **Errado:** o chat da Máxima virar a própria onda e abrir os
   itens direto debaixo dele (ex.: "Máxima — onda 58" com os itens): ele acumula o contexto de todos os itens.
 - **Autonomia da Máxima:** sozinha ela revisa, mergeia e gera a versão de teste; toma decisão **reversível** de
