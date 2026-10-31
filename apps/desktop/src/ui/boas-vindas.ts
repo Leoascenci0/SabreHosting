@@ -85,7 +85,10 @@ async function aberto(e: Extract<EstadoBoasVindas, { aberto: true }>): Promise<v
   if (e.passo !== "convite") {
     mostrarContrato(await window.sabre.boasVindas.eula());
   }
-  irPara(e.passo);
+  irPara(e.passo); // zera o erro: a mensagem de cofre vem depois
+  if (e.cofreCorrompido) {
+    mostrarErro("Seu acesso guardado neste PC não abre mais; peça um convite novo.");
+  }
 }
 
 async function iniciar(): Promise<void> {

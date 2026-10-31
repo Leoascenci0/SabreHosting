@@ -295,7 +295,8 @@ const ACESSO_FALSO = "token-falso-do-e2e";
 
 /**
  * Assistente de primeira vez do E2E: cartório e WireGuard falsos. Sem `SABRE_E2E_BOAS_VINDAS=1` o PC já nasce
- * configurado (as outras telas não veem o assistente). `SABRE_E2E_SEM_COFRE=1` tira o cofre do sistema. O convite com
+ * configurado (as outras telas não veem o assistente). `SABRE_E2E_SEM_COFRE=1` tira o cofre do sistema.
+ * `SABRE_E2E_COFRE_CORROMPIDO=1` faz o PC já configurado com um token guardado que não decifra. O convite com
  * código `usado` é recusado como o cartório recusaria. Tudo que o "passo elevado" recebeu fica em
  * `__sabreE2EBoasVindas` (chamadas, token guardado) para o teste conferir.
  */
@@ -304,7 +305,8 @@ export function depsBoasVindasE2E(dados: string): {
   escolherPasta: () => Promise<string | undefined>;
 } {
   const ligado = process.env["SABRE_E2E_BOAS_VINDAS"] === "1";
-  if (!ligado) {
+  const corrompido = process.env["SABRE_E2E_COFRE_CORROMPIDO"] === "1";
+  if (!ligado || corrompido) {
     mkdirSync(dados, { recursive: true });
     writeFileSync(
       join(dados, "boas-vindas.json"),
@@ -322,6 +324,8 @@ export function depsBoasVindasE2E(dados: string): {
       cofre: {
         guardar: async (t) => void registro.tokens.push(t),
         ler: async () => registro.tokens[0],
+        // `SABRE_E2E_COFRE_CORROMPIDO=1`: o token guardado existe e não decifra.
+        estado: async () => ({ tipo: corrompido ? "corrompido" : "ok" }),
       },
       entrar: async (convite) => {
         registro.entradas.push(convite.grupo);
