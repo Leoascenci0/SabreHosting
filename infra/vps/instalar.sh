@@ -199,6 +199,9 @@ executar ufw allow "$PORTA_WG"/udp
 # Repasse só dentro da rede privada (PC ↔ PC passando pelo hub); nada de wg0 ↔ internet.
 # A sala de entrada (10.66.0.200–254) fica de fora: as before.rules abaixo a barram antes desta regra.
 executar ufw route allow in on wg0 out on wg0
+# Cartório: só pela rede privada, só no IP do hub. Vale para os PCs definitivos (10.66.0.2–199); a sala de entrada
+# já tem a regra própria nas before.rules abaixo.
+executar ufw allow in on wg0 to 10.66.0.1 port 7710 proto tcp
 
 # Sala de entrada (convite): só alcança o cartório em 10.66.0.1:7710; nada de repasse de/para outro PC. A faixa não é
 # um bloco CIDR, então vai por intervalo (-m iprange) nas before.rules do ufw, que valem antes das regras comuns.
@@ -251,11 +254,10 @@ if ! ja_feito segredo-cartorio grep -Eq '^SABRE_CARTORIO_SEGREDO_ADMIN=[0-9a-f]{
   marcar segredo-cartorio
 fi
 
-# ---------- 5c. Ajudante da sala de entrada: único comando que o usuário sabre pode rodar como root ----------
+# ---------- 5c. Ajudante da sala de entrada: serviço próprio (root) atrás de um socket; o cartório fica sem sudo ----------
 
-AJUDANTE=/opt/sabre/wg/ajudante-entrada.sh
 executar install -d -m 755 -o root -g root /opt/sabre/wg
-for arq in ajudante-entrada.sh:755 comum.sh:644; do
+for arq in ajudante-entrada.sh:755 ajudante-socket.sh:755 comum.sh:644; do
   if ! ja_feito "wg-${arq%%:*}" cmp -s "$AQUI/wg/${arq%%:*}" "/opt/sabre/wg/${arq%%:*}"; then
     executar install -m "${arq##*:}" -o root -g root "$AQUI/wg/${arq%%:*}" "/opt/sabre/wg/${arq%%:*}"
     marcar "wg-${arq%%:*}"
@@ -277,37 +279,27 @@ if [ -n "${SABRE_ENDPOINT_HUB:-}" ]; then
   printf 'SABRE_ENDPOINT_HUB=%s\n' "$SABRE_ENDPOINT_HUB" | gravar 644 /etc/sabre/hub.env
 fi
 
-# sudoers: SÓ o caminho do ajudante, sem curinga; o sudo limpa o ambiente (env_reset). Conferido pelo visudo antes.
-SUDOERS=/etc/sudoers.d/sabre-entrada
-regra_sudo() {
-  cat <<FIM
-# SabreHosting: o cartório (usuário $USUARIO) só pode rodar o ajudante da sala de entrada; a validação mora nele.
-Defaults!$AJUDANTE env_reset
-$USUARIO ALL=(root) NOPASSWD: $AJUDANTE
-FIM
-}
-if ! ja_feito sudoers cmp -s <(regra_sudo) "$SUDOERS"; then
-  if simulando; then
-    regra_sudo | gravar 440 "$SUDOERS"
-  else
-    sudo_tmp=$(mktemp)
-    regra_sudo >"$sudo_tmp"
-    visudo -cf "$sudo_tmp" >/dev/null || { rm -f "$sudo_tmp"; falhar "a regra do sudoers não passou no visudo; nada foi gravado."; }
-    executar install -m 440 -o root -g root "$sudo_tmp" "$SUDOERS"
-    rm -f "$sudo_tmp"
-  fi
-  marcar sudoers
+# O sudoers do convite (rede-1.4) saiu: o cartório fala com o ajudante pelo socket /run/sabre/ajudante.sock.
+if ! ja_feito sem-sudoers test ! -e /etc/sudoers.d/sabre-entrada; then
+  executar rm -f /etc/sudoers.d/sabre-entrada
+  marcar sem-sudoers
 fi
 
 # ---------- 6. Unidades systemd de exemplo (instaladas, DESLIGADAS) ----------
 
-for unidade in sabre-cartorio.service sabre-proxy.service; do
+for unidade in sabre-cartorio.service sabre-proxy.service sabre-ajudante-entrada.socket sabre-ajudante-entrada@.service; do
   if ! ja_feito "unidade-$unidade" cmp -s "$AQUI/systemd/$unidade" "/etc/systemd/system/$unidade"; then
     executar install -m 644 "$AQUI/systemd/$unidade" "/etc/systemd/system/$unidade"
     marcar "unidade-$unidade"
   fi
 done
 executar systemctl daemon-reload
+# O socket do ajudante fica LIGADO (só root e o grupo sabre conectam); o ajudante só roda quando chega um pedido.
+socket_ativo() { systemctl is-enabled -q sabre-ajudante-entrada.socket && systemctl is-active -q sabre-ajudante-entrada.socket; }
+if ! ja_feito socket-ajudante socket_ativo; then
+  executar systemctl enable --now sabre-ajudante-entrada.socket
+  marcar socket-ajudante
+fi
 
 echo "Pronto. Falta: abrir as mesmas portas na 'Security List' da conta Oracle (tutorial rede-1.2)." >&2
 if ! simulando && [ ! -s /etc/sabre/hub.env ]; then

@@ -50,7 +50,12 @@ describe("infra/vps/limbo/instalar-limbo.sh em simulação", () => {
   it("2ª rodada não baixa de novo nem regrava config nem unidade", () => {
     const um = rodar().comandos;
     const dois = rodar().comandos;
-    for (const padrao of [/baixar/i, /GRAVAR .*server\.toml/, /sabre-limbo\.service/, /\/opt\/sabre\/limbo\/pico/]) {
+    for (const padrao of [
+      /baixar/i,
+      /GRAVAR .*server\.toml/,
+      /sabre-limbo\.service/,
+      /\/opt\/sabre\/limbo\/pico/,
+    ]) {
       expect(
         um.some((c) => padrao.test(c)),
         `1ª vez deveria ter ${padrao}`,
@@ -138,14 +143,22 @@ describe("infra/vps/limbo/instalar-limbo.sh em simulação", () => {
 
   it("a unidade roda como sabre, endurecida", () => {
     const u = readFileSync(join(RAIZ, "infra/vps/systemd/sabre-limbo.service"), "utf8");
-    for (const linha of ["User=sabre", "NoNewPrivileges=true", "ProtectSystem=strict", "PrivateTmp=true"]) {
+    for (const linha of [
+      "User=sabre",
+      "NoNewPrivileges=true",
+      "ProtectSystem=strict",
+      "PrivateTmp=true",
+    ]) {
       expect(u).toMatch(new RegExp(`^${linha}$`, "m"));
     }
     expect(u).toMatch(/^RestrictAddressFamilies=AF_INET AF_INET6$/m);
   });
 
   it("sem root, recusa antes de tudo", () => {
-    const r = spawnSync("bash", [SCRIPT], { encoding: "utf8", env: { PATH: process.env.PATH, SABRE_FALSO_UID: "1000" } });
+    const r = spawnSync("bash", [SCRIPT], {
+      encoding: "utf8",
+      env: { PATH: process.env.PATH, SABRE_FALSO_UID: "1000" },
+    });
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(/sudo/);
     expect(r.stdout).not.toMatch(/^\+ /m);

@@ -117,7 +117,13 @@ describe("infra/vps/instalar-velocity.sh em simulação", () => {
     apiFalsa();
     const um = rodar().comandos;
     const dois = rodar().comandos;
-    for (const padrao of [/urandom/, /GRAVAR .*velocity\.toml/, /GRAVAR .*whitelist\.txt/, /velocity\.jar/, /baixar/i]) {
+    for (const padrao of [
+      /urandom/,
+      /GRAVAR .*velocity\.toml/,
+      /GRAVAR .*whitelist\.txt/,
+      /velocity\.jar/,
+      /baixar/i,
+    ]) {
       expect(
         um.some((c) => padrao.test(c)),
         `1ª vez deveria ter ${padrao}`,
@@ -193,7 +199,9 @@ describe("infra/vps/instalar-velocity.sh em simulação", () => {
 
   it("destino válido da rede privada entra no toml", () => {
     apiFalsa();
-    expect(rodar({ SABRE_DESTINO: "10.66.0.7:25566" }).stdout).toContain('host = "10.66.0.7:25566"');
+    expect(rodar({ SABRE_DESTINO: "10.66.0.7:25566" }).stdout).toContain(
+      'host = "10.66.0.7:25566"',
+    );
   });
 
   it("whitelist vem de arquivo, vazio e sem permissão para os outros", () => {
@@ -212,7 +220,10 @@ describe("infra/vps/instalar-velocity.sh em simulação", () => {
     const fonte = readFileSync(SCRIPT, "utf8");
     expect(fonte).not.toMatch(/-----BEGIN [A-Z ]*PRIVATE KEY/);
     expect(fonte).not.toMatch(/(senha|password|token|secret)\s*=\s*["'][^"'$]+["']/i);
-    const unidade = readFileSync(resolve(import.meta.dirname, "../../infra/vps/systemd/sabre-velocity.service"), "utf8");
+    const unidade = readFileSync(
+      resolve(import.meta.dirname, "../../infra/vps/systemd/sabre-velocity.service"),
+      "utf8",
+    );
     expect(unidade).toMatch(/^User=sabre$/m);
     expect(unidade).toMatch(/^NoNewPrivileges=true$/m);
   });
