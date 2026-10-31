@@ -12,7 +12,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   *Confirmação:* e2e com cartório falso: dono edita, amigo vê a lista; não-dono não edita.
   *Origem:* lanc-1.4 · PR #210 · filha
 
-- [ ] **2.2 — Ligar `abrirJogo` em `depsReais` (com o app-1.3c)**
+- [x] **2.2 — Ligar `abrirJogo` em `depsReais` (com o app-1.3c)** (PR #217, 31/10/2026; **[P: Jogar abre o Prism no PC]**)
   *O que fazer:* o botão Jogar só copia o endereço até `abrirJogo` ser ligado em `deps-reais.ts` com `detectarPrism`, id da instância e endereço do grupo. Derivar `pastaMarcador` e `idInstancia` da MESMA instância (hoje o chamador passa as duas e `abrirJogo` não prova que combinam).
   *Arquivo:* `apps/desktop/src/main/deps-reais.ts`, `packages/nucleo/src/launcher/abrir.ts`
   **Tela no app:** não se aplica.
