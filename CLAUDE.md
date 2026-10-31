@@ -149,6 +149,9 @@ qual parte detalhada (`references/*.md`) ler para o tipo da mudança.
   de onda (aparece aninhada debaixo dela) e com a
   etiqueta `maxima-onda-<N>`; o número da onda é único no projeto e cada onda aberta tem uma linha em
   `docs/MILESTONE.md` › Em curso. Bastão do coordenador: `Máxima continuar — <data> (<n>º bastão)`.
+  Exemplo certo (aprovado pelo Eliel, 31/10): `Maxima retomar` › `Onda 20 — cartmel-1.1 · app-2.1 · …` › `Item 1 ·
+  cartmel-1.1 — Revogar token de PC`, `Item 2 · app-2.1 — …`. **Errado:** o chat da Máxima virar a própria onda e abrir os
+  itens direto debaixo dele (ex.: "Máxima — onda 58" com os itens): ele acumula o contexto de todos os itens.
 - **Autonomia da Máxima:** sozinha ela revisa, mergeia e gera a versão de teste; toma decisão **reversível** de
   detalhe (texto de tela, ordem de botão) e relata ("decidi por você", com o PR para desfazer). **Fica com o Eliel:**
   regra do grupo (quem pode hospedar, quem entra), custo ou cadastro em serviço externo (máquina na nuvem, domínio),
