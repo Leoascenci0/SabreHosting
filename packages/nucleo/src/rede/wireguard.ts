@@ -65,7 +65,7 @@ export function validarPacote(entrada: unknown): PacoteDeLigacao {
   if (!chaveValida(p.chave_publica_hub))
     throw new Error("Pacote de ligação inválido: chave pública do hub.");
   const ponto =
-    typeof p.endpoint === "string" ? /^[A-Za-z0-9.-]+:(\d{1,5})$/.exec(p.endpoint) : null;
+    typeof p.endpoint === "string" ? /^[A-Za-z0-9.-]+:([1-9]\d{0,4})$/.exec(p.endpoint) : null;
   if (!ponto || Number(ponto[1]) > 65535)
     throw new Error("Pacote de ligação inválido: endereço do hub.");
   if (p.allowed_ips !== REDE) throw new Error("Pacote de ligação inválido: rede permitida.");
@@ -98,7 +98,29 @@ export function montarConfigDoPc(entrada: unknown, chavePrivada: string): string
   ].join("\n");
 }
 
-const PROIBIDO_NA_CONFIG = /0\.0\.0\.0\/0|::\/0|^\s*(DNS|PreUp|PostUp|PreDown|PostDown)\s*=/im;
+/**
+ * Lista do permitido: a config só passa se for EXATAMENTE o que `montarConfigDoPc` produz com os próprios valores
+ * dela. Qualquer linha a mais (`PostUp`, `DNS`, `Table`, outro `[Peer]`), valor trocado (`AllowedIPs = 0.0.0.0/1,
+ * 128.0.0.0/1`) ou outra quebra de linha deixa o texto diferente e é recusada.
+ */
+function eDoMontador(cfg: string): boolean {
+  const v = new Map<string, string>();
+  for (const linha of cfg.split("\n")) {
+    const i = linha.indexOf(" = ");
+    if (i > 0) v.set(linha.slice(0, i), linha.slice(i + 3));
+  }
+  const pacote = {
+    ip_pc: v.get("Address")?.replace(/\/24$/, ""),
+    chave_publica_hub: v.get("PublicKey"),
+    endpoint: v.get("Endpoint"),
+    allowed_ips: v.get("AllowedIPs"),
+  };
+  try {
+    return montarConfigDoPc(pacote, v.get("PrivateKey") ?? "") === cfg;
+  } catch {
+    return false;
+  }
+}
 
 export interface OpcoesAplicar {
   /** Pasta do app para o .conf temporário (ex.: %LOCALAPPDATA%\SabreHosting\rede). */
@@ -122,8 +144,7 @@ export interface OpcoesAplicar {
 export async function aplicarNoWindows(cfg: string, op: OpcoesAplicar): Promise<void> {
   if ((op.plataforma ?? process.platform) !== "win32")
     throw new Error("A rede privada só pode ser instalada no Windows.");
-  if (PROIBIDO_NA_CONFIG.test(cfg))
-    throw new Error("Config recusada: ela não é só da rede privada.");
+  if (!eDoMontador(cfg)) throw new Error("Config recusada: ela não é só da rede privada.");
   const exec = op.exec ?? execReal;
   const execElevado = op.execElevado ?? criarExecutorElevado();
   const usuario = op.usuario ?? process.env.USERNAME ?? "";
@@ -148,16 +169,27 @@ export async function aplicarNoWindows(cfg: string, op: OpcoesAplicar): Promise<
   }
 
   const arquivo = join(op.pasta, `${NOME_DO_TUNEL}.conf`);
+  let falhou = false;
   try {
     await writeFile(arquivo, cfg, { mode: 0o600 });
     await execElevado(op.wireguardExe ?? WIREGUARD_EXE, ["/installtunnelservice", arquivo]);
   } catch (causa) {
+    falhou = true;
     throw new Error(
       "Não consegui instalar a rede privada. Ela precisa da permissão de administrador do Windows e do WireGuard instalado.",
       { cause: causa },
     );
   } finally {
-    await rm(arquivo, { force: true });
+    try {
+      await rm(arquivo, { force: true });
+    } catch (causa) {
+      // Se a instalação já falhou, o erro dela é o que importa; não deixar o do rm tomar o lugar.
+      if (!falhou)
+        throw new Error(
+          'A rede privada foi instalada, mas não consegui apagar o arquivo temporário com a chave. Apague a pasta "rede" do SabreHosting ou reinstale a rede privada.',
+          { cause: causa },
+        );
+    }
   }
 }
 
