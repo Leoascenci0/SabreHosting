@@ -47,14 +47,14 @@ item da mesma tela.
 
 ## Bloco 2 — Backups e configurações
 
-- [ ] **2.1 — Tela de backups e restaurar**
+- [x] **2.1 — Tela de backups e restaurar** (PR #157, 31/10/2026; 'De quem' = "Este PC"; Windows real ainda não conferido)
   *O que fazer:* lista (data, tamanho, de quem), restaurar com confirmação que diz nome e data.
   *Arquivo:* `apps/desktop/src/telas/backups.*`
   **Tela no app:** este item é a própria tela.
   *Confirmação:* E2E: cancelar não muda nada; confirmar chama `restaurar` do núcleo.
   *Depende de:* app-1.1, bkp-2.2
 
-- [ ] **2.2 — Tela de configurações**
+- [x] **2.2 — Tela de configurações** (PR #160, 31/10/2026; corte: Geral + Servidor; o resto vira appmel 1.7–1.9)
   *O que fazer:* reunir os campos criados nos outros itens (Geral, Servidor, Backups, Grupo), com valores padrão e
   validação.
   *Arquivo:* `apps/desktop/src/telas/configuracoes.*`
