@@ -11,7 +11,8 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Arquivo:* `apps/desktop/recursos/icone/`, `apps/desktop/src/main/principal.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* no Windows, com escala 100% e 150%, o ícone da bandeja aparece nítido.
-  *Origem:* app-1.1 · PR #70 · filha
+  *Origem:* app-1.1 · PR #70 · filha · **confirmado pelo Eliel no Windows (31/10): na bandeja o ícone fica pequeno e o
+  texto não se lê.**
 
 - [ ] **1.2 — Teste de chamada de fora recusada pela ponte**
   *O que fazer:* teste que prova que `veioDaPagina` (processo principal) recusa chamada cujo remetente não é a página
@@ -45,4 +46,13 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** não se aplica.
   *Confirmação:* E2E com cenário "dono sou eu, sem servidor".
   *Origem:* app-1.2 · PR #74 · filha + qa (baixa-média)
+
+- [ ] **1.6 — Endereço continua visível depois de Jogar**
+  *O que fazer:* no estado "Você está hospedando", depois de clicar em Jogar a frase "Endereço copiado. Cole no
+  Minecraft para entrar." toma o lugar do endereço, que some da tela. Mostrar o aviso por alguns segundos e voltar ao
+  endereço (ou mostrar os dois).
+  *Arquivo:* `apps/desktop/src/ui/tela.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* E2E: depois de Jogar, o endereço volta a aparecer.
+  *Origem:* teste do Eliel no Windows · 31/10/2026
 
