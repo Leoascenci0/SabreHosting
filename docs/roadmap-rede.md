@@ -33,7 +33,7 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
   *Confirmação:* teste em contêineres: dois "PCs" falam entre si só pela rede privada. **[P: prova real no PC]**
   *Depende de:* rede-1.1
 
-- [ ] **1.4 — Ajudante do WireGuard e sala de entrada**
+- [x] **1.4 — Ajudante do WireGuard e sala de entrada** (PR #85, 31/10/2026; troca para serviço próprio no rede-1.5)
   *Desenho aprovado:* `docs/superpowers/specs/2026-10-31-convite-do-grupo-design.md` §5.4, §5.5, §5.7.
   *O que fazer:* ajudante pequeno (root) liberado no `sudoers` para o usuário `sabre` **só** com os comandos
   `entrada-adicionar`, `entrada-trocar` (adiciona o definitivo antes de tirar o provisório) e `entrada-remover`,
@@ -45,6 +45,22 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
   *Confirmação:* simulação e contêiner: peer da sala de entrada não alcança outro PC; `sudoers` recusa comando fora da
   lista; argumento torto não muda nada.
   *Depende de:* rede-1.3
+
+- [ ] **1.5 — Ajudante como serviço próprio (sem sudo)**
+  *Decisão do Eliel (31/10/2026):* o cartório continua blindado (`NoNewPrivileges`, `ProtectSystem=strict`); quem tem
+  poder de root é só o ajudante, numa unidade systemd própria.
+  *O que fazer:* unidade `sabre-ajudante-entrada.service` (root, blindada no que der: só escreve em `/etc/wireguard` e
+  `/var/lib/sabre-wg`) escutando num socket unix (`/run/sabre/ajudante.sock`, 0660 root:sabre); pedido de uma linha
+  JSON `{comando, args}` com os mesmos três comandos e a mesma validação do `ajudante-entrada.sh`, uma conexão por
+  pedido, tempo-limite. Sai o `sudoers` do convite. No cartório, `criarAjudanteSudo` vira cliente do socket com o mesmo
+  contrato (`AjudanteEntrada`). Junto: regra `ufw allow in on wg0 to 10.66.0.1 port 7710 proto tcp` para os PCs
+  definitivos chegarem ao cartório (achado do rede-1.4) e uma fonte só para o endpoint do hub.
+  *Arquivo:* `infra/vps/wg/`, `infra/vps/systemd/`, `infra/vps/instalar.sh`, `infra/vps/LEIAME.md`,
+  `services/cartorio/src/ajudante.ts`, `services/cartorio/src/ambiente.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes: pedido fora da lista, JSON torto e argumento torto recusados sem mudar nada; cartório sem socket
+  falha fechado (503); unidade do cartório sem sudo nem `ReadWritePaths` novos; sudoers do convite removido.
+  *Depende de:* rede-1.4, cart-1.5
 
 ## Bloco 2 — Proxy
 

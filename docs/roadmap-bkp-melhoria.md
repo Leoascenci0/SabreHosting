@@ -35,7 +35,7 @@ Melhorias achadas durante os itens do `docs/roadmap-bkp.md` (skill `maxima` › 
 
 ## Bloco 2 — Guardar
 
-- [ ] **2.1 — Restauração: atalho no lugar do mundo e marcador garantido**
+- [x] **2.1 — Restauração: atalho no lugar do mundo e marcador garantido** (PR #86, 31/10/2026)
   *O que fazer:* `haMundo` com `lstat` (um link quebrado no lugar da pasta do mundo é recusado, não tratado como
   "inexistente"); se gravar o `RESTAURACAO-INCOMPLETA.txt` falhar, avisar em pt-BR em vez de engolir o erro.
   *Arquivo:* `packages/nucleo/src/backup/restaurar.ts`

@@ -28,7 +28,7 @@ _(nenhum item aberto; leva de 31/10 encerrada — retomar com `/maxima retomar`)
 **M2 — Primeira partida**
 - **Próxima onda (Eliel pediu app-1.1 primeiro, para ter prévia):** app-1.1 · rede-2.2 (plugin do proxy: trocar o host da vez + whitelist = redemel-2.1) ·
   cartmel-1.2/1.3 (endurecer a entrada do cartório; banco fora do diretório atual)
-- **Convite (desenho aprovado em 31/10):** rede-1.4 · cart-1.5 (podem ir juntos: cart-1.5 começa com o ajudante falso) →
+- **Convite (desenho aprovado em 31/10):** rede-1.4 ✅ (#85) · cart-1.5 → rede-1.5 (ajudante como serviço próprio, decisão de 31/10) →
   app-1.3 (com appmel-1.4) [P: prova real no PC]
 - Depois: redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
 - Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
