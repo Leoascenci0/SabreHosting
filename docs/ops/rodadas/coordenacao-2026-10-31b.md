@@ -15,6 +15,7 @@
 | 29 | lancmel-2.3 · 2.4 · appmel-1.12 · 1.14b · 1.16 | session_012qrjnvdGwPuWRwKRdMcMcm | f6d674d | fechada 18:04 → main 46dbcf6 |
 | 30 | appmel-1.9 · appmel-1.15 · consolidar melhorias #221–#226 | session_012qrjnuGuKVzHMX2SCj7Tsi | 46a3dcb | fechada 18:27 → main d720a63 |
 | 31 | hostmel-3.4 · appmel-1.17–1.20 · lancmel-2.5 | session_012qrjnsTgQ3fB3yh9ujYa3R | d720a63 | fechada 19:01 → main 68cd214 |
+| 32 | appmel-1.21 · drive-1.2 · lanc-2.3 · app-3.1 | session_012qrjnrw8sAVdmfS1nbdKTf | 68cd214 | fechada 19:24 → main 8f80bf8 |
 
 ## Relatórios
 
@@ -25,3 +26,5 @@
 - Recado 15:15/20:44 da coordenadora anterior (via mensagem): Eliel saiu, totalmente autônomo → trato como modo noite para perguntas (P vira ⏸️).
 - **Onda 30** (18:27): ✅ appmel-1.9 #228 · appmel-1.15 #229 · consolidação melhorias #230. ⏸️ appmel-1.14a (decisão de segurança do Eliel). P: provas Windows (túnel/Hospedar 1.9; leitor de tela real e e2e Electron 1.15). Decidi por você: Hospedar recusa sem o túnel privado (#228, reversível). Custo n/d. main d720a63 APROVADA. Sugeridos: hostmel-3.4, appmel-1.17–1.20, lancmel-2.5.
 - **Onda 31** (19:01): ✅ hostmel-3.4 #233 (Opus, qa integridade+segurança) · appmel-1.17 #231 · 1.18 #235 · 1.19 #236 · lancmel-2.5+appmel-1.20 #234 · controle #237. P: provas Windows. Decidi por você: 1.19 prova entre dois Hospedar; 3.4 em Opus (gatilho trava). Ficha S-16 (Vezes 1). main 68cd214 APROVADA. Sugerido: appmel-1.21.
+- **Onda 32** (19:24): ✅ appmel-1.21 #238 · drive-1.2 #239 (texto) · lanc-2.3 #240 (parcial) · app-3.1 #241 (config) · controle #242. P: testes no PC (lanc-2.3, drive-1.2, app-3.1). S-17 sugerida (Vezes 1). main 8f80bf8 APROVADA.
+- **Encerramento 19:25:** fila sem P vazia; domínios ainda 000. Heartbeat e watchdogs apagados. Bastão não passado (7 ondas, sem trabalho útil restante).
