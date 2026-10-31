@@ -1,0 +1,25 @@
+# Um pedido do cartório pelo socket: único processo com poder de root no convite (sem sudo no cartório).
+# Só escreve em /etc/wireguard e /var/lib/sabre-wg; só mexe na rede (wg set). Detalhes: infra/vps/LEIAME.md
+[Unit]
+Description=SabreHosting - ajudante da sala de entrada (um pedido)
+
+[Service]
+Type=exec
+User=root
+ExecStart=/opt/sabre/wg/ajudante-socket.sh
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+RuntimeMaxSec=10
+UnsetEnvironment=SABRE_SIMULAR SABRE_ESTADO SABRE_ENDPOINT_HUB SABRE_CHAVE_PUB_HUB
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/etc/wireguard /var/lib/sabre-wg
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+CapabilityBoundingSet=CAP_NET_ADMIN

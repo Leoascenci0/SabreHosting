@@ -1,8 +1,5 @@
-import { execFile } from "node:child_process";
 import { createPrivateKey, createPublicKey, randomBytes } from "node:crypto";
-
-/** Mesmo tipo de `packages/nucleo/src/launcher/prism.ts` (copiado: o cartório não importa o núcleo). */
-export type ExecArquivo = (arquivo: string, args: readonly string[]) => Promise<string>;
+import { createConnection } from "node:net";
 
 /** Pacote de ligação definitivo, igual ao que o `adicionar-pc.sh` imprime. */
 export interface PacoteLigacao {
@@ -22,7 +19,8 @@ export interface AjudanteEntrada {
   remover(ipProv: string): Promise<void>;
 }
 
-export const CAMINHO_AJUDANTE = "/opt/sabre/wg/ajudante-entrada.sh";
+/** Socket do serviço do ajudante (root:sabre 0660); o cartório não tem sudo (rede-1.5). */
+export const CAMINHO_SOCKET = "/run/sabre/ajudante.sock";
 const PRAZO_AJUDANTE_MS = 10_000;
 
 /** 44 caracteres de base64 = 32 bytes (o 43º símbolo só pode ter os 2 bits finais zerados). */
@@ -35,19 +33,39 @@ function final(ip: unknown): number {
 }
 export const naSalaDeEntrada = (ip: string) => final(ip) >= 200 && final(ip) <= 254;
 
-/** `execFile` sem shell, com tempo-limite: os argumentos vão em array, nada é interpretado. */
-export function criarExecSemShell(execFileFn: typeof execFile = execFile): ExecArquivo {
-  return (arquivo, args) =>
-    new Promise((ok, falha) => {
-      execFileFn(
-        arquivo,
-        [...args],
-        { shell: false, timeout: PRAZO_AJUDANTE_MS, encoding: "utf8" },
-        (erro, saida) => (erro ? falha(erro) : ok(saida)),
-      );
+/** Um pedido por conexão: uma linha JSON de ida, uma de volta, em até 10 s. */
+export function pedirAoSocket(
+  caminho: string,
+  comando: string,
+  args: string[],
+  prazoMs = PRAZO_AJUDANTE_MS,
+): Promise<string> {
+  return new Promise((ok, falha) => {
+    const conexao = createConnection(caminho);
+    let resposta = "";
+    const acabar = (erro?: Error) => {
+      conexao.destroy();
+      if (erro) falha(erro);
+      else ok(resposta);
+    };
+    conexao.setEncoding("utf8");
+    conexao.setTimeout(prazoMs, () =>
+      acabar(new Error("Ajudante do WireGuard não respondeu a tempo.")),
+    );
+    conexao.on("error", acabar);
+    conexao.on("end", () => acabar(new Error("Ajudante do WireGuard fechou sem responder.")));
+    conexao.on("data", (pedaco: string) => {
+      resposta += pedaco;
+      const fim = resposta.indexOf("\n");
+      if (fim >= 0) {
+        resposta = resposta.slice(0, fim);
+        acabar();
+      } else if (resposta.length > 4096)
+        acabar(new Error("Ajudante do WireGuard devolveu uma saída ilegível."));
     });
+    conexao.end(`${JSON.stringify({ comando, args })}\n`);
+  });
 }
-export const execSemShell = criarExecSemShell();
 
 /** A saída do ajudante é conferida como entrada de fora: um campo torto não chega ao PC. */
 function lerJson(saida: string): Record<string, unknown> {
@@ -60,21 +78,25 @@ function lerJson(saida: string): Record<string, unknown> {
   throw new Error("Ajudante do WireGuard devolveu uma saída ilegível.");
 }
 
-/** O real: `sudo -n <caminho> entrada-* …`. O sudoers libera só esse caminho para o usuário do cartório. */
-export function criarAjudanteSudo(
-  exec: ExecArquivo = execSemShell,
-  caminho = CAMINHO_AJUDANTE,
-): AjudanteEntrada {
-  const rodar = (...args: string[]) => exec("sudo", ["-n", caminho, ...args]);
+/** O real: pedido pelo socket do serviço do ajudante. Recusa do ajudante (`{"codigo":…}`) vira erro. */
+export function criarAjudanteSocket(caminho = CAMINHO_SOCKET): AjudanteEntrada {
+  const rodar = async (comando: string, ...args: string[]) => {
+    const r = lerJson(await pedirAoSocket(caminho, comando, args));
+    if ("codigo" in r)
+      throw new Error(
+        `Ajudante do WireGuard recusou o pedido: ${String(r["erro"] ?? r["codigo"])}`,
+      );
+    return r;
+  };
   return {
     async adicionar(chavePub) {
-      const { ip } = lerJson(await rodar("entrada-adicionar", chavePub));
+      const { ip } = await rodar("entrada-adicionar", chavePub);
       if (typeof ip !== "string" || !naSalaDeEntrada(ip))
         throw new Error("Ajudante do WireGuard devolveu um IP fora da sala de entrada.");
       return ip;
     },
     async trocar(ipProv, nome, chavePub) {
-      const p = lerJson(await rodar("entrada-trocar", ipProv, nome, chavePub));
+      const p = await rodar("entrada-trocar", ipProv, nome, chavePub);
       const n = final(p["ip_pc"]);
       const endpoint = typeof p["endpoint"] === "string" ? p["endpoint"] : "";
       if (

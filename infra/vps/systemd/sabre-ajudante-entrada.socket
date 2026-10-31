@@ -1,0 +1,16 @@
+# Socket do ajudante da sala de entrada (rede-1.5): só root e o grupo sabre (o cartório) conectam.
+# Uma conexão = um pedido = uma execução de sabre-ajudante-entrada@.service (Accept=yes).
+[Unit]
+Description=SabreHosting - socket do ajudante da sala de entrada (WireGuard)
+
+[Socket]
+ListenStream=/run/sabre/ajudante.sock
+SocketUser=root
+SocketGroup=sabre
+SocketMode=0660
+DirectoryMode=0755
+Accept=yes
+MaxConnections=8
+
+[Install]
+WantedBy=sockets.target

@@ -83,7 +83,8 @@ export async function rodarComando(
     if ((comando !== "criar-convite-dono" && !novo) || !nomePc) throw new Error(USO);
     const ajudante = ajudanteDoAmbiente(env);
     const grupo = grupoDoAmbiente(env);
-    if (!ajudante) throw new Error("ajudante do WireGuard não instalado (SABRE_AJUDANTE_ENTRADA).");
+    if (!ajudante)
+      throw new Error("ajudante do WireGuard não instalado (socket SABRE_AJUDANTE_SOCKET).");
     if (!grupo)
       throw new Error(
         "dados do grupo ausentes (SABRE_GRUPO_NOME, SABRE_GRUPO_ENDERECO_JOGAR, SABRE_HUB_*).",

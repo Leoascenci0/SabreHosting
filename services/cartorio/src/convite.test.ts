@@ -4,14 +4,7 @@ import { join } from "node:path";
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import { writeFileSync } from "node:fs";
-import type { execFile } from "node:child_process";
-import {
-  type AjudanteEntrada,
-  type PacoteLigacao,
-  criarAjudanteSudo,
-  criarExecSemShell,
-  gerarParProvisorio,
-} from "./ajudante.js";
+import { type AjudanteEntrada, type PacoteLigacao, gerarParProvisorio } from "./ajudante.js";
 import { ajudanteDoAmbiente } from "./ambiente.js";
 import { abrirBanco, apagarConvitesVencidos, criarConvite, donoAtual } from "./banco.js";
 import { hashSegredo } from "./segredo.js";
@@ -452,7 +445,7 @@ describe("comandos de root: criar-convite-dono e trocar-dono", () => {
     pastas.push(pasta);
     const env = {
       SABRE_CARTORIO_BANCO: join(pasta, "c.db"),
-      SABRE_AJUDANTE_ENTRADA: join(pasta, "nao-existe.sh"),
+      SABRE_AJUDANTE_SOCKET: join(pasta, "nao-existe.sock"),
       SABRE_GRUPO_NOME: "G",
       SABRE_GRUPO_ENDERECO_JOGAR: "jogar.exemplo",
       SABRE_HUB_ENDPOINT: "hub.exemplo:51820",
@@ -470,113 +463,21 @@ describe("comandos de root: criar-convite-dono e trocar-dono", () => {
   });
 });
 
-describe("ajudante pelo sudo (contrato do rede-1.4)", () => {
-  function comSaida(saida: string) {
-    const chamadas: Array<[string, readonly string[]]> = [];
-    const ajudante = criarAjudanteSudo((arquivo, args) => {
-      chamadas.push([arquivo, args]);
-      return Promise.resolve(saida);
-    }, "/opt/sabre/wg/ajudante-entrada.sh");
-    return { ajudante, chamadas };
-  }
-  const CHAVE = gerarParProvisorio().publica;
-
-  it("chama sudo -n <caminho> <comando> <args> em array, sem shell", async () => {
-    const a = comSaida('{"ip":"10.66.0.201"}');
-    expect(await a.ajudante.adicionar(CHAVE)).toBe("10.66.0.201");
-    const pacote = {
-      ip_pc: "10.66.0.12",
-      chave_publica_hub: CHAVE,
-      endpoint: "hub.exemplo:51820",
-      allowed_ips: "10.66.0.0/24",
-    };
-    const t = comSaida(JSON.stringify(pacote));
-    expect(await t.ajudante.trocar("10.66.0.201", "pc-da-ana", CHAVE)).toEqual(pacote);
-    const r = comSaida("");
-    await r.ajudante.remover("10.66.0.201");
-    expect([...a.chamadas, ...t.chamadas, ...r.chamadas]).toEqual([
-      ["sudo", ["-n", "/opt/sabre/wg/ajudante-entrada.sh", "entrada-adicionar", CHAVE]],
-      [
-        "sudo",
-        [
-          "-n",
-          "/opt/sabre/wg/ajudante-entrada.sh",
-          "entrada-trocar",
-          "10.66.0.201",
-          "pc-da-ana",
-          CHAVE,
-        ],
-      ],
-      ["sudo", ["-n", "/opt/sabre/wg/ajudante-entrada.sh", "entrada-remover", "10.66.0.201"]],
-    ]);
-  });
-
-  it("saída torta do ajudante é recusada (IP fora da faixa, pacote inválido, JSON ilegível)", async () => {
-    await expect(comSaida('{"ip":"10.66.0.12"}').ajudante.adicionar(CHAVE)).rejects.toThrow(
-      /sala de entrada/,
-    );
-    await expect(comSaida("ERRO").ajudante.adicionar(CHAVE)).rejects.toThrow(/ilegível/);
-    for (const torto of [
-      {
-        ip_pc: "10.66.0.201",
-        chave_publica_hub: CHAVE,
-        endpoint: "h:1",
-        allowed_ips: "10.66.0.0/24",
-      },
-      { ip_pc: "10.66.0.5", chave_publica_hub: "x", endpoint: "h:1", allowed_ips: "10.66.0.0/24" },
-      {
-        ip_pc: "10.66.0.5",
-        chave_publica_hub: CHAVE,
-        endpoint: "h\n:1",
-        allowed_ips: "10.66.0.0/24",
-      },
-      { ip_pc: "10.66.0.5", chave_publica_hub: CHAVE, endpoint: "h:1", allowed_ips: "0.0.0.0/0\n" },
-    ]) {
-      await expect(
-        comSaida(JSON.stringify(torto)).ajudante.trocar("10.66.0.201", "pc", CHAVE),
-      ).rejects.toThrow(/inválido/);
-    }
-  });
-});
-
 describe("revisão do PR #84", () => {
-  it("execSemShell: execFile com argumentos em array, shell desligado e tempo-limite de 10 s", async () => {
-    const vistos: unknown[][] = [];
-    const espiao = ((...args: unknown[]) => {
-      vistos.push(args);
-      const pronto = args[3] as (e: Error | null, saida: string) => void;
-      pronto(null, '{"ip":"10.66.0.200"}');
-    }) as unknown as typeof execFile;
-    const exec = criarExecSemShell(espiao);
-    const chave = gerarParProvisorio().publica;
-    expect(await exec("sudo", ["-n", "/x.sh", "entrada-adicionar", `${chave}; rm -rf /`])).toBe(
-      '{"ip":"10.66.0.200"}',
-    );
-    expect(vistos).toHaveLength(1);
-    const [arquivo, args, opcoes] = vistos[0] ?? [];
-    expect(arquivo).toBe("sudo");
-    expect(args).toEqual(["-n", "/x.sh", "entrada-adicionar", `${chave}; rm -rf /`]);
-    expect(opcoes).toMatchObject({ shell: false, timeout: 10_000 });
-    const falhou = criarExecSemShell(((...a: unknown[]) => {
-      (a[3] as (e: Error | null, s: string) => void)(new Error("código 1"), "");
-    }) as unknown as typeof execFile);
-    await expect(falhou("sudo", [])).rejects.toThrow(/código 1/);
-  });
-
-  it("ajudanteDoAmbiente: arquivo ausente → sem ajudante → POST /convites 503 (falha fechada, nunca um falso)", async () => {
+  it("ajudanteDoAmbiente: socket ausente → sem ajudante → POST /convites 503 (falha fechada, nunca um falso)", async () => {
     const pasta = mkdtempSync(join(tmpdir(), "sabre-amb-"));
     pastas.push(pasta);
-    const ausente = join(pasta, "nao-existe.sh");
-    expect(ajudanteDoAmbiente({ SABRE_AJUDANTE_ENTRADA: ausente })).toBeUndefined();
-    const existe = join(pasta, "ajudante.sh");
+    const ausente = join(pasta, "nao-existe.sock");
+    expect(ajudanteDoAmbiente({ SABRE_AJUDANTE_SOCKET: ausente })).toBeUndefined();
+    const existe = join(pasta, "ajudante.sock");
     writeFileSync(existe, "");
-    expect(ajudanteDoAmbiente({ SABRE_AJUDANTE_ENTRADA: existe })).toBeDefined();
+    expect(ajudanteDoAmbiente({ SABRE_AJUDANTE_SOCKET: existe })).toBeDefined();
 
     const banco = abrirBanco(join(pasta, "c.db"));
     const app = criarCartorio({
       banco,
       logger: { level: "silent" },
-      ajudante: ajudanteDoAmbiente({ SABRE_AJUDANTE_ENTRADA: ausente }),
+      ajudante: ajudanteDoAmbiente({ SABRE_AJUDANTE_SOCKET: ausente }),
       grupo: GRUPO,
     });
     fechar.push(() => app.close());
