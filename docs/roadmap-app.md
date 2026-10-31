@@ -9,7 +9,7 @@ item da mesma tela.
 
 ## Bloco 1 — Casca
 
-- [x] **1.1 — Janela, bandeja e design system** (PR #70, 31/10/2026; confirmação no Windows pendente)
+- [x] **1.1 — Janela, bandeja e design system** (PR #70, 31/10/2026; confirmado no Windows 11 pelo Eliel em 31/10: janela, tema escuro, ícone na bandeja, fechar esconde; "Abrir com o Windows" ainda sem tela)
   *O que fazer:* Electron com janela única, ícone na bandeja, iniciar com o Windows (opcional), tokens de cor/espaço
   claro e escuro, `docs/design-system.md` curto. Ponte segura tela ↔ núcleo (`contextIsolation`, sem `nodeIntegration`).
   *Arquivo:* `apps/desktop/src/`, `docs/design-system.md`
@@ -17,7 +17,7 @@ item da mesma tela.
   *Confirmação:* teste E2E (Playwright para Electron) abre a janela; `audit` do impeccable sem crítico.
   *Depende de:* base-1.1 · D4 decidida (ícone em apps/desktop/recursos/icone/)
 
-- [x] **1.2 — Tela inicial: Jogar / Hospedar e status** (PR #74, 31/10/2026; confirmação no Windows pendente)
+- [x] **1.2 — Tela inicial: Jogar / Hospedar e status** (PR #74, 31/10/2026; modo demonstração conferido no Windows pelo Eliel em 31/10: Hospedar e Jogar)
   *O que fazer:* estado vindo do núcleo/cartório: "Servidor no PC do X" + Jogar (copia o endereço / abre o launcher);
   "Ninguém hospedando" + Hospedar; progresso em toda ação demorada.
   *Arquivo:* `apps/desktop/src/telas/inicio.*`
