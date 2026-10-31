@@ -104,3 +104,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** não se aplica (mensagem no assistente do app-1.3b).
   *Confirmação:* teste com arquivo adulterado.
   *Origem:* app-1.3a · PR #207 · qa
+
+- [ ] **1.13 — Campo "Pasta do SabreHosting" e fundir os pedidos de administrador**
+  *O que fazer:* campo em Configurações › Geral para ver/trocar a pasta-base gravada pelo assistente (hoje `pastaBase` fica só em `boas-vindas.json` e não alimenta `SABRE_PASTA_*`; ligar no app-1.3c); fundir os 3 pedidos de administrador (instala provisório, desinstala, instala definitiva) em um.
+  *Arquivo:* `apps/desktop/src/main/boas-vindas.ts`, `entrada-no-grupo.ts`, `apps/desktop/src/ui/`
+  **Tela no app:** Configurações › Geral › "Pasta do SabreHosting".
+  *Confirmação:* teste: trocar a pasta atualiza onde servidor e mundos são lidos; 1 só chamada do executor elevado **[P: UAC no Windows]**.
+  *Origem:* app-1.3b · PR #211 · qa
