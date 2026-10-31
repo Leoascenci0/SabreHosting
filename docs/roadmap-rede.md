@@ -46,7 +46,7 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
   lista; argumento torto não muda nada.
   *Depende de:* rede-1.3
 
-- [ ] **1.5 — Ajudante como serviço próprio (sem sudo)**
+- [x] **1.5 — Ajudante como serviço próprio (sem sudo)** (PR #97, 31/10/2026; prova na máquina real fica no cart-2.2 [P])
   *Decisão do Eliel (31/10/2026):* o cartório continua blindado (`NoNewPrivileges`, `ProtectSystem=strict`); quem tem
   poder de root é só o ajudante, numa unidade systemd própria.
   *O que fazer:* unidade `sabre-ajudante-entrada.service` (root, blindada no que der: só escreve em `/etc/wireguard` e
