@@ -216,7 +216,7 @@ export async function servirArquivos(opcoes: OpcoesServidor): Promise<Servidor> 
 
 export interface OpcoesPedido extends Pick<
   OpcoesDownload,
-  "destino" | "tentativas" | "tamanhoMaximo" | "tempoSemDados" | "tempoTotal"
+  "destino" | "tentativas" | "tamanhoMaximo" | "tempoSemDados" | "tempoTotal" | "limiteBytesPorSeg"
 > {
   /** IP do PC que hospeda, na rede privada. */
   endereco: string;

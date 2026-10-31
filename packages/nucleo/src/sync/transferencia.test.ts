@@ -342,6 +342,22 @@ describe("cliente", () => {
     await baixar(destino);
     expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
   });
+  it("com limite de banda, demora o que a banda manda e o arquivo chega igual (syncmel-1.9b)", async () => {
+    await subir();
+    const destino = join(pasta, "lento.pacote");
+    const t0 = Date.now();
+    await pedirArquivo({
+      endereco: "127.0.0.1",
+      porta: servidor?.porta ?? 0,
+      sha256: HASH,
+      token: CREDENCIAL,
+      destino,
+      permitirLoopbackParaTeste: true,
+      limiteBytesPorSeg: 4000, // ~7,5 kB a 4 kB/s: pelo menos ~1,5 s
+    });
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(1200);
+    expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
+  });
   it("conexão cortada no meio retoma com Range e o hash final é igual", async () => {
     const pedidos: Array<string | undefined> = [];
     const autorizacoes: Array<string | undefined> = [];

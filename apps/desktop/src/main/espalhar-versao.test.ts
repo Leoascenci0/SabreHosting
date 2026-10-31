@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo } from "../../../../packages/nucleo/test/ajuda/mundos.js";
 import { gerarManifesto } from "@sabrehosting/nucleo/backup/manifesto";
 import { hashDoArquivo } from "@sabrehosting/nucleo/integridade/hash";
@@ -83,6 +83,15 @@ describe("criarEspalhador", () => {
     expect(r.estado).toBe("atualizado");
     expect(hashesDoMundo(c.mundo)).toEqual(hashesDoMundo(c.host));
     expect(c.eventos).toEqual(["pegar", "copia 4", "soltar"]);
+  });
+
+  it("passa o limite de banda ao núcleo a cada arquivo e o mundo chega igual (1.9b)", async () => {
+    const c = await cenario();
+    const limite = vi.fn(() => 50_000_000);
+    const r = await c.montar({ limiteBytesPorSeg: limite })(...c.args);
+    expect(r.estado).toBe("atualizado");
+    expect(limite).toHaveBeenCalled();
+    expect(hashesDoMundo(c.mundo)).toEqual(hashesDoMundo(c.host));
   });
 
   it("com o servidor rodando recusa antes de pegar a vez e o mundo não muda", async () => {

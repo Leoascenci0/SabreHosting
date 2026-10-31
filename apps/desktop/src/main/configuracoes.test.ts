@@ -17,6 +17,7 @@ const valido = {
   intervaloBackupMin: 30,
   quantosGuardar: 5,
   quantosGuardarHistorico: 5,
+  limiteBandaMBs: 10,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -27,6 +28,7 @@ const padrao = {
   intervaloBackupMin: 10,
   quantosGuardar: 10,
   quantosGuardarHistorico: 10,
+  limiteBandaMBs: 10,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -47,6 +49,7 @@ describe("configurações", () => {
       intervaloBackupMin: 10,
       quantosGuardar: 10,
       quantosGuardarHistorico: 10,
+      limiteBandaMBs: 10,
       historicoLongoLigado: false,
       historicoLongoPasta: "",
     });
@@ -183,6 +186,24 @@ describe("histórico longo numa pasta (drive-1.1a)", () => {
       expect(existsSync(arquivo())).toBe(false);
     },
   );
+
+  it.each([0, -1, 1.5, 1001, Number.NaN])(
+    "limite de banda %j é recusado, marca o campo e nada é gravado",
+    (v) => {
+      const c = criar();
+      const r = c.salvar({ ...valido, limiteBandaMBs: v });
+      expect(r.ok).toBe(false);
+      expect(r.ok === false && r.campo).toBe("banda");
+      expect(r.ok === false && r.mensagem).toContain("Limite de banda");
+      expect(existsSync(arquivo())).toBe(false);
+    },
+  );
+
+  it("limite de banda válido é gravado e lido de volta", () => {
+    const c = criar();
+    expect(c.salvar({ ...valido, limiteBandaMBs: 25 }).ok).toBe(true);
+    expect(c.ler().limiteBandaMBs).toBe(25);
+  });
 
   it("salvar quantosGuardarHistorico grava o valor; texto no lugar do número é recusado", () => {
     const c = criar();
