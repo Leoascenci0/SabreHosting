@@ -16,6 +16,8 @@ function deps(extra: Partial<DepsInicio> = {}): DepsInicio {
   return {
     lerTrava: async () => ({ dono: null }),
     hospedar: async () => ({ servidor: servidorFalso() }),
+    eu: async () => ({ id: 1 }),
+    servidorOrfao: async () => false,
     endereco: "10.0.0.5:25565",
     copiar: vi.fn(),
     ...extra,
@@ -57,6 +59,52 @@ describe("estado da tela inicial", () => {
       },
     });
     expect(await criarInicio(d).estado()).toEqual({ tipo: "sem-cartorio", motivo: "acesso" });
+  });
+
+  describe("dono da trava sou eu (app reaberto)", () => {
+    const minha = async () => ({ dono: { id: 1, nome: "Este PC" } });
+    const outro = { tipo: "outro", nomePc: "Este PC", endereco: "10.0.0.5:25565" };
+
+    it("dono sou eu sem servidor vira ninguém (Hospedar de novo)", async () => {
+      expect(await criarInicio(deps({ lerTrava: minha })).estado()).toEqual({ tipo: "ninguem" });
+    });
+
+    it("dono sou eu com órfão vivo não oferece Hospedar", async () => {
+      const d = deps({ lerTrava: minha, servidorOrfao: async () => true });
+      expect(await criarInicio(d).estado()).toEqual(outro);
+    });
+
+    it("falha ao conferir órfão ou quem sou eu: mantém o estado atual", async () => {
+      const falha = async () => {
+        throw Object.assign(new Error("x"), { tipo: "rede" });
+      };
+      expect(await criarInicio(deps({ lerTrava: minha, servidorOrfao: falha })).estado()).toEqual(
+        outro,
+      );
+      expect(await criarInicio(deps({ lerTrava: minha, eu: falha })).estado()).toEqual(outro);
+    });
+
+    it("pergunta quem sou eu ao cartório uma vez só", async () => {
+      const eu = vi.fn(async () => ({ id: 1 }));
+      const inicio = criarInicio(deps({ lerTrava: minha, eu }));
+      await inicio.estado();
+      await inicio.estado();
+      expect(eu).toHaveBeenCalledTimes(1);
+    });
+
+    it("com o Hospedar desta sessão em curso não vira ninguém", async () => {
+      let liberar: () => void = () => {};
+      const d = deps({
+        lerTrava: minha,
+        hospedar: () => new Promise((ok) => (liberar = () => ok({ servidor: servidorFalso() }))),
+      });
+      const inicio = criarInicio(d);
+      const subindo = inicio.hospedar();
+      expect(await inicio.estado()).toEqual(outro);
+      liberar();
+      await subindo;
+      expect((await inicio.estado()).tipo).toBe("eu");
+    });
   });
 });
 
