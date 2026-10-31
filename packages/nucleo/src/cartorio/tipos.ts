@@ -286,3 +286,20 @@ export function validarEntradaNoGrupo(v: unknown): EntradaNoGrupo {
   const o = objeto(v, "entrada no grupo");
   return { token: texto(o, "token"), pacote: validarPacote(o.pacote) };
 }
+
+/** `201` de `POST /versoes`. */
+export function validarVersaoCriada(v: unknown): number {
+  return inteiro(objeto(v, "versão criada"), "numero", 1);
+}
+
+/** `201` de `PUT /versoes/:n/pacote`: o que a nuvem diz ter guardado. */
+export function validarPacoteGuardado(v: unknown): {
+  versao: number;
+  sha256: string;
+  bytes: number;
+} {
+  const o = objeto(v, "pacote guardado");
+  const sha256 = texto(o, "sha256");
+  if (!/^[0-9a-f]{64}$/.test(sha256)) throw new Error("Resposta inválida do cartório: sha256.");
+  return { versao: inteiro(o, "versao", 1), sha256, bytes: inteiro(o, "bytes") };
+}

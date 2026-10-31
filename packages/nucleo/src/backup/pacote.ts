@@ -20,6 +20,8 @@ export interface PacoteCriado {
   caminho: string;
   sha256: string;
   tamanho: number;
+  /** O `manifesto.json` exato que entrou no pacote: hash e totais (o `POST /versoes` do cartório registra estes). */
+  manifesto: { sha256: string; arquivos: number; bytes: number };
 }
 
 const NOME_MANIFESTO = "manifesto.json";
@@ -119,6 +121,12 @@ export async function criarPacote(
       `O mundo tem um arquivo chamado "${NOME_MANIFESTO}", nome reservado do pacote. Renomeie esse arquivo e tente de novo.`,
     );
   }
+  const json = JSON.stringify(manifesto);
+  const resumo = {
+    sha256: createHash("sha256").update(json).digest("hex"),
+    arquivos: manifesto.arquivos.length,
+    bytes: manifesto.arquivos.reduce((t, a) => t + a.tamanho, 0),
+  };
   const parcial = `${destino}.parcial`;
   const desistiu = (): boolean => sinal?.aborted === true || confirmar?.() === false;
   let renomeado = false;
@@ -127,7 +135,7 @@ export async function criarPacote(
     await mkdir(dirname(destino), { recursive: true });
     await compactarEmWorker(
       pastaDoMundo,
-      JSON.stringify(manifesto),
+      json,
       manifesto.arquivos.map((a) => a.caminho),
       parcial,
       sinal,
@@ -137,7 +145,7 @@ export async function criarPacote(
     await rename(parcial, destino);
     renomeado = true;
     if (desistiu()) throw new PacoteDescartado("descartado durante o rename");
-    return { caminho: destino, sha256: hash, tamanho };
+    return { caminho: destino, sha256: hash, tamanho, manifesto: resumo };
   } catch (erro) {
     await rm(parcial, { force: true });
     if (renomeado) await rm(destino, { force: true });

@@ -70,6 +70,7 @@ describe("janela do SabreHosting", () => {
       "backups",
       "configuracoes",
       "grupo",
+      "importar",
       "inicio",
       "versao",
       "versoes",

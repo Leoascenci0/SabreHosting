@@ -67,6 +67,26 @@
           <button type="button" class="secundario" id="backups-cancelar">Cancelar</button>
         </div>
       </div>
+      <button type="button" class="secundario" id="importar-abrir">Importar mundo</button>
+      <p class="detalhe" id="importar-status" role="status" hidden></p>
+      <p class="erro" id="importar-erro" role="alert" hidden></p>
+      <div
+        class="confirmacao importar"
+        id="importar-painel"
+        role="alertdialog"
+        aria-labelledby="importar-titulo"
+        aria-describedby="importar-explica"
+        hidden
+      >
+        <p class="titulo" id="importar-titulo"></p>
+        <p class="detalhe" id="importar-info"></p>
+        <ul class="avisos" id="importar-avisos"></ul>
+        <p id="importar-explica"></p>
+        <div class="acoes">
+          <button type="button" class="principal" id="importar-confirmar">Importar</button>
+          <button type="button" class="secundario" id="importar-cancelar">Cancelar</button>
+        </div>
+      </div>
       <button type="button" class="secundario" id="voltar-backups">Voltar</button>
     </main>
     <main class="cartao" id="tela-config" aria-labelledby="titulo-config" hidden>
@@ -217,5 +237,6 @@
     <script type="module" src="tela.js"></script>
     <script type="module" src="configuracoes.js"></script>
     <script type="module" src="backups.js"></script>
+    <script type="module" src="importar.js"></script>
   </body>
 </html>
