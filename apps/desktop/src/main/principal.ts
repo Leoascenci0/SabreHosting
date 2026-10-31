@@ -652,6 +652,7 @@ if (!app.requestSingleInstanceLock()) {
         dados,
         criarCofreSeguro(safeStorage, join(dados, ARQUIVO_COFRE)),
         process.env,
+        !app.isPackaged,
       );
       ambientePc = ambienteLegado(pc);
     }
