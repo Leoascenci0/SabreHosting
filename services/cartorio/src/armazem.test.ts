@@ -316,7 +316,7 @@ describe("armazém: migração v4 → v5", () => {
     v4.close();
     const banco = abrirBanco(caminho);
     fechar.push(() => banco.close());
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 8 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 9 }]);
     expect(banco.prepare("SELECT numero, epoca, pc_id FROM versoes").all()).toEqual([
       { numero: 1, epoca: 3, pc_id: 1 },
     ]);

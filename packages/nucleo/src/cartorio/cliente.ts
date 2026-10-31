@@ -9,6 +9,7 @@ import {
   validarEntradaNoGrupo,
   validarEstadoTrava,
   validarGrupo,
+  validarConfigGrupo,
   validarEu,
   validarListaPcs,
   validarRespostaAtualizacao,
@@ -71,7 +72,7 @@ function conferirUrl(url: string): string {
 }
 
 interface Pedido<T> {
-  metodo: "GET" | "POST";
+  metodo: "GET" | "POST" | "PUT";
   rota: string;
   corpo?: object;
   /** Só GETs e `/trava/renovar`: `pegar`/`passar`/`soltar` mudam a época e não podem ir duas vezes. */
@@ -270,6 +271,20 @@ export function criarCliente(opcoes: OpcoesCliente) {
       atualizacao("/atualizacao/renovar", true, { epoca }, sinal),
     soltarAtualizacao: (epoca: number) => atualizacao("/atualizacao/soltar", false, { epoca }),
     grupo: () => ler("/grupo", validarGrupo),
+    /** Versão do Minecraft do grupo (todos os PCs usam a mesma). */
+    lerConfigGrupo: () => ler("/grupo/config", validarConfigGrupo),
+    /**
+     * Só o dono, com o servidor parado e ninguém atualizando (senão o cartório recusa com 409 e a mensagem em pt-BR
+     * vem no erro). Repete: gravar o mesmo par duas vezes dá o mesmo resultado.
+     */
+    gravarConfigGrupo: (versaoMinecraft: string, sha1Manifesto: string) =>
+      chamar({
+        metodo: "PUT",
+        rota: "/grupo/config",
+        corpo: { versaoMinecraft, sha1Manifesto },
+        repetir: true,
+        validar: validarConfigGrupo,
+      }),
     /** Este PC diz que agora tem a versão N inteira (substitui a anterior). Repete: dizer duas vezes não muda nada. */
     informarCopia: (versao: number) =>
       chamar<undefined>({ metodo: "POST", rota: "/copias", corpo: { versao }, repetir: true }),
