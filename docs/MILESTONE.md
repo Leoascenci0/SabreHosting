@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-_(nenhuma onda aberta; leva de 6 ondas concluída em 31/10/2026 — retomar com `/maxima retomar`)_
+Leva 31/10: app-1.1 ✅ (#70) · cartmel-1.2/1.3 🔄 (#69) · rede-2.2 ⏸️ [P: liberar repo.papermc.io na rede do ambiente]
 
 ## Fila
 
@@ -49,18 +49,21 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Backlog
 
+- Melhorias do app: `docs/roadmap-app-melhoria.md` (appmel-1.1, 1.2).
 - Melhorias do launcher: `docs/roadmap-lanc-melhoria.md` (lancmel-1.1).
 - Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-1.1; 2.1 obrigatório antes de ligar o proxy; 2.2; 2.3 [P]).
 - Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
 - Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1 a 1.4 e 1.6; 1.5 feito).
 - Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
-- Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1 e 1.2, CI).
+- Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1, 1.2 e 1.5, CI).
 
 - Bedrock via Geyser (se D1 = Java + Bedrock depois).
 - App para Linux e macOS (o núcleo já é multiplataforma).
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 31/10/2026 — app-1.1 janela, bandeja e design system (#70).
 
 - 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
 

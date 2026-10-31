@@ -9,7 +9,7 @@ item da mesma tela.
 
 ## Bloco 1 — Casca
 
-- [ ] **1.1 — Janela, bandeja e design system**
+- [x] **1.1 — Janela, bandeja e design system** (PR #70, 31/10/2026; confirmação no Windows pendente)
   *O que fazer:* Electron com janela única, ícone na bandeja, iniciar com o Windows (opcional), tokens de cor/espaço
   claro e escuro, `docs/design-system.md` curto. Ponte segura tela ↔ núcleo (`contextIsolation`, sem `nodeIntegration`).
   *Arquivo:* `apps/desktop/src/`, `docs/design-system.md`

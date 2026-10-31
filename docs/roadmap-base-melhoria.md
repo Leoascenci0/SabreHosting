@@ -43,3 +43,12 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   *Confirmação:* commit de teste com marcador → REPROVADO; `.md` com `=======` como sublinhado de título não é falso positivo
   (exigir o trio ou a linha exata `=======` entre `<<<<<<<` e `>>>>>>>`).
   *Origem:* onda 6 · orquestradora
+
+- [ ] **1.5 — Teste da trava contra o cartório real estável sob carga**
+  *O que fazer:* `tests/integracao/hospedar-cartorio.test.ts` › "renovando, a trava passa do prazo e outro PC continua
+  recusado; parou, solta" falhou 1 vez com outro processo pesado rodando ao lado (8 de 8 verdes isolado). Trocar a
+  espera por tempo real por relógio injetado ou dar folga medida (ver ficha S-01).
+  *Arquivo:* `tests/integracao/hospedar-cartorio.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* 4 `npx vitest run` em paralelo, 3 vezes seguidas, sem falha.
+  *Origem:* rodada 31/10 · vistoria do PR #70
