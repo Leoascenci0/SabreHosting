@@ -1,6 +1,18 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, nativeTheme, Tray } from "electron";
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  ipcMain,
+  Menu,
+  nativeImage,
+  nativeTheme,
+  Tray,
+} from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
+import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
+import { criarInicio, erroSemGrupo, type DepsInicio, type Inicio } from "./inicio.js";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida } from "./seguranca.js";
 
@@ -79,7 +91,62 @@ function veioDaPagina(evento: IpcMainInvokeEvent): boolean {
   return navegacaoPermitida(evento.senderFrame?.url ?? "", PAGINA);
 }
 
-function registrarPonte(): void {
+// Cartório, endereço e pasta do servidor vêm do ambiente até a tela de primeira vez (app-1.3); ver .env.exemplo.
+function depsReais(): DepsInicio {
+  const { SABRE_CARTORIO_URL: url, SABRE_CARTORIO_TOKEN: token } = process.env;
+  const { SABRE_PASTA_SERVIDOR: pasta, SABRE_JAVA: java, SABRE_NEOFORGE: neoforge } = process.env;
+  let cliente: ReturnType<typeof criarCliente> | undefined;
+  let falha: unknown;
+  if (url && token) {
+    try {
+      cliente = criarCliente({ url, cofre: { guardar: async () => {}, ler: async () => token } });
+    } catch (e) {
+      falha = e;
+    }
+  }
+  const exigir = () => {
+    if (cliente) return cliente;
+    throw falha ?? erroSemGrupo();
+  };
+  return {
+    lerTrava: () => exigir().estadoTrava(),
+    hospedar: async (aoPerder) => {
+      if (!pasta || !java || !neoforge) {
+        throw new Error("Este PC ainda não está configurado para hospedar o servidor.");
+      }
+      return hospedar({
+        cliente: exigir(),
+        aoPerder,
+        pasta,
+        javaPath: java,
+        versaoNeoForge: neoforge,
+      });
+    },
+    endereco: process.env["SABRE_ENDERECO"] ?? "",
+    copiar: (texto) => clipboard.writeText(texto),
+  };
+}
+
+async function criarInicioDoApp(): Promise<Inicio> {
+  if (process.env["SABRE_E2E"] !== "1") return criarInicio(depsReais());
+  const { criarDepsE2E } = await import("./fake-e2e.js");
+  const espiao = { spawns: [] };
+  (globalThis as Record<string, unknown>)["__sabreE2EEspiao"] = espiao;
+  const cenario = process.env["SABRE_E2E_CENARIO"] ?? "ninguem";
+  const inicio = criarInicio(criarDepsE2E(cenario as never, espiao));
+  if (cenario === "eu") await inicio.hospedar(); // "eu" = este PC já hospeda, pelo caminho normal
+  return inicio;
+}
+
+function registrarPonte(inicio: Inicio): void {
+  const permitir = (evento: IpcMainInvokeEvent): void => {
+    if (!veioDaPagina(evento)) throw new Error("origem não permitida");
+  };
+  inicio.aoMudar(() => janela?.webContents.send("sabre:inicio:mudou"));
+  ipcMain.handle("sabre:inicio:estado", (evento) => (permitir(evento), inicio.estado()));
+  ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), inicio.jogar()));
+  ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), inicio.hospedar()));
+  ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), inicio.parar()));
   ipcMain.handle("sabre:versao", (evento) => {
     if (!veioDaPagina(evento)) throw new Error("origem não permitida");
     return app.getVersion();
@@ -108,9 +175,9 @@ if (!app.requestSingleInstanceLock()) {
   // Fechar a janela só a esconde: o app continua na bandeja até "Sair".
   app.on("window-all-closed", () => undefined);
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     nativeTheme.themeSource = "system";
-    registrarPonte();
+    registrarPonte(await criarInicioDoApp());
     bandeja = criarBandeja();
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {

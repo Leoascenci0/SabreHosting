@@ -58,5 +58,12 @@ describe("tokens", () => {
     expect(contraste(cor(t, "--cor-destaque"), cor(t, "--cor-superficie"))).toBeGreaterThanOrEqual(
       4.5,
     );
+    expect(contraste(cor(t, "--cor-erro"), cor(t, "--cor-superficie"))).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contraste(cor(t, "--cor-sobre-destaque"), cor(t, "--cor-destaque")),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(contraste(cor(t, "--cor-sobre-destaque"), cor(t, "--cor-erro"))).toBeGreaterThanOrEqual(
+      4.5,
+    );
   });
 });
