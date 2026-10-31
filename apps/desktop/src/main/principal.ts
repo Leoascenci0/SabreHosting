@@ -448,6 +448,7 @@ async function criarGrupoDoApp(): Promise<Grupo> {
       eu: async () => exigir().eu(),
       listarPcs: async () => exigir().listarPcs(),
       revogarPc: async (id) => exigir().revogarPc(id),
+      criarConvite: async (nomePc, horas) => exigir().criarConvite(nomePc, horas),
     });
   }
   const { depsGrupoE2E } = await import("./fake-e2e.js");
@@ -555,6 +556,10 @@ function registrarPonte(
   ipcMain.handle("sabre:grupo:tirar", (evento, id: unknown) => {
     permitir(evento);
     return grupo.tirar(id); // o main revalida dono, lista e "não é o dono" antes de revogar
+  });
+  ipcMain.handle("sabre:grupo:criar-convite", (evento, entrada: unknown) => {
+    permitir(evento);
+    return grupo.criarConvite(entrada); // o main revalida o dono, o nome e a validade; o texto não é gravado nem logado
   });
   ipcMain.handle("sabre:mods:estado", (evento) => (permitir(evento), mods.estado()));
   ipcMain.handle("sabre:mods:adicionar", (evento, mod: unknown) => {

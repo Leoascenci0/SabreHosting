@@ -39,6 +39,15 @@ const confGrupo = $("grupo-confirmacao");
 const perguntaGrupo = $("grupo-pergunta");
 const confirmarGrupo = $<HTMLButtonElement>("grupo-confirmar");
 const cancelarGrupo = $<HTMLButtonElement>("grupo-cancelar");
+const conviteNome = $<HTMLInputElement>("convite-nome");
+const conviteNomeFicou = $("convite-nome-ficou");
+const conviteValidade = $<HTMLSelectElement>("convite-validade");
+const conviteCriar = $<HTMLButtonElement>("convite-criar");
+const conviteResultado = $("convite-resultado");
+const conviteTexto = $<HTMLInputElement>("convite-texto");
+const convitePrazo = $("convite-prazo");
+const conviteCopiar = $<HTMLButtonElement>("convite-copiar");
+const conviteErro = $("convite-erro");
 const avisoGrupo = $("grupo-aviso");
 const erroGrupo = $("grupo-erro");
 
@@ -168,6 +177,82 @@ function desenharGrupo(pcs: PcDaTela[]): void {
     }),
   );
 }
+
+/** O texto do convite é credencial: só vive nesta tela e some ao sair, recarregar ou criar outro. */
+function limparConvite(): void {
+  conviteTexto.value = "";
+  convitePrazo.textContent = "";
+  conviteResultado.hidden = true;
+  conviteCopiar.textContent = "Copiar";
+}
+
+function mostrarErroConvite(texto: string): void {
+  conviteErro.textContent = texto;
+  conviteErro.hidden = texto === "";
+}
+
+/** Mesmo jeito do main (`nomeNaRede`): só para mostrar como o nome vai ficar; quem manda é o main. */
+function nomeComoFica(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+/, "")
+    .slice(0, 32)
+    .replace(/-+$/, "");
+}
+
+conviteNome.addEventListener("input", () => {
+  const ficou = nomeComoFica(conviteNome.value);
+  conviteNomeFicou.textContent = ficou ? `Vai ficar como: ${ficou}` : "";
+});
+
+const FORMATO_PRAZO = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+conviteCriar.addEventListener("click", () => {
+  if (conviteCriar.disabled) return;
+  limparConvite();
+  mostrarErroConvite("");
+  if (!nomeComoFica(conviteNome.value)) {
+    mostrarErroConvite("Digite o nome do PC convidado (letras ou números).");
+    conviteNome.focus();
+    return;
+  }
+  conviteCriar.disabled = true;
+  conviteCriar.textContent = "Criando…";
+  window.sabre.grupo
+    .criarConvite(conviteNome.value, Number(conviteValidade.value))
+    .then((r) => {
+      if (!r.ok) return mostrarErroConvite(r.mensagem);
+      conviteTexto.value = r.convite;
+      convitePrazo.textContent = `Para o PC "${r.nomeNaRede}". Vale até ${FORMATO_PRAZO.format(r.venceEm)}.`;
+      conviteResultado.hidden = false;
+      conviteNome.value = "";
+      conviteNomeFicou.textContent = "";
+      conviteTexto.focus();
+      conviteTexto.select();
+    })
+    .catch(() =>
+      mostrarErroConvite("Não consegui criar o convite agora. Nenhum convite foi criado."),
+    )
+    .finally(() => {
+      conviteCriar.disabled = false;
+      conviteCriar.textContent = "Criar convite";
+    });
+});
+
+conviteCopiar.addEventListener("click", () => {
+  navigator.clipboard
+    .writeText(conviteTexto.value)
+    .then(() => {
+      conviteCopiar.textContent = "Copiado";
+    })
+    .catch(() => {
+      conviteTexto.select(); // sem permissão para copiar: o texto fica selecionado para Ctrl+C
+      mostrarErroConvite("Não consegui copiar sozinho. O texto está selecionado: use Ctrl+C.");
+    });
+});
 
 async function carregarGrupo(): Promise<void> {
   confGrupo.hidden = true;
@@ -415,6 +500,7 @@ confirmarVersao.addEventListener("click", () => {
 });
 
 async function carregar(): Promise<void> {
+  limparConvite();
   void carregarGrupo();
   void carregarVersao();
   void carregarMods();
@@ -464,6 +550,7 @@ abrir.addEventListener("click", () => {
   windows.focus();
 });
 voltar.addEventListener("click", () => {
+  limparConvite();
   tela.hidden = true;
   inicio.hidden = false;
   abrir.focus();
