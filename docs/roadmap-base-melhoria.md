@@ -53,7 +53,7 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   *Confirmação:* 4 `npx vitest run` em paralelo, 3 vezes seguidas, sem falha.
   *Origem:* rodada 31/10 · vistoria do PR #70
 
-- [ ] **1.6 — Quarto teste da trava com folga medida**
+- [x] **1.6 — Quarto teste da trava com folga medida** (PR #128, 31/10/2026; também o 5º)
   *O que fazer:* em `tests/integracao/hospedar-cartorio.test.ts`, o 4º teste (folga de ~700 ms) ainda estoura sob carga
   extrema de CPU; aplicar o mesmo tratamento do basemel-1.5 (tempos folgados só onde o teste exige a trava viva, prazo
   explícito), sem afrouxar o que ele prova.
