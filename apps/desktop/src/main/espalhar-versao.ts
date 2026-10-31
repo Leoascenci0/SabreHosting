@@ -1,9 +1,10 @@
 import type { ClienteCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
+import { alcancar } from "@sabrehosting/nucleo/sync/alcancar";
 import {
   espalhar,
-  fontesDeCopias,
   type Espalhado,
   type Fonte,
+  type PacoteDaNuvem,
   type VersaoNova,
 } from "@sabrehosting/nucleo/sync/espalhar";
 
@@ -53,7 +54,12 @@ export function criarEspalhador(o: OpcoesEspalhador) {
     const [eu, trava] = await Promise.all([c.eu(), c.estadoTrava()]);
     return trava.dono?.id === eu.id;
   };
-  return async (versao: VersaoNova, fontes: readonly Fonte[]): Promise<Espalhado> => {
+  return async (
+    versao: VersaoNova,
+    fontes: readonly Fonte[],
+    nuvem?: PacoteDaNuvem,
+    aoProgresso?: (feitos: number, total: number) => void,
+  ): Promise<Espalhado> => {
     const { pastaDoMundo, pastaDoServidor } = o;
     if (!pastaDoMundo || !pastaDoServidor) throw new Error(SEM_PASTA);
     if (o.servidorRodando()) {
@@ -75,6 +81,8 @@ export function criarEspalhador(o: OpcoesEspalhador) {
         versao,
         versaoLocal: await o.versaoLocal(),
         fontes,
+        ...(nuvem ? { nuvem } : {}),
+        ...(aoProgresso ? { aoProgresso } : {}),
         token: o.token,
         atualizacao: {
           pegar: () => c.pegarAtualizacao(),
@@ -94,29 +102,37 @@ export function criarEspalhador(o: OpcoesEspalhador) {
 }
 
 export interface OpcoesGatilho {
-  cliente: Pick<ClienteCartorio, "maisNova" | "quemTem" | "eu">;
+  cliente: Pick<ClienteCartorio, "maisNova" | "quemTem" | "eu" | "baixarPacote">;
   espalhar: ReturnType<typeof criarEspalhador>;
-  /** Versão do pacote que este PC tem agora; só pergunta ao cartório pelas fontes se a mais nova for maior. */
+  /** Versão do pacote que este PC tem agora. */
   versaoLocal: () => Promise<number>;
+  /** Percentual da atualização em curso (a tela mostra); `undefined` = acabou. */
+  aoProgresso?: (percentual: number | undefined) => void;
   aoAvisar?: (texto: string) => void;
 }
 
 /**
- * Dispara a atualização em segundo plano: pergunta ao cartório a versão mais nova e quem a tem, e chama o espalhador.
- * Nunca lança (quem chama não espera): erro vira aviso. Sem versão nova ou sem fonte com IP, não faz nada. Fontes só de
- * PCs (a nuvem não serve arquivo por hash) e sem este PC; o IP vem do cartório e é validado de novo em `espalhar`.
+ * Dispara a atualização em segundo plano (sync-2.2, `alcancar`): leva este PC à versão mais nova, de PC online ou, sem
+ * PC, do pacote da nuvem. Nunca lança (quem chama não espera): erro vira aviso. Sem versão nova, não faz nada.
  */
 export function criarGatilhoEspalhar(o: OpcoesGatilho): () => Promise<void> {
+  let emCurso = false;
   return async () => {
+    // Uma rodada por vez, marcada ANTES de qualquer await (S-06): a 2ª sai sem tocar no progresso, e só a rodada dona
+    // do estado "atualizando" o limpa (senão Hospedar abriria no meio da atualização da 1ª).
+    if (emCurso) return;
+    emCurso = true;
     try {
-      const nova = await o.cliente.maisNova();
-      if (!nova || nova.numero <= (await o.versaoLocal())) return;
-      const [eu, copias] = await Promise.all([o.cliente.eu(), o.cliente.quemTem(nova.numero)]);
-      const fontes = fontesDeCopias(copias, eu.id);
-      if (fontes.length === 0) return; // ninguém com IP ainda: tenta na próxima rodada
-      await o.espalhar({ numero: nova.numero, manifestoSha256: nova.manifestoSha256 }, fontes);
+      await alcancar({
+        cliente: o.cliente,
+        espalhar: o.espalhar,
+        versaoLocal: o.versaoLocal,
+        ...(o.aoProgresso ? { aoProgresso: o.aoProgresso } : {}),
+      });
     } catch (erro) {
       o.aoAvisar?.(`Atualização do mundo: ${erro instanceof Error ? erro.message : String(erro)}`);
+    } finally {
+      emCurso = false;
     }
   };
 }

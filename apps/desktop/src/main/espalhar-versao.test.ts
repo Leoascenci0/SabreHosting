@@ -200,7 +200,7 @@ describe("criarGatilhoEspalhar (1.9a)", () => {
         eu: async () => ({ id: 1, nome: "Eu", dono: false }),
       } as never,
       versaoLocal: async () => o.local ?? 3,
-      espalhar: (async (...a: unknown[]) => void chamadas.push(a)) as never,
+      espalhar: (async (...a: unknown[]) => void chamadas.push(a.slice(0, 2))) as never,
       aoAvisar: (t) => avisos.push(t),
     });
     return { rodar, chamadas, avisos };
@@ -224,16 +224,47 @@ describe("criarGatilhoEspalhar (1.9a)", () => {
     expect(m.avisos).toEqual([]);
   });
 
-  it("sem versão nova, sem versão registrada ou sem fonte com IP: não faz nada e não avisa", async () => {
+  it("sem versão nova ou sem versão registrada: não faz nada e não avisa", async () => {
     for (const m of [
       montar({ local: 4, pcs: [{ id: 3, ip: "10.66.0.4" }] }),
       montar({ maisNova: null, pcs: [{ id: 3, ip: "10.66.0.4" }] }),
-      montar({ pcs: [{ id: 2, ip: null }] }),
     ]) {
       await m.rodar();
       expect(m.chamadas).toEqual([]);
       expect(m.avisos).toEqual([]);
     }
+  });
+
+  it("sem PC com IP, a nuvem guarda a versão: espalha só pela nuvem, sem fontes (sync-2.2)", async () => {
+    const m = montar({ pcs: [{ id: 2, ip: null }] });
+    await m.rodar();
+    expect(m.chamadas).toEqual([[{ numero: 4, manifestoSha256: "a".repeat(64) }, []]]);
+    expect(m.avisos).toEqual([]);
+  });
+
+  it("duas rodadas ao mesmo tempo: a 2ª sai sem tocar no progresso; só a dona limpa (Hospedar não abre no meio)", async () => {
+    let liberar: () => void = () => undefined;
+    const trava = new Promise<void>((ok) => (liberar = ok));
+    const progresso: (number | undefined)[] = [];
+    const rodar = criarGatilhoEspalhar({
+      cliente: {
+        maisNova: async () => {
+          await trava; // a 1ª rodada fica pendurada aqui
+          return null;
+        },
+      } as never,
+      versaoLocal: async () => 0,
+      espalhar: (async () => undefined) as never,
+      aoProgresso: (p) => progresso.push(p),
+    });
+    const primeira = rodar();
+    await rodar(); // 2ª: volta na hora
+    expect(progresso).toEqual([0]); // só a 1ª sinalizou; nada de undefined ainda
+    liberar();
+    await primeira;
+    expect(progresso).toEqual([0, undefined]);
+    await rodar(); // acabou: uma rodada nova volta a valer
+    expect(progresso).toEqual([0, undefined, 0, undefined]);
   });
 
   it("erro do cartório ou da troca vira aviso em pt-BR e nunca lança", async () => {
