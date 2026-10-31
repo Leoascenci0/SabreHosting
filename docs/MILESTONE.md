@@ -18,7 +18,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 _(nenhum item aberto; leva de 31/10 encerrada — retomar com `/maxima retomar`)_
 
-⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente] · ⏸️ app-1.3 [P: aprovar o desenho do convite]
+⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
 ## Fila
 
@@ -28,7 +28,9 @@ _(nenhum item aberto; leva de 31/10 encerrada — retomar com `/maxima retomar`)
 **M2 — Primeira partida**
 - **Próxima onda (Eliel pediu app-1.1 primeiro, para ter prévia):** app-1.1 · rede-2.2 (plugin do proxy: trocar o host da vez + whitelist = redemel-2.1) ·
   cartmel-1.2/1.3 (endurecer a entrada do cartório; banco fora do diretório atual)
-- Depois: app-1.3 (após o desenho do convite) · redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
+- **Convite (desenho aprovado em 31/10):** rede-1.4 · cart-1.5 (podem ir juntos: cart-1.5 começa com o ajudante falso) →
+  app-1.3 (com appmel-1.4) [P: prova real no PC]
+- Depois: redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
 - Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
 
 **M3 — Mundo em todos** (ondas montadas pela Máxima ao chegar aqui): sync-1.1 → sync-1.2 → sync-2.1 → sync-2.2;
@@ -46,17 +48,13 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
 
 - **Liberar `repo.papermc.io`** na rede do ambiente da nuvem (Allowed domains). *Trava:* rede-2.2.
-- **Desenho do convite (app-1.3):** hoje o convite é só um segredo; para o amigo colar UM texto e entrar, ele precisa
-  levar também a entrada na rede privada (WireGuard) e o endereço do cartório e do servidor. A Máxima prepara a
-  proposta (planejador) e leva em balão. *Trava:* app-1.3, appmel-1.4.
-
 - **Versão do Minecraft** (e do NeoForge): escolha do Eliel antes do host-3.1 (teste no PC).
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
   assinatura (pago, ~US$ 100+/ano). *Trava:* app-3.2.
 
 ## Backlog
 
-- Melhorias do app: `docs/roadmap-app-melhoria.md` (appmel-1.1 a 1.5; 1.4 junto do app-1.3).
+- Melhorias do app: `docs/roadmap-app-melhoria.md` (appmel-1.1 a 1.6; 1.4 absorvido pelo app-1.3).
 - Melhorias do launcher: `docs/roadmap-lanc-melhoria.md` (lancmel-1.1).
 - Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-1.1; 2.1 obrigatório antes de ligar o proxy; 2.2; 2.3 [P]).
 - Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
