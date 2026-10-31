@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { IP_DO_HUB } from "@sabrehosting/nucleo/rede/wireguard";
 import { lerSalvo, pastaPermitida } from "./boas-vindas.js";
@@ -7,7 +8,7 @@ export const ENDERECO_VALIDO = /^[A-Za-z0-9][A-Za-z0-9.-]*:\d{1,5}$/;
 
 /**
  * Configuração deste PC (app-1.3c-i): vem do que o assistente gravou (`boas-vindas.json`) e do token no cofre real.
- * Nada daqui é lido de variável de ambiente, exceto Java/NeoForge, que só vão para a tela quando houver instalador.
+ * Nada daqui é lido de variável de ambiente, exceto Java/NeoForge, e só em modo teste (app não empacotado).
  */
 export interface ConfigPc {
   /** `http://<IP do hub>:<porta>`: o cartório só é alcançável pela rede privada do grupo. */
@@ -21,7 +22,7 @@ export interface ConfigPc {
   pastaBase?: string;
   /** `<base>\servidor` */
   pastaServidor?: string;
-  /** `<base>\servidor\world`: o mundo fica direto dentro da pasta do servidor. */
+  /** `<base>\servidor\<level-name>` (padrão `world`): o mundo fica direto dentro da pasta do servidor. */
   pastaMundo?: string;
   /** `<base>\mundos`: onde ficam os backups. */
   pastaBackups?: string;
@@ -35,10 +36,23 @@ export interface LeitorDeToken {
   estado?(): Promise<{ tipo: string }>;
 }
 
+/**
+ * Nome da pasta do mundo: o `level-name` do `server.properties` (padrão `world`). O arquivo é entrada não confiável
+ * (S-07): só vale nome simples de pasta (sem separador, `..`, letra de unidade ou caminho absoluto); o resto vira `world`.
+ */
+export async function nomeDoMundo(pastaServidor: string): Promise<string> {
+  const props = await readFile(join(pastaServidor, "server.properties"), "utf8").catch(() => "");
+  const nome = /^level-name=(.*)$/m.exec(props)?.[1]?.trim() ?? "";
+  const simples = nome !== "" && nome !== "." && nome !== ".." && !/[\\/:\0]/.test(nome);
+  return simples ? nome : "world";
+}
+
+/** `modoTeste`: só nele `SABRE_JAVA`/`SABRE_NEOFORGE` do ambiente viram executável do servidor (app empacotado ignora). */
 export async function lerConfigPc(
   dados: string,
   cofre: LeitorDeToken,
   env: NodeJS.ProcessEnv,
+  modoTeste = false,
 ): Promise<ConfigPc> {
   const salvo = lerSalvo(dados);
   const urlCartorio =
@@ -53,6 +67,7 @@ export async function lerConfigPc(
   const pastaBase =
     salvo.concluido && pastaPermitida(salvo.pastaBase) ? salvo.pastaBase : undefined;
   const pastaServidor = pastaBase ? join(pastaBase, "servidor") : undefined;
+  const mundo = pastaServidor ? await nomeDoMundo(pastaServidor) : "world";
   return {
     ...(urlCartorio ? { urlCartorio } : {}),
     ...(token ? { token } : {}),
@@ -65,12 +80,12 @@ export async function lerConfigPc(
       ? {
           pastaBase,
           pastaServidor,
-          pastaMundo: join(pastaServidor, "world"),
+          pastaMundo: join(pastaServidor, mundo),
           pastaBackups: join(pastaBase, "mundos"),
         }
       : {}),
-    ...(env["SABRE_JAVA"] ? { java: env["SABRE_JAVA"] } : {}),
-    ...(env["SABRE_NEOFORGE"] ? { neoforge: env["SABRE_NEOFORGE"] } : {}),
+    ...(modoTeste && env["SABRE_JAVA"] ? { java: env["SABRE_JAVA"] } : {}),
+    ...(modoTeste && env["SABRE_NEOFORGE"] ? { neoforge: env["SABRE_NEOFORGE"] } : {}),
   };
 }
 
