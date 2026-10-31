@@ -696,3 +696,38 @@ describe("versões do mundo (piloto-1.1c)", () => {
     expect(chamadas).toHaveLength(1);
   });
 });
+
+describe("mods do grupo (lanc-1.4)", () => {
+  const MOD = {
+    nome: "Sodium",
+    versao: "0.6.0",
+    arquivo: "sodium.jar",
+    url: "https://cdn.modrinth.com/data/x/sodium.jar",
+    sha512: "c".repeat(128),
+    lado: "cliente",
+  };
+
+  it("lê a lista e envia a troca inteira no PUT", async () => {
+    const { cliente, chamadas } = montar([json(200, { mods: [MOD] }), json(200, { mods: [] })]);
+    expect(await cliente.lerModsGrupo()).toEqual([MOD]);
+    expect(await cliente.gravarModsGrupo([])).toEqual([]);
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/grupo/mods`);
+    expect(chamadas[1]?.init.method).toBe("PUT");
+    expect(JSON.parse(String(chamadas[1]?.init.body))).toEqual({ mods: [] });
+  });
+
+  it("resposta com host fora do Modrinth ou hash torto é recusada", async () => {
+    const { cliente } = montar([
+      json(200, { mods: [{ ...MOD, url: "https://exemplo.com/a.jar" }] }),
+      json(200, { mods: [{ ...MOD, sha512: "abc" }] }),
+    ]);
+    await expect(cliente.lerModsGrupo()).rejects.toThrow(/ilegível/);
+    await expect(cliente.lerModsGrupo()).rejects.toThrow(/ilegível/);
+  });
+
+  it("403 de quem não é dono vem com a mensagem do cartório", async () => {
+    const { cliente } = montar([json(403, { erro: "Só o dono do grupo muda a lista de mods." })]);
+    const e = await erroDe(cliente.gravarModsGrupo([]));
+    expect(e.message).toMatch(/dono/);
+  });
+});
