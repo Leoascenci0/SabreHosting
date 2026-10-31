@@ -57,7 +57,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Origem:* teste do Eliel no Windows · 31/10/2026
 
 
-- [ ] **1.7 — Tirar PC do grupo (tela)**
+- [x] **1.7 — Tirar PC do grupo (tela)** (PR #165, 31/10/2026)
   *O que fazer:* área Grupo em Configurações com a lista dos PCs (`cliente.listarPcs()`), só para o dono (`/eu.dono`),
   botão "Tirar PC do grupo" com confirmação que diz o NOME do PC, mensagens pt-BR para 403/409/404 e aviso de que o PC
   tirado precisa de novo convite; novo método `revogarPc` no cliente do núcleo.
@@ -67,7 +67,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Depende de:* cartmel-1.1 e cartmel-2.3 (feitos), app-2.2 (feito)
   *Origem:* app-2.2 · PR #160 · filha
 
-- [ ] **1.8 — Backups: intervalo e quantos guardar (ligar e expor)**
+- [x] **1.8 — Backups: intervalo e quantos guardar (ligar e expor)** (PR #167, 31/10/2026) *(cortado em 31/10: a onda 21 entregou só o intervalo; "quantos guardar" e a rotação viraram 1.11)*
   *O que fazer:* ligar `agendarBackups` e a rotação do núcleo ao app (hoje sem consumidor em `apps/desktop`) e só então
   expor os dois campos em Configurações › Backups.
   *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/backup/agendador.ts`, `rotacao.ts`
@@ -82,3 +82,18 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: valor salvo em Configurações aparece em `server.properties` ao hospedar.
   *Depende de:* app-1.3
   *Origem:* app-2.2 · PR #160 · filha + qa
+
+- [ ] **1.10 — Acabamentos da tela "Tirar PC do grupo"**
+  *O que fazer:* (a) o `aria-label` do botão ("Tirar PC do Lucas do grupo") deve conter o texto visível ("Tirar PC do grupo"): deixar o texto visível com o nome ou usar `aria-describedby`; (b) depois de revogar com sucesso o foco se perde (o botão some): focar o aviso ou o título da área; (c) mensagem genérica de rede diz "Nada foi alterado", que pode ser falsa se a resposta se perder depois de o cartório já ter tirado o PC: trocar por "Atualize a lista para conferir."
+  *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`, `apps/desktop/src/main/grupo.ts`
+  **Tela no app:** Configurações › Grupo › "Tirar PC do grupo".
+  *Confirmação:* E2E: foco vai ao aviso depois de revogar; teste da mensagem de rede.
+  *Origem:* appmel-1.7 · PR #165 · qa interface
+
+- [ ] **1.11 — ⏸️ P · Backups: ligar a rotação e expor "Quantos guardar"**
+  *O que fazer:* ligar `planejarRotacao`/`aplicarRotacao` ao app depois de cada backup bom e expor Configurações › Backups › "Quantos guardar". **Pede o OK do Eliel**: a rotação apaga backups dos amigos sozinha; e falta a fonte que marca cada backup como bom/ruim/não-conferido (rotacao.ts:4: cartório ou app). Padrão atual (10 recentes + 7 dias) e mínimo garantido não mudam sem ele.
+  *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/backup/rotacao.ts`, `apps/desktop/src/ui/configuracoes.ts`
+  **Tela no app:** Configurações › Backups › "Quantos guardar".
+  *Confirmação:* E2E: valor salvo muda quantos backups ficam; teste de que o último bom e os não conferidos nunca saem.
+  *Depende de:* appmel-1.8 e decisão do Eliel.
+  *Origem:* appmel-1.8 · triagem · Máxima

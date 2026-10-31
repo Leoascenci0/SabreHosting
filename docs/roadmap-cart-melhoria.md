@@ -101,7 +101,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* testes: dono lista; não-dono → 403; PC revogado não aparece; `/eu` diz `dono`.
   *Origem:* app-2.2 · triagem da filha · Máxima
 
-- [ ] **2.2 — Revogar também o peer e provar a trava do PC revogado**
+- [x] **2.2 — Revogar também o peer e provar a trava do PC revogado** (PR #163, 31/10/2026; remoção do peer virou rede-melhoria 1.3)
   *O que fazer:* hoje `POST /pcs/:id/revogar` só tira o acesso ao cartório; o peer do PC continua na rede privada
   (item de rede à parte, já decidido em DECISOES 31/10) — abrir esse item em `docs/roadmap-rede-melhoria.md` quando
   o ajudante do WireGuard estiver instalado; e documentar que o host revogado perde a trava só no prazo (~20 s).

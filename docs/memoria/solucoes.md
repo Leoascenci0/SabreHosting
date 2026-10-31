@@ -41,3 +41,17 @@ Prova: #138 mergeado, `git log origin/main..origin/roadmap/basemel-1.6` vazio ·
 Sintoma: `TS2307: Cannot find module '@sabrehosting/nucleo/...'` no `npm run vistoria` de um worktree · Causa:
 `node_modules` em atalho para a pasta principal resolve os pacotes do workspace fora do worktree · Solução: `npm ci` no
 próprio worktree (5 s) · Prova: vistoria APROVADA no mesmo worktree depois do `npm ci` · Vezes: 1 · Origem: revisão do #84
+
+## S-06 — Dois agendadores/relógios por corrida em função assíncrona de "ligar/reagendar"
+Sintoma: duas chamadas seguidas de `reagendar()` com backup em curso deixam DOIS agendadores ativos (timer vazando, dois relógios
+disparando backup do mesmo mundo) · Causa: `const meu = geracao` lido DEPOIS de `await desligar()`; as duas chamadas capturam o mesmo
+número e passam pela checagem `meu !== geracao` · Solução: tomar a geração (`++geracao`) e guardar o agendador antigo de forma
+SÍNCRONA, antes de qualquer `await` · Prova: teste "backup em curso + dois reagendar seguidos → 1 agendador ativo" (falha no código
+antigo) · Vezes: 1 · Origem: appmel-1.8, PR #167 (achado pelo qa integridade). Vale para qualquer "token de geração" contra corrida.
+
+## S-07 — Marcador lido do disco apaga o que não devia
+Sintoma: marcador de troca adulterado (`temp == mundo` ou `temp = mods`) faria `apagar(c.temp)` apagar o mundo vivo/os mods · Causa:
+o caminho vinha do JSON sem validar nome nem distinção entre as três pastas · Solução: exigir mundo/antigo/temp distintos, filhos
+diretos da pasta do servidor (via `path.relative`) e com nome `basename(mundo)+"."…`; apagar o marcador FORA do `try` do 2º rename ·
+Prova: testes de marcador forjado e de EPERM ao apagar o marcador · Vezes: 1 · Origem: syncmel-1.4, PR #164. Regra: tudo que um
+arquivo de estado manda apagar/renomear é entrada não confiável.
