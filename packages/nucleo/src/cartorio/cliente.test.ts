@@ -621,6 +621,16 @@ describe("versões do mundo (piloto-1.1c)", () => {
     expect(sem.chamadas).toHaveLength(1);
   });
 
+  it("ultimoRegistrado lê o maior número já registrado, órfã inclusive", async () => {
+    const { cliente, chamadas } = montar([
+      json(200, { versao: null, ultimoRegistrado: 4 }),
+      json(200, { versao: null }),
+    ]);
+    expect(await cliente.ultimoRegistrado()).toBe(4);
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes/mais-nova`);
+    expect((await erroDe(cliente.ultimoRegistrado())).message).toMatch(/ilegível/i);
+  });
+
   it("criarVersao recusada pela trava vira erro com a mensagem do cartório", async () => {
     const { cliente } = montar([
       json(409, {
