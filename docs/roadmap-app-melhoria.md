@@ -139,3 +139,24 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** não se aplica.
   *Confirmação:* teste: falha de `esperarPronta` espera a sessão; Jogar recusado após a troca.
   *Origem:* appmel-1.13 · PR #219 · qa
+
+- [ ] **1.17 — Assistente: mensagem para cofre corrompido**
+  *O que fazer:* quando `cofreCorrompido` vier verdadeiro, mostrar "Seu acesso guardado neste PC não abre mais; peça um convite novo" (hoje `main/boas-vindas.ts` já informa o estado, mas a tela `ui/boas-vindas.ts` não o trata).
+  *Arquivo:* `apps/desktop/src/ui/boas-vindas.ts`
+  **Tela no app:** Assistente de boas-vindas (primeira vez).
+  *Confirmação:* teste/E2E com `cofreCorrompido: true` mostra a mensagem.
+  *Origem:* appmel-1.12 · PR #223 · filha
+
+- [ ] **1.18 — Teste do encaixe de Jogar/Hospedar em `principal.ts`**
+  *O que fazer:* extrair os handlers de Jogar/Hospedar para função testável e cobrir a recusa depois de `trocada()` (hoje só `pasta-base.test.ts` cobre `trocada()`; o encaixe no `principal.ts` não tem teste).
+  *Arquivo:* `apps/desktop/src/main/principal.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: Jogar e Hospedar recusam depois de `trocada()`.
+  *Origem:* appmel-1.16 · PR #224 · filha
+
+- [ ] **1.19 — Reler `level-name` a cada operação**
+  *O que fazer:* resolver `pastaMundo` na hora do backup/espalhar, e não só ao abrir o app (se o `level-name` mudar com o app aberto, o backup ainda aponta o mundo antigo).
+  *Arquivo:* `apps/desktop/src/main/config-pc.ts`, `principal.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: `level-name` muda com o app aberto e o backup segue o novo.
+  *Origem:* appmel-1.14b · PR #225 · filha
