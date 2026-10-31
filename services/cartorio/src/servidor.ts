@@ -17,6 +17,7 @@ import {
   lerConvite,
   nomeOcupado,
   pcDoToken,
+  revogarPc,
   usarConvite,
 } from "./banco.js";
 import {
@@ -69,6 +70,11 @@ const REDACT = [
 ];
 const NAO_AUTORIZADO = { erro: "Acesso negado. Peça um convite novo ao administrador do grupo." };
 const SO_DONO = { erro: "Só o dono do grupo cria convites." };
+const SO_DONO_TIRA = { erro: "Só o dono do grupo tira um PC do grupo." };
+const DONO_NAO_SE_TIRA = {
+  erro: "O dono não pode se tirar do grupo. Passe a posse a outro PC antes (trocar-dono).",
+};
+const PC_INEXISTENTE = { erro: "Esse PC não existe no grupo." };
 const SEM_AJUDANTE = {
   erro: "O cartório não está pronto para criar convites (rede da nuvem não configurada). Avise o dono do grupo.",
 };
@@ -356,6 +362,23 @@ export function criarCartorio({
       return resp.code(503).send(AJUDANTE_FALHOU);
     }
   });
+
+  app.post<{ Params: { id: number } }>(
+    "/pcs/:id/revogar",
+    {
+      onRequest: soPc,
+      schema: { params: { type: "object", properties: { id: { type: "integer", minimum: 1 } } } },
+    },
+    (req, resp) => {
+      const dono = donoAtual(banco);
+      if (dono?.id !== pcDe(req).id) return resp.code(403).send(SO_DONO_TIRA);
+      const { id } = req.params;
+      if (id === dono.id) return resp.code(409).send(DONO_NAO_SE_TIRA);
+      if (!pcPorId(id)) return resp.code(404).send(PC_INEXISTENTE);
+      revogarPc(banco, id, agora());
+      return resp.code(204).send();
+    },
+  );
 
   app.get("/eu", { onRequest: soPc }, (req) => pcDe(req));
 

@@ -220,6 +220,60 @@ describe("convite do grupo: criar (só o dono)", () => {
   });
 });
 
+describe("tirar PC do grupo: POST /pcs/:id/revogar (só o dono)", () => {
+  async function comAna() {
+    const m = montar();
+    const dono = await m.comDono();
+    const texto = (await m.convidar(dono.auth, { nomePc: "pc-da-ana" })).json<{
+      convite: string;
+    }>();
+    const ana = await m.entrar(texto.convite);
+    const idDe = (nome: string) =>
+      (m.banco.prepare("SELECT id FROM pcs WHERE nome = ?").get(nome) as { id: number }).id;
+    const revogar = (auth: Record<string, string>, id: number | string, ip = "10.66.0.2") =>
+      m.app.inject({ method: "POST", url: `/pcs/${id}/revogar`, headers: auth, remoteAddress: ip });
+    const eu = (a: { auth: Record<string, string>; pacote: PacoteLigacao }) =>
+      m.app.inject({ url: "/eu", headers: a.auth, remoteAddress: a.pacote.ip_pc });
+    return { m, dono, ana, idDe, revogar, eu };
+  }
+
+  it("dono revoga: o token do PC tirado vira 401 no /eu; o do dono continua valendo", async () => {
+    const { dono, ana, idDe, revogar, eu } = await comAna();
+    expect((await eu(ana)).statusCode).toBe(200);
+    const r = await revogar(dono.auth, idDe("pc-da-ana"));
+    expect(r.statusCode).toBe(204);
+    expect((await eu(ana)).statusCode).toBe(401);
+    expect((await eu(dono)).statusCode).toBe(200);
+  });
+
+  it("revogar duas vezes é inofensivo (204) e o PC continua sem acesso", async () => {
+    const { dono, ana, idDe, revogar, eu } = await comAna();
+    expect((await revogar(dono.auth, idDe("pc-da-ana"))).statusCode).toBe(204);
+    expect((await revogar(dono.auth, idDe("pc-da-ana"))).statusCode).toBe(204);
+    expect((await eu(ana)).statusCode).toBe(401);
+  });
+
+  it("quem não é dono → 403 e nada é revogado; sem token → 401", async () => {
+    const { dono, ana, idDe, revogar, eu } = await comAna();
+    const r = await revogar(ana.auth, idDe("pc-do-dono"), ana.pacote.ip_pc);
+    expect(r.statusCode).toBe(403);
+    expect(r.json<{ erro: string }>().erro).toMatch(/dono/);
+    expect((await revogar({}, idDe("pc-da-ana"))).statusCode).toBe(401);
+    expect((await eu(dono)).statusCode).toBe(200);
+    expect((await eu(ana)).statusCode).toBe(200);
+  });
+
+  it("o dono não se tira (409, só depois do trocar-dono); PC inexistente → 404; id inválido → 400", async () => {
+    const { dono, idDe, revogar, eu } = await comAna();
+    const r = await revogar(dono.auth, idDe("pc-do-dono"));
+    expect(r.statusCode).toBe(409);
+    expect(r.json<{ erro: string }>().erro).toMatch(/trocar-dono|posse/);
+    expect((await eu(dono)).statusCode).toBe(200);
+    expect((await revogar(dono.auth, 9999)).statusCode).toBe(404);
+    expect((await revogar(dono.auth, "abc")).statusCode).toBe(400);
+  });
+});
+
 describe("convite do grupo: usar (sala de entrada, duas fases)", () => {
   async function comConvite(m: ReturnType<typeof montar>) {
     const dono = await m.comDono();

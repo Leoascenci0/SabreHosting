@@ -276,6 +276,15 @@ export function nomeOcupado(banco: Banco, nome: string, agora: number): boolean 
   );
 }
 
+/** Tira o acesso do PC ao cartório: revoga todos os tokens ativos dele (o filtro de `pcDoToken` faz o resto). */
+export function revogarPc(banco: Banco, pcId: number, agora: number): void {
+  emTransacao(banco, () =>
+    banco
+      .prepare("UPDATE tokens SET revogado_em = ? WHERE pc_id = ? AND revogado_em IS NULL")
+      .run(agora, pcId),
+  );
+}
+
 export function donoAtual(banco: Banco): Pc | undefined {
   return banco.prepare("SELECT id, nome FROM pcs WHERE dono = 1").get() as Pc | undefined;
 }
