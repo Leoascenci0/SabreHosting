@@ -1,0 +1,30 @@
+/* Tokens do SabreHosting: única fonte de cor e espaço da tela (docs/design-system.md). */
+:root {
+  --cor-fundo: #f4f7f8;
+  --cor-superficie: #ffffff;
+  --cor-borda: #cfd9dd;
+  --cor-texto: #14232a;
+  --cor-texto-suave: #4a5d66;
+  --cor-destaque: #0a6b80;
+
+  --espaco-1: 4px;
+  --espaco-2: 8px;
+  --espaco-3: 16px;
+  --espaco-4: 24px;
+  --espaco-5: 40px;
+  --raio: 12px;
+
+  --fonte: system-ui, "Segoe UI", sans-serif;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cor-fundo: #0e171c;
+    --cor-superficie: #16242b;
+    --cor-borda: #2a3d46;
+    --cor-texto: #eaf2f4;
+    --cor-texto-suave: #9fb4bd;
+    --cor-destaque: #4fd1e8;
+  }
+}

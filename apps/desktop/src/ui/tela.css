@@ -1,0 +1,49 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--espaco-4);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: var(--fonte);
+}
+
+.cartao {
+  width: min(100%, 420px);
+  display: grid;
+  justify-items: center;
+  gap: var(--espaco-3);
+  padding: var(--espaco-5) var(--espaco-4);
+  text-align: center;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+}
+
+.icone {
+  width: 160px;
+  height: 160px;
+  border-radius: var(--raio);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: var(--cor-destaque);
+}
+
+.aviso {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.versao {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--cor-texto-suave);
+}
