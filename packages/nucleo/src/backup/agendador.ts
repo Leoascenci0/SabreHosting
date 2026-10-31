@@ -28,7 +28,7 @@ export interface BackupFeito extends PacoteCriado {
 }
 
 /** `2026-10-30T14:05:09.123Z` vira `2026-10-30T14-05-09-123Z` (":" e "." não valem em nome de arquivo no Windows). */
-function nomeDoBackup(data: Date, versao: number): string {
+export function nomeDoBackup(data: Date, versao: number): string {
   return `${data.toISOString().replace(/[:.]/g, "-")}-v${versao}.tar.gz`;
 }
 

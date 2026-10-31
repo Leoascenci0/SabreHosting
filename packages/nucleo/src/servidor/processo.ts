@@ -44,7 +44,7 @@ const PRAZO_PARADA_SEM_TRAVA_MS = 10_000;
 const PRAZO_TRAVA_PADRAO_MS = 10_000;
 
 /** Erro, demora e `false` valem como sem trava; só `true` dentro do prazo confirma. */
-async function travaConfirmada(
+export async function travaConfirmada(
   temTrava: () => Promise<boolean>,
   prazoMs: number,
 ): Promise<"sim" | "nao" | "semResposta"> {
