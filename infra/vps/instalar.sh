@@ -285,7 +285,7 @@ if ! ja_feito sem-sudoers test ! -e /etc/sudoers.d/sabre-entrada; then
   marcar sem-sudoers
 fi
 
-# ---------- 6. Unidades systemd de exemplo (instaladas, DESLIGADAS) ----------
+# ---------- 6. Unidades systemd (de exemplo, DESLIGADAS; só o socket do ajudante fica ligado) ----------
 
 for unidade in sabre-cartorio.service sabre-proxy.service sabre-ajudante-entrada.socket sabre-ajudante-entrada@.service; do
   if ! ja_feito "unidade-$unidade" cmp -s "$AQUI/systemd/$unidade" "/etc/systemd/system/$unidade"; then
