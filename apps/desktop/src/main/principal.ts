@@ -12,7 +12,7 @@ import {
 import type { IpcMainInvokeEvent } from "electron";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { depsReais } from "./deps-reais.js";
-import { criarInicio, type Inicio } from "./inicio.js";
+import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida } from "./seguranca.js";
 
@@ -44,6 +44,17 @@ async function perguntarSair(): Promise<boolean> {
   return r.response === 0;
 }
 
+async function avisarFalhaSair(motivo: string): Promise<void> {
+  if (process.env["SABRE_E2E"] === "1") return; // diálogo nativo não é clicável no E2E
+  const opcoes = {
+    type: "error" as const,
+    title: "SabreHosting",
+    message: mensagemFalhaSair(motivo),
+  };
+  if (janela) await dialog.showMessageBox(janela, opcoes);
+  else await dialog.showMessageBox(opcoes);
+}
+
 /**
  * Sair com o servidor no ar: para (salva, para, devolve a trava) ANTES de fechar; senão o Java seguiria sem
  * renovar a trava e outro PC hospedaria o mesmo mundo (regra de ouro 1).
@@ -52,9 +63,14 @@ async function sairDoApp(perguntar: boolean): Promise<void> {
   if (encerrando) return;
   encerrando = true;
   if (inicioApp?.ativo()) mostrarJanela(); // o progresso ("Parando o servidor…") aparece na tela
-  const ok = (await inicioApp?.encerrar(perguntar ? perguntarSair : async () => true)) ?? true;
+  const r = (await inicioApp?.encerrar(perguntar ? perguntarSair : async () => true)) ?? {
+    sair: true as const,
+  };
   encerrando = false;
-  if (!ok) return;
+  if (!r.sair) {
+    if (r.falha !== undefined) await avisarFalhaSair(r.falha);
+    return;
+  }
   podeSair = true;
   saindo = true;
   app.quit();

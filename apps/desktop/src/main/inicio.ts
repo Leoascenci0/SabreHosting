@@ -61,21 +61,31 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     }
   }
 
-  async function parar(): Promise<Resultado> {
+  let paradaEmCurso: Promise<Resultado> | undefined;
+
+  /** Uma parada por vez: novo pedido (Parar, Sair) enquanto outra roda, mesmo após estourar prazo, reaproveita a promessa. */
+  function parar(): Promise<Resultado> {
+    if (paradaEmCurso) return paradaEmCurso;
     const servidor = ativo;
-    if (!servidor) return { ok: false, mensagem: "O servidor deste PC não está rodando." };
+    if (!servidor)
+      return Promise.resolve({ ok: false, mensagem: "O servidor deste PC não está rodando." });
     parando = true;
     avisar();
-    try {
-      await servidor.pararServidor();
-      await esperarTravaLivre();
-      if (ativo === servidor) ativo = undefined;
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, mensagem: e instanceof Error && e.message ? e.message : GENERICA };
-    } finally {
-      parando = false;
-    }
+    paradaEmCurso = (async (): Promise<Resultado> => {
+      try {
+        await servidor.pararServidor();
+        await esperarTravaLivre();
+        if (ativo === servidor) ativo = undefined;
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, mensagem: e instanceof Error && e.message ? e.message : GENERICA };
+      } finally {
+        parando = false;
+        paradaEmCurso = undefined;
+        avisar(); // a tela volta ao estado real (ainda hospedando, se a parada falhou)
+      }
+    })();
+    return paradaEmCurso;
   }
 
   return {
@@ -88,16 +98,22 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
      * Antes de sair do app: com servidor no ar, confirma, para (salva, para e devolve a trava) e só então libera a
      * saída. `false` = não sair (recusou, ou a parada falhou/estourou o prazo).
      */
-    async encerrar(confirmar: () => Promise<boolean>, prazoMs = 90_000): Promise<boolean> {
-      if (!ativo && !ocupado) return true;
-      if (!(await confirmar())) return false;
+    async encerrar(
+      confirmar: () => Promise<boolean>,
+      prazoMs = 90_000,
+    ): Promise<{ sair: true } | { sair: false; falha?: string }> {
+      if (!ativo && !ocupado) return { sair: true };
+      if (!(await confirmar())) return { sair: false };
       let timer: NodeJS.Timeout | undefined;
       const estouro = new Promise<Resultado>((ok) => {
-        timer = setTimeout(() => ok({ ok: false, mensagem: "estourou" }), prazoMs);
+        timer = setTimeout(
+          () => ok({ ok: false, mensagem: "a parada passou do tempo limite" }),
+          prazoMs,
+        );
       });
       const r = await Promise.race([parar(), estouro]);
       clearTimeout(timer);
-      return r.ok;
+      return r.ok ? { sair: true } : { sair: false, falha: r.mensagem };
     },
 
     async estado(): Promise<EstadoInicio> {
@@ -143,6 +159,10 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       return () => void ouvintes.delete(cb);
     },
   };
+}
+
+export function mensagemFalhaSair(motivo: string): string {
+  return `Não consegui parar o servidor: ${motivo}. Os amigos podem continuar conectados. Tente Sair de novo.`;
 }
 
 export type Inicio = ReturnType<typeof criarInicio>;

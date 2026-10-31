@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
-import { criarInicio, erroSemGrupo, type DepsInicio } from "./inicio.js";
+import { criarInicio, erroSemGrupo, mensagemFalhaSair, type DepsInicio } from "./inicio.js";
 
 const RAPIDO = { passoMs: 1, tentativas: 5 };
 
@@ -137,7 +137,7 @@ describe("jogar", () => {
 describe("encerrar (Sair do app)", () => {
   it("sem servidor no ar sai sem perguntar", async () => {
     const confirmar = vi.fn(async () => true);
-    expect(await criarInicio(deps()).encerrar(confirmar)).toBe(true);
+    expect(await criarInicio(deps()).encerrar(confirmar)).toEqual({ sair: true });
     expect(confirmar).not.toHaveBeenCalled();
   });
 
@@ -162,7 +162,7 @@ describe("encerrar (Sair do app)", () => {
       RAPIDO,
     );
     await i.hospedar();
-    expect(await i.encerrar(async () => true)).toBe(true);
+    expect(await i.encerrar(async () => true)).toEqual({ sair: true });
     expect(ordem).toEqual(["parou", "leu", "leu"]);
   });
 
@@ -170,7 +170,7 @@ describe("encerrar (Sair do app)", () => {
     const s = servidorFalso();
     const i = criarInicio(deps({ hospedar: async () => ({ servidor: s }) }), RAPIDO);
     await i.hospedar();
-    expect(await i.encerrar(async () => false)).toBe(false);
+    expect(await i.encerrar(async () => false)).toEqual({ sair: false });
     expect(s.pararServidor).not.toHaveBeenCalled();
     expect(i.ativo()).toBe(true);
   });
@@ -180,13 +180,16 @@ describe("encerrar (Sair do app)", () => {
     falha.pararServidor.mockRejectedValue(new Error("travou"));
     const i = criarInicio(deps({ hospedar: async () => ({ servidor: falha }) }), RAPIDO);
     await i.hospedar();
-    expect(await i.encerrar(async () => true)).toBe(false);
+    expect(await i.encerrar(async () => true)).toEqual({ sair: false, falha: "travou" });
 
     const lento = servidorFalso();
     lento.pararServidor.mockImplementation(() => new Promise(() => {}));
     const j = criarInicio(deps({ hospedar: async () => ({ servidor: lento }) }), RAPIDO);
     await j.hospedar();
-    expect(await j.encerrar(async () => true, 20)).toBe(false);
+    expect(await j.encerrar(async () => true, 20)).toEqual({
+      sair: false,
+      falha: "a parada passou do tempo limite",
+    });
   });
 
   it("durante a parada o estado mostra 'parando'", async () => {
@@ -199,5 +202,37 @@ describe("encerrar (Sair do app)", () => {
     expect(await i.estado()).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565", parando: true });
     liberar();
     await parada;
+  });
+
+  it("falha na parada: a tela volta ao estado real (ainda hospedando) e a mensagem sai em pt-BR", async () => {
+    const s = servidorFalso();
+    s.pararServidor.mockRejectedValue(new Error("o Java não respondeu"));
+    const i = criarInicio(deps({ hospedar: async () => ({ servidor: s }) }), RAPIDO);
+    const aviso = vi.fn();
+    i.aoMudar(aviso);
+    await i.hospedar();
+    const r = await i.encerrar(async () => true);
+    expect(r).toEqual({ sair: false, falha: "o Java não respondeu" });
+    expect(mensagemFalhaSair("o Java não respondeu")).toBe(
+      "Não consegui parar o servidor: o Java não respondeu. Os amigos podem continuar conectados. Tente Sair de novo.",
+    );
+    expect(await i.estado()).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565" }); // sem "parando"
+    expect(aviso).toHaveBeenCalled();
+  });
+
+  it("guarda: Sair durante uma parada em andamento (inclusive após estourar o prazo) não para em paralelo", async () => {
+    const s = servidorFalso();
+    let liberar!: () => void;
+    s.pararServidor.mockImplementation(() => new Promise<void>((ok) => (liberar = ok)));
+    const i = criarInicio(deps({ hospedar: async () => ({ servidor: s }) }), RAPIDO);
+    await i.hospedar();
+    const primeira = i.encerrar(async () => true, 10); // estoura o prazo com a parada ainda rodando
+    expect(await primeira).toMatchObject({ sair: false });
+    const segunda = i.encerrar(async () => true, 10_000);
+    const terceira = i.parar();
+    liberar();
+    expect(await segunda).toEqual({ sair: true });
+    expect(await terceira).toEqual({ ok: true });
+    expect(s.pararServidor).toHaveBeenCalledOnce();
   });
 });

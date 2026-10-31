@@ -154,24 +154,36 @@ describe("tela inicial", () => {
     expect(await visiveis(p)).toEqual([]);
   });
 
-  it("Sair com o servidor no ar: para, solta a trava e só então fecha o app", async () => {
-    const p = await abrir("eu");
-    const registro = join(dadosAtual(), "registro.txt");
-    const saiu = new Promise<void>((ok) =>
-      viva()
-        .process()
-        .once("exit", () => ok()),
-    );
-    const tentativa = viva().evaluate(() =>
-      (globalThis as { __sabreE2E?: { sair(): Promise<void> } }).__sabreE2E?.sair(),
-    );
-    await p.locator("#principal").waitFor({ state: "attached" });
-    await Promise.race([saiu, tentativa.catch(() => undefined)]);
-    await saiu;
-    // Quando o processo saiu, a ordem já estava gravada: parou → soltou.
-    expect(existsSync(registro)).toBe(true);
-    const fatos = readFileSync(registro, "utf8").trim().split("\n");
-    expect(fatos.indexOf("parou")).toBeGreaterThanOrEqual(0);
-    expect(fatos.indexOf("soltar")).toBeGreaterThan(fatos.indexOf("parou"));
-  });
+  it.each([
+    [
+      "Sair da bandeja",
+      () => (globalThis as { __sabreE2E?: { sair(): Promise<void> } }).__sabreE2E?.sair(),
+    ],
+    ["saída do sistema (app.quit)", undefined],
+  ] as const)(
+    "%s com o servidor no ar: para, solta a trava e só então fecha o app",
+    async (_n, sair) => {
+      await abrir("eu");
+      const registro = join(dadosAtual(), "registro.txt");
+      const saiu = new Promise<void>((ok) =>
+        viva()
+          .process()
+          .once("exit", () => ok()),
+      );
+      if (sair)
+        void viva()
+          .evaluate(sair)
+          .catch(() => undefined);
+      else
+        void viva()
+          .evaluate(({ app: a }) => a.quit())
+          .catch(() => undefined);
+      await saiu;
+      // Quando o processo saiu, a ordem já estava gravada: parou → soltou.
+      expect(existsSync(registro)).toBe(true);
+      const fatos = readFileSync(registro, "utf8").trim().split("\n");
+      expect(fatos.indexOf("parou")).toBeGreaterThanOrEqual(0);
+      expect(fatos.indexOf("soltar")).toBeGreaterThan(fatos.indexOf("parou"));
+    },
+  );
 });
