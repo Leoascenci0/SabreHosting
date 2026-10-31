@@ -263,6 +263,23 @@ describe("tirar PC do grupo: POST /pcs/:id/revogar (só o dono)", () => {
     expect((await eu(ana)).statusCode).toBe(200);
   });
 
+  it("token revogado conta no limite de falhas: 20 × 401 e a próxima é 429, até para o token ativo do mesmo IP", async () => {
+    const { m, dono, ana, idDe, revogar } = await comAna();
+    expect((await revogar(dono.auth, idDe("pc-da-ana"))).statusCode).toBe(204);
+    const ip = ana.pacote.ip_pc;
+    const trava = (auth: Record<string, string>) =>
+      m.app.inject({ url: "/trava", headers: auth, remoteAddress: ip });
+    for (let i = 0; i < 20; i++) expect((await trava(ana.auth)).statusCode).toBe(401);
+    // Renovar a trava com o token revogado também é recusado: o host revogado perde a trava só no prazo.
+    expect((await trava(ana.auth)).statusCode).toBe(429);
+    expect((await trava(dono.auth)).statusCode).toBe(429);
+    // Outro IP não paga pelo PC revogado.
+    expect(
+      (await m.app.inject({ url: "/trava", headers: dono.auth, remoteAddress: "10.66.0.77" }))
+        .statusCode,
+    ).toBe(200);
+  });
+
   it("o dono não se tira (409, só depois do trocar-dono); PC inexistente → 404; id inválido → 400", async () => {
     const { dono, idDe, revogar, eu } = await comAna();
     const r = await revogar(dono.auth, idDe("pc-do-dono"));
