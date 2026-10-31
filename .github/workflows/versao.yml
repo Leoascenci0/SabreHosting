@@ -1,0 +1,50 @@
+name: Versão
+
+# Só roda quando alguém cria uma tag vX.Y.Z (a Máxima, no fim de um milestone). Não assina o instalador (decisão D9, do Eliel).
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  instalador:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # só este job cria a release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Conferir que a tag bate com a versão do app
+        shell: bash
+        run: |
+          VERSAO=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "v${VERSAO}" ]; then
+            echo "A tag ${GITHUB_REF_NAME} não bate com a versão ${VERSAO} em apps/desktop/package.json." >&2
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm run build -w apps/desktop
+      - name: Gerar o instalador (NSIS)
+        run: npx electron-builder --config electron-builder.json --win
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false" # sem assinatura de código
+      - name: Checksums e teto de tamanho
+        run: node apps/desktop/scripts/checksums.mjs apps/desktop/release
+      - name: Publicar a release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            apps/desktop/release/SabreHosting-Setup-*.exe \
+            apps/desktop/release/SHA256SUMS.txt \
+            --title "SabreHosting ${GITHUB_REF_NAME}" \
+            --notes "Instalador para Windows. Confira o SHA-256 em SHA256SUMS.txt antes de instalar."
