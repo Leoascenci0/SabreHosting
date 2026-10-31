@@ -1,5 +1,6 @@
+import { realpathSync } from "node:fs";
 import { readdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative, isAbsolute } from "node:path";
 import { abrirPacote } from "../backup/pacote.js";
 import { hashDoArquivo } from "../integridade/hash.js";
 
@@ -14,6 +15,8 @@ const PASTA_DA_VITRINE = /^v-\d+-\d+$/;
 export function criarVitrine(pasta: string) {
   let atual: { dir: string; indice: Map<string, string> } | undefined;
   let emCurso = false;
+  let andamento: Promise<unknown> = Promise.resolve();
+  let fechada = false;
   let contador = 0;
   let limpou = false;
 
@@ -21,13 +24,23 @@ export function criarVitrine(pasta: string) {
     /** Acha o arquivo pelo hash; `undefined` se não está na vitrine. */
     arquivos(sha256: string): { caminho: string } | undefined {
       const caminho = atual?.indice.get(sha256);
-      return caminho === undefined ? undefined : { caminho };
+      if (atual === undefined || caminho === undefined) return undefined;
+      // Pasta intermediária trocada por link simbólico: o caminho real tem de continuar dentro da vitrine.
+      try {
+        const fora = relative(realpathSync(atual.dir), realpathSync(caminho));
+        if (fora === "" || fora.startsWith("..") || isAbsolute(fora)) return undefined;
+      } catch {
+        return undefined;
+      }
+      return { caminho };
     },
 
     /** Abre o pacote na vitrine. `false`: já havia uma publicação em curso (S-06), esta foi pulada. */
     async publicar(pacote: string, sha256: string): Promise<boolean> {
-      if (emCurso) return false;
+      if (emCurso || fechada) return false;
       emCurso = true; // antes de qualquer await
+      let terminou!: () => void;
+      andamento = new Promise<void>((ok) => (terminou = ok));
       try {
         if (!limpou) {
           limpou = true; // sobras de sessão anterior: só as pastas com o nosso nome (S-07)
@@ -50,11 +63,14 @@ export function criarVitrine(pasta: string) {
         return true;
       } finally {
         emCurso = false;
+        terminou();
       }
     },
 
-    /** Para de servir e apaga a cópia aberta. */
+    /** Para de servir e apaga a cópia aberta; espera a publicação em curso para não deixar pasta `v-*` órfã. */
     async fechar(): Promise<void> {
+      fechada = true; // antes de qualquer await: nenhuma publicação nova começa
+      await andamento.catch(() => undefined);
       const velha = atual;
       atual = undefined;
       if (velha) await rm(velha.dir, { recursive: true, force: true }).catch(() => undefined);

@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { crc32 } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { gravarInstancia, montarInstancia, nomeSeguroDoGrupo } from "./instancia.js";
+import {
+  gravarInstancia,
+  montarInstancia,
+  nomeSeguroDoGrupo,
+  temMarcadorSabre,
+} from "./instancia.js";
 
 const base = { grupo: "Amigos", versaoMinecraft: "1.21.1", versaoNeoForge: "21.1.172", mods: [] };
 
@@ -90,7 +95,10 @@ describe("gravarInstancia", () => {
     expect(dois).toEqual({ caminho: um.caminho, alterado: false });
     const tres = await gravarInstancia({ ...base, versaoNeoForge: "21.1.200", pastaDestino: raiz });
     expect(tres.alterado).toBe(true);
-    expect(await readdir(join(raiz, "SabreHosting"))).toEqual(["Amigos.mrpack"]);
+    expect((await readdir(join(raiz, "SabreHosting"))).sort()).toEqual([
+      ".sabrehosting.json",
+      "Amigos.mrpack",
+    ]);
   });
 
   it("não toca em instâncias nem arquivos alheios", async () => {
@@ -129,5 +137,41 @@ describe("gravarInstancia", () => {
     expect((await readdir(join(raiz, "SabreHosting"))).filter((n) => n.includes("tmp"))).toEqual(
       [],
     );
+  });
+
+  it("grava o marcador próprio da pasta, além do nome", async () => {
+    const pasta = join(raiz, "SabreHosting");
+    expect(await temMarcadorSabre(pasta)).toBe(false);
+    await gravarInstancia({ ...base, pastaDestino: raiz });
+    expect(await temMarcadorSabre(pasta)).toBe(true);
+    expect(JSON.parse(await readFile(join(pasta, ".sabrehosting.json"), "utf8"))).toEqual({
+      app: "SabreHosting",
+      formato: 1,
+    });
+    // Marcador de outro programa ou ilegível não conta.
+    await writeFile(join(pasta, ".sabrehosting.json"), '{"app":"Outro"}');
+    expect(await temMarcadorSabre(pasta)).toBe(false);
+    await writeFile(join(pasta, ".sabrehosting.json"), "lixo");
+    expect(await temMarcadorSabre(pasta)).toBe(false);
+  });
+
+  it("não sobrescreve um .mrpack de mesmo nome que não é do SabreHosting (sem marcador)", async () => {
+    await mkdir(join(raiz, "SabreHosting"));
+    const alheio = join(raiz, "SabreHosting", "Amigos.mrpack");
+    await writeFile(alheio, "do amigo");
+    await expect(gravarInstancia({ ...base, pastaDestino: raiz })).rejects.toThrow(
+      /não é do SabreHosting/,
+    );
+    expect(await readFile(alheio, "utf8")).toBe("do amigo");
+    expect(await readdir(join(raiz, "SabreHosting"))).toEqual(["Amigos.mrpack"]);
+  });
+
+  it("arquivo idêntico sem marcador só ganha o marcador, sem regravar o pacote", async () => {
+    await mkdir(join(raiz, "SabreHosting"));
+    const caminho = join(raiz, "SabreHosting", "Amigos.mrpack");
+    await writeFile(caminho, montarInstancia(base).bytes);
+    const r = await gravarInstancia({ ...base, pastaDestino: raiz });
+    expect(r.alterado).toBe(false);
+    expect(await temMarcadorSabre(join(raiz, "SabreHosting"))).toBe(true);
   });
 });

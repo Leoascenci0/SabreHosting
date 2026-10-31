@@ -63,6 +63,31 @@ describe("versão do Minecraft (main)", () => {
       opcoes: async () => ({ neoforge: true, fabricForge: true, consultou: true }),
     }).versao.opcoes("1.20.1");
     expect(r).toMatchObject({ ok: true, neoforge: false, fabricForge: false });
+    expect(r.ok && r.texto).toMatch(/só roda sem mods.*ainda não foi liberado/);
+  });
+
+  it("outra versão não mostra o aviso de mods pendentes", async () => {
+    const r = await montar().versao.opcoes("1.21.1");
+    expect(r.ok && r.texto).not.toMatch(/ainda não foi liberado/);
+  });
+
+  it("trocando(): vale durante o backup e a gravação, e volta a falso em sucesso e em falha", async () => {
+    let solta!: () => void;
+    const { versao } = montar({ backupAntes: () => new Promise<void>((ok) => (solta = ok)) });
+    expect(versao.trocando()).toBe(false);
+    const p = versao.gravar("1.20.4");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(versao.trocando()).toBe(true);
+    solta();
+    await p;
+    expect(versao.trocando()).toBe(false);
+    const falha = montar({
+      backupAntes: async () => {
+        throw new Error("x");
+      },
+    }).versao;
+    await falha.gravar("1.20.4");
+    expect(falha.trocando()).toBe(false);
   });
 
   it("consulta que falhou: só sem mods, dito com clareza", async () => {

@@ -3,7 +3,7 @@ import { isAbsolute, join, resolve } from "node:path";
 
 export const LINK_DOWNLOAD_PRISM = "https://prismlauncher.org/download";
 /** Versão mínima suportada (decidida na rodada; reversível). */
-export const VERSAO_MINIMA_PRISM = 8;
+export const VERSAO_MINIMA_PRISM = "8.0.0";
 
 export interface SistemaArquivos {
   existe(caminho: string): Promise<boolean>;
@@ -60,8 +60,18 @@ function lerInstanceDir(cfg: string): string | null {
   return null;
 }
 
-function inteiro(versao: string): number {
-  return Number.parseInt(versao, 10);
+/** "8.0.0-rc1" -> [8, 0, 0]; parte que falta vale 0 ("8.1" = 8.1.0); null se não começa por número. */
+function partesDaVersao(versao: string): [number, number, number] | null {
+  const m = /^\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(versao);
+  return m ? [Number(m[1]), Number(m[2] ?? 0), Number(m[3] ?? 0)] : null;
+}
+
+/** Compara major.minor.patch: negativo se `a` < `b`, 0 se iguais, positivo se `a` > `b`; null se ilegível. */
+export function compararVersoes(a: string, b: string): number | null {
+  const pa = partesDaVersao(a);
+  const pb = partesDaVersao(b);
+  if (!pa || !pb) return null;
+  return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
 }
 
 export async function detectarPrism(op: OpcoesDetectarPrism): Promise<ResultadoPrism> {
@@ -133,7 +143,7 @@ export async function detectarPrism(op: OpcoesDetectarPrism): Promise<ResultadoP
       avisos.push("Não consegui descobrir a versão do Prism; vou assumir que serve.");
   }
 
-  const antigo = versao !== null && inteiro(versao) < VERSAO_MINIMA_PRISM;
+  const antigo = versao !== null && (compararVersoes(versao, VERSAO_MINIMA_PRISM) ?? 0) < 0;
   return {
     instalado: true,
     antigo,
@@ -143,7 +153,7 @@ export async function detectarPrism(op: OpcoesDetectarPrism): Promise<ResultadoP
     avisos,
     ...(antigo
       ? {
-          mensagem: `O Prism ${versao} é antigo demais. Atualize para a versão ${VERSAO_MINIMA_PRISM}.0 ou mais nova em ${LINK_DOWNLOAD_PRISM}.`,
+          mensagem: `O Prism ${versao} é antigo demais. Atualize para a versão ${VERSAO_MINIMA_PRISM} ou mais nova em ${LINK_DOWNLOAD_PRISM}.`,
         }
       : {}),
   };

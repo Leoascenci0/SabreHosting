@@ -25,6 +25,8 @@ export interface Preferencias {
   historicoLongoLigado: boolean;
   /** Configurações › Backups › Histórico longo numa pasta (pasta). Vem do arquivo: entrada não confiável. */
   historicoLongoPasta: string;
+  /** Configurações › Backups › Limite de banda para atualizar o mundo (MB/s). */
+  limiteBandaMBs: number;
 }
 
 /** Ligado exige pasta completa (absoluta); desligado aceita qualquer texto. Lança erro em pt-BR. */
@@ -61,6 +63,21 @@ export function validarQuantosGuardar(n: number): void {
   }
 }
 
+export const LIMITE_BANDA_PADRAO = 10;
+export const LIMITE_BANDA_MAX = 1000;
+
+/** Só inteiro de 1 a 1000 MB/s (0 travaria a atualização); lança erro em pt-BR. */
+export function validarLimiteBanda(mbs: number): void {
+  if (!Number.isInteger(mbs) || mbs < 1 || mbs > LIMITE_BANDA_MAX) {
+    throw new Error(
+      `O "Limite de banda" precisa ser um número inteiro de MB/s, de 1 a ${LIMITE_BANDA_MAX}.`,
+    );
+  }
+}
+
+/** MB/s da tela em bytes/s para o núcleo (1 MB = 1.000.000 bytes). */
+export const bytesPorSegundo = (mbs: number): number => mbs * 1_000_000;
+
 const PADRAO: Preferencias = {
   abrirComWindows: false,
   distanciaVisao: DISTANCIA_VISAO_PADRAO,
@@ -70,6 +87,7 @@ const PADRAO: Preferencias = {
   quantosGuardarHistorico: QUANTOS_GUARDAR_PADRAO,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
+  limiteBandaMBs: LIMITE_BANDA_PADRAO,
 };
 const ARQUIVO = "preferencias.json";
 
@@ -101,6 +119,7 @@ export function lerPreferencias(pasta: string): Preferencias {
       typeof bruto.historicoLongoLigado === "boolean" ? bruto.historicoLongoLigado : false,
     historicoLongoPasta:
       typeof bruto.historicoLongoPasta === "string" ? bruto.historicoLongoPasta : "",
+    limiteBandaMBs: numeroOuPadrao(bruto.limiteBandaMBs, PADRAO.limiteBandaMBs),
   };
   try {
     validarHistoricoLongo(resultado.historicoLongoLigado, resultado.historicoLongoPasta);
@@ -121,6 +140,11 @@ export function lerPreferencias(pasta: string): Preferencias {
     validarQuantosGuardar(resultado.quantosGuardarHistorico);
   } catch {
     resultado.quantosGuardarHistorico = PADRAO.quantosGuardarHistorico;
+  }
+  try {
+    validarLimiteBanda(resultado.limiteBandaMBs);
+  } catch {
+    resultado.limiteBandaMBs = PADRAO.limiteBandaMBs; // arquivo torto nunca vira "0 MB/s" nem "sem limite"
   }
   try {
     // As duas distâncias andam juntas (simulação < visão): par inválido volta ao par padrão.

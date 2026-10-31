@@ -95,6 +95,8 @@ export interface OpcoesEspalhar extends Pick<
   /** Token deste PC (nunca vai para log nem para mensagem). */
   token: string;
   tentativas?: number;
+  /** Banda máxima em bytes/s, lida a cada arquivo (mudar em Configurações vale na hora); ausente: sem limite. */
+  limiteBytesPorSeg?: () => number | undefined;
   permitirLoopbackParaTeste?: boolean;
   /** Só para os testes: roda antes de cada arquivo; o que lançar simula a rede caindo ali. */
   aoBaixar?: (arquivo: ArquivoDoManifesto) => void | Promise<void>;
@@ -133,6 +135,7 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
     let ultimo: unknown;
     for (const f of fontes) {
       try {
+        const limite = o.limiteBytesPorSeg?.();
         return await pedirArquivo({
           endereco: f.endereco,
           porta: f.porta,
@@ -140,6 +143,7 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
           destino,
           token: o.token,
           tamanhoMaximo,
+          ...(limite !== undefined ? { limiteBytesPorSeg: limite } : {}),
           ...(o.tentativas !== undefined ? { tentativas: o.tentativas } : {}),
           ...(o.permitirLoopbackParaTeste ? { permitirLoopbackParaTeste: true } : {}),
         });

@@ -30,6 +30,8 @@ export interface OpcoesEspalhador {
   servidorOrfao?: () => Promise<boolean>;
   /** Versão do pacote que este PC tem agora (maior `versao` dos backups). */
   versaoLocal: () => Promise<number>;
+  /** Limite de banda em bytes/s, lido a cada rodada (Configurações › Backups › Limite de banda). */
+  limiteBytesPorSeg?: () => number | undefined;
   /** Só para teste: aceita 127.0.0.1. Nunca ligado pelo app. */
   permitirLoopbackParaTeste?: boolean;
 }
@@ -82,6 +84,7 @@ export function criarEspalhador(o: OpcoesEspalhador) {
         hospedaAgora,
         servidorParado: () => !o.servidorRodando(),
         avisarCopia: (n) => c.informarCopia(n),
+        ...(o.limiteBytesPorSeg ? { limiteBytesPorSeg: o.limiteBytesPorSeg } : {}),
         ...(o.permitirLoopbackParaTeste ? { permitirLoopbackParaTeste: true } : {}),
       });
     } finally {

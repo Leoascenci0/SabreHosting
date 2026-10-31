@@ -72,6 +72,9 @@ export function criarVersao(deps: DepsVersao) {
     typeof versao === "string" && (await deps.listar()).includes(versao) ? versao : undefined;
 
   return {
+    /** Verdadeiro da checagem inicial até depois da gravação: o início do servidor recusa subir nesse intervalo. */
+    trocando: (): boolean => gravando,
+
     async estado(): Promise<EstadoVersao> {
       if (!(await ehDono())) return { dono: false };
       try {
