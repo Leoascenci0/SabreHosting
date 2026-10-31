@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { writeFileSync } from "node:fs";
 import { type AjudanteEntrada, type PacoteLigacao, gerarParProvisorio } from "./ajudante.js";
 import { ajudanteDoAmbiente } from "./ambiente.js";
-import { abrirBanco, apagarConvitesVencidos, criarConvite, donoAtual } from "./banco.js";
+import { abrirBanco, apagarConvitesVencidos, criarConvite, donoAtual, revogarPc } from "./banco.js";
 import { hashSegredo } from "./segredo.js";
 import { criarConviteDono, rodarComando, trocarDono } from "./comandos.js";
 import { type Grupo, limparProvisorios } from "./convite.js";
@@ -271,6 +271,38 @@ describe("tirar PC do grupo: POST /pcs/:id/revogar (só o dono)", () => {
     expect((await eu(dono)).statusCode).toBe(200);
     expect((await revogar(dono.auth, 9999)).statusCode).toBe(404);
     expect((await revogar(dono.auth, "abc")).statusCode).toBe(400);
+  });
+
+  it("revogarPc direto no banco recusa o dono e o PC inexistente (a conferência é da transação, não da rota)", async () => {
+    const { m, ana, idDe, eu } = await comAna();
+    expect(revogarPc(m.banco, idDe("pc-do-dono"), 1)).toBe("dono");
+    expect(revogarPc(m.banco, 9999, 1)).toBe("inexistente");
+    expect(revogarPc(m.banco, idDe("pc-da-ana"), 1)).toBe("revogado");
+    expect((await eu(ana)).statusCode).toBe(401);
+    expect(
+      m.banco.prepare("SELECT count(*) AS n FROM tokens WHERE revogado_em IS NULL").get(),
+    ).toEqual({ n: 1 });
+  });
+
+  it("PC tirado que segurava a trava a perde só no prazo (~20 s), não na hora", async () => {
+    const { m, dono, ana, idDe, revogar } = await comAna();
+    const pegar = await m.app.inject({
+      method: "POST",
+      url: "/trava/pegar",
+      headers: ana.auth,
+      remoteAddress: ana.pacote.ip_pc,
+    });
+    expect(pegar.statusCode).toBeLessThan(300);
+    await revogar(dono.auth, idDe("pc-da-ana"));
+    const t = await m.app.inject({ url: "/trava", headers: dono.auth, remoteAddress: "10.66.0.2" });
+    expect(t.json<{ dono: { nome: string } | null }>().dono?.nome).toBe("pc-da-ana");
+    m.relogio.agora += 60_000;
+    const depois = await m.app.inject({
+      url: "/trava",
+      headers: dono.auth,
+      remoteAddress: "10.66.0.2",
+    });
+    expect(depois.json<{ dono: unknown }>().dono).toBeNull();
   });
 });
 

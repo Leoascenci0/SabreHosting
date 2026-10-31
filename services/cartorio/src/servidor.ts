@@ -372,10 +372,9 @@ export function criarCartorio({
     (req, resp) => {
       const dono = donoAtual(banco);
       if (dono?.id !== pcDe(req).id) return resp.code(403).send(SO_DONO_TIRA);
-      const { id } = req.params;
-      if (id === dono.id) return resp.code(409).send(DONO_NAO_SE_TIRA);
-      if (!pcPorId(id)) return resp.code(404).send(PC_INEXISTENTE);
-      revogarPc(banco, id, agora());
+      const r = revogarPc(banco, req.params.id, agora());
+      if (r === "dono") return resp.code(409).send(DONO_NAO_SE_TIRA);
+      if (r === "inexistente") return resp.code(404).send(PC_INEXISTENTE);
       return resp.code(204).send();
     },
   );
