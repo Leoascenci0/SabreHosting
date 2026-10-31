@@ -14,7 +14,8 @@ Sintoma: `expected Set{ 16, 20 } to deeply equal Set{ 16 }` (corrida da trava) e
 Causa: teste dependente de tempo — perdedor atrasado lia a época da rodada seguinte; prazo padrão de 5 s; medida de
 memória por `gc()` sensível à carga · Solução: comparar "época ≥ a do vencedor" mantendo "exatamente 1 ganha"; prazo
 explícito de 30 s nos testes pesados; medir pedaço lido (≤ 1 MiB) e arquivos abertos (= 1) em vez de memória · Prova:
-4 `npx vitest run` em paralelo, 3 vezes, zero falhas · Vezes: 1 · Origem: basemel-1.3, PR #43
+4 `npx vitest run` em paralelo, 3 vezes, zero falhas · Vezes: 2 · Origem: basemel-1.3, PR #43; basemel-1.5, PR #76
+(trava: com renovação de 100 ms a folga do prazo local é 75 ms; teste que exige a trava viva usa 1500/500 ms)
 
 ## S-02 — Commit de controle levou marcador de conflito de merge
 Sintoma: `<<<<<<< HEAD` dentro de `docs/ops/DECISOES.md` e o verificador APROVADO · Causa: `git merge` da main deu

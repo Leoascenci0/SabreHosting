@@ -55,7 +55,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
 - Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1, 1.4, 1.6, 1.7 [antes do cart-2.2], 1.8; 1.2, 1.3, 1.5 feitos).
 - Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
-- Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1, 1.2 e 1.5, CI).
+- Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1, 1.2, 1.6; 1.5 feito).
 
 - Bedrock via Geyser (se D1 = Java + Bedrock depois).
 - App para Linux e macOS (o núcleo já é multiplataforma).
@@ -63,7 +63,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Feito
 
-- 31/10/2026 — app-1.1 janela, bandeja e design system (#70); cartmel-1.2/1.3 cartório endurecido e banco em /var/lib (#69).
+- 31/10/2026 — app-1.1 janela, bandeja e design system (#70); cartmel-1.2/1.3 cartório endurecido e banco em /var/lib (#69); basemel-1.5 teste da trava estável (#76).
 
 - 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
 
