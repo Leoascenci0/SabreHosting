@@ -12,7 +12,7 @@ import {
   type ExecArquivo,
   type ResultadoPrism,
 } from "@sabrehosting/nucleo/launcher/prism";
-import { ambienteLegado, ENDERECO_VALIDO, type ConfigPc } from "./config-pc.js";
+import { ambienteLegado, ENDERECO_VALIDO, nomeDoMundo, type ConfigPc } from "./config-pc.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 /** Ganchos só dos testes: rede e processo falsos no lugar dos reais. */
@@ -98,8 +98,7 @@ async function servidorNaPasta(
   }
   if (plataforma === "win32") {
     // O Java prende o session.lock do mundo com trava obrigatória do Windows: ler falha enquanto ele vive.
-    const props = await readFile(join(pasta, "server.properties"), "utf8").catch(() => "");
-    const mundo = /^level-name=(.*)$/m.exec(props)?.[1]?.trim() || "world";
+    const mundo = await nomeDoMundo(pasta);
     try {
       await readFile(join(pasta, mundo, "session.lock"));
       return false;

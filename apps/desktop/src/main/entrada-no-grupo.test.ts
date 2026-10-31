@@ -171,6 +171,32 @@ describe("entrada no grupo (passo elevado)", () => {
     expect(configs.join()).not.toContain(proprias.privada);
   });
 
+  it("falha ao esperar a instalação: só termina depois de o script desinstalar a provisória (appmel-1.16)", async () => {
+    const passos: string[] = [];
+    const entrar = criarEntradaNoGrupo({
+      pastaRede: pasta,
+      plataforma: "win32",
+      usuario: "teste",
+      exec: async () => "",
+      passoMs: 5,
+      prazoMs: 40, // a instalação "nunca fica pronta": esperarPronta estoura
+      execElevado: async () => {
+        for (let i = 0; i < 400; i++) {
+          if (existsSync(join(pasta, "cancelar.flag"))) {
+            await espera(80); // o script leva um tempo para desinstalar o túnel
+            passos.push("desinstalada");
+            throw new Error("saiu com 2");
+          }
+          await espera(5);
+        }
+        throw new Error("sem sinal");
+      },
+      fetchFn: (async () => new Response("{}")) as typeof fetch,
+    });
+    await expect(entrar(convite, proprias, async () => {})).rejects.toThrow();
+    expect(passos).toEqual(["desinstalada"]); // falhava: o erro saía antes da desinstalação
+  });
+
   it("fora do Windows: recusa sem tocar em nada", async () => {
     const entrar = criarEntradaNoGrupo({ pastaRede: pasta, plataforma: "linux" });
     await expect(entrar(convite, proprias, async () => {})).rejects.toThrow(

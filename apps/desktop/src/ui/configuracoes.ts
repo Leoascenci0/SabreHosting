@@ -355,7 +355,9 @@ function desenharMods(mods: ModDaTela[], dono: boolean): void {
   );
 }
 
-async function carregarMods(): Promise<void> {
+// `preservarMensagens`: true quando a leitura vem de uma ação (adicionar/tirar) ou da espera de "atualizando";
+// nesses casos o aviso e o erro da ação que acabou de rodar não podem sumir.
+async function carregarMods(preservarMensagens = false): Promise<void> {
   const minha = ++consultaMods;
   clearTimeout(aguardaMods);
   try {
@@ -365,10 +367,15 @@ async function carregarMods(): Promise<void> {
     dicaMods.hidden = false;
     atualizandoMods.hidden = !e.atualizando;
     desenharMods(e.mods, e.dono);
+    // Leitura de tela: o que sobrou de antes (aviso que o problema já resolveu, erro de leitura) sai.
+    if (!preservarMensagens) {
+      mostrarErroMods("");
+      avisoMods.textContent = "";
+    }
     if (e.erro) mostrarErroMods(e.erro);
-    else if (e.aviso) avisoMods.textContent = e.aviso;
+    if (e.aviso) avisoMods.textContent = e.aviso;
     // Atualizando no arranque: olha de novo até acabar, para o amigo ver o resultado.
-    if (e.atualizando) aguardaMods = setTimeout(() => void carregarMods(), 1500);
+    if (e.atualizando) aguardaMods = setTimeout(() => void carregarMods(true), 1500);
   } catch {
     mostrarErroMods("Não consegui ler a lista de mods agora.");
   }
@@ -397,7 +404,7 @@ confirmarMods.addEventListener("click", () => {
     .catch(() => mostrarErroMods("Não consegui tirar o mod agora. Atualize a lista para conferir."))
     .finally(() => {
       ocuparMods(false);
-      void carregarMods();
+      void carregarMods(true);
     });
 });
 adicionarMods.addEventListener("click", () => {
@@ -423,7 +430,7 @@ adicionarMods.addEventListener("click", () => {
     .catch(() => mostrarErroMods("Não consegui adicionar o mod agora. Nada foi alterado."))
     .finally(() => {
       ocuparMods(false);
-      void carregarMods();
+      void carregarMods(true);
     });
 });
 

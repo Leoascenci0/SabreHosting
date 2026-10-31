@@ -550,8 +550,18 @@ function registrarPonte(
   });
   inicio.aoMudar(() => janela?.webContents.send("sabre:inicio:mudou"));
   ipcMain.handle("sabre:inicio:estado", (evento) => (permitir(evento), inicio.estado()));
-  ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), inicio.jogar()));
-  ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), inicio.hospedar()));
+  // Depois de trocar a pasta o app reinicia em ~1,5 s: nada de Jogar/Hospedar com a pasta velha nesse intervalo.
+  const REINICIANDO = "O app está reiniciando para usar a pasta nova. Espere alguns segundos.";
+  ipcMain.handle("sabre:inicio:jogar", (evento) => {
+    permitir(evento);
+    if (pastaBase.trocada()) throw new Error(REINICIANDO);
+    return inicio.jogar();
+  });
+  ipcMain.handle("sabre:inicio:hospedar", (evento) => {
+    permitir(evento);
+    if (pastaBase.trocada()) return { ok: false, mensagem: REINICIANDO };
+    return inicio.hospedar();
+  });
   ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), inicio.parar()));
   ipcMain.handle(
     "sabre:config:escolher-pasta",
@@ -652,6 +662,7 @@ if (!app.requestSingleInstanceLock()) {
         dados,
         criarCofreSeguro(safeStorage, join(dados, ARQUIVO_COFRE)),
         process.env,
+        !app.isPackaged,
       );
       ambientePc = ambienteLegado(pc);
     }

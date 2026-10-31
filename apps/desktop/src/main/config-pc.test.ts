@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -48,7 +48,65 @@ describe("lerConfigPc: tudo vem da config gravada e do cofre, nunca do ambiente"
     expect(c.token).toBeUndefined();
     expect(c.enderecoGravado).toBeUndefined();
     expect(c.pastaServidor).toBeUndefined();
-    expect(c).toMatchObject({ java: "java", neoforge: "21.1.1" });
+    expect(c.java).toBeUndefined();
+    expect(c.neoforge).toBeUndefined();
+  });
+
+  it("modo teste: Java/NeoForge do ambiente valem; fora dele (app empacotado) são ignorados", async () => {
+    const env = { SABRE_JAVA: "java", SABRE_NEOFORGE: "21.1.1" };
+    expect(await lerConfigPc(dados, cofreCom(undefined), env, true)).toMatchObject({
+      java: "java",
+      neoforge: "21.1.1",
+    });
+    const c = await lerConfigPc(dados, cofreCom(undefined), env, false);
+    expect(c.java).toBeUndefined();
+    expect(c.neoforge).toBeUndefined();
+  });
+
+  describe("level-name do server.properties", () => {
+    const concluido = (): void =>
+      gravar({ grupo: { nome: "A" }, portaCartorio: 7710, concluido: true, pastaBase: BASE });
+    const props = (conteudo: string): void => {
+      // A pasta do app não é a do servidor: o servidor fica em BASE/servidor, então o teste usa a base dentro de `dados`.
+      mkdirSync(join(dados, "base", "servidor"), { recursive: true });
+      writeFileSync(join(dados, "base", "servidor", "server.properties"), conteudo);
+    };
+    const comBase = (): void =>
+      gravar({
+        grupo: { nome: "A" },
+        portaCartorio: 7710,
+        concluido: true,
+        pastaBase: join(dados, "base"),
+      });
+
+    it("level-name diferente aponta o mundo certo", async () => {
+      props("motd=oi\nlevel-name=Mundo dos Amigos\n");
+      comBase();
+      const c = await lerConfigPc(dados, cofreCom("t"), {});
+      expect(c.pastaMundo).toBe(join(dados, "base", "servidor", "Mundo dos Amigos"));
+    });
+
+    it("sem server.properties ou sem level-name: world", async () => {
+      concluido();
+      expect((await lerConfigPc(dados, cofreCom("t"), {})).pastaMundo).toBe(
+        join(BASE, "servidor", "world"),
+      );
+      props("motd=oi\n");
+      comBase();
+      expect((await lerConfigPc(dados, cofreCom("t"), {})).pastaMundo).toBe(
+        join(dados, "base", "servidor", "world"),
+      );
+    });
+
+    it.each(["../fora", "a/b", "a\\b", "/abs", "..", ".", "C:\\x", ""])(
+      "nome torto %j vira world (S-07)",
+      async (nome) => {
+        props(`level-name=${nome}\n`);
+        comBase();
+        const c = await lerConfigPc(dados, cofreCom("t"), {});
+        expect(c.pastaMundo).toBe(join(dados, "base", "servidor", "world"));
+      },
+    );
   });
 
   it("entrou no grupo mas não concluiu a pasta: tem cartório, não tem pastas", async () => {
