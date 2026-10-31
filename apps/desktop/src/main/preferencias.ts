@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { RECENTES_PADRAO } from "@sabrehosting/nucleo/backup/rotacao";
 import {
   DISTANCIA_SIMULACAO_PADRAO,
   DISTANCIA_VISAO_PADRAO,
@@ -16,6 +17,8 @@ export interface Preferencias {
   distanciaSimulacao: number;
   /** Configurações › Backups › Intervalo (minutos entre um backup e o próximo). */
   intervaloBackupMin: number;
+  /** Configurações › Backups › Quantos guardar (os dos últimos 7 dias sempre ficam além destes). */
+  quantosGuardar: number;
   /** Configurações › Backups › Histórico longo numa pasta (liga). */
   historicoLongoLigado: boolean;
   /** Configurações › Backups › Histórico longo numa pasta (pasta). Vem do arquivo: entrada não confiável. */
@@ -44,11 +47,24 @@ export function validarIntervaloBackup(min: number): void {
   }
 }
 
+export const QUANTOS_GUARDAR_PADRAO = RECENTES_PADRAO;
+export const QUANTOS_GUARDAR_MAX = 1000;
+
+/** Só inteiro de 1 a 1000 (0 apagaria tudo); lança erro em pt-BR. */
+export function validarQuantosGuardar(n: number): void {
+  if (!Number.isInteger(n) || n < 1 || n > QUANTOS_GUARDAR_MAX) {
+    throw new Error(
+      `"Quantos guardar" precisa ser um número inteiro de 1 a ${QUANTOS_GUARDAR_MAX}.`,
+    );
+  }
+}
+
 const PADRAO: Preferencias = {
   abrirComWindows: false,
   distanciaVisao: DISTANCIA_VISAO_PADRAO,
   distanciaSimulacao: DISTANCIA_SIMULACAO_PADRAO,
   intervaloBackupMin: INTERVALO_BACKUP_PADRAO,
+  quantosGuardar: QUANTOS_GUARDAR_PADRAO,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -69,6 +85,7 @@ export function lerPreferencias(pasta: string): Preferencias {
     distanciaVisao: Number(bruto.distanciaVisao),
     distanciaSimulacao: Number(bruto.distanciaSimulacao),
     intervaloBackupMin: Number(bruto.intervaloBackupMin ?? PADRAO.intervaloBackupMin),
+    quantosGuardar: Number(bruto.quantosGuardar ?? PADRAO.quantosGuardar),
     historicoLongoLigado:
       typeof bruto.historicoLongoLigado === "boolean" ? bruto.historicoLongoLigado : false,
     historicoLongoPasta:
@@ -83,6 +100,11 @@ export function lerPreferencias(pasta: string): Preferencias {
     validarIntervaloBackup(resultado.intervaloBackupMin);
   } catch {
     resultado.intervaloBackupMin = PADRAO.intervaloBackupMin;
+  }
+  try {
+    validarQuantosGuardar(resultado.quantosGuardar);
+  } catch {
+    resultado.quantosGuardar = PADRAO.quantosGuardar; // arquivo torto nunca vira "guardar 0"
   }
   try {
     // As duas distâncias andam juntas (simulação < visão): par inválido volta ao par padrão.

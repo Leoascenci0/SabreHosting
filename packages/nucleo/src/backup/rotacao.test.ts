@@ -224,8 +224,7 @@ describe("planejarRotacao", () => {
         const ini = new Date(2026, 9, 30 - d).getTime();
         const fim = new Date(2026, 9, 31 - d).getTime();
         const doDia = porData.filter((b) => b.data.getTime() >= ini && b.data.getTime() < fim);
-        if (bons.length > 0)
-          for (const b of doDia) expect(mantidos.has(b.nome), ctx).toBe(true);
+        if (bons.length > 0) for (const b of doDia) expect(mantidos.has(b.nome), ctx).toBe(true);
       }
     }
   }, 60_000);

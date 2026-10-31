@@ -18,6 +18,7 @@ const windows = $<HTMLInputElement>("cfg-windows");
 const visao = $<HTMLInputElement>("cfg-visao");
 const simulacao = $<HTMLInputElement>("cfg-simulacao");
 const intervalo = $<HTMLInputElement>("cfg-intervalo");
+const quantos = $<HTMLInputElement>("cfg-quantos");
 const historico = $<HTMLInputElement>("cfg-historico");
 const historicoPasta = $<HTMLInputElement>("cfg-historico-pasta");
 const historicoEscolher = $<HTMLButtonElement>("cfg-historico-escolher");
@@ -51,6 +52,7 @@ function mostrarErro(texto: string, campo?: CampoComErro): void {
   visao.setAttribute("aria-invalid", marca("distancias"));
   simulacao.setAttribute("aria-invalid", marca("distancias"));
   intervalo.setAttribute("aria-invalid", marca("intervalo"));
+  quantos.setAttribute("aria-invalid", marca("quantos"));
   historicoPasta.setAttribute("aria-invalid", marca("historico"));
 }
 
@@ -69,6 +71,7 @@ function ocupar(ocupado: boolean): void {
     visao,
     simulacao,
     intervalo,
+    quantos,
     historico,
     historicoPasta,
     salvar,
@@ -169,6 +172,7 @@ async function carregar(): Promise<void> {
     visao.value = String(c.distanciaVisao);
     simulacao.value = String(c.distanciaSimulacao);
     intervalo.value = String(c.intervaloBackupMin);
+    quantos.value = String(c.quantosGuardar);
     historico.checked = c.historicoLongoLigado;
     historicoPasta.value = c.historicoLongoPasta;
     atualizarHistorico();
@@ -222,6 +226,7 @@ form.addEventListener("submit", (evento) => {
       distanciaVisao: visao.value === "" ? Number.NaN : Number(visao.value),
       distanciaSimulacao: simulacao.value === "" ? Number.NaN : Number(simulacao.value),
       intervaloBackupMin: intervalo.value === "" ? Number.NaN : Number(intervalo.value),
+      quantosGuardar: quantos.value === "" ? Number.NaN : Number(quantos.value),
       historicoLongoLigado: historico.checked,
       historicoLongoPasta: historicoPasta.value,
     })
@@ -235,6 +240,7 @@ form.addEventListener("submit", (evento) => {
       const alvo = {
         distancias: visao,
         intervalo,
+        quantos,
         historico: historicoPasta.disabled ? historico : historicoPasta,
       };
       (campoComErro ? alvo[campoComErro] : erro.hidden ? salvar : visao).focus();
