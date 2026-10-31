@@ -67,7 +67,10 @@ export interface PcDaTela {
   dono: boolean;
 }
 
-export type EstadoGrupo = { dono: false } | { dono: true; pcs: PcDaTela[]; erro?: string };
+export type EstadoGrupo = ({ dono: false } | { dono: true; pcs: PcDaTela[]; erro?: string }) & {
+  /** "Endereço do servidor" (só leitura, vindo do cartório); ausente quando o cartório não respondeu. */
+  endereco?: string;
+};
 
 export type EstadoVersao =
   { dono: false } | { dono: true; atual: string; versoes: string[]; erro?: string };

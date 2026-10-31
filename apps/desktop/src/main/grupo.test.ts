@@ -82,4 +82,27 @@ describe("grupo (main)", () => {
     const b = montar(true, { eu: async () => Promise.reject(new Error("x")) });
     expect(await b.grupo.estado()).toEqual({ dono: false });
   });
+
+  describe("Endereço do servidor (só leitura)", () => {
+    it("dono e não-dono recebem o endereço que o cartório deu", async () => {
+      const lerEndereco = async () => "jogar.exemplo.org:25565";
+      expect(await montar(false, { lerEndereco }).grupo.estado()).toEqual({
+        dono: false,
+        endereco: "jogar.exemplo.org:25565",
+      });
+      expect(await montar(true, { lerEndereco }).grupo.estado()).toMatchObject({
+        dono: true,
+        endereco: "jogar.exemplo.org:25565",
+      });
+    });
+
+    it("cartório não respondeu o /grupo: sem o campo, sem derrubar a lista nem vazar o erro", async () => {
+      const r = await montar(true, {
+        lerEndereco: async () => Promise.reject(new Error("http://10.66.0.1:7710 caiu")),
+      }).grupo.estado();
+      expect(r).toMatchObject({ dono: true, pcs: PCS });
+      expect(r.endereco).toBeUndefined();
+      expect(JSON.stringify(r)).not.toContain("10.66");
+    });
+  });
 });
