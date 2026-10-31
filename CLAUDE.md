@@ -138,9 +138,11 @@ qual parte detalhada (`references/*.md`) ler para o tipo da mudança.
   durante um item vira item no `docs/roadmap-<sigla>-melhoria.md` (sigla `<sigla>mel`); a filha só descreve no PR.
 - **Fila:** um orquestrador por vez; no máximo 1 PR de controle + 3 itens abertos. Item que pede decisão do Eliel
   nunca vai para agente.
-- **Um chat por rodada:** chat de ideia ou decisão não executa rodada; a rodada roda num chat aberto com `/maxima`
-  (ou `/maxima retomar`), que lê o estado em `docs/MILESTONE.md` e `docs/ops/rodadas/`. Passou de ~50% de contexto:
-  grava o estado e pede chat novo.
+- **Três níveis (regra do Eliel, 31/10/2026):** o chat aberto com `/maxima` (ou `/maxima retomar`) só **coordena**:
+  abre uma **sessão de onda** por vez, e ela abre as sessões de item, revisa e mergeia. O coordenador lê só o relatório
+  de ≤10 linhas de cada onda e passa o bastão a uma nova sessão coordenadora. Teto de contexto: meta **30%**, margem até
+  **35%** para concluir a demanda em curso, até **40%** só para um item muito específico. Detalhe em
+  `.claude/skills/maxima/references/coordenacao.md`.
 - **Autonomia da Máxima:** sozinha ela revisa, mergeia e gera a versão de teste; toma decisão **reversível** de
   detalhe (texto de tela, ordem de botão) e relata ("decidi por você", com o PR para desfazer). **Fica com o Eliel:**
   regra do grupo (quem pode hospedar, quem entra), custo ou cadastro em serviço externo (máquina na nuvem, domínio),

@@ -24,7 +24,8 @@ Regra de conflito: o `CLAUDE.md` vence; depois esta skill; depois a skill chamad
 | | `comecar` | abrir sessão: o que está em andamento e o que falta |
 | | `roteador-modelo-esforco` | antes de despachar: modelo e esforço (Sonnet padrão, Opus com gatilho) |
 | | `github-issue-pr-delivery` | issue pequena por item, PR com `Closes`/`Refs` |
-| | `references/rodada.md` | executar o milestone: filha por item, vigia, revisão, merge, retomada |
+| | `references/coordenacao.md` | **sempre que for rodar**: três níveis (coordenador → sessão de onda → sessão de item), tetos e templates |
+| | `references/rodada.md` | motor da sessão de onda: filha por item, vigia, revisão, merge, retomada |
 | | `references/triagem.md` | ao montar o briefing de item de código: método mais curto antes de escrever |
 | | `references/melhorias.md` | melhoria achada num item vira item do `docs/roadmap-<sigla>-melhoria.md` |
 | **Processo** (Superpowers) | `using-superpowers` | toda tarefa de código, antes de agir |
@@ -104,18 +105,20 @@ APROVADO, sem conflito com outros PRs; merge commit, um por vez. Depois: `pull -
 (vermelha = pare a rodada), marcar o item `- [x]` no roadmap (com o PR) e no milestone. Roadmap 100% feito vai para
 `docs/concluidos/`.
 
-## 4b. Contexto da orquestradora
+## 4b. Contexto: três níveis (regra do Eliel, 31/10/2026)
 
-- **Um chat por rodada.** O chat que configura ou decide com o Eliel não executa rodada.
-- A orquestradora não lê código grande: diff, log e relatório vão para subagente (`qa`, `planejador`), que devolve
-  ≤10 linhas.
-- Passou de ~50% de contexto: gravar o estado, fechar com prompt de retomada curto; o Eliel abre chat novo com
-  `/maxima retomar`.
+- **O chat do Eliel é só coordenador.** Ele abre uma **sessão de onda** por vez, e a sessão de onda abre as **sessões de
+  item**. O coordenador nunca faz triagem, briefing, vistoria, `qa` nem merge de item: lê só o relatório de ≤10 linhas
+  de cada onda. Detalhe, calibragem e templates em **`references/coordenacao.md`** (leia antes da primeira onda).
+- **Teto de contexto (coordenador e onda):** meta **30%**; margem até **35%** só para concluir a demanda em curso;
+  até **40%** só para um item muito específico, anotado no estado. Coordenador passa o bastão a uma nova sessão
+  coordenadora; sessão de onda fecha (também em 6 itens).
+- O chat que configura ou decide com o Eliel não executa rodada; diff, log e relatório grande vão para subagente.
 
 ## 5. A rodada (motor)
 
-Passo a passo (preparação, filha por item, vigia, revisão, merge, retomada, template da filha, arquivo de estado) em
-**`references/rodada.md`**. Leia antes de despachar a primeira filha.
+Quem roda o motor é a **sessão de onda**: passo a passo (filha por item, vigia, revisão, merge, template da filha,
+estado) em **`references/rodada.md`**. O coordenador segue **`references/coordenacao.md`**.
 
 ## 5b. Custo
 
