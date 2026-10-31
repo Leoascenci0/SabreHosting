@@ -28,7 +28,7 @@ afterEach(() => {
 function rodar(extra: Record<string, string> = {}) {
   const r = spawnSync("bash", [SCRIPT], {
     encoding: "utf8",
-    env: { PATH: process.env.PATH, SABRE_SIMULAR: "1", SABRE_ESTADO: estado, ...extra },
+    env: { PATH: process.env.PATH, SABRE_SIMULAR: "1", SABRE_FALSO_UID: "0", SABRE_ESTADO: estado, ...extra },
   });
   const comandos = r.stdout
     .split("\n")

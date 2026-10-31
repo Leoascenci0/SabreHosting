@@ -28,6 +28,7 @@ function rodar(extra: Record<string, string> = {}) {
     env: {
       PATH: process.env.PATH,
       SABRE_SIMULAR: "1",
+      SABRE_FALSO_UID: "0",
       SABRE_ESTADO: join(estado, "estado"),
       SABRE_LIMBO_URL: `file://${binario}`,
       SABRE_LIMBO_SHA256: shaCerto(),
@@ -81,7 +82,7 @@ describe("infra/vps/limbo/instalar-limbo.sh em simulação", () => {
   it("o manifesto do repositório ainda não tem hash inventado: sem override, recusa", () => {
     const r = spawnSync("bash", [SCRIPT], {
       encoding: "utf8",
-      env: { PATH: process.env.PATH, SABRE_SIMULAR: "1", SABRE_ESTADO: join(estado, "e2") },
+      env: { PATH: process.env.PATH, SABRE_SIMULAR: "1", SABRE_FALSO_UID: "0", SABRE_ESTADO: join(estado, "e2") },
     });
     const manifesto = readFileSync(join(RAIZ, "infra/vps/limbo/limbo-release.env"), "utf8");
     if (!/^LIMBO_SHA256_x86_64=[0-9a-f]{64}$/m.test(manifesto)) {
