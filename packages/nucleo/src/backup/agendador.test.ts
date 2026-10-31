@@ -178,12 +178,18 @@ describe("fazerBackup", () => {
   );
 
   it(
-    "o sinal de cancelamento do salvarSeguro chega ao criarPacote",
+    "cópia que estoura o prazo é abortada: nada fica no destino, nem .parcial, e o save-on volta",
     async () => {
-      const o = base(servidorFalso(5));
-      await fazerBackup(o);
-      const opcoes = vi.mocked(pacote.criarPacote).mock.calls.at(-1)?.[2];
-      expect(opcoes?.sinal).toBeInstanceOf(AbortSignal);
+      const o = {
+        ...base(servidorFalso(5)),
+        pastaDoMundo: gerarMundo({ tamanho: "20MB", pasta: nova() }),
+        prazoCopiaMs: 30,
+      };
+      vi.mocked(rename).mockClear();
+      await expect(fazerBackup(o)).rejects.toThrow(/passou do prazo/);
+      expect(rename).not.toHaveBeenCalled();
+      expect(existsSync(o.pastaBackups) ? readdirSync(o.pastaBackups) : []).toEqual([]);
+      expect(eventos.at(-1)).toBe("enviar:save-on");
     },
     PRAZO,
   );

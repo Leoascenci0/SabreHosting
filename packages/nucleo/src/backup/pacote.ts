@@ -56,6 +56,9 @@ for (const arquivo of workerData.arquivos) pacote.write(arquivo);
 pacote.end();
 `;
 
+/** O pacote foi desfeito antes de ganhar o nome final (`confirmar` disse não, ou o sinal abortou). */
+export class PacoteDescartado extends Error {}
+
 function compactarEmWorker(
   mundo: string,
   manifesto: string,
@@ -69,26 +72,27 @@ function compactarEmWorker(
       eval: true,
       workerData: { tar, mundo, manifesto, arquivos, saida },
     });
-    // Abortado: derruba o worker e só rejeita depois que ele saiu, para o `.parcial` poder ser apagado em qualquer sistema.
-    sinal?.addEventListener(
-      "abort",
-      () => void worker.terminate().then(() => rejeitar(new Error("cópia cancelada"))),
-      { once: true },
-    );
+    // Abortado: derruba o worker; o "exit" abaixo só rejeita depois que ele saiu, para o `.parcial` poder ser apagado.
+    sinal?.addEventListener("abort", () => void worker.terminate(), { once: true });
     worker.once("message", (m: { ok?: true; erro?: string }) =>
       m.ok ? resolver() : rejeitar(new Error(m.erro)),
     );
     worker.once("error", rejeitar);
-    worker.once("exit", (codigo) => rejeitar(new Error(`compactação encerrou (código ${codigo})`)));
+    worker.once("exit", (codigo) =>
+      rejeitar(
+        sinal?.aborted
+          ? new PacoteDescartado("cancelado durante a compactação")
+          : new Error(`compactação encerrou (código ${codigo})`),
+      ),
+    );
   });
 }
 
-/** O pacote foi desfeito antes de ganhar o nome final (`confirmar` disse não, ou o sinal abortou). */
-export class PacoteDescartado extends Error {}
-
 /**
  * `confirmar` é chamado logo antes do rename (sem espera entre os dois): falso descarta o pacote, que nunca chega a
- * ter o nome final. `sinal` abortado para a leitura e a compactação e também descarta.
+ * ter o nome final. `sinal` abortado para a compactação e também descarta; a leitura do manifesto termina antes de o
+ * sinal ser olhado (a regra 2 segue salva: o `salvarSeguro` espera a cópia acabar antes do `save-on`). Se o aborto ou a
+ * queda vier durante o próprio rename, o destino recém-criado (só ele) é removido.
  */
 export async function criarPacote(
   pastaDoMundo: string,
@@ -117,6 +121,7 @@ export async function criarPacote(
   }
   const parcial = `${destino}.parcial`;
   const desistiu = (): boolean => sinal?.aborted === true || confirmar?.() === false;
+  let renomeado = false;
   try {
     if (sinal?.aborted) throw new PacoteDescartado("cancelado antes de começar");
     await mkdir(dirname(destino), { recursive: true });
@@ -130,9 +135,12 @@ export async function criarPacote(
     const { hash, tamanho } = await hashComTamanho(parcial);
     if (desistiu()) throw new PacoteDescartado("descartado antes do rename");
     await rename(parcial, destino);
+    renomeado = true;
+    if (desistiu()) throw new PacoteDescartado("descartado durante o rename");
     return { caminho: destino, sha256: hash, tamanho };
   } catch (erro) {
     await rm(parcial, { force: true });
+    if (renomeado) await rm(destino, { force: true });
     if (erro instanceof PacoteDescartado) throw erro;
     throw new Error("Não consegui montar o pacote do mundo; o mundo não foi alterado.", {
       cause: erro,

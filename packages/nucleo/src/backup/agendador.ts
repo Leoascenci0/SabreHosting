@@ -20,6 +20,8 @@ export interface OpcoesBackup {
   agora?: () => Date;
   /** Prazo para o servidor confirmar o `save-all flush`. */
   prazoSalvarMs?: number;
+  /** Prazo para a cópia do mundo; estourou, o pacote é abortado e descartado. */
+  prazoCopiaMs?: number;
 }
 
 export interface BackupFeito extends PacoteCriado {
@@ -55,6 +57,7 @@ export async function fazerBackup(opcoes: OpcoesBackup): Promise<BackupFeito> {
         });
       }),
     opcoes.prazoSalvarMs,
+    opcoes.prazoCopiaMs,
   );
   return { ...pacote, duracaoMs: Date.now() - inicio };
 }
