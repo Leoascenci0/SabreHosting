@@ -1,4 +1,6 @@
 import type { SpawnOptions, ChildProcess } from "node:child_process";
+import { readdir, readFile, readlink, realpath } from "node:fs/promises";
+import { join } from "node:path";
 import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
 import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
@@ -9,6 +11,33 @@ export interface ExtrasDepsReais {
   spawnFn?: (cmd: string, args: readonly string[], opcoes: SpawnOptions) => ChildProcess;
   prefixoArgs?: string[];
   plataforma?: NodeJS.Platform;
+}
+
+/**
+ * Há servidor vivo na pasta (sobra de app fechado à força com o Java no ar)? Lado seguro: `true` também quando não
+ * dá para saber, e quem chama trata erro como `true`.
+ */
+async function servidorNaPasta(pasta: string, plataforma: NodeJS.Platform): Promise<boolean> {
+  if (plataforma === "linux") {
+    const alvo = await realpath(pasta);
+    for (const pid of await readdir("/proc")) {
+      if (!/^\d+$/.test(pid) || Number(pid) === process.pid) continue;
+      if ((await readlink(`/proc/${pid}/cwd`).catch(() => "")) === alvo) return true;
+    }
+    return false;
+  }
+  if (plataforma === "win32") {
+    // O Java prende o session.lock do mundo com trava obrigatória do Windows: ler falha enquanto ele vive.
+    const props = await readFile(join(pasta, "server.properties"), "utf8").catch(() => "");
+    const mundo = /^level-name=(.*)$/m.exec(props)?.[1]?.trim() || "world";
+    try {
+      await readFile(join(pasta, mundo, "session.lock"));
+      return false;
+    } catch (e) {
+      return (e as NodeJS.ErrnoException).code !== "ENOENT";
+    }
+  }
+  return true;
 }
 
 // Cartório, endereço e pasta do servidor vêm do ambiente até a tela de primeira vez (app-1.3); ver .env.exemplo.
@@ -54,6 +83,9 @@ export function depsReais(
         ...(extras.plataforma ? { plataforma: extras.plataforma } : {}),
       });
     },
+    eu: async () => exigir().eu(),
+    servidorOrfao: async () =>
+      pasta ? servidorNaPasta(pasta, extras.plataforma ?? process.platform) : false,
     endereco: env["SABRE_ENDERECO"] ?? "",
     copiar,
   };

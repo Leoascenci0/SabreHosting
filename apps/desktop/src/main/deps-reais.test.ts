@@ -1,4 +1,4 @@
-import type { ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -93,5 +93,62 @@ describe("ligação real do Hospedar", () => {
     const d = depsReais({ ...env(), SABRE_PASTA_SERVIDOR: "" }, () => {}, { fetchFn: c.fetchFn });
     await expect(d.hospedar(() => {})).rejects.toThrow("não está configurado");
     expect(c.rotas).not.toContain("/trava/pegar");
+  });
+});
+
+describe("quem sou eu e servidor órfão", () => {
+  it("eu pergunta ao cartório (GET /eu)", async () => {
+    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ id: 7, nome: "Este PC" })));
+    const d = depsReais(env(), () => {}, { fetchFn: fetchFn as unknown as typeof fetch });
+    await expect(d.eu()).resolves.toMatchObject({ id: 7 });
+    expect(new URL(String(fetchFn.mock.calls[0]?.[0 as never])).pathname).toBe("/eu");
+  });
+
+  it("sem pasta configurada: não há onde ter servidor", async () => {
+    const d = depsReais({ ...env(), SABRE_PASTA_SERVIDOR: "" }, () => {}, { plataforma: "darwin" });
+    await expect(d.servidorOrfao()).resolves.toBe(false);
+  });
+
+  it("sistema sem como conferir: na dúvida, órfão", async () => {
+    await expect(
+      depsReais(env(), () => {}, { plataforma: "darwin" }).servidorOrfao(),
+    ).resolves.toBe(true);
+  });
+
+  it.runIf(process.platform === "linux")(
+    "Linux: processo vivo com a pasta do servidor como diretório atual é órfão",
+    async () => {
+      const d = depsReais(env(), () => {}, { plataforma: "linux" });
+      await expect(d.servidorOrfao()).resolves.toBe(false);
+      const vivo = spawn("sleep", ["30"], { cwd: pasta, stdio: "ignore" });
+      try {
+        await new Promise((ok) => vivo.once("spawn", ok));
+        await expect(d.servidorOrfao()).resolves.toBe(true);
+      } finally {
+        vivo.kill();
+      }
+    },
+  );
+
+  describe("Windows: session.lock preso pelo Java", () => {
+    const win = () => depsReais(env(), () => {}, { plataforma: "win32" });
+
+    it("sem mundo ou com session.lock legível: sem órfão", async () => {
+      await expect(win().servidorOrfao()).resolves.toBe(false);
+      mkdirSync(join(pasta, "world"));
+      writeFileSync(join(pasta, "world", "session.lock"), "x");
+      await expect(win().servidorOrfao()).resolves.toBe(false);
+    });
+
+    it("session.lock que não se deixa ler: órfão", async () => {
+      mkdirSync(join(pasta, "world", "session.lock"), { recursive: true }); // leitura falha, como na trava do Java
+      await expect(win().servidorOrfao()).resolves.toBe(true);
+    });
+
+    it("segue o level-name do server.properties", async () => {
+      writeFileSync(join(pasta, "server.properties"), "server-port=25565\nlevel-name=mundo\n");
+      mkdirSync(join(pasta, "mundo", "session.lock"), { recursive: true });
+      await expect(win().servidorOrfao()).resolves.toBe(true);
+    });
   });
 });

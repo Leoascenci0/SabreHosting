@@ -16,6 +16,10 @@ export interface DepsInicio {
   lerTrava(): Promise<TravaLida>;
   /** `hospedar` do núcleo: pega a trava, sobe o servidor e devolve a trava ao parar. Nunca outro caminho. */
   hospedar(aoPerder: (motivo: string) => void): Promise<{ servidor: ServidorAtivo }>;
+  /** `eu` do cartório: quem é este PC. */
+  eu(): Promise<{ id: number }>;
+  /** Há servidor vivo na pasta deste PC (sobra de app fechado à força)? `true` também quando não dá para saber. */
+  servidorOrfao(): Promise<boolean>;
   /** Endereço para os amigos entrarem. Vazio: ainda não configurado. */
   endereco: string;
   copiar(texto: string): void;
@@ -46,6 +50,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
   let ativo: ServidorAtivo | undefined;
   let ocupado = false;
   let parando = false;
+  let meuId: number | undefined;
   const ouvintes = new Set<() => void>();
   const avisar = (): void => ouvintes.forEach((cb) => cb());
 
@@ -58,6 +63,20 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
         return; // sem cartório não há como conferir; a trava vence sozinha no prazo
       }
       await new Promise((ok) => setTimeout(ok, passoMs));
+    }
+  }
+
+  /**
+   * App reaberto com a trava ainda em nome deste PC: o cartório aceita o `pegar` de novo, então a tela oferece
+   * Hospedar. Só sem servidor desta sessão e sem servidor órfão; na dúvida, não (regra de ouro 1).
+   */
+  async function possoRetomar(donoId: number): Promise<boolean> {
+    if (ocupado) return false;
+    try {
+      meuId ??= (await deps.eu()).id;
+      return donoId === meuId && !(await deps.servidorOrfao()) && !ocupado && !ativo;
+    } catch {
+      return false;
     }
   }
 
@@ -120,7 +139,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       if (ativo) return { tipo: "eu", endereco: deps.endereco, ...(parando ? { parando } : {}) };
       try {
         const { dono } = await deps.lerTrava();
-        if (!dono) return { tipo: "ninguem" };
+        if (!dono || (await possoRetomar(dono.id))) return { tipo: "ninguem" };
         return { tipo: "outro", nomePc: dono.nome, endereco: deps.endereco };
       } catch (e) {
         return { tipo: "sem-cartorio", motivo: motivoDe(e) };
