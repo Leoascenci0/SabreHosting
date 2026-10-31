@@ -4,7 +4,13 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
-import { MIGRACOES, abrirBanco, criarConvite, usarConvite } from "./banco.js";
+import {
+  MIGRACOES,
+  abrirBanco,
+  apagarConvitesVencidos,
+  criarConvite,
+  usarConvite,
+} from "./banco.js";
 import { gerarSegredo } from "./segredo.js";
 import { conferirEndereco, criarCartorio } from "./servidor.js";
 
@@ -149,6 +155,33 @@ describe("cartório: convites", () => {
     const convite = await convidar("PC", 10);
     relogio.agora += 10 * 60_000;
     expect((await usar(convite)).statusCode).toBe(401);
+  });
+
+  it("limpeza apaga só convite não usado vencido há mais de N dias; usado e vigente ficam", () => {
+    const pasta = mkdtempSync(join(tmpdir(), "sabre-cartorio-"));
+    pastas.push(pasta);
+    const banco = abrirBanco(join(pasta, "cartorio.db"));
+    const DIA = 86_400_000;
+    const hoje = 100 * DIA;
+    criarConvite(banco, "vencido há 8 dias", hoje - 9 * DIA, DIA);
+    criarConvite(banco, "vencido há 6 dias", hoje - 7 * DIA, DIA);
+    criarConvite(banco, "vigente", hoje, DIA);
+    const usado = criarConvite(banco, "usado e vencido há muito", hoje - 50 * DIA, DIA);
+    expect(usarConvite(banco, usado, hoje - 50 * DIA)).toBeDefined();
+
+    expect(apagarConvitesVencidos(banco, hoje, 7)).toBe(1);
+    const nomes = (
+      banco.prepare("SELECT nome_pc FROM convites ORDER BY nome_pc").all() as Array<{
+        nome_pc: string;
+      }>
+    ).map((l) => l.nome_pc);
+    expect(nomes).toEqual(["usado e vencido há muito", "vencido há 6 dias", "vigente"]);
+    expect(
+      banco.prepare("SELECT count(*) AS n FROM convites WHERE pc_id IS NOT NULL").get(),
+    ).toEqual({
+      n: 1,
+    });
+    banco.close();
   });
 
   it("falha ao criar o token: convite continua sem uso e nenhum PC é criado", () => {

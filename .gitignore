@@ -36,5 +36,10 @@ playerdata/
 !tests/mundos/**
 tests/mundos/gerados/
 
+# Banco SQLite do cartório (WAL ligado: -wal e -shm acompanham)
+*.db
+*.db-wal
+*.db-shm
+
 # Worktrees dos agentes
 .claude/worktrees/
