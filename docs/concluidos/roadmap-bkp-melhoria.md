@@ -1,6 +1,6 @@
 # Roadmap de melhoria — Backup
 
-Melhorias achadas durante os itens do `docs/roadmap-bkp.md` (skill `maxima` › `references/melhorias.md`).
+Melhorias achadas durante os itens do `docs/concluidos/roadmap-bkp.md` (skill `maxima` › `references/melhorias.md`).
 **Sigla `bkpmel`.** Ramos `roadmap/bkpmel-<id>`. Todo item é RISCO alto (toca o mundo).
 
 ## Bloco 1 — Pacote
