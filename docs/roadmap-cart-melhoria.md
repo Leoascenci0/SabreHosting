@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
 
 ## Bloco 1 — Núcleo do cartório
 
-- [ ] **1.1 — Revogar token de PC**
+- [x] **1.1 — Revogar token de PC** (PR #154, 31/10/2026)
   *O que fazer:* rota de administrador `POST /pcs/:id/revogar` que preenche `tokens.revogado_em` (a coluna e o filtro
   já existem).
   *Arquivo:* `services/cartorio/src/`
@@ -93,3 +93,12 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* testes de cada caso (falham antes, passam depois).
   *Origem:* cartmel-2.1 · PR #123 · qa segurança + qa integridade + filha
 
+
+- [ ] **2.2 — Revogar também o peer e provar a trava do PC revogado**
+  *O que fazer:* hoje `POST /pcs/:id/revogar` só tira o acesso ao cartório; o peer do PC continua na rede privada
+  (item de rede à parte, já decidido em DECISOES 31/10) — abrir esse item em `docs/roadmap-rede-melhoria.md` quando
+  o ajudante do WireGuard estiver instalado; e documentar que o host revogado perde a trava só no prazo (~20 s).
+  *Arquivo:* `services/cartorio/src/`, `docs/`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste de limite de falhas contando token revogado (429).
+  *Origem:* cartmel-1.1 · PR #154 · qa segurança + qa integridade

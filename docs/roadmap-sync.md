@@ -8,7 +8,7 @@ estava desligado atualiza ao ligar.
 
 ## Bloco 1 — Transferência
 
-- [ ] **1.1 — Servir e pedir regiões pela rede privada**
+- [x] **1.1 — Servir e pedir regiões pela rede privada** (PR #156, 31/10/2026)
   *O que fazer:* pequeno servidor HTTP no app, só no IP da rede privada e autenticado pelo token do grupo, que entrega
   arquivos de uma versão por hash; cliente que pede, retoma do ponto onde parou e confere o hash.
   *Arquivo:* `packages/nucleo/src/sync/transferencia.ts`
