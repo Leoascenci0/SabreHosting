@@ -67,7 +67,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   o estado.
   *Origem:* host-2.1 · PR #24 · qa
 
-- [ ] **2.4 — Comandos ao servidor mais rígidos**
+- [x] **2.4 — Comandos ao servidor mais rígidos** (PR #99, 31/10/2026)
   *O que fazer:* `salvarSeguro` espera "Automatic saving is now disabled" antes do `save-all flush`; prazo também na
   função `copiar` (cópia travada não pode segurar o `save-on` para sempre); teto de tamanho em `enviar`; limite de
   comandos pendentes na fila; `say` recusa `§` (código de cor).
