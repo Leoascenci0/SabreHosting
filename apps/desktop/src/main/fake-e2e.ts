@@ -275,12 +275,16 @@ export function depsModsE2E(servidorRodando: () => boolean): DepsModsGrupo {
   ];
   const listas: ModGrupo[][] = [];
   // Interruptores do teste: `semInstancia` deixa a pasta da instância do Prism inexistente; `falhaLer` faz a leitura falhar.
-  const interruptores = { listas, semInstancia: false, falhaLer: false };
+  // `leiturasOk`: quantas leituras passam antes de `falhaLer` começar a valer (a ação lê a lista antes de conferir).
+  const interruptores = { listas, semInstancia: false, falhaLer: false, leiturasOk: 0 };
   (globalThis as Record<string, unknown>)["__sabreE2EMods"] = interruptores;
   return {
     eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
     lerLista: async () => {
-      if (interruptores.falhaLer) throw new Error("cartório não respondeu");
+      if (interruptores.falhaLer) {
+        if (interruptores.leiturasOk > 0) interruptores.leiturasOk -= 1;
+        else throw new Error("cartório não respondeu");
+      }
       return lista;
     },
     gravarLista: async (nova) => void (listas.push(nova), (lista = nova)),
