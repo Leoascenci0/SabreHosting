@@ -46,6 +46,7 @@ import { criarModsGrupo, type ModsGrupo } from "./mods-grupo.js";
 import { sincronizarMods } from "@sabrehosting/nucleo/launcher/mods";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
+import { criarPastaBase } from "./pasta-base.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { bytesPorSegundo, lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
@@ -530,6 +531,23 @@ function registrarPonte(
   const permitir = (evento: IpcMainInvokeEvent): void => {
     if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
   };
+  const pastaBase = criarPastaBase({
+    dados: app.getPath("userData"),
+    servidorRodando: () => inicio.ativo() || inicio.temOrfao(),
+  });
+  ipcMain.handle("sabre:pasta:estado", (evento) => (permitir(evento), pastaBase.estado()));
+  ipcMain.handle("sabre:pasta:trocar", async (evento, pasta: unknown) => {
+    permitir(evento);
+    const r = await pastaBase.trocar(pasta); // o main revalida a pasta e o servidor parado
+    // A configuração é lida no arranque: o app reinicia para já usar a pasta nova (no E2E, não).
+    if (r.ok && process.env["SABRE_E2E"] !== "1") {
+      setTimeout(() => {
+        app.relaunch({ args: process.argv.slice(1) });
+        app.exit(0);
+      }, 1500);
+    }
+    return r;
+  });
   inicio.aoMudar(() => janela?.webContents.send("sabre:inicio:mudou"));
   ipcMain.handle("sabre:inicio:estado", (evento) => (permitir(evento), inicio.estado()));
   ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), inicio.jogar()));

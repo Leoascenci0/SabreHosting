@@ -113,7 +113,14 @@ export type ConviteConferido =
 export type EntradaNoGrupo =
   { ok: true; grupo: string; endereco?: string } | { ok: false; mensagem: string };
 
+export type TrocaDePasta = { ok: true; anterior: string } | { ok: false; mensagem: string };
+
 export interface PonteSabre {
+  pasta: {
+    estado(): Promise<{ pasta?: string }>;
+    /** Revalidada no main; recusa com o servidor rodando. O mundo da pasta antiga NÃO é movido. */
+    trocar(pasta: string): Promise<TrocaDePasta>;
+  };
   boasVindas: {
     estado(): Promise<EstadoBoasVindas>;
     conferirConvite(texto: string): Promise<ConviteConferido>;

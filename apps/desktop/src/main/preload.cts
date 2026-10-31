@@ -17,6 +17,11 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     escolherPasta: (): Promise<unknown> =>
       electron.ipcRenderer.invoke("sabre:config:escolher-pasta"),
   },
+  pasta: {
+    estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:pasta:estado"),
+    trocar: (pasta: string): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:pasta:trocar", pasta),
+  },
   boasVindas: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:bv:estado"),
     conferirConvite: (texto: string): Promise<unknown> =>

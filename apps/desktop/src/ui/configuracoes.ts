@@ -51,6 +51,16 @@ const conviteErro = $("convite-erro");
 const avisoGrupo = $("grupo-aviso");
 const erroGrupo = $("grupo-erro");
 
+const areaPasta = $("cfg-pasta-area");
+const campoPasta = $<HTMLInputElement>("cfg-pasta");
+const trocarPasta = $<HTMLButtonElement>("cfg-pasta-trocar");
+const confPasta = $("cfg-pasta-confirmacao");
+const perguntaPasta = $("cfg-pasta-pergunta");
+const confirmarPasta = $<HTMLButtonElement>("cfg-pasta-confirmar");
+const cancelarPasta = $<HTMLButtonElement>("cfg-pasta-cancelar");
+const erroPasta = $("cfg-pasta-erro");
+const avisoPasta = $("cfg-pasta-aviso");
+
 const areaVersao = $("cfg-versao-area");
 const seletorVersao = $<HTMLSelectElement>("cfg-versao");
 const dicaVersao = $("cfg-versao-dica");
@@ -542,11 +552,79 @@ historicoEscolher.addEventListener("click", () => {
     });
 });
 
+// Pasta do SabreHosting: escolher → confirmar → o main revalida, grava e reinicia o app.
+let pastaEscolhida = "";
+function mostrarErroPasta(t: string): void {
+  erroPasta.textContent = t;
+  erroPasta.hidden = t === "";
+}
+function fecharConfirmacaoPasta(): void {
+  confPasta.hidden = true;
+  trocarPasta.disabled = false;
+}
+async function carregarPasta(): Promise<void> {
+  fecharConfirmacaoPasta();
+  mostrarErroPasta("");
+  avisoPasta.hidden = true;
+  try {
+    const { pasta } = await window.sabre.pasta.estado();
+    areaPasta.hidden = pasta === undefined;
+    campoPasta.value = pasta ?? "";
+  } catch {
+    areaPasta.hidden = true;
+  }
+}
+trocarPasta.addEventListener("click", () => {
+  trocarPasta.disabled = true;
+  mostrarErroPasta("");
+  window.sabre.configuracoes
+    .escolherPasta()
+    .then((pasta) => {
+      if (pasta === undefined) return fecharConfirmacaoPasta();
+      pastaEscolhida = pasta;
+      perguntaPasta.textContent = `Usar a pasta ${pasta}?`;
+      confPasta.hidden = false;
+      confirmarPasta.focus();
+    })
+    .catch(() => {
+      fecharConfirmacaoPasta();
+      mostrarErroPasta("Não consegui abrir o seletor de pasta agora.");
+    });
+});
+cancelarPasta.addEventListener("click", () => {
+  fecharConfirmacaoPasta();
+  trocarPasta.focus();
+});
+confirmarPasta.addEventListener("click", () => {
+  confirmarPasta.disabled = cancelarPasta.disabled = true;
+  window.sabre.pasta
+    .trocar(pastaEscolhida)
+    .then((r) => {
+      if (r.ok) {
+        campoPasta.value = pastaEscolhida;
+        confPasta.hidden = true;
+        avisoPasta.textContent = `Pasta trocada. O mundo antigo continua em ${r.anterior}. O SabreHosting vai reiniciar.`;
+        avisoPasta.hidden = false;
+      } else {
+        fecharConfirmacaoPasta();
+        mostrarErroPasta(r.mensagem);
+      }
+    })
+    .catch(() => {
+      fecharConfirmacaoPasta();
+      mostrarErroPasta("Não consegui trocar a pasta agora. Nada foi alterado.");
+    })
+    .finally(() => {
+      confirmarPasta.disabled = cancelarPasta.disabled = false;
+    });
+});
+
 abrir.addEventListener("click", () => {
   inicio.hidden = true;
   tela.hidden = false;
   mostrarErro("");
   void carregar();
+  void carregarPasta();
   windows.focus();
 });
 voltar.addEventListener("click", () => {

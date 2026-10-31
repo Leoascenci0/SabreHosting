@@ -23,7 +23,7 @@ export interface ParDeChaves {
 export const IP_DO_HUB = "10.66.0.1";
 const REDE = "10.66.0.0/24";
 export const NOME_DO_TUNEL = "sabre";
-const WIREGUARD_EXE = "C:\\Program Files\\WireGuard\\wireguard.exe";
+export const WIREGUARD_EXE = "C:\\Program Files\\WireGuard\\wireguard.exe";
 /** Prefixo PKCS#8 de uma chave privada X25519 (RFC 8410); depois vêm os 32 bytes da chave. */
 const PKCS8_X25519 = Buffer.from("302e020100300506032b656e04220420", "hex");
 
@@ -103,7 +103,7 @@ export function montarConfigDoPc(entrada: unknown, chavePrivada: string): string
  * dela. Qualquer linha a mais (`PostUp`, `DNS`, `Table`, outro `[Peer]`), valor trocado (`AllowedIPs = 0.0.0.0/1,
  * 128.0.0.0/1`) ou outra quebra de linha deixa o texto diferente e é recusada.
  */
-function eDoMontador(cfg: string): boolean {
+export function eDoMontador(cfg: string): boolean {
   const v = new Map<string, string>();
   for (const linha of cfg.split("\n")) {
     const i = linha.indexOf(" = ");
@@ -136,24 +136,16 @@ export interface OpcoesAplicar {
   usuario?: string;
 }
 
-/**
- * Instala a rede privada no Windows: protege a pasta, grava o .conf, manda o WireGuard instalar o túnel (pede
- * administrador uma vez) e apaga o .conf em texto (o WireGuard guarda a própria cópia protegida). A chave privada
- * só existe em texto entre a gravação e a instalação; nada vai para log nem para mensagem de erro.
- */
-export async function aplicarNoWindows(cfg: string, op: OpcoesAplicar): Promise<void> {
-  if ((op.plataforma ?? process.platform) !== "win32")
-    throw new Error("A rede privada só pode ser instalada no Windows.");
-  if (!eDoMontador(cfg)) throw new Error("Config recusada: ela não é só da rede privada.");
+/** Cria a pasta da rede e deixa só o próprio usuário, o sistema e os administradores nela (o serviço do WireGuard lê). */
+export async function protegerPastaDaRede(
+  op: Pick<OpcoesAplicar, "pasta" | "exec" | "usuario">,
+): Promise<void> {
   const exec = op.exec ?? execReal;
-  const execElevado = op.execElevado ?? criarExecutorElevado();
   const usuario = op.usuario ?? process.env.USERNAME ?? "";
   if (usuario === "") throw new Error("Não sei qual é a conta do Windows para proteger a pasta.");
-
   await mkdir(op.pasta, { recursive: true, mode: 0o700 });
   await chmod(op.pasta, 0o700);
   try {
-    // Só o próprio usuário, o sistema e os administradores (o serviço do WireGuard precisa ler).
     await exec("icacls", [
       op.pasta,
       "/inheritance:r",
@@ -167,6 +159,19 @@ export async function aplicarNoWindows(cfg: string, op: OpcoesAplicar): Promise<
       cause: causa,
     });
   }
+}
+
+/**
+ * Instala a rede privada no Windows: protege a pasta, grava o .conf, manda o WireGuard instalar o túnel (pede
+ * administrador uma vez) e apaga o .conf em texto (o WireGuard guarda a própria cópia protegida). A chave privada
+ * só existe em texto entre a gravação e a instalação; nada vai para log nem para mensagem de erro.
+ */
+export async function aplicarNoWindows(cfg: string, op: OpcoesAplicar): Promise<void> {
+  if ((op.plataforma ?? process.platform) !== "win32")
+    throw new Error("A rede privada só pode ser instalada no Windows.");
+  if (!eDoMontador(cfg)) throw new Error("Config recusada: ela não é só da rede privada.");
+  const execElevado = op.execElevado ?? criarExecutorElevado();
+  await protegerPastaDaRede(op);
 
   const arquivo = join(op.pasta, `${NOME_DO_TUNEL}.conf`);
   let falhou = false;
@@ -202,7 +207,10 @@ const COMANDO_ELEVADO =
   "exit $p.ExitCode";
 
 /** Executor que roda um programa com administrador (janela do UAC). Sem shell; o execFile é injetável para teste. */
-export function criarExecutorElevado(execFileFn: ExecFileFn = execFile): ExecArquivo {
+export function criarExecutorElevado(
+  execFileFn: ExecFileFn = execFile,
+  prazoMs: number = PRAZO_ELEVADO_MS,
+): ExecArquivo {
   return (arquivo, args) =>
     new Promise((ok, falha) => {
       execFileFn(
@@ -211,7 +219,7 @@ export function criarExecutorElevado(execFileFn: ExecFileFn = execFile): ExecArq
         {
           shell: false,
           windowsHide: true,
-          timeout: PRAZO_ELEVADO_MS,
+          timeout: prazoMs,
           encoding: "utf8",
           env: { ...process.env, SABRE_EXE: arquivo, SABRE_ARGS: JSON.stringify(args) },
         },
