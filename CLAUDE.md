@@ -144,7 +144,8 @@ qual parte detalhada (`references/*.md`) ler para o tipo da mudança.
   **35%** para concluir a demanda em curso, até **40%** só para um item muito específico. Detalhe em
   `.claude/skills/maxima/references/coordenacao.md`.
 - **Ondas visíveis na lista de chats (regra do Eliel, 31/10/2026):** a sessão de onda se chama `Onda <N> — <itens>` e
-  cada sessão de item `O<N> · <sigla-id> — <título>`, criada **dentro** da sessão de onda (aparece aninhada) e com a
+  cada sessão de item `Item <k> · <sigla-id> — <título>` (k = 1, 2, 3… dentro da onda), criada **dentro** da sessão
+  de onda (aparece aninhada debaixo dela) e com a
   etiqueta `maxima-onda-<N>`; o número da onda é único no projeto e cada onda aberta tem uma linha em
   `docs/MILESTONE.md` › Em curso.
 - **Autonomia da Máxima:** sozinha ela revisa, mergeia e gera a versão de teste; toma decisão **reversível** de

@@ -58,7 +58,7 @@ Nunca peça a uma filha o que foi negado a você.
    linha `TRIAGEM:` do briefing.
 4. **Briefing:** preencha `references/briefing.md`, salve em `BRIEFINGS`, commite e envie no ramo da orquestradora.
    Commit-base = `HEAD` da `main` (hash **completo**, 40 caracteres; o curto dá `ref_not_found`).
-5. **Crie a filha** (`create_session`) com título `O<N> · <sigla>-<id> — <título curto>` e `tags: ["maxima-onda-<N>"]`
+5. **Crie a filha** (`create_session`) com título `Item <k> · <sigla>-<id> — <título curto>` (k = 1, 2, 3… dentro da onda) e `tags: ["maxima-onda-<N>"]`
    (`references/coordenacao.md`, "Ver as ondas na lista de chats"): repositório, `source_revision` = commit-base completo,
    `outcome_branch: roadmap/<sigla>-<id>`, `permission_mode` igual ou mais restrito que o seu (nunca `plan`), modelo
    pela triagem, prompt do **Template da filha**.
