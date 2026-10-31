@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 26**
+**Próxima onda: 26** — inclui **app-3.1** (instalador Windows), decisão do Eliel de 31/10.
 
 _(nenhuma onda aberta; bastão da coordenadora passado às 15:10 — ver docs/ops/rodadas/coordenacao-2026-10-31.md)_
 
