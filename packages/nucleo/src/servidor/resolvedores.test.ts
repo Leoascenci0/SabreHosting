@@ -52,6 +52,20 @@ describe("resolverModrinth", () => {
   });
 });
 
+describe("url que não é https", () => {
+  it("Adoptium e Modrinth recusam http e endereço inválido", () => {
+    const h = "a".repeat(64);
+    for (const link of ["http://x.test/a", "ftp://x.test/a", "não-é-url"]) {
+      expect(() => resolverAdoptium([{ binary: { package: { link, checksum: h } } }])).toThrow(
+        /https/,
+      );
+      expect(() =>
+        resolverModrinth({ files: [{ url: link, hashes: { sha512: "d".repeat(128) } }] }),
+      ).toThrow(/https/);
+    }
+  });
+});
+
 describe("resolverNeoForge", () => {
   const tabela = { "9.9.9": sha1 };
   it("monta a URL do instalador no Maven oficial e usa o hash da tabela", () => {
@@ -79,6 +93,9 @@ describe("resolverNeoForge", () => {
     expect(() => resolverNeoForge("", sha1, tabela)).toThrow(/versão/);
     expect(() => resolverNeoForge("../x", sha1, tabela)).toThrow(/versão/);
     expect(() => resolverNeoForge("-x", sha1, tabela)).toThrow(/versão/);
+    expect(() => resolverNeoForge("..", sha1, tabela)).toThrow(/versão/);
+    expect(() => resolverNeoForge("x.1", sha1, tabela)).toThrow(/versão/);
+    expect(resolverNeoForge("1.x", sha1, { "1.x": sha1 }).url).toContain("/1.x/");
     expect(() => resolverNeoForge("9.9.9", "não-é-hash", tabela)).toThrow(/hash/);
   });
 });

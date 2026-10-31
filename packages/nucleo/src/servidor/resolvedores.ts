@@ -10,6 +10,13 @@ const HEX = { sha1: 40, sha256: 64, sha512: 128 } as const;
 function alvo(url: unknown, algoritmo: keyof typeof HEX, valor: unknown, fonte: string): Alvo {
   if (typeof url !== "string" || !url)
     throw new Error(`Resposta do ${fonte} sem endereço de download.`);
+  let https = false;
+  try {
+    https = new URL(url).protocol === "https:";
+  } catch {
+    // endereço que nem é URL cai na recusa abaixo
+  }
+  if (!https) throw new Error(`O ${fonte} devolveu um endereço que não é https; não vou baixar.`);
   if (typeof valor !== "string" || !new RegExp(`^[0-9a-f]{${HEX[algoritmo]}}$`, "i").test(valor)) {
     throw new Error(
       `Resposta do ${fonte} sem hash ${algoritmo} válido; não vou baixar sem conferir.`,
@@ -51,7 +58,7 @@ export function resolverNeoForge(
   sidecar: string,
   tabela: Readonly<Record<string, string>> = HASHES_NEOFORGE,
 ): Alvo {
-  if (!/^\w[\w.+-]*$/.test(versao)) throw new Error("Informe a versão do NeoForge (sem padrão).");
+  if (!/^\d[\w.+-]*$/.test(versao)) throw new Error("Informe a versão do NeoForge (sem padrão).");
   const fixado = Object.hasOwn(tabela, versao) ? tabela[versao] : undefined;
   if (!fixado)
     throw new Error(
