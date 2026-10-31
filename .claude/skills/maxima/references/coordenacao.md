@@ -16,6 +16,19 @@ acumula o trabalho da noite inteira.
 Avisos sobem um nível por vez: o item avisa a **onda** (`send_message` para o id da onda) e a onda avisa o
 **coordenador**. O coordenador nunca recebe aviso de item.
 
+## Ver as ondas na lista de chats (regra do Eliel, 31/10/2026)
+
+O Eliel se guia pela lista de chats do claude.ai/code; cada sessão tem que dizer de qual onda é.
+- **Numeração:** as ondas seguem um número único do projeto, que não volta a 1 (o próximo número fica no estado do
+  coordenador e no `docs/MILESTONE.md`, seção "Em curso").
+- **Título da sessão de onda:** `Onda <N> — <itens separados por " · ">` (ex.: `Onda 12 — cartmel-1.1 · hostmel-2.1`).
+- **Título da sessão de item:** `O<N> · <sigla-id> — <título curto>` (ex.: `O12 · cartmel-1.1 — revogar PC`).
+- **Aninhamento:** quem cria as sessões de item é a sessão de onda, então elas aparecem dentro dela na lista lateral.
+  O coordenador nunca cria sessão de item direto.
+- **Etiqueta:** toda sessão de onda e de item recebe `tags: ["maxima-onda-<N>"]` no `create_session`.
+- **No `docs/MILESTONE.md` › Em curso:** uma linha por onda aberta, `Onda <N> (<data>) — <itens> — sessão <link>`; no
+  Feito, a onda fechada com os PRs.
+
 ## Calibragem (números; revisar no fim de cada rodada com o que foi medido)
 
 - **Medida de 31/10:** cerca de **2% de contexto por item** quando um chat faz tudo; relatório de onda lido pelo
@@ -64,7 +77,7 @@ termine. De dia, avise o Eliel em uma linha com o link da nova sessão.
 ## Template da sessão de onda
 
 ```
-Você é uma sessão de onda da Máxima no SabreHosting (nível 2 de .claude/skills/maxima/references/coordenacao.md).
+Você é a sessão da Onda {{N}} da Máxima no SabreHosting (nível 2 de .claude/skills/maxima/references/coordenacao.md).
 Sua coordenadora é {{ID_COORDENADOR}}. Sua onda: {{LISTA_DE_ITENS}} (até 6; no máximo 3 abertos ao mesmo tempo).
 Base: {{HASH_MAIN}}. Seu ramo de controle: roadmap/onda-{{DATA}}-{{N}}. Turno: {{dia/noite}}. Autorizações: {{lista}}.
 
@@ -72,7 +85,8 @@ Siga references/rodada.md (§1 Loop por item, Revisão, merge pela SKILL.md §4)
 - Você não fala com o Eliel. Item que pede decisão dele vira ⏸️ P e vai no relatório.
 - Você não mexe em docs/MILESTONE.md, docs/ops/bom-dia.md nem docs/ops/custos.md (são da coordenadora).
   Marca [x] nos roadmaps, grava fichas em docs/memoria/solucoes.md e o seu estado em docs/ops/rodadas/onda-{{DATA}}-{{N}}.md.
-- Os itens avisam VOCÊ (use o seu próprio id no Template da filha).
+- Os itens avisam VOCÊ (use o seu próprio id no Template da filha). Cada sessão de item: título
+  "O{{N}} · <sigla-id> — <título curto>" e tags ["maxima-onda-{{N}}"] (ver "Ver as ondas na lista de chats").
 - Só mergeie depois do aviso de "pronto" da filha para o último pedido (S-04); item que mexe em infra/ ou tests/infra/:
   testes também como usuário comum (S-03); vistorias uma de cada vez (S-01).
 - Feche ao terminar a lista ou ao chegar a 30% de contexto (margem até 35% para terminar o item em curso; até 40% só

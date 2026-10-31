@@ -16,6 +16,8 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
+**Próxima onda: 20** (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
+
 _(nenhum item aberto; rodada da madrugada de 31/10 encerrada às 04:15 — 33 PRs; retomar com `/maxima retomar`)_
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
