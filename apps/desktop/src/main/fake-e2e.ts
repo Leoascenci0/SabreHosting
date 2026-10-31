@@ -12,6 +12,7 @@ import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
 import type { RespostaTrava } from "@sabrehosting/nucleo/cartorio/tipos";
 import { depsBackups } from "./deps-backups.js";
 import type { DepsBackups } from "./backups.js";
+import type { DepsGrupo } from "./grupo.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 // "dono-eu*": app reaberto com a trava ainda em nome deste PC, sem servidor desta sessão (com ou sem órfão vivo).
@@ -164,5 +165,28 @@ export function depsBackupsE2E(servidorRodando: () => boolean): DepsBackups {
     ...real,
     listar: async () => (await pronto, real.listar()),
     restaurar: async (n) => (await pronto, real.restaurar(n)),
+  };
+}
+
+/**
+ * Grupo do E2E: cartório falso com 3 PCs (o dono, Lucas e Ana). `SABRE_E2E_DONO=1` faz este PC ser o dono;
+ * sem isso ele é um PC comum. Os ids tirados ficam em `__sabreE2EGrupo.revogados` para o teste conferir.
+ */
+export function depsGrupoE2E(): DepsGrupo {
+  const souDono = process.env["SABRE_E2E_DONO"] === "1";
+  let pcs = [
+    { id: 1, nome: "PC do Eliel", dono: true },
+    { id: 2, nome: "PC do Lucas", dono: false },
+    { id: 3, nome: "PC da Ana", dono: false },
+  ];
+  const revogados: number[] = [];
+  (globalThis as Record<string, unknown>)["__sabreE2EGrupo"] = { revogados };
+  return {
+    eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
+    listarPcs: async () => pcs,
+    revogarPc: async (id) => {
+      revogados.push(id);
+      pcs = pcs.filter((p) => p.id !== id);
+    },
   };
 }

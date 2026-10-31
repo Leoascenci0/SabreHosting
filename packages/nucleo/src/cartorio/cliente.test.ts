@@ -246,6 +246,29 @@ describe("cliente do cartório", () => {
     expect(chamadas).toHaveLength(1);
   });
 
+  it("revogarPc: 204 tira; 403, 409 e 404 trazem o status e a mensagem; 401 é acesso; nunca repete", async () => {
+    const { cliente, chamadas } = montar([new Response(null, { status: 204 })]);
+    expect(await cliente.revogarPc(5)).toBeUndefined();
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/pcs/5/revogar`);
+    expect(chamadas[0]?.init.method).toBe("POST");
+    for (const [status, erro] of [
+      [403, "Só o dono do grupo tira um PC do grupo."],
+      [409, "O PC dono não pode ser tirado."],
+      [404, "Esse PC não existe no grupo."],
+    ] as const) {
+      const r = montar([json(status, { erro }), new Response(null, { status: 204 })]);
+      const e = await erroDe(r.cliente.revogarPc(5));
+      expect([e.tipo, e.status]).toEqual(["resposta", status]);
+      expect(e.message).toContain(erro);
+      expect(r.chamadas).toHaveLength(1);
+    }
+    const a = montar([json(401, {})]);
+    expect((await erroDe(a.cliente.revogarPc(5))).tipo).toBe("acesso");
+    const rede = montar([semRede(), new Response(null, { status: 204 })]);
+    expect((await erroDe(rede.cliente.revogarPc(5))).tipo).toBe("rede");
+    expect(rede.chamadas).toHaveLength(1);
+  });
+
   const PACOTE = {
     ip_pc: "10.66.0.12",
     chave_publica_hub: `${"A".repeat(43)}=`,

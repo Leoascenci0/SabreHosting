@@ -20,6 +20,10 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     restaurar: (nome: string): Promise<unknown> =>
       electron.ipcRenderer.invoke("sabre:backups:restaurar", nome),
   },
+  grupo: {
+    estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:estado"),
+    tirar: (id: number): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:tirar", id),
+  },
   inicio: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:estado"),
     jogar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:jogar"),
