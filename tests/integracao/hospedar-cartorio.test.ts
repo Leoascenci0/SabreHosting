@@ -211,7 +211,7 @@ describe("trava de host contra o cartório real", () => {
   }, 30_000);
 
   it("aviso da tela que lança erro não impede a parada na perda", async () => {
-    const { app, pc } = await subirCartorio();
+    const { app, pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000); // folga só na subida; a parada segue pelos prazos abaixo
     const { servidor } = await hospedarFalso(await pc("PC A"), [], {
       modo: "travado",
       prazoParadaMs: 30_000,
@@ -229,5 +229,5 @@ describe("trava de host contra o cartório real", () => {
     await esperarEstado(servidor, "parado");
     expect(Date.now() - inicio).toBeLessThan(3_000);
     expect(logs.some((l) => /tela quebrou/.test(l))).toBe(true);
-  }, 10_000);
+  }, 30_000);
 });
