@@ -49,6 +49,7 @@
       <h2 id="titulo-backups">Backups</h2>
       <p class="detalhe" id="backups-detalhe" role="status"></p>
       <p class="erro" id="backups-erro" role="alert" hidden></p>
+      <p class="detalhe" id="backups-aviso-historico" role="status" hidden></p>
       <ul class="lista-backups" id="lista-backups"></ul>
       <div
         class="confirmacao"
@@ -104,6 +105,30 @@
           />
           <p class="dica" id="cfg-intervalo-dica">
             De 1 a 1440. Padrão: 10. Vale já, com o servidor no ar.
+          </p>
+          <label class="opcao"
+            ><input type="checkbox" id="cfg-historico" aria-describedby="cfg-historico-dica" />
+            Copiar também os backups para uma pasta (Drive, OneDrive…)</label
+          >
+          <label for="cfg-historico-pasta">Pasta do histórico longo</label>
+          <div class="linha-pasta">
+            <input
+              type="text"
+              id="cfg-historico-pasta"
+              readonly
+              disabled
+              autocomplete="off"
+              aria-describedby="cfg-historico-dica"
+              placeholder="Nenhuma pasta escolhida"
+            />
+            <button type="button" class="secundario" id="cfg-historico-escolher" disabled>
+              Escolher pasta…
+            </button>
+          </div>
+          <p class="dica" id="cfg-historico-dica">
+            Cada backup novo também é copiado para a pasta escolhida (use a pasta do Drive, OneDrive
+            ou Dropbox no seu PC). Nada é apagado nela; se a pasta sumir, o backup deste PC continua
+            normal.
           </p>
         </fieldset>
         <fieldset id="cfg-grupo" hidden>

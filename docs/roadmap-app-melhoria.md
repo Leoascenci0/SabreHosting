@@ -83,7 +83,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Depende de:* app-1.3
   *Origem:* app-2.2 · PR #160 · filha + qa
 
-- [ ] **1.10 — Acabamentos da tela "Tirar PC do grupo"**
+- [x] **1.10 — Acabamentos da tela "Tirar PC do grupo"** (PR #171, 31/10/2026)
   *O que fazer:* (a) o `aria-label` do botão ("Tirar PC do Lucas do grupo") deve conter o texto visível ("Tirar PC do grupo"): deixar o texto visível com o nome ou usar `aria-describedby`; (b) depois de revogar com sucesso o foco se perde (o botão some): focar o aviso ou o título da área; (c) mensagem genérica de rede diz "Nada foi alterado", que pode ser falsa se a resposta se perder depois de o cartório já ter tirado o PC: trocar por "Atualize a lista para conferir."
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`, `apps/desktop/src/main/grupo.ts`
   **Tela no app:** Configurações › Grupo › "Tirar PC do grupo".

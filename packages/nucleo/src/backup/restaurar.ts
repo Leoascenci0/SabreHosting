@@ -8,6 +8,7 @@
  */
 import { existsSync } from "node:fs";
 import { lstat, readFile, rename, rm, writeFile } from "node:fs/promises";
+import * as caminhoPadrao from "node:path";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { MARCADOR_RESTAURACAO, MARCADOR_TROCA, gravarAtomico } from "../servidor/configurar.js";
 import { travaConfirmada } from "../servidor/processo.js";
@@ -121,7 +122,11 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
   }
 
   if (haMundoAtual) {
-    await gravarMarcadorTroca({ mundo, antigo, temp });
+    // Sem marcador gravado a troca não começa: a temporária não pode ficar órfã.
+    await gravarMarcadorTroca({ mundo, antigo, temp }).catch(async (erro: unknown) => {
+      await apagar(temp);
+      throw erro;
+    });
     await renomear(mundo, antigo).catch(async (erro: unknown) => {
       await apagar(temp);
       await apagarMarcadorTroca(mundo);
@@ -161,7 +166,12 @@ export interface CaminhosDaTroca {
   temp: string;
 }
 
-const mesmoLugar = (a: string, b: string) => relative(resolve(a), resolve(b)) === ""; // sem diferença de C:\ e c:\ no Windows
+/** Sem diferença de C:\ e c:\ no Windows (o `path` do Windows compara sem maiúscula); `p` só para o teste provar isso. */
+export const mesmoLugar = (
+  a: string,
+  b: string,
+  p: Pick<typeof caminhoPadrao, "relative" | "resolve"> = { relative, resolve },
+) => p.relative(p.resolve(a), p.resolve(b)) === "";
 
 /** O marcador fica em `dirname(mundo)` e `podeSubir` o lê na pasta do servidor: se forem diferentes, não protege. */
 export function exigirMundoNaPastaDoServidor(
@@ -210,8 +220,8 @@ export async function recuperarTroca(
   }
   if (!(await haMundo(c.antigo))) {
     throw new Error(
-      `A troca do mundo parou no meio e não achei nem o mundo nem "${c.antigo}". Nada foi apagado; ` +
-        `procure a pasta do mundo de antes, renomeie para "${c.mundo}" e apague ${MARCADOR_TROCA}.`,
+      `A troca do mundo parou no meio e não achei nem o mundo nem "${basename(c.antigo)}". Nada foi apagado; ` +
+        `procure a pasta do mundo de antes, renomeie para "${basename(c.mundo)}" e depois apague o arquivo de aviso da troca (fica ao lado do mundo).`,
     );
   }
   await desfazer(
@@ -228,8 +238,8 @@ export async function recuperarTroca(
 function lerMarcadorTroca(texto: string, pasta: string): CaminhosDaTroca {
   const ruim = () =>
     new Error(
-      `O arquivo ${MARCADOR_TROCA} está ilegível ou fora do esperado; nada foi alterado. ` +
-        `Confira a pasta do mundo e apague o arquivo só depois.`,
+      `O arquivo de aviso da troca do mundo está ilegível ou fora do esperado; nada foi alterado. ` +
+        `Confira a pasta do mundo e apague o arquivo de aviso só depois.`,
     );
   let j: unknown;
   try {

@@ -115,6 +115,19 @@ describe("tela de configurações", () => {
     expect(await p.locator("#cfg-intervalo").inputValue()).toBe("30");
   });
 
+  it("histórico longo: pasta e botão só ficam ativos com a opção ligada; erro leva ao campo certo", async () => {
+    const p = await abrir();
+    await expect(p.locator("#cfg-historico-pasta").isDisabled()).resolves.toBe(true);
+    await expect(p.locator("#cfg-historico-escolher").isDisabled()).resolves.toBe(true);
+    await p.locator("#cfg-historico").check();
+    await expect(p.locator("#cfg-historico-escolher").isDisabled()).resolves.toBe(false);
+    await p.locator("#config-salvar").click(); // ligado sem pasta
+    await esperarTexto(p, "#config-erro", "histórico longo");
+    expect(await p.locator("#cfg-historico-pasta").getAttribute("aria-invalid")).toBe("true");
+    expect(await p.locator("#cfg-intervalo").getAttribute("aria-invalid")).toBe("false");
+    expect(() => readFileSync(arquivo())).toThrow();
+  });
+
   it("não mostra a área Grupo a quem não é dono", async () => {
     const p = await abrir();
     expect(await p.locator("legend:visible").allTextContents()).toEqual([
@@ -146,7 +159,10 @@ describe("tela de configurações", () => {
     expect(await p.locator("#grupo-lista button").first().textContent()).toBe("Tirar PC do grupo");
 
     // Cancelar: a pergunta cita o NOME do PC e nada é revogado.
-    await p.getByRole("button", { name: "Tirar PC do Lucas do grupo" }).click();
+    await p
+      .locator("#grupo-lista li", { hasText: "Lucas" })
+      .getByRole("button", { name: "Tirar PC do grupo" })
+      .click();
     await esperarTexto(p, "#grupo-pergunta", "PC do Lucas");
     expect(await p.locator("#grupo-confirmacao").textContent()).toContain("novo convite");
     await p.locator("#grupo-cancelar").click();
@@ -155,10 +171,16 @@ describe("tela de configurações", () => {
     expect(await p.locator("#grupo-lista li").count()).toBe(3);
 
     // Confirmar: chama revogarPc só desse PC e a lista perde o PC.
-    await p.getByRole("button", { name: "Tirar PC do Lucas do grupo" }).click();
+    await p
+      .locator("#grupo-lista li", { hasText: "Lucas" })
+      .getByRole("button", { name: "Tirar PC do grupo" })
+      .click();
     await p.locator("#grupo-confirmar").click();
     await esperarTexto(p, "#grupo-aviso", "PC do Lucas saiu do grupo");
     expect(await revogados()).toEqual([2]);
     expect(await p.locator("#grupo-lista li").count()).toBe(2);
+    // O foco não se perde: vai ao aviso; e o botão não tem aria-label que esconda o texto visível.
+    expect(await p.evaluate(() => document.activeElement?.id)).toBe("grupo-aviso");
+    expect(await p.locator("#grupo-lista button[aria-label]").count()).toBe(0);
   });
 });

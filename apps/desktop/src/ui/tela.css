@@ -211,6 +211,32 @@ button.link {
   color: var(--cor-texto);
 }
 
+.config input[type="text"] {
+  font: inherit;
+  min-height: 44px;
+  padding: 0 var(--espaco-2);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.config .linha-pasta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  align-items: center;
+}
+
+.config .linha-pasta input[type="text"] {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.config input:disabled {
+  opacity: 0.6;
+}
+
 .config input:focus-visible {
   outline: 3px solid var(--cor-texto);
   outline-offset: 2px;

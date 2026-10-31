@@ -143,6 +143,58 @@ describe("conexões", () => {
   });
 });
 
+describe("limites do servidor (cabeçalho lento e conexões)", () => {
+  const abrir = (porta: number) =>
+    new Promise<import("node:net").Socket>((ok, erro) => {
+      const s = connect(porta, "127.0.0.1");
+      // resume(): sem ler os dados o cliente não processa o FIN do servidor e o "close" não vem.
+      s.resume();
+      s.once("connect", () => ok(s));
+      s.once("error", erro);
+    });
+  const fechado = (s: import("node:net").Socket) =>
+    new Promise<void>((ok) => {
+      if (s.destroyed) return ok();
+      s.once("close", () => ok());
+    });
+
+  it("cabeçalho que nunca termina: o servidor derruba o socket antes do tempo ocioso de 60 s (headersTimeout)", async () => {
+    await subir();
+    const s = await abrir(portaDoServidor());
+    s.write(`GET /arquivos/${HASH} HTTP/1.1\r\nHost: teste\r\n`);
+    const t0 = Date.now();
+    await fechado(s);
+    const decorrido = Date.now() - t0;
+    // O Node confere prazos de cabeçalho a cada ~30 s, então o corte real sai perto de 30 s.
+    // Abaixo de 9 s seria outra causa; acima de 45 s o corte veio do tempo ocioso (60 s), não deste prazo.
+    expect(decorrido).toBeGreaterThanOrEqual(9_000);
+    expect(decorrido).toBeLessThan(45_000);
+  }, 60_000);
+
+  it("17ª conexão não é atendida enquanto 16 estão abertas; liberar uma vaga volta a atender", async () => {
+    await subir();
+    const porta = portaDoServidor();
+    const abertas: import("node:net").Socket[] = [];
+    for (let i = 0; i < 16; i++) abertas.push(await abrir(porta));
+
+    const extra = await abrir(porta);
+    let resposta = "";
+    extra.on("data", (d: Buffer) => (resposta += d.toString("latin1")));
+    extra.write(
+      `GET /arquivos/${HASH} HTTP/1.1\r\nHost: teste\r\nauthorization: Bearer ${CREDENCIAL}\r\n\r\n`,
+    );
+    await fechado(extra);
+    expect(resposta).not.toMatch(/HTTP\/1\.1 \d{3}/);
+
+    abertas[0]?.destroy();
+    await new Promise((ok) => setTimeout(ok, 100));
+    const r = await pedir();
+    expect(r.status).toBe(200);
+    await r.arrayBuffer();
+    for (const s of abertas) s.destroy();
+  }, 20_000);
+});
+
 describe("limite de tentativas erradas e cache de token", () => {
   let agora = 1_000_000;
   let consultas = 0;
@@ -313,8 +365,23 @@ describe("cliente", () => {
     const destino = join(pasta, "saida.pacote");
     await writeFile(`${destino}.parcial`, Buffer.alloc(conteudo.length, 1));
     await writeFile(`${destino}.parcial.meta`, `"${HASH}"`);
-    await baixar(destino);
+    // Conta os corpos que o servidor entregou: tem que ser exatamente 1 (o download refeito).
+    // Se a conferência do hash for pulada, o parcial errado vira o destino sem nenhum corpo novo.
+    let corpos = 0;
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (...a: Parameters<typeof fetch>) => {
+      const r = await original(...a);
+      if (r.status === 200 || r.status === 206) corpos++;
+      return r;
+    }) as typeof fetch;
+    try {
+      await baixar(destino);
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(corpos).toBe(1);
     expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
+    expect(existsSync(`${destino}.parcial`)).toBe(false);
   });
   it("hash errado: apaga o parcial e não cria o destino", async () => {
     // O servidor entrega outro conteúdo sob o hash pedido (arquivo corrompido ou troca maliciosa).

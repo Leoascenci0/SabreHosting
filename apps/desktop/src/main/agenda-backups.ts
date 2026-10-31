@@ -4,7 +4,9 @@ import {
   type Relogio,
   type OpcoesAgenda,
 } from "@sabrehosting/nucleo/backup/agendador";
+import type { AvisoHistorico } from "./aviso-historico.js";
 import { listarBackups } from "@sabrehosting/nucleo/backup/listar";
+import { copiarParaPasta } from "@sabrehosting/nucleo/backup/destinos/pasta";
 
 /** Só o que a agenda precisa do servidor; `ServidorMinecraft` do núcleo cumpre. */
 export interface ServidorObservado {
@@ -90,7 +92,40 @@ export interface OpcoesAgendaReal {
   /** Época atual da trava do cartório (vai no pacote). */
   epoca(): Promise<number>;
   relogio?: Relogio;
+  /** Configurações › Backups › Histórico longo numa pasta (lido a cada backup; `undefined`: desligado). */
+  historicoLongo?(): string | undefined;
+  /** Onde a tela de Backups lê o último problema da cópia (limpo quando a cópia dá certo ou o recurso é desligado). */
+  avisoHistorico?: AvisoHistorico;
   aoAvisar?(texto: string): void;
+}
+
+/**
+ * Depois de um backup bom, copia para o histórico longo (se ligado). Falha da cópia só vira aviso: o backup local já
+ * está guardado e continua valendo. Nunca apaga nada.
+ */
+export async function copiarAoConcluir(
+  o: Pick<
+    OpcoesAgendaReal,
+    "pastaBackups" | "pastaDoMundo" | "historicoLongo" | "avisoHistorico" | "aoAvisar"
+  >,
+  feito: { caminho: string; sha256: string },
+): Promise<void> {
+  const pasta = o.historicoLongo?.();
+  if (pasta === undefined || !o.pastaBackups) {
+    o.avisoHistorico?.definir(undefined);
+    return;
+  }
+  try {
+    await copiarParaPasta(feito.caminho, feito.sha256, pasta, [
+      o.pastaBackups,
+      o.pastaDoMundo ?? "",
+    ]);
+    o.avisoHistorico?.definir(undefined);
+  } catch (e) {
+    const texto = e instanceof Error ? e.message : String(e);
+    o.avisoHistorico?.definir(texto);
+    o.aoAvisar?.(texto);
+  }
 }
 
 /** Liga `agendarBackups` do núcleo; sem as pastas configuradas, avisa e não agenda (nunca chuta um caminho). */
@@ -112,6 +147,7 @@ export function iniciarAgendaReal(o: OpcoesAgendaReal) {
       epoca: await o.epoca(),
       intervaloMin,
       ...(o.relogio ? { relogio: o.relogio } : {}),
+      aoConcluir: (feito) => void copiarAoConcluir(o, feito),
       aoFalhar: (e) => o.aoAvisar?.(`Backup agendado falhou: ${e.message}`),
       ...(o.aoAvisar ? { aoAvisar: o.aoAvisar } : {}),
     });

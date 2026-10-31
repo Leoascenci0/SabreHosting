@@ -18,7 +18,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 **Próxima onda: 23** — entra o appmel-1.11 (destravado 31/10: rotação 10 + 7 dias, DECISOES) e o hostmel-3.1 (versão escolhida pelo dono); Dependabot #95 e #96 (merge autônomo, DECISOES 31/10) (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
 
-Onda 22 (31/10) — appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 — sessão https://claude.ai/code/session_012qrjntw8ggfpCSw7mg4UfD (a 1ª tentativa falhou: S-08)
+Onda 22 (31/10) — appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 — sessão https://claude.ai/code/session_012qrjntw8ggfpCSw7mg4UfD (a 1ª tentativa falhou: S-09)
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -68,6 +68,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Feito
 
+- 31/10/2026 (dia) — Onda 22: syncmel-1.5 #170, appmel-1.10 #171, syncmel-1.6 #172, sync-2.1a #173, drive-1.1a #174, controle #175.
 - 31/10/2026 (dia) — Onda 21: cartmel-2.2 #163, syncmel-1.4 #164, appmel-1.7 #165, syncmel-1.1 #166, appmel-1.8 #167, syncmel-1.2 #168, controle #169.
 - 31/10/2026 (dia) — Onda 20: cartmel-1.1 #154, sync-1.1 #156, app-2.1 #157, sync-1.2 #158, app-2.2 #160, cartmel-2.3 #161, controle #162.
 

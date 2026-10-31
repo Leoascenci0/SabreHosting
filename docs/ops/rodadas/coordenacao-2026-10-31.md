@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | 20 | cartmel-1.1 · app-2.1 · sync-1.1 · app-2.2 · sync-1.2 | session_012qrjntSMKMZcY3GUuomfqa | bdee520 | fechada 09:59 → main 0b57326 |
 | 21 | syncmel-1.4 · appmel-1.7 · cartmel-2.2 · syncmel-1.1 · syncmel-1.2 · appmel-1.8 | session_012qrjnuVvPbMbr49Ryg8nY3 | 0b57326 | fechada 10:36 → main 5f440cc |
-| 22 | appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 | session_012qrjntw8ggfpCSw7mg4UfD (1ª: …AzcormV8 falhou, hash curto, S-08) | 5f440cc | aberta 10:47 |
+| 22 | appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 | session_012qrjntw8ggfpCSw7mg4UfD (1ª: …AzcormV8 falhou, hash curto, S-09) | 5f440cc | fechada 11:33 → main 722501a |
 
 ## Relatórios das ondas
 
@@ -25,6 +25,10 @@
   redemel-1.3 (tirar peer ao revogar: WireGuard real na nuvem). Decidi por você: appmel-1.8 sem rotação; sync 60 s ocioso/10 s
   cabeçalho/16 conexões; token revogado vale até 30 s no sync; trava vence em até 60 s (doc corrigida). 4 devoluções.
   Fichas S-06, S-07 → promovidas ao CLAUDE.md pela coordenadora. Custo n/d. main 5f440cc APROVADA.
+- **Onda 22** (11:33): ✅ appmel-1.10 #171 · syncmel-1.5 #170 (+b no #173) · syncmel-1.6 #172 · sync-2.1a #173 · drive-1.1a #174
+  · controle #175. ⏸️ piloto-1.1 (zip = dependência nova, P); drive-1.1b (rotação na pasta: coberta pela decisão 10+7 dias).
+  P: syncmel-1.8 (trava de atualização separada × só sem host); zip do piloto. Custo US$ 7,78. main 722501a APROVADA.
+  Ficha S-08 da onda (socket cru) colidiu com a S-08 da coordenação → a da coordenação virou S-09.
 
 ## Bastão
 

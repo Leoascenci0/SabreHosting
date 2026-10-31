@@ -56,7 +56,10 @@ diretos da pasta do servidor (via `path.relative`) e com nome `basename(mundo)+"
 Prova: testes de marcador forjado e de EPERM ao apagar o marcador · Vezes: 1 · Origem: syncmel-1.4, PR #164. Regra: tudo que um
 arquivo de estado manda apagar/renomear é entrada não confiável.
 
-## S-08 — Sessão de onda não abre: "branch or commit was not found"
+## S-08 — Teste de socket cru: sem `resume()` o `close` nunca chega; prazo de cabeçalho do Node sai em ~30 s
+Sintoma: teste de "cabeçalho que nunca termina" estourava 20 s sem o socket fechar · Causa: (1) o cliente de teste não lia os dados, então o FIN do servidor não era processado e o `close` não vinha; (2) o Node confere `headersTimeout` a cada ~30 s, então o corte real não acontece em 10 s · Solução: `s.resume()` no socket de teste; janela do teste de 9 a 45 s com prazo explícito de 60 s (S-01: prazo só no teste) · Prova: medido em 30,0 s; suíte de transferência 33/33 · Vezes: 1 · Origem: syncmel-1.6, PR #172. Vale para qualquer teste de socket cru; melhoria 1.7 do syncmel baixa o custo de 30 s.
+
+## S-09 — Sessão de onda não abre: "branch or commit was not found"
 Sintoma: a sessão criada com `create_session` falha em "Repositório clonado" (`ref_not_found`) e não pode continuar ·
 Causa: `source_revision` com hash CURTO (`5f440cc`); a nuvem só aceita ramo ou hash completo · Solução: sempre
 `git rev-parse origin/main` (40 caracteres) no `source_revision`; arquivar a sessão morta, apagar o vigia dela e recriar ·

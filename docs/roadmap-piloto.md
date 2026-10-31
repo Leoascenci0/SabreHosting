@@ -5,7 +5,7 @@ hospedagem.
 
 **Sigla `piloto`.** Ramos `roadmap/piloto-<id>`. Quase tudo aqui é **P** (precisa do Eliel e dos amigos).
 
-- [ ] **1.1 — Importar o mundo da hospedagem atual**
+- [ ] **1.1 — Importar o mundo da hospedagem atual** *(⏸️ P em 31/10: precisa de biblioteca nova para ler zip — dependência nova exige aprovação do Eliel em DECISOES; envio de versão ao cartório já existe (`PUT /versoes/:n/...`); alternativa: aceitar só pasta já extraída)*
   *O que fazer:* ferramenta que importa um zip/pasta de mundo baixado da hospedagem (checa versão do Minecraft,
   plugins, tamanho), gera a versão 1 no cartório; tutorial de como baixar o mundo do painel da hospedagem.
   *Arquivo:* `packages/nucleo/src/importar.ts`, `docs/tutoriais/piloto-importar.md`

@@ -205,7 +205,9 @@ o que se repete). No máximo 10 linhas:
   antigo ANTES de qualquer `await`.
 - **S-07** marcador/caminho lido do disco é entrada não confiável: validar que as pastas são distintas e filhas diretas
   antes de apagar qualquer coisa a partir dele.
-- **S-08** sessão nova falha com "branch or commit was not found": `source_revision` com hash curto; usar sempre o hash
+- **S-08** teste de socket cru: `s.resume()` no cliente, senão o `close` nunca chega; o prazo de cabeçalho do Node
+  só corta em ~30 s (janela do teste com folga).
+- **S-09** sessão nova falha com "branch or commit was not found": `source_revision` com hash curto; usar sempre o hash
   completo (`git rev-parse origin/main`).
 
 ## Skills sob demanda

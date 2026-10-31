@@ -11,6 +11,8 @@ export interface DepsBackups {
   /** `restaurarBackup` do núcleo, com trava e hash; lança erro em pt-BR. */
   restaurar(nome: string): Promise<void>;
   servidorRodando(): boolean;
+  /** Último problema da cópia para o histórico longo (texto pronto para a tela). */
+  avisoHistorico?(): string | undefined;
 }
 
 export interface EstadoBackups {
@@ -18,6 +20,8 @@ export interface EstadoBackups {
   /** Servidor rodando: restaurar fica desligado. */
   bloqueado: boolean;
   erro?: string;
+  /** A cópia para a pasta do histórico longo falhou: a tela mostra, em pt-BR, que o backup deste PC está salvo. */
+  avisoHistorico?: string;
 }
 
 const GENERICA = "Não consegui restaurar agora. O mundo continua como estava.";
@@ -31,13 +35,20 @@ export function criarBackups(deps: DepsBackups) {
     restaurando: (): boolean => restaurando,
     async estado(): Promise<EstadoBackups> {
       const bloqueado = deps.servidorRodando();
+      const aviso = deps.avisoHistorico?.();
+      const comAviso = aviso === undefined ? {} : { avisoHistorico: aviso };
       try {
-        return { itens: (await deps.listar()).map((b) => ({ ...b, dePc: ESTE_PC })), bloqueado };
+        return {
+          itens: (await deps.listar()).map((b) => ({ ...b, dePc: ESTE_PC })),
+          bloqueado,
+          ...comAviso,
+        };
       } catch {
         return {
           itens: [],
           bloqueado,
           erro: "Não consegui ler a lista de backups. Confira a pasta de backups.",
+          ...comAviso,
         };
       }
     },

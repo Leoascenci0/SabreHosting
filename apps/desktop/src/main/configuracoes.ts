@@ -1,6 +1,12 @@
-import type { ConfiguracoesDaTela, Resultado } from "../ui/ponte.js";
+import { isAbsolute } from "node:path";
+import type { CampoComErro, ConfiguracoesDaTela, Resultado } from "../ui/ponte.js";
 import { validarDistancias } from "@sabrehosting/nucleo/servidor/configurar";
-import { lerPreferencias, salvarPreferencias, validarIntervaloBackup } from "./preferencias.js";
+import {
+  lerPreferencias,
+  salvarPreferencias,
+  validarHistoricoLongo,
+  validarIntervaloBackup,
+} from "./preferencias.js";
 
 export interface DepsConfiguracoes {
   pasta: string;
@@ -8,6 +14,8 @@ export interface DepsConfiguracoes {
   aplicarAbrirComWindows(ligado: boolean): void;
   /** Depois de gravar: o agendador de backup passa a usar o novo intervalo (minutos). */
   aplicarIntervaloBackup?(min: number): void;
+  /** Seletor de pasta do sistema; `undefined` se cancelar. */
+  escolherPasta?(): Promise<string | undefined>;
 }
 
 const GENERICA = "Não consegui salvar agora. Nada foi alterado.";
@@ -21,7 +29,11 @@ function lerValor(valor: unknown): ConfiguracoesDaTela | undefined {
     return undefined;
   }
   if (typeof v["intervaloBackupMin"] !== "number") return undefined;
+  if (typeof v["historicoLongoLigado"] !== "boolean") return undefined;
+  if (typeof v["historicoLongoPasta"] !== "string") return undefined;
   return {
+    historicoLongoLigado: v["historicoLongoLigado"],
+    historicoLongoPasta: v["historicoLongoPasta"].trim(),
     intervaloBackupMin: v["intervaloBackupMin"],
     abrirComWindows: v["abrirComWindows"],
     distanciaVisao: v["distanciaVisao"],
@@ -32,15 +44,33 @@ function lerValor(valor: unknown): ConfiguracoesDaTela | undefined {
 export function criarConfiguracoes(deps: DepsConfiguracoes) {
   return {
     ler: (): ConfiguracoesDaTela => lerPreferencias(deps.pasta),
+    /** Só devolve caminho absoluto (o resto, inclusive cancelar, vira `undefined`); quem salva valida de novo. */
+    async escolherPasta(): Promise<string | undefined> {
+      try {
+        const p = await deps.escolherPasta?.();
+        return typeof p === "string" && isAbsolute(p) ? p : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     /** Valida tudo ANTES de gravar: valor inválido não toca no arquivo. */
     salvar(valor: unknown): Resultado {
       const novo = lerValor(valor);
       if (!novo) return { ok: false, mensagem: "Valor inválido. Nada foi alterado." };
-      try {
-        validarDistancias(novo.distanciaVisao, novo.distanciaSimulacao);
-        validarIntervaloBackup(novo.intervaloBackupMin);
-      } catch (e) {
-        return { ok: false, mensagem: e instanceof Error ? e.message : GENERICA };
+      const checagens: [CampoComErro, () => void][] = [
+        ["distancias", () => validarDistancias(novo.distanciaVisao, novo.distanciaSimulacao)],
+        ["intervalo", () => validarIntervaloBackup(novo.intervaloBackupMin)],
+        [
+          "historico",
+          () => validarHistoricoLongo(novo.historicoLongoLigado, novo.historicoLongoPasta),
+        ],
+      ];
+      for (const [campo, checar] of checagens) {
+        try {
+          checar();
+        } catch (e) {
+          return { ok: false, mensagem: e instanceof Error ? e.message : GENERICA, campo };
+        }
       }
       try {
         salvarPreferencias(deps.pasta, novo);
