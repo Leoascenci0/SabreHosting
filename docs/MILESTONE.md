@@ -19,7 +19,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 ## Fila
 
 **M1 — Fundação**
-- **Onda 7 (em curso):** cart-2.1 · basemel-1.3 · rede-1.1 ✅ · bkp-1.3
+_(nenhuma onda aberta; leva de 6 ondas concluída em 31/10/2026)_
 - **Onda 6b:** bkp-2.1 · rede-1.1
 - **Onda 8:** bkp-2.2 · cart-1.4 · host-3.1 [P: teste no PC]
 
@@ -51,7 +51,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 - Melhorias do launcher: `docs/roadmap-lanc-melhoria.md` (lancmel-1.1).
 - Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-1.1; 2.1 obrigatório antes de ligar o proxy; 2.2; 2.3 [P]).
-- Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; bkpmel-1.2).
+- Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
 - Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1 a 1.4 e 1.6; 1.5 feito).
 - Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
 - Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1 e 1.2, CI).
@@ -64,6 +64,10 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 - 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
 
+- 31/10/2026 — Ondas 7–11: cart-2.1 cliente e trava (#41), basemel-1.3 testes estáveis (#43), rede-1.1 script da nuvem
+  (#42), bkp-1.3 backup agendado (#45), rede-2.1 Velocity (#48), bkp-2.1 rotação (#50), rede-1.2 tutorial (#51),
+  migra-1.1 quem hospeda (#54), lanc-1.2 instância Prism (#57), cart-1.4 cópia na nuvem (#58), rede-1.3 WireGuard (#60),
+  rede-2.3 limbo (#62), bkp-2.2 restaurar (#64), basemel-1.4 verificador (#65).
 - 30/10/2026 — Onda 6: cart-1.3 versões do mundo (PR #32), lanc-1.1 achar o Prism (PR #36), bkp-1.2 pacote
   fechado (PR #38).
 - 30/10/2026 — Onda 5: host-2.1 subir/parar (PR #24), bkpmel-1.1 caminhos Windows (PR #29), cartmel-1.5 época

@@ -42,7 +42,7 @@ risco. Base de todo o resto (sync e migração usam o mesmo pacote).
   *Confirmação:* testes de propriedade: em qualquer sequência, sobra ≥ 1 backup bom.
   *Depende de:* bkp-1.2
 
-- [ ] **2.2 — Restaurar com troca atômica**
+- [x] **2.2 — Restaurar com troca atômica** (PR #64, 31/10/2026)
   *O que fazer:* backup do estado atual → extrair em pasta temporária → conferir → `rename` → registrar. Exige trava (no
   modo local, trava local até o cartório existir).
   *Arquivo:* `packages/nucleo/src/backup/restaurar.ts`

@@ -35,6 +35,7 @@ Skill `maxima` › `references/triagem.md`. A Máxima grava no merge; a filha n�
 | cart-1.4 | armazém em fluxo | M1+M7 | ~180 | ~280 (+~400 teste) | não | #58 |
 | rede-2.3 | script limbo | M3 | ~120 | ~170 (+~200 teste) | não | #62 |
 | basemel-1.4 | checagem do verificador | M3 | ~30 | ~40 (+~50 teste) | não | #65 |
+| bkp-2.2 | restauração | M1+M7 | ~120 | ~230 (+~300 teste) | não | #64 |
 
 ## Lições
 - **L-01** Item de trava/tempo (renovação, prazo, parada) precisa da CONTA de tempo no briefing: prazo do cartório, margem
