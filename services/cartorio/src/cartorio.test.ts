@@ -4,9 +4,15 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
-import { MIGRACOES, abrirBanco, criarConvite, usarConvite } from "./banco.js";
+import {
+  MIGRACOES,
+  abrirBanco,
+  apagarConvitesVencidos,
+  criarConvite,
+  usarConvite,
+} from "./banco.js";
 import { gerarSegredo } from "./segredo.js";
-import { conferirEndereco, criarCartorio } from "./servidor.js";
+import { conferirEndereco, criarCartorio, criarLimitador } from "./servidor.js";
 
 const pastas: string[] = [];
 const fechar: Array<() => Promise<unknown>> = [];
@@ -151,6 +157,33 @@ describe("cartório: convites", () => {
     expect((await usar(convite)).statusCode).toBe(401);
   });
 
+  it("limpeza apaga só convite não usado vencido há mais de N dias; usado e vigente ficam", () => {
+    const pasta = mkdtempSync(join(tmpdir(), "sabre-cartorio-"));
+    pastas.push(pasta);
+    const banco = abrirBanco(join(pasta, "cartorio.db"));
+    const DIA = 86_400_000;
+    const hoje = 100 * DIA;
+    criarConvite(banco, "vencido há 8 dias", hoje - 9 * DIA, DIA);
+    criarConvite(banco, "vencido há 6 dias", hoje - 7 * DIA, DIA);
+    criarConvite(banco, "vigente", hoje, DIA);
+    const usado = criarConvite(banco, "usado e vencido há muito", hoje - 50 * DIA, DIA);
+    expect(usarConvite(banco, usado, hoje - 50 * DIA)).toBeDefined();
+
+    expect(apagarConvitesVencidos(banco, hoje, 7)).toBe(1);
+    const nomes = (
+      banco.prepare("SELECT nome_pc FROM convites ORDER BY nome_pc").all() as Array<{
+        nome_pc: string;
+      }>
+    ).map((l) => l.nome_pc);
+    expect(nomes).toEqual(["usado e vencido há muito", "vencido há 6 dias", "vigente"]);
+    expect(
+      banco.prepare("SELECT count(*) AS n FROM convites WHERE pc_id IS NOT NULL").get(),
+    ).toEqual({
+      n: 1,
+    });
+    banco.close();
+  });
+
   it("falha ao criar o token: convite continua sem uso e nenhum PC é criado", () => {
     const { pasta } = montar();
     const banco = abrirBanco(join(pasta, "falha.db"));
@@ -267,5 +300,111 @@ describe("cartório: endereço de escuta", () => {
     }
     expect(conferirEndereco("127.0.0.1")).toBe("127.0.0.1");
     expect(conferirEndereco("10.8.0.1")).toBe("10.8.0.1");
+  });
+
+  it("recusa IP público, IPv4 mapeado em IPv6, CGNAT e link-local; aceita só loopback e faixas privadas", () => {
+    for (const e of [
+      "8.8.8.8",
+      "200.160.2.3",
+      "2001:4860:4860::8888",
+      "::ffff:10.66.0.1",
+      "::ffff:127.0.0.1",
+      "100.64.0.1",
+      "169.254.1.1",
+      "fe80::1",
+      "172.32.0.1",
+    ]) {
+      expect(() => conferirEndereco(e), e).toThrow(/recusado/);
+    }
+    for (const e of ["127.0.0.1", "127.1.2.3", "::1", "10.66.0.1", "172.16.0.1", "172.31.255.1"]) {
+      expect(conferirEndereco(e)).toBe(e);
+    }
+    for (const e of ["192.168.1.1", "fd00::1", "fc00::1"]) expect(conferirEndereco(e)).toBe(e);
+  });
+});
+
+describe("cartório: entrada endurecida", () => {
+  it("corpo JSON de 10 KB → 413, antes de chegar à rota", async () => {
+    const { app } = montar();
+    const r = await app.inject({
+      method: "POST",
+      url: "/convites/usar",
+      payload: { convite: "x", lixo: "a".repeat(10 * 1024) },
+    });
+    expect(r.statusCode).toBe(413);
+  });
+
+  it("20 convites errados do mesmo IP → a 21ª tentativa é 429, mesmo com o convite certo", async () => {
+    const { app, convidar, usar } = montar();
+    const bom = await convidar();
+    for (let i = 0; i < 20; i++) expect((await usar(gerarSegredo())).statusCode).toBe(401);
+    const barrado = await usar(bom);
+    expect(barrado.statusCode).toBe(429);
+    expect(barrado.json<{ erro: string }>().erro).toMatch(/tentativas/);
+    // Outro IP não paga pelo primeiro.
+    const outro = await app.inject({
+      method: "POST",
+      url: "/convites/usar",
+      payload: { convite: bom },
+      remoteAddress: "10.66.0.9",
+    });
+    expect(outro.statusCode).toBe(200);
+  });
+
+  it("token errado conta junto com convite errado; barrado antes de olhar o token", async () => {
+    const { app, convidar, usar } = montar();
+    const { token } = (await usar(await convidar())).json<{ token: string }>();
+    const auth = (t: string) => ({ authorization: `Bearer ${t}` });
+    for (let i = 0; i < 10; i++) expect((await usar(gerarSegredo())).statusCode).toBe(401);
+    for (let i = 0; i < 5; i++)
+      expect((await app.inject({ url: "/eu", headers: auth(gerarSegredo()) })).statusCode).toBe(
+        401,
+      );
+    for (let i = 0; i < 5; i++)
+      expect((await app.inject({ url: "/trava", headers: auth(gerarSegredo()) })).statusCode).toBe(
+        401,
+      );
+    expect((await app.inject({ url: "/trava", headers: auth(token) })).statusCode).toBe(429);
+    expect((await app.inject({ url: "/eu", headers: auth(token) })).statusCode).toBe(429);
+  });
+
+  it("segredo de administrador errado conta no mesmo limite e é barrado antes de conferir", async () => {
+    const { app, segredoAdmin } = montar();
+    const criar = (segredo: string) =>
+      app.inject({
+        method: "POST",
+        url: "/convites",
+        headers: { authorization: `Bearer ${segredo}` },
+        payload: { nomePc: "PC" },
+      });
+    for (let i = 0; i < 20; i++) expect((await criar(gerarSegredo())).statusCode).toBe(401);
+    expect((await criar(segredoAdmin)).statusCode).toBe(429);
+  });
+
+  it("limitador tira do mapa as entradas vencidas de qualquer IP", () => {
+    const relogio = { agora: 0 };
+    const limite = criarLimitador(() => relogio.agora);
+    for (let i = 0; i < 100; i++) limite.contarFalha(`10.66.0.${i}`);
+    expect(limite.tamanho()).toBe(100);
+    relogio.agora = 15 * 60_000 - 1;
+    limite.contarFalha("10.66.1.1");
+    expect(limite.tamanho()).toBe(101);
+    relogio.agora = 15 * 60_000;
+    limite.contarFalha("10.66.1.2");
+    expect(limite.tamanho()).toBe(2);
+  });
+
+  it("acerto não conta nem zera; passada a janela de 15 min, o IP volta a entrar", async () => {
+    const { app, convidar, usar, relogio } = montar();
+    const { token } = (await usar(await convidar())).json<{ token: string }>();
+    const eu = (t: string) => app.inject({ url: "/eu", headers: { authorization: `Bearer ${t}` } });
+    for (let i = 0; i < 19; i++) expect((await eu(gerarSegredo())).statusCode).toBe(401);
+    for (let i = 0; i < 30; i++) expect((await eu(token)).statusCode).toBe(200);
+    expect((await eu(gerarSegredo())).statusCode).toBe(401); // a 20ª falha
+    expect((await eu(token)).statusCode).toBe(429);
+    relogio.agora += 15 * 60_000 - 1;
+    expect((await eu(token)).statusCode).toBe(429);
+    relogio.agora += 1;
+    expect((await eu(token)).statusCode).toBe(200);
   });
 });

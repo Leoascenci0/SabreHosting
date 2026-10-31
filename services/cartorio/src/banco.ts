@@ -159,3 +159,12 @@ export function pcDoToken(banco: Banco, token: string): Pc | undefined {
     )
     .get(hashSegredo(token)) as Pc | undefined;
 }
+
+/** Apaga convites nunca usados vencidos há mais de `dias`; o usado fica (o `pc_id` dele é o registro de quem entrou). */
+export function apagarConvitesVencidos(banco: Banco, agora: number, dias = 7): number {
+  const limite = agora - dias * 86_400_000;
+  return Number(
+    banco.prepare("DELETE FROM convites WHERE usado_em IS NULL AND expira_em < ?").run(limite)
+      .changes,
+  );
+}

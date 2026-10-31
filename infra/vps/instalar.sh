@@ -146,6 +146,7 @@ if ! ja_feito usuario id "$USUARIO"; then
 fi
 executar install -d -m 755 -o root -g root /opt/sabre
 executar install -d -m 750 -o "$USUARIO" -g "$USUARIO" /var/lib/sabre
+executar install -d -m 750 -o "$USUARIO" -g "$USUARIO" /var/lib/sabre/cartorio
 
 # ---------- 3. WireGuard (hub): chave gerada AQUI, nunca vem de fora ----------
 
