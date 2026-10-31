@@ -123,6 +123,15 @@ describe("ciclo de estados", () => {
     expect(logs.some((l) => /Java/.test(l))).toBe(true);
   });
 
+  it("Java que não existe avisa uma vez só", async () => {
+    const s = await subir("normal", { javaPath: join(pasta, "nao-existe"), prefixoArgs: [] });
+    const logs: string[] = [];
+    s.on("log", (l: { texto: string }) => logs.push(l.texto));
+    await esperarEstado(s, "caiu");
+    await new Promise((r) => setTimeout(r, 200));
+    expect(logs.filter((l) => /Java|encerrou/.test(l))).toHaveLength(1);
+  });
+
   it("pararServidor em servidor que já caiu não faz nada", async () => {
     const s = await subir("cai");
     await esperarEstado(s, "caiu");
@@ -334,6 +343,31 @@ describe("trava (regra de ouro 1)", () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(s.estado).toBe("pronto");
   });
+
+  it('"Done (" de outra thread não deixa pronto; o da thread do servidor, nos dois formatos, deixa', async () => {
+    const dizer = async (linha: string) => {
+      const s = await subir("semdone");
+      (s as unknown as { aoReceberLinha: (l: string) => void }).aoReceberLinha(linha);
+      const estado = s.estado;
+      await s.pararServidor();
+      return estado;
+    };
+    expect(await dizer("[12:00:00] [Worker-Main-1/INFO]: Done (1.0s)!")).toBe("subindo");
+    expect(await dizer("[12:00:00] [Server thread/INFO] [mod/Outro]: <A> Done (1.0s)!")).toBe(
+      "subindo",
+    );
+    expect(await dizer("[12:00:00] [Server thread/INFO]: Done (1.0s)!")).toBe("pronto");
+    expect(
+      await dizer("[12:00:00] [Server thread/INFO] [minecraft/DedicatedServer]: Done (1.0s)!"),
+    ).toBe("pronto");
+  });
+
+  it("no Windows a guarda ignora diferença de maiúscula na pasta", async () => {
+    await subir("normal", { plataforma: "win32" });
+    await expect(
+      iniciarServidor(opcoes("normal", { plataforma: "win32", pasta: pasta.toUpperCase() })),
+    ).rejects.toThrow(/Já está rodando/);
+  });
 });
 
 describe("antes de subir", () => {
@@ -429,7 +463,61 @@ describe("comando e memória", () => {
   it("abaixo de 4 GB avisa em pt-BR; com 4 GB ou mais, não", async () => {
     const pouco = await subir("normal", { memoriaTotalBytes: 6 * GB });
     expect(pouco.aviso).toMatch(/pouca memória para servidor com mods/);
+    await pouco.pararServidor();
     const ok = await subir("normal", { memoriaTotalBytes: 8 * GB });
     expect(ok.aviso).toBeUndefined();
+  });
+});
+
+describe("entrada e guarda", () => {
+  it("recusa pasta relativa e javaPath relativo com separador", async () => {
+    await expect(iniciarServidor(opcoes("normal", { pasta: "mundo/pasta" }))).rejects.toThrow(
+      /caminho completo/,
+    );
+    await expect(iniciarServidor(opcoes("normal", { javaPath: "./java" }))).rejects.toThrow(
+      /caminho completo/,
+    );
+    await expect(iniciarServidor(opcoes("normal", { javaPath: "bin/java" }))).rejects.toThrow(
+      /caminho completo/,
+    );
+    expect(chamadas).toHaveLength(0);
+  });
+
+  it("aceita javaPath só com o nome (procurado no PATH)", async () => {
+    const s = await subir("normal", { javaPath: "java-que-nao-existe-aqui", prefixoArgs: [] });
+    await esperarEstado(s, "caiu");
+  });
+
+  it("segunda chamada na mesma pasta é recusada e libera quando o servidor para", async () => {
+    const s = await subir();
+    await expect(iniciarServidor(opcoes())).rejects.toThrow(/Já está rodando/);
+    expect(chamadas).toHaveLength(1);
+    await s.pararServidor();
+    const outro = await subir();
+    expect(outro.estado).not.toBe("caiu");
+  });
+
+  it("duas chamadas simultâneas na mesma pasta: só uma sobe", async () => {
+    const r = await Promise.allSettled([subir(), subir()]);
+    expect(r.filter((x) => x.status === "fulfilled")).toHaveLength(1);
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it("falha antes do spawn libera a pasta", async () => {
+    await expect(
+      iniciarServidor(opcoes("normal", { temTrava: async () => false })),
+    ).rejects.toThrow();
+    await subir();
+  });
+
+  it('"Done (" vindo do chat não deixa o servidor pronto', async () => {
+    const s = await subir("semdone");
+    const f = (s as unknown as { aoReceberLinha: (l: string) => void }).aoReceberLinha.bind(s);
+    f("[12:00:00] [Server thread/INFO] [minecraft/MinecraftServer]: <Mallory> Done (1.0s)!");
+    expect(s.estado).toBe("subindo");
+    f(
+      '[12:00:01] [Server thread/INFO] [minecraft/DedicatedServer]: Done (1.2s)! For help, type "help"',
+    );
+    expect(s.estado).toBe("pronto");
   });
 });
