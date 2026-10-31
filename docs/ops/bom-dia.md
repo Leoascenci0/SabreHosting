@@ -8,7 +8,7 @@ _Reescrito pela Máxima no fim de cada onda, ao pausar e no encerramento. Atuali
   - Cartório: aceita só a rede privada, recusa mensagem grande, bloqueia 20 tentativas erradas (#69); banco numa pasta
     de dados (#69); senha de administrador num arquivo protegido criado pelo instalador (#75).
   - Base: teste da trava estável com a máquina ocupada (#76).
-- **Tutoriais para testar:** nenhum novo (o app ainda não tem instalador; vem no app-3.1).
+- **Tutoriais para testar:** `docs/tutoriais/2026-10-31-app-demonstracao.md` — abrir as telas do app no Windows em modo demonstração (dados de mentira; o instalador vem no app-3.1).
 - **Decidi por você:** Jogar só copia o endereço (abrir o Prism é do lanc-1.3); Parar e Sair pedem confirmação; cartório
   recusa a faixa de operadora 100.64/10; convites não usados somem 7 dias depois de vencer; "Abrir com o Windows" vem
   desligado; 3ª passada no app-1.2 (exceção à regra de 2 devoluções, por ser regra de ouro 1).
