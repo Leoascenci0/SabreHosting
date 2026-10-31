@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-_(nenhum item aberto; leva de 31/10 encerrada — retomar com `/maxima retomar`)_
+_(nenhum item aberto; rodada da madrugada de 31/10 encerrada às 04:15 — 33 PRs; retomar com `/maxima retomar`)_
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -26,11 +26,9 @@ _(nenhum item aberto; leva de 31/10 encerrada — retomar com `/maxima retomar`)
 - host-3.1 [P: teste no PC — precisa da versão do Minecraft escolhida pelo Eliel]
 
 **M2 — Primeira partida**
-- **Próxima onda (Eliel pediu app-1.1 primeiro, para ter prévia):** app-1.1 · rede-2.2 (plugin do proxy: trocar o host da vez + whitelist = redemel-2.1) ·
-  cartmel-1.2/1.3 (endurecer a entrada do cartório; banco fora do diretório atual)
-- **Convite (desenho aprovado em 31/10):** rede-1.4 · cart-1.5 (podem ir juntos: cart-1.5 começa com o ajudante falso) →
-  app-1.3 (com appmel-1.4) [P: prova real no PC]
-- Depois: redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
+- rede-2.2 (plugin do proxy: trocar o host da vez + whitelist = redemel-2.1) [P: liberar repo.papermc.io]
+- **Convite:** rede-1.4 ✅ (#85) · cart-1.5 ✅ (#84) · rede-1.5 ✅ (#97) → **app-1.3** (com appmel-1.4) [P: prova real no PC]
+- Depois: redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · redemel-2.2 [P: internet para fixar a versão do Velocity] · cart-2.2 [P: máquina real; levar o achado do SABRE_CARTORIO_SEGREDO_ADMIN que ninguém lê]
 - Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
 
 **M3 — Mundo em todos** (ondas montadas pela Máxima ao chegar aqui): sync-1.1 → sync-1.2 → sync-2.1 → sync-2.2;
@@ -49,24 +47,31 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 - **Liberar `repo.papermc.io`** na rede do ambiente da nuvem (Allowed domains). *Trava:* rede-2.2.
 - **Versão do Minecraft** (e do NeoForge): escolha do Eliel antes do host-3.1 (teste no PC).
+- **cartmel-1.1 — quem pode tirar um PC do grupo** (recomendado: só o dono, pelo app; o PC tirado perde o acesso ao cartório; tirar da rede privada vira item de rede). *Trava:* cartmel-1.1.
+- **Dependabot #95 e #96** (actions do CI 4→7): PR de autor externo, merge é do Eliel.
+- **Provas no PC Windows:** appmel-1.5, hostmel-2.5, appmel-1.1 (passo a passo nos PRs #101, #114, #144).
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
   assinatura (pago, ~US$ 100+/ano). *Trava:* app-3.2.
 
 ## Backlog
 
-- Melhorias do app: `docs/roadmap-app-melhoria.md` (appmel-1.1 a 1.6; 1.4 absorvido pelo app-1.3).
-- Melhorias do launcher: `docs/roadmap-lanc-melhoria.md` (lancmel-1.1).
-- Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-1.1; 2.1 obrigatório antes de ligar o proxy; 2.2; 2.3 [P]).
-- Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
-- Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1, 1.4, 1.6, 1.8; 1.2, 1.3, 1.5, 1.7 feitos).
-- Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
-- Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1, 1.2, 1.6; 1.5 feito).
+- Melhorias: quase tudo feito na madrugada de 31/10. Abertos: appmel-1.4 (vai com o app-1.3); lancmel-1.1 parte
+  "marcador da instância" (vai com o lanc-1.3); redemel-2.1 (com o rede-2.2), 2.2 e 2.3 [P: internet]; cartmel-1.1 [P];
+  hostmel-2.1 [P: PCs reais].
+- Achados menores para um próximo item: vigia dentro do `app.asar` (asarUnpack no app-3.1); teste do PUT com corpo > 1 MB;
+  `::1` no download local; vistoria local também como usuário comum (S-03).
 
 - Bedrock via Geyser (se D1 = Java + Bedrock depois).
 - App para Linux e macOS (o núcleo já é multiplataforma).
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 31/10/2026 (madrugada) — 33 PRs: convite completo (rede-1.4 #85, cart-1.5 #84, rede-1.5 #97); correção do CI da main
+  (corr-1.1 #118); host: 2.3 #89, 2.4 #99, 1.1 #102, 1.2 #106, 1.3 #109, 2.5 vigia #114, 1.4 #122, 2.2 #139; backup:
+  bkpmel-2.1 #86, 1.2 #90, 1.3 #105; app: appmel-1.5 #101, 1.3 #126, 1.2 #131, 1.6 #137, 1.1 #144; cartório: cartmel-2.1
+  #123, 1.6 #127, 1.4 #133, 1.8 #135, 1.9 #143; rede: redemel-1.1 #115, 1.2 #145; base: basemel-1.1 #93, 1.2 #111, 1.6
+  #128/#138; launcher: lancmel-1.1 (a+b) #117.
 
 - 31/10/2026 — app-1.1 janela, bandeja e design system (#70); cartmel-1.2/1.3 cartório endurecido e banco em /var/lib (#69); basemel-1.5 teste da trava estável (#76); cartmel-1.7 segredo do cartório em arquivo 0600 (#75); app-1.2 tela inicial com 4 estados e saída segura (#74).
 

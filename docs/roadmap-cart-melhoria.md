@@ -29,7 +29,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* `git status` limpo após rodar o cartório na raiz; teste com relógio injetado apaga só os vencidos.
   *Origem:* cart-1.1 · PR #15 · filha
 
-- [ ] **1.4 — Prova de corrida com dois processos**
+- [x] **1.4 — Prova de corrida com dois processos** (PR #133, 31/10/2026)
   *O que fazer:* teste com 2 processos (ou worker_threads) abrindo um banco novo e usando o mesmo convite ao mesmo
   tempo; exatamente um vence.
   *Arquivo:* `services/cartorio/src/cartorio.test.ts`
@@ -47,7 +47,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   preserva os PCs.
   *Origem:* cart-1.2 · PR #22 · qa integridade + qa segurança · **feito no PR #27 (30/10/2026)**
 
-- [ ] **1.6 — Tipo da época garantido no banco e recusa mais clara na passagem**
+- [x] **1.6 — Tipo da época garantido no banco e recusa mais clara na passagem** (PR #127, 31/10/2026)
   *O que fazer:* numa migração nova, `CHECK (typeof(epoca) = 'integer')` na trava (hoje um UPDATE com texto passaria
   pelo gatilho; não se alcança pela API); recusa própria `destino_sem_acesso` quando o destino só tem token revogado.
   *Arquivo:* `services/cartorio/src/banco.ts`, `services/cartorio/src/trava.ts`
@@ -57,7 +57,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
 
 ## Bloco 2 — Cliente do cartório
 
-- [ ] **2.1 — Cliente mais rígido**
+- [x] **2.1 — Cliente mais rígido** (PR #123, 31/10/2026; intervalo de renovação mantido)
   *O que fazer:* validar as respostas do cartório (tipos, campos, teto de ~64 KB no corpo) em vez de `as T`; renovar
   confere a época na resposta; parar as novas tentativas do renovar depois de soltar/perder; na perda, o salvar pode
   furar a fila de comandos (hoje é só melhor esforço); considerar renovar a cada renovarMs/2.
@@ -75,10 +75,21 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* simulação do instalador: arquivo com 0600, unidade sobe com o segredo; rodar de novo não troca o segredo.
   *Origem:* cartmel-1.2 · PR #69 · filha (achado médio)
 
-- [ ] **1.8 — Teto do PUT sem enfeite e exemplo de endereço coerente**
+- [x] **1.8 — Teto do PUT sem enfeite e exemplo de endereço coerente** (PR #135, 31/10/2026; cartório e app só na rede 10.66)
   *O que fazer:* tirar o `bodyLimit` inerte da rota `PUT /versoes/:n/pacote` (o teto real é o do armazém, leitor em
   fluxo) ou trocar por comentário; na mensagem de `conferirEndereco`, trocar o exemplo `10.8.0.1` por `10.66.0.1`.
   *Arquivo:* `services/cartorio/src/servidor.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* teste do PUT igual; teste do texto do erro.
   *Origem:* cartmel-1.2 · PR #69 · filha (achados baixos)
+
+- [x] **1.9 — Acabamentos do cliente do cartório** (PR #143, 31/10/2026)
+  *O que fazer:* cortar em ~200 caracteres o campo `erro` vindo do cartório antes de pôr no `ErroCartorio` e na recusa
+  da trava (vai para o log e para a tela); o teste "content-length acima de 64 KB nem é lido" passa a provar que o corpo
+  não foi lido (hoje a contagem por fluxo também barra e o teste não distingue); convite antigo sem `ip_prov` (só
+  `{token}`) recusado com mensagem clara em vez de "resposta inválida".
+  *Arquivo:* `packages/nucleo/src/cartorio/cliente.ts`, `packages/nucleo/src/cartorio/tipos.ts`, testes
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes de cada caso (falham antes, passam depois).
+  *Origem:* cartmel-2.1 · PR #123 · qa segurança + qa integridade + filha
+

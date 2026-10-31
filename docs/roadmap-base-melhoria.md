@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
 
 ## Bloco 1 — Esqueleto
 
-- [ ] **1.1 — Fixar as actions do CI por hash de commit**
+- [x] **1.1 — Fixar as actions do CI por hash de commit** (PR #93, 31/10/2026; Dependabot ligado)
   *O que fazer:* trocar `actions/checkout@v4` e `actions/setup-node@v4` por hash de commit (com o número da versão em
   comentário) e ligar o Dependabot só para GitHub Actions, para atualizar os hashes por PR.
   *Arquivo:* `.github/workflows/vistoria.yml`, `.github/dependabot.yml`
@@ -13,7 +13,7 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   *Confirmação:* o workflow segue verde com os hashes; o Dependabot abre PR quando sair versão nova.
   *Origem:* base-1.2 · PR #7 · filha
 
-- [ ] **1.2 — Vistoria em push na main também confere arquivos**
+- [x] **1.2 — Vistoria em push na main também confere arquivos** (PR #111, 31/10/2026)
   *O que fazer:* em push na `main`, o verificador compara com a própria `main` e não confere nada de arquivo (só lint e
   testes valem). Fazer o CI passar `--base` do commit anterior (`github.event.before`) nesse caso.
   *Arquivo:* `.github/workflows/vistoria.yml`
@@ -53,7 +53,7 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   *Confirmação:* 4 `npx vitest run` em paralelo, 3 vezes seguidas, sem falha.
   *Origem:* rodada 31/10 · vistoria do PR #70
 
-- [ ] **1.6 — Quarto teste da trava com folga medida**
+- [x] **1.6 — Quarto teste da trava com folga medida** (PR #128, 31/10/2026; também o 5º)
   *O que fazer:* em `tests/integracao/hospedar-cartorio.test.ts`, o 4º teste (folga de ~700 ms) ainda estoura sob carga
   extrema de CPU; aplicar o mesmo tratamento do basemel-1.5 (tempos folgados só onde o teste exige a trava viva, prazo
   explícito), sem afrouxar o que ele prova.

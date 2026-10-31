@@ -22,3 +22,11 @@ Sintoma: `<<<<<<< HEAD` dentro de `docs/ops/DECISOES.md` e o verificador APROVAD
 conflito no fim da tabela (as duas pontas acrescentam linha) e o script seguinte fez `git add -A` sem conferir · Solução:
 resolver mantendo as duas linhas; sempre checar a saída do `git merge` antes de `git add` · Prova: `grep -c "<<<<<<<"` = 0 ·
 Vezes: 3 (Ondas 3, 6 e 10) · Origem: orquestradora; trava no verificador em basemel-1.4. Regra: depois de `git merge`, se a saída tiver CONFLICT, resolver ANTES de qualquer edição ou commit
+
+## S-03 — Vistoria verde na sessão e check vermelho no GitHub
+Sintoma: `ERRO: rode como administrador: sudo bash infra/vps/instalar.sh` e dezenas de falhas em `tests/infra/instalar*.test.ts`
+só no CI (usuário comum); na sessão (contêiner como root) tudo verde · Causa: os testes rodavam os scripts em simulação sem
+fingir root, e o script confere `id -u` · Solução: os ajudantes de teste passam `SABRE_FALSO_UID=0`; teste que precisa de
+root de verdade fica `skipIf` explícito · Prova: `npx vitest run` verde como root e como usuário comum (`useradd -m teste`;
+`su teste -c ...` numa cópia do repositório) · Vezes: 1 · Origem: corr-1.1, PR #118. Regra: depois de mergear item que mexe
+em `infra/` ou `tests/infra/`, rodar a suíte também como usuário comum, e olhar o check da `main` no fim da onda

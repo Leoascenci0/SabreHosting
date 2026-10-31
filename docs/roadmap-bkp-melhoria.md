@@ -16,7 +16,7 @@ Melhorias achadas durante os itens do `docs/roadmap-bkp.md` (skill `maxima` › 
   *Confirmação:* testes com cada caso recusado; manifesto com campo extra volta sem ele.
   *Origem:* bkp-1.1 · PR #21 · qa segurança + qa integridade · **feito no PR #29 (30/10/2026)**
 
-- [ ] **1.2 — Colisões de nome além de maiúscula**
+- [x] **1.2 — Colisões de nome além de maiúscula** (PR #90, 31/10/2026)
   *O que fazer:* normalizar Unicode (NFC) antes de comparar colisões (macOS trata `é` e `e`+acento como o mesmo nome);
   recusar arquivo `a` junto de pasta `a/b` no mesmo manifesto.
   *Arquivo:* `packages/nucleo/src/backup/manifesto.ts`
@@ -24,7 +24,7 @@ Melhorias achadas durante os itens do `docs/roadmap-bkp.md` (skill `maxima` › 
   *Confirmação:* testes com `é` nas duas formas e com `a` + `a/b` recusados.
   *Origem:* bkpmel-1.1 · PR #29 · qa
 
-- [ ] **1.3 — Mensagens e sobras do backup agendado**
+- [x] **1.3 — Mensagens e sobras do backup agendado** (PR #105, 31/10/2026; com o sinal de cancelamento do hostmel-2.4)
   *O que fazer:* `criarPacote` preserva a mensagem específica do manifesto ("o mundo mudou durante a leitura") em vez
   da genérica; quando o servidor cai no meio do backup, o pacote não chega a ganhar o nome final (descartar antes do
   rename) em vez de ser apagado depois.
@@ -35,7 +35,7 @@ Melhorias achadas durante os itens do `docs/roadmap-bkp.md` (skill `maxima` › 
 
 ## Bloco 2 — Guardar
 
-- [ ] **2.1 — Restauração: atalho no lugar do mundo e marcador garantido**
+- [x] **2.1 — Restauração: atalho no lugar do mundo e marcador garantido** (PR #86, 31/10/2026)
   *O que fazer:* `haMundo` com `lstat` (um link quebrado no lugar da pasta do mundo é recusado, não tratado como
   "inexistente"); se gravar o `RESTAURACAO-INCOMPLETA.txt` falhar, avisar em pt-BR em vez de engolir o erro.
   *Arquivo:* `packages/nucleo/src/backup/restaurar.ts`

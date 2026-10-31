@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
 
 ## Bloco 1 — Janela e bandeja
 
-- [ ] **1.1 — Ícone próprio para a bandeja**
+- [x] **1.1 — Ícone próprio para a bandeja** (PR #144, 31/10/2026; conferência no Windows [P])
   *O que fazer:* recortar só a cabeça do tigre do ícone (o texto "SABRE HOSTING" não se lê em 16–32 px) e usar esse
   recorte na bandeja, nos tamanhos 16, 24 e 32 px.
   *Arquivo:* `apps/desktop/recursos/icone/`, `apps/desktop/src/main/principal.ts`
@@ -14,7 +14,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Origem:* app-1.1 · PR #70 · filha · **confirmado pelo Eliel no Windows (31/10): na bandeja o ícone fica pequeno e o
   texto não se lê.**
 
-- [ ] **1.2 — Teste de chamada de fora recusada pela ponte**
+- [x] **1.2 — Teste de chamada de fora recusada pela ponte** (PR #131, 31/10/2026)
   *O que fazer:* teste que prova que `veioDaPagina` (processo principal) recusa chamada cujo remetente não é a página
   do app (hoje o código confere, mas nenhum teste cai se a conferência sumir).
   *Arquivo:* `apps/desktop/src/main/principal.ts` (extrair a conferência para `seguranca.ts`), `seguranca.test.ts`
@@ -22,7 +22,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* sabotar a conferência derruba o teste.
   *Origem:* app-1.1 · PR #70 · qa
 
-- [ ] **1.3 — Capturas do E2E só quando pedidas**
+- [x] **1.3 — Capturas do E2E só quando pedidas** (PR #126, 31/10/2026; `SABRE_CAPTURAS=1`)
   *O que fazer:* o E2E regrava `docs/imagens/app-1.1-*.png` (agora com a tela do app-1.2) a cada `npm run vistoria`,
   sujando o `git status`. Gravar capturas só com `SABRE_CAPTURAS=1` e numa pasta própria por item; atualizar as do app-1.1.
   *Arquivo:* `apps/desktop/e2e/`
@@ -38,7 +38,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste de integração com cartório devolvendo o endereço.
   *Origem:* app-1.2 · PR #74 · filha
 
-- [ ] **1.5 — Retomar a própria trava depois de reabrir o app**
+- [x] **1.5 — Retomar a própria trava depois de reabrir o app** (PR #101, 31/10/2026; prova no Windows [P])
   *O que fazer:* se este PC é dono da trava mas o app foi reaberto sem servidor rodando, a tela mostra "Servidor no PC do
   <este PC>" até a trava vencer (~60 s). Reconhecer "dono sou eu, sem servidor" e soltar a trava (ou oferecer "Hospedar"
   de novo pelo `hospedar()`).
@@ -47,7 +47,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* E2E com cenário "dono sou eu, sem servidor".
   *Origem:* app-1.2 · PR #74 · filha + qa (baixa-média)
 
-- [ ] **1.6 — Endereço continua visível depois de Jogar**
+- [x] **1.6 — Endereço continua visível depois de Jogar** (PR #137, 31/10/2026)
   *O que fazer:* no estado "Você está hospedando", depois de clicar em Jogar a frase "Endereço copiado. Cole no
   Minecraft para entrar." toma o lugar do endereço, que some da tela. Mostrar o aviso por alguns segundos e voltar ao
   endereço (ou mostrar os dois).
