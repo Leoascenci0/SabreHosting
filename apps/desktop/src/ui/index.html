@@ -43,6 +43,7 @@
       </div>
       <p class="versao" id="versao"></p>
       <button type="button" class="link" id="ver-backups">Backups</button>
+      <button type="button" class="link" id="ver-config">Configurações</button>
     </main>
     <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>
       <h2 id="titulo-backups">Backups</h2>
@@ -67,7 +68,38 @@
       </div>
       <button type="button" class="secundario" id="voltar-backups">Voltar</button>
     </main>
+    <main class="cartao" id="tela-config" aria-labelledby="titulo-config" hidden>
+      <h2 id="titulo-config">Configurações</h2>
+      <form class="config" id="config-form" novalidate>
+        <fieldset>
+          <legend>Geral</legend>
+          <label class="opcao">
+            <input type="checkbox" id="cfg-windows" />
+            Abrir o SabreHosting quando o Windows ligar
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>Servidor</legend>
+          <label for="cfg-visao">Distância de visão</label>
+          <input type="number" id="cfg-visao" inputmode="numeric" min="3" max="32" step="1" />
+          <p class="dica" id="cfg-visao-dica">De 3 a 32. Padrão: 10. Quanto maior, mais pesado.</p>
+          <label for="cfg-simulacao">Distância de simulação</label>
+          <input type="number" id="cfg-simulacao" inputmode="numeric" min="5" max="32" step="1" />
+          <p class="dica" id="cfg-simulacao-dica">
+            De 5 a 32, e menor que a distância de visão. Padrão: 8.
+          </p>
+          <p class="dica">Vale na próxima vez que o servidor for ligado.</p>
+        </fieldset>
+        <p class="detalhe" id="config-aviso" role="status"></p>
+        <p class="erro" id="config-erro" role="alert" hidden></p>
+        <div class="acoes">
+          <button type="submit" class="principal" id="config-salvar">Salvar</button>
+          <button type="button" class="secundario" id="config-voltar">Voltar</button>
+        </div>
+      </form>
+    </main>
     <script type="module" src="tela.js"></script>
+    <script type="module" src="configuracoes.js"></script>
     <script type="module" src="backups.js"></script>
   </body>
 </html>
