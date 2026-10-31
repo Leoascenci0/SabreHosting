@@ -13,6 +13,8 @@ export interface ConfigPc {
   /** `http://<IP do hub>:<porta>`: o cartório só é alcançável pela rede privada do grupo. */
   urlCartorio?: string;
   token?: string;
+  /** O arquivo do cofre existe mas não decifra: o assistente deve pedir convite novo (não é "primeira vez"). */
+  cofreCorrompido?: true;
   grupo?: string;
   /** Último endereço do Jogar que o cartório deu (o `GET /grupo` mais novo vale mais). */
   enderecoGravado?: string;
@@ -30,6 +32,7 @@ export interface ConfigPc {
 /** Só o `ler` do cofre; o token nunca é gravado por aqui. */
 export interface LeitorDeToken {
   ler(): Promise<string | undefined>;
+  estado?(): Promise<{ tipo: string }>;
 }
 
 export async function lerConfigPc(
@@ -42,6 +45,10 @@ export async function lerConfigPc(
     salvo.grupo && salvo.portaCartorio ? `http://${IP_DO_HUB}:${salvo.portaCartorio}` : undefined;
   // Cofre que falha vale como "sem token": o app diz "ainda não entrou no grupo" (a mensagem do erro pode ter segredo).
   const token = urlCartorio ? await cofre.ler().catch(() => undefined) : undefined;
+  const corrompido =
+    urlCartorio && !token && cofre.estado
+      ? (await cofre.estado().catch(() => undefined))?.tipo === "corrompido"
+      : false;
   // O arquivo do disco é entrada não confiável (S-07): pasta torta ("..", relativa, raiz, Windows) vale como ausente.
   const pastaBase =
     salvo.concluido && pastaPermitida(salvo.pastaBase) ? salvo.pastaBase : undefined;
@@ -49,6 +56,7 @@ export async function lerConfigPc(
   return {
     ...(urlCartorio ? { urlCartorio } : {}),
     ...(token ? { token } : {}),
+    ...(corrompido ? { cofreCorrompido: true as const } : {}),
     ...(salvo.grupo ? { grupo: salvo.grupo.nome } : {}),
     ...(salvo.grupo?.endereco && ENDERECO_VALIDO.test(salvo.grupo.endereco)
       ? { enderecoGravado: salvo.grupo.endereco }

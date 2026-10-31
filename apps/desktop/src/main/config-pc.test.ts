@@ -120,4 +120,20 @@ describe("ambienteLegado (para quem ainda lê no formato SABRE_*)", () => {
       SABRE_PASTA_BACKUPS: join(BASE, "mundos"),
     });
   });
+
+  it("cofre corrompido: sem token, mas a config avisa (assistente pede convite novo)", async () => {
+    gravar({ grupo: { nome: "G" }, portaCartorio: 7710 });
+    const leitor = {
+      ler: async () => undefined,
+      estado: async () => ({ tipo: "corrompido" as const }),
+    };
+    const c = await lerConfigPc(dados, leitor, {});
+    expect(c.token).toBeUndefined();
+    expect(c.cofreCorrompido).toBe(true);
+    const ausente = {
+      ler: async () => undefined,
+      estado: async () => ({ tipo: "ausente" as const }),
+    };
+    expect((await lerConfigPc(dados, ausente, {})).cofreCorrompido).toBeUndefined();
+  });
 });

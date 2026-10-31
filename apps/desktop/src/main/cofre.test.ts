@@ -91,4 +91,49 @@ describe("cofre real (safeStorage)", () => {
     await expect(cofre.guardar("")).rejects.toThrow();
     await expect(cofre.guardar("tem\nquebra")).rejects.toThrow();
   });
+
+  it("estado(): distingue ok, ausente, corrompido e indisponível", async () => {
+    const dir = pasta();
+    const arq = join(dir, "token.bin");
+    expect(await criarCofreSeguro(falso(), arq).estado()).toEqual({ tipo: "ausente" });
+    await criarCofreSeguro(falso(), arq).guardar(TOKEN);
+    expect(await criarCofreSeguro(falso(), arq).estado()).toEqual({ tipo: "ok", token: TOKEN });
+    expect(await criarCofreSeguro(falso(false), arq).estado()).toEqual({ tipo: "indisponivel" });
+  });
+
+  it("arquivo adulterado no disco: corrompido (não 'ausente'), arquivo intacto e sem vazar token", async () => {
+    const dir = pasta();
+    const arq = join(dir, "token.bin");
+    // safeStorage falso que, como o real, recusa bytes que não foi ele quem cifrou.
+    const exigente: CofreDoSistema = {
+      ...falso(),
+      decryptString: (b) => {
+        if (b.at(0) === 0x00) throw new Error(`autenticação falhou com ${TOKEN}`);
+        return falso().decryptString(b);
+      },
+    };
+    await criarCofreSeguro(exigente, arq).guardar(TOKEN);
+    const adulterado = Buffer.concat([Buffer.from([0x00]), readFileSync(arq)]);
+    writeFileSync(arq, adulterado);
+    const cofre = criarCofreSeguro(exigente, arq);
+    const e = await cofre.estado();
+    expect(e).toEqual({ tipo: "corrompido" });
+    expect(JSON.stringify(e)).not.toContain(TOKEN);
+    expect(await cofre.ler()).toBeUndefined();
+    expect(readFileSync(arq).equals(adulterado)).toBe(true);
+  });
+
+  it("arquivo vazio ou ilegível (é pasta): corrompido", async () => {
+    const dir = pasta();
+    const vazio = join(dir, "vazio.bin");
+    writeFileSync(vazio, Buffer.alloc(0));
+    const quebra: CofreDoSistema = {
+      ...falso(),
+      decryptString: () => {
+        throw new Error("vazio");
+      },
+    };
+    expect(await criarCofreSeguro(quebra, vazio).estado()).toEqual({ tipo: "corrompido" });
+    expect(await criarCofreSeguro(falso(), dir).estado()).toEqual({ tipo: "corrompido" });
+  });
 });
