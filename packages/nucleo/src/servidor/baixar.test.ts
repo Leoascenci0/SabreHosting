@@ -7,7 +7,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer as createServidorHttps } from "node:https";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { baixarConferido, type OpcoesDownload } from "./baixar.js";
 
 const conteudo = Buffer.from("conteudo-de-teste-".repeat(200));
@@ -439,6 +439,41 @@ describe("limite de banda", () => {
     });
     expect(Date.now() - t0).toBeGreaterThanOrEqual(800);
     expect((await readFile(r.caminho)).equals(grande)).toBe(true);
+  });
+
+  it("abortar com o freio esperando cancela o timer dele (1.12 e)", async () => {
+    manipulador = (_req, res) => responder(res, grande);
+    const longos = new Set<unknown>(); // timers de espera longa = só o do freio (os do download são < 1 s aqui)
+    const reais = { set: globalThis.setTimeout, limpar: globalThis.clearTimeout };
+    const set = vi.spyOn(globalThis, "setTimeout").mockImplementation(((
+      f: () => void,
+      ms?: number,
+    ) => {
+      const h = reais.set(f, ms);
+      if ((ms ?? 0) >= 5_000) longos.add(h);
+      return h;
+    }) as never);
+    const limpar = vi.spyOn(globalThis, "clearTimeout").mockImplementation(((h: never) => {
+      longos.delete(h);
+      reais.limpar(h);
+    }) as never);
+    try {
+      await expect(
+        baixar({
+          url: url(),
+          hashEsperado: hashGrande,
+          destino: join(pasta, "freio.bin"),
+          limiteBytesPorSeg: 1_000, // 200 kB a 1 kB/s: o freio esperaria minutos
+          tempoTotal: 300,
+          tempoSemDados: 400,
+        }),
+      ).rejects.toThrow();
+      expect(longos.size).toBe(0);
+    } finally {
+      set.mockRestore();
+      limpar.mockRestore();
+      for (const h of longos) reais.limpar(h as never);
+    }
   });
 
   it("sem limite, não atrasa", async () => {

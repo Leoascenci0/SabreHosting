@@ -47,7 +47,7 @@ describe("atualização: migração v7 → v8", () => {
     v7.close();
     const banco = abrirBanco(caminho);
     fechar.push(() => banco.close());
-    expect(banco.prepare("SELECT versao FROM esquema").get()).toEqual({ versao: 9 });
+    expect(banco.prepare("SELECT versao FROM esquema").get()).toEqual({ versao: 10 });
     expect(banco.prepare("SELECT count(*) AS n FROM atualizacao").get()).toEqual({ n: 0 });
     expect(renovar(banco, 1, 3, 100, PRAZO)).toEqual({ ok: true, epoca: 3, expiraEm: 100 + PRAZO });
   });

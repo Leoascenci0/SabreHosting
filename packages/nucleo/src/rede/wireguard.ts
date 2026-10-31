@@ -28,7 +28,7 @@ const WIREGUARD_EXE = "C:\\Program Files\\WireGuard\\wireguard.exe";
 const PKCS8_X25519 = Buffer.from("302e020100300506032b656e04220420", "hex");
 
 /** 44 caracteres de base64 = 32 bytes (o 43º símbolo só pode ter os 2 bits finais zerados). */
-function chaveValida(k: unknown): k is string {
+export function chaveValida(k: unknown): k is string {
   return typeof k === "string" && /^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$/.test(k);
 }
 

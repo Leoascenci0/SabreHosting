@@ -140,9 +140,11 @@ principal.addEventListener("click", () => {
       if (!r.ok) mostrarErro(r.mensagem);
     });
   } else if (principal.dataset["acao"] === "jogar") {
-    void agir("Copiando…", async () => {
-      await window.sabre.inicio.jogar();
-      mostrarAviso(COPIADO);
+    void agir("Abrindo o jogo…", async () => {
+      const r = await window.sabre.inicio.jogar();
+      mostrarAviso(
+        r.aberto ? "Abrindo o Minecraft no servidor…" : r.aviso ? `${r.aviso} ${COPIADO}` : COPIADO,
+      );
     });
   }
 });

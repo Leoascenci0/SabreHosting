@@ -143,5 +143,22 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
   };
 }
 
+/**
+ * Túnel que sobe depois do arranque: relê o IP a cada `ms` até o servidor ligar (um relógio só). Devolve `parar()`,
+ * que o app chama ao sair para o relógio não sobreviver ao fechar.
+ */
+export function religarAteLigar(
+  servidor: { tentarLigar: () => Promise<boolean> },
+  ms: number,
+): () => void {
+  const relogio = setInterval(() => {
+    void servidor.tentarLigar().then((ligou) => {
+      if (ligou) clearInterval(relogio);
+    });
+  }, ms);
+  relogio.unref();
+  return () => clearInterval(relogio);
+}
+
 export type ServidorDeArquivos = ReturnType<typeof criarServidorDeArquivos>;
 export const pastaDaVitrine = (dadosDoApp: string): string => join(dadosDoApp, "vitrine");
