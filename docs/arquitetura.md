@@ -98,3 +98,7 @@ docs/                arquitetura, roadmaps, milestone, memória, ops
 - Troca de host tem uma pausa curta (tela de carregamento); zero pausa é impossível.
 - Se o host cai de repente, perde-se o que houve desde o último backup.
 - A máquina na nuvem é o único ponto fixo: sem ela, os amigos não conseguem entrar (o mundo continua salvo nos PCs).
+- PC tirado do grupo (revogado) que era o host: o cartório recusa a renovação da trava (a cada 20 s) por falta de token
+  ativo e o servidor dele para; mas a trava só vence no prazo (`expira_em`, até 60 s depois da última renovação) e só
+  então outro PC pode hospedar. Tentativas com o token revogado contam no limite de falhas (20 em 15 min → 429).
+  O peer dele na rede privada (WireGuard) continua até o item de rede que remove o peer.
