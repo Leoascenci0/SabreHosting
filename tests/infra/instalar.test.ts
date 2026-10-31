@@ -14,6 +14,8 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const SCRIPT = resolve(import.meta.dirname, "../../infra/vps/instalar.sh");
+const SYSTEMD = resolve(import.meta.dirname, "../../infra/vps/systemd");
+const unidade = (nome: string) => readFileSync(join(SYSTEMD, nome), "utf8");
 
 let estado: string;
 beforeEach(() => {
@@ -26,7 +28,7 @@ afterEach(() => {
 function rodar(extra: Record<string, string> = {}) {
   const r = spawnSync("bash", [SCRIPT], {
     encoding: "utf8",
-    env: { PATH: process.env.PATH, SABRE_SIMULAR: "1", SABRE_ESTADO: estado, ...extra },
+    env: { PATH: process.env.PATH, SABRE_SIMULAR: "1", SABRE_FALSO_UID: "0", SABRE_ESTADO: estado, ...extra },
   });
   const comandos = r.stdout
     .split("\n")
@@ -65,10 +67,15 @@ describe("infra/vps/instalar.sh em simulação", () => {
     }
   });
 
-  it("libera exatamente 22/tcp, 25565/tcp e 51820/udp", () => {
+  it("libera exatamente 22/tcp, 25565/tcp e 51820/udp na internet; o cartório só em wg0", () => {
     for (const cmds of [rodar().comandos, rodar().comandos]) {
       const abertas = cmds.filter((c) => /^ufw (allow|limit)\b/.test(c)).sort();
-      expect(abertas).toEqual(["ufw allow 22/tcp", "ufw allow 25565/tcp", "ufw allow 51820/udp"]);
+      expect(abertas).toEqual([
+        "ufw allow 22/tcp",
+        "ufw allow 25565/tcp",
+        "ufw allow 51820/udp",
+        "ufw allow in on wg0 to 10.66.0.1 port 7710 proto tcp",
+      ]);
     }
   });
 
@@ -118,11 +125,12 @@ describe("infra/vps/instalar.sh em simulação", () => {
     expect(g).toMatch(/umask 077/);
   });
 
-  it("unidades systemd são instaladas mas nunca habilitadas", () => {
+  it("unidades systemd são instaladas; só o socket do ajudante é ligado", () => {
     const c = rodar().comandos;
     expect(c.some((x) => /sabre-cartorio\.service/.test(x))).toBe(true);
     expect(c.some((x) => /sabre-proxy\.service/.test(x))).toBe(true);
-    expect(c.some((x) => /systemctl (enable|start)\b.*sabre-/.test(x))).toBe(false);
+    const ligados = c.filter((x) => /systemctl (enable|start)\b.*sabre-/.test(x));
+    expect(ligados).toEqual(["systemctl enable --now sabre-ajudante-entrada.socket"]);
   });
 
   it("segredo do cartório: criado pelo instalador na 1ª vez, mantido na 2ª, nunca impresso", () => {
@@ -142,6 +150,61 @@ describe("infra/vps/instalar.sh em simulação", () => {
     );
     expect(u).toMatch(/^EnvironmentFile=\/etc\/sabre\/cartorio\.env$/m);
   });
+
+  it("unidade do cartório segue blindada: sem sudo, sem ReadWritePaths novo (rede-1.5)", () => {
+    const u = unidade("sabre-cartorio.service");
+    expect(u).toMatch(/^User=sabre$/m);
+    expect(u).toMatch(/^NoNewPrivileges=true$/m);
+    expect(u).toMatch(/^ProtectSystem=strict$/m);
+    expect(u.match(/^ReadWritePaths=.*$/gm)).toEqual(["ReadWritePaths=/var/lib/sabre"]);
+    expect(u).not.toMatch(/sudo|AmbientCapabilities|CapabilityBoundingSet/);
+  });
+
+  it("socket do ajudante: /run/sabre/ajudante.sock, 0660 root:sabre, uma conexão por pedido", () => {
+    const s = unidade("sabre-ajudante-entrada.socket");
+    for (const linha of [
+      "ListenStream=/run/sabre/ajudante.sock",
+      "SocketUser=root",
+      "SocketGroup=sabre",
+      "SocketMode=0660",
+      "Accept=yes",
+    ])
+      expect(s.split("\n")).toContain(linha);
+  });
+
+  it("serviço do ajudante: root blindado, só escreve no WireGuard e no registro, tempo-limite", () => {
+    const u = unidade("sabre-ajudante-entrada@.service").split("\n");
+    for (const linha of [
+      "ExecStart=/opt/sabre/wg/ajudante-socket.sh",
+      "StandardInput=socket",
+      "StandardOutput=socket",
+      "RuntimeMaxSec=10",
+      "NoNewPrivileges=true",
+      "ProtectSystem=strict",
+      "ReadWritePaths=/etc/wireguard /var/lib/sabre-wg",
+      "ProtectHome=true",
+      "PrivateTmp=true",
+      "CapabilityBoundingSet=CAP_NET_ADMIN",
+      "UnsetEnvironment=SABRE_SIMULAR SABRE_ESTADO SABRE_ENDPOINT_HUB SABRE_CHAVE_PUB_HUB",
+    ])
+      expect(u).toContain(linha);
+  });
+
+  it.skipIf(spawnSync("systemd-analyze", ["--version"]).status !== 0)(
+    "unidades do ajudante passam no systemd-analyze verify (chave desconhecida = falha)",
+    () => {
+      for (const nome of ["sabre-ajudante-entrada.socket", "sabre-ajudante-entrada@.service"]) {
+        const r = spawnSync("systemd-analyze", ["verify", "--man=no", join(SYSTEMD, nome)], {
+          encoding: "utf8",
+        });
+        // O ExecStart só existe na máquina da nuvem; o resto precisa sair limpo.
+        const queixas = (r.stdout + r.stderr)
+          .split("\n")
+          .filter((l) => l && !/is not executable: No such file or directory/.test(l));
+        expect(queixas, nome).toEqual([]);
+      }
+    },
+  );
 
   it("o script não carrega segredo nenhum", () => {
     const fonte = readFileSync(SCRIPT, "utf8");
@@ -218,34 +281,18 @@ const podeIptables =
     .status === 0;
 
 describe("instalar.sh: ajudante da sala de entrada (rede-1.4)", () => {
-  it("sudoers: só o caminho do ajudante, sem curinga, modo 440, ambiente limpo", () => {
-    const g = gravado(rodar().stdout, /\/etc\/sudoers\.d\/sabre-entrada$/);
-    expect(g?.modo).toBe("440");
-    const regras = (g?.texto ?? "").split("\n").filter((l) => l && !l.startsWith("#"));
-    expect(regras).toEqual([
-      "Defaults!/opt/sabre/wg/ajudante-entrada.sh env_reset",
-      "sabre ALL=(root) NOPASSWD: /opt/sabre/wg/ajudante-entrada.sh",
-    ]);
-    expect(g?.texto ?? "").not.toMatch(/\*|adicionar-pc|SETENV|ALL\s*$/m);
+  it("sem sudoers do convite: nada é gravado em /etc/sudoers.d e o antigo é apagado (rede-1.5)", () => {
+    const { stdout, comandos } = rodar();
+    expect(stdout).not.toMatch(/GRAVAR .*sudoers/);
+    expect(comandos).toContain("rm -f /etc/sudoers.d/sabre-entrada");
+    expect(readFileSync(SCRIPT, "utf8")).not.toMatch(/NOPASSWD|visudo/);
   });
 
-  it.skipIf(!existsSync("/usr/sbin/visudo"))("sudoers passa no visudo -cf", () => {
-    const g = gravado(rodar().stdout, /sabre-entrada$/);
-    const arq = join(estado, "sudoers-teste");
-    writeFileSync(arq, g.texto, { mode: 0o440 });
-    const r = spawnSync("/usr/sbin/visudo", ["-cf", arq], { encoding: "utf8" });
-    expect(r.status, r.stdout + r.stderr).toBe(0);
-  });
-
-  it("o instalador confere o sudoers no visudo antes de gravar", () => {
-    const src = readFileSync(SCRIPT, "utf8");
-    const visudo = src.indexOf("visudo -cf");
-    expect(visudo).toBeGreaterThan(0);
-    expect(src.indexOf("install -m 440", visudo)).toBeGreaterThan(visudo);
-  });
-
-  it("ajudante e fonte comum vão para /opt/sabre/wg, do root; registro em pasta só do root", () => {
+  it("ajudante, porta do socket e fonte comum vão para /opt/sabre/wg, do root; registro em pasta só do root", () => {
     const c = rodar().comandos;
+    expect(c).toContain(
+      `install -m 755 -o root -g root ${resolve(import.meta.dirname, "../../infra/vps")}/wg/ajudante-socket.sh /opt/sabre/wg/ajudante-socket.sh`,
+    );
     expect(c).toContain("install -d -m 755 -o root -g root /opt/sabre/wg");
     expect(
       c.some((x) =>
@@ -262,9 +309,12 @@ describe("instalar.sh: ajudante da sala de entrada (rede-1.4)", () => {
     expect(c).toContain("install -d -m 700 -o root -g root /var/lib/sabre-wg");
   });
 
-  it("2ª vez não regrava sudoers, before.rules nem o ajudante", () => {
+  it("2ª vez não regrava before.rules nem o ajudante, nem religa o socket", () => {
     rodar();
     const dois = rodar().comandos;
+    expect(
+      dois.some((x) => /sudoers|enable --now sabre-ajudante|ajudante-socket\.sh \/opt/.test(x)),
+    ).toBe(false);
     expect(dois.some((x) => /GRAVAR .*(sudoers|before\.rules)/.test(x))).toBe(false);
     expect(dois.some((x) => /ajudante-entrada\.sh \/opt/.test(x))).toBe(false);
   });
@@ -356,9 +406,11 @@ describe("instalar.sh: ajudante da sala de entrada (rede-1.4)", () => {
       },
     );
 
-    it("nenhuma porta nova na internet: o cartório não ganha ufw allow", () => {
+    it("nenhuma porta nova na internet: o cartório só é liberado em wg0, no IP do hub", () => {
       const c = rodar().comandos;
-      expect(c.some((x) => /^ufw .*7710/.test(x))).toBe(false);
+      expect(c.filter((x) => /^ufw .*7710/.test(x))).toEqual([
+        "ufw allow in on wg0 to 10.66.0.1 port 7710 proto tcp",
+      ]);
     });
   });
 });

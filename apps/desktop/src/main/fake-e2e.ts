@@ -10,7 +10,8 @@ import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
 import type { RespostaTrava } from "@sabrehosting/nucleo/cartorio/tipos";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
-export type Cenario = "ninguem" | "outro" | "eu" | "sem-cartorio";
+// "dono-eu*": app reaberto com a trava ainda em nome deste PC, sem servidor desta sessão (com ou sem órfão vivo).
+export type Cenario = "ninguem" | "outro" | "eu" | "sem-cartorio" | "dono-eu" | "dono-eu-orfao";
 const NEO = "21.1.172";
 const MEU_ID = 1;
 const ENDERECO = "mundo.exemplo.net";
@@ -35,7 +36,13 @@ function filhoFalso(registrar: (e: string) => void): ChildProcess {
   f["stderr"] = new PassThrough();
   f["pid"] = 1;
   f["kill"] = () => f.emit("close", null);
-  setTimeout(() => stdout.write('Done (0.1s)! For help, type "help"\n'), 300);
+  setTimeout(
+    () =>
+      stdout.write(
+        '[12:00:00] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.1s)! For help, type "help"\n',
+      ),
+    300,
+  );
   return f as unknown as ChildProcess;
 }
 
@@ -52,7 +59,11 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
     if (arquivo) appendFileSync(arquivo, `${evento}\n`);
   };
   let dono: { id: number; nome: string } | null =
-    cenario === "outro" ? { id: 2, nome: "Lucas" } : null;
+    cenario === "outro"
+      ? { id: 2, nome: "Lucas" }
+      : cenario.startsWith("dono-eu")
+        ? { id: MEU_ID, nome: "Este PC" }
+        : null;
   let epoca = 1;
   const aceita = (): RespostaTrava => ({
     ok: true,
@@ -74,7 +85,7 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
       return { dono, epoca, expiraEm: Date.now() + 60_000, prazoMs: 60_000, renovarMs: 20_000 };
     },
     pegar: async () => {
-      if (dono) return recusa();
+      if (dono && dono.id !== MEU_ID) return recusa(); // como o cartório: o próprio dono pega de novo
       dono = { id: MEU_ID, nome: "Este PC" };
       return aceita();
     },
@@ -106,6 +117,8 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
         },
       });
     },
+    eu: async () => ({ id: MEU_ID }),
+    servidorOrfao: async () => cenario === "dono-eu-orfao",
     endereco: process.env["SABRE_E2E_SEM_ENDERECO"] === "1" ? "" : ENDERECO,
     copiar: (t) => void copias.push(t),
   };

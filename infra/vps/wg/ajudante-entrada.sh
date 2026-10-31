@@ -1,7 +1,7 @@
 #!/bin/bash
-# Ajudante da sala de entrada (convite do grupo). Roda como root; o cartório (usuário sabre) o chama por
-#   sudo -n /opt/sabre/wg/ajudante-entrada.sh <comando> <argumentos>
-# e o sudoers libera SÓ este caminho: toda a validação mora aqui.
+# Ajudante da sala de entrada (convite do grupo). Roda como root; o cartório (usuário sabre, sem sudo) pede pelo
+# socket /run/sabre/ajudante.sock, e o ajudante-socket.sh (serviço do systemd) chama este script com ambiente limpo.
+# Toda a validação mora aqui.
 #   entrada-adicionar <chave-pub-prov>               -> {"ip":"10.66.0.2xx"} (sala 200–254; mesma chave = mesmo IP)
 #   entrada-trocar <ip-prov> <nome> <chave-pub-def>  -> pacote do adicionar-pc.sh (PC 2–199); NÃO tira o provisório
 #   entrada-remover <ip-prov>                        -> tira o provisório (só 200–254 em estado "entrada")
@@ -11,7 +11,7 @@
 set -euo pipefail
 umask 077
 
-# Pelo sudo, nada de simulação nem caminho vindo de fora (o sudo já limpa o ambiente; aqui é a segunda tranca).
+# Rodado à mão pelo sudo: nada de simulação nem caminho vindo de fora (pelo socket, o wrapper já limpa o ambiente).
 if [ -n "${SUDO_USER:-}" ]; then
   unset SABRE_SIMULAR SABRE_ESTADO SABRE_ENDPOINT_HUB SABRE_CHAVE_PUB_HUB
 fi
@@ -50,7 +50,7 @@ case "$comando:$#" in
   *) uso ;;
 esac
 
-preparar_caminhos "o ajudante da sala de entrada só roda como root (pelo sudo)."
+preparar_caminhos "o ajudante da sala de entrada só roda como root (pelo serviço do socket)."
 travar
 
 # A linha do registro com esse IP (qualquer estado).

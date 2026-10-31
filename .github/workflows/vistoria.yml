@@ -13,15 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0 # o verificador compara com origin/main
+          fetch-depth: 0 # o verificador compara com origin/main (PR) ou com o commit anterior (push: github.event.before)
       # Em push na main o ramo ativo seria "main", que o verificador reprova de propósito.
       - run: git checkout --detach
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: sudo apt-get update && sudo apt-get install -y xvfb # E2E do Electron precisa de tela
-      - run: npm run vistoria
+      - if: github.event_name == 'pull_request'
+        run: npm run vistoria
+      # Push na main: sem base, o verificador não conferia arquivo nenhum. Compara com o commit anterior do push.
+      - if: github.event_name == 'push'
+        env:
+          BASE: ${{ github.event.before }}
+        run: |
+          # Ramo novo no push vem com SHA zerado: nesse caso o anterior é o pai do commit enviado.
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD~1; fi
+          npm run lint && npm test && npm run test:e2e -w apps/desktop
+          python3 scripts/verificar.py --base "$BASE"

@@ -23,6 +23,8 @@ export interface OpcoesDownload {
   tempoSemDados?: number;
   /** Milissegundos no máximo para uma passada inteira. Padrão: 30 min. */
   tempoTotal?: number;
+  /** Só para teste: libera http em localhost/127.0.0.1. Nunca ligado pelo app. Padrão: falso. */
+  permitirHttpLocal?: boolean;
 }
 
 export class ErroDownload extends Error {
@@ -47,7 +49,7 @@ const tamanhoOuZero = (caminho: string) =>
     () => 0,
   );
 
-function validar({ url, hashEsperado }: OpcoesDownload): string {
+function validar({ url, hashEsperado, permitirHttpLocal = false }: OpcoesDownload): string {
   const { algoritmo, valor } = hashEsperado;
   const tamanho = TAMANHO_HEX[algoritmo] as number | undefined;
   if (!tamanho || !new RegExp(`^[0-9a-f]{${tamanho}}$`, "i").test(valor)) {
@@ -55,7 +57,7 @@ function validar({ url, hashEsperado }: OpcoesDownload): string {
   }
   const { protocol, hostname } = new URL(url);
   const local = hostname === "localhost" || hostname === "127.0.0.1";
-  if (protocol !== "https:" && !(protocol === "http:" && local)) {
+  if (protocol !== "https:" && !(permitirHttpLocal && protocol === "http:" && local)) {
     throw new ErroDownload("O download precisa usar https; recusei por segurança.");
   }
   return valor.toLowerCase();

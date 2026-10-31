@@ -52,16 +52,50 @@ describe("resolverModrinth", () => {
   });
 });
 
+describe("url que não é https", () => {
+  it("Adoptium e Modrinth recusam http e endereço inválido", () => {
+    const h = "a".repeat(64);
+    for (const link of ["http://x.test/a", "ftp://x.test/a", "não-é-url"]) {
+      expect(() => resolverAdoptium([{ binary: { package: { link, checksum: h } } }])).toThrow(
+        /https/,
+      );
+      expect(() =>
+        resolverModrinth({ files: [{ url: link, hashes: { sha512: "d".repeat(128) } }] }),
+      ).toThrow(/https/);
+    }
+  });
+});
+
 describe("resolverNeoForge", () => {
-  it("monta a URL do instalador no Maven oficial e lê o sidecar", () => {
-    const r = resolverNeoForge("9.9.9", `${sha1.toUpperCase()}  neoforge-9.9.9-installer.jar\n`);
+  const tabela = { "9.9.9": sha1 };
+  it("monta a URL do instalador no Maven oficial e usa o hash da tabela", () => {
+    const r = resolverNeoForge(
+      "9.9.9",
+      `${sha1.toUpperCase()}  neoforge-9.9.9-installer.jar\n`,
+      tabela,
+    );
     expect(r).toEqual({
       url: "https://maven.neoforged.net/releases/net/neoforged/neoforge/9.9.9/neoforge-9.9.9-installer.jar",
       hashEsperado: { algoritmo: "sha1", valor: sha1 },
     });
   });
-  it("versão obrigatória e sidecar válido", () => {
-    expect(() => resolverNeoForge("", sha1)).toThrow(/versão/);
-    expect(() => resolverNeoForge("9.9.9", "não-é-hash")).toThrow(/hash/);
+  it("sidecar adulterado (servidor comprometido): recusa", () => {
+    expect(() => resolverNeoForge("9.9.9", "d".repeat(40), tabela)).toThrow(/não confere/);
+  });
+  it("versão sem entrada na tabela: recusa, sem cair para o sidecar", () => {
+    expect(() => resolverNeoForge("1.2.3", sha1, tabela)).toThrow(/ainda não tem o hash conferido/);
+    expect(() => resolverNeoForge("9.9.9", sha1, {})).toThrow(/ainda não tem o hash conferido/);
+  });
+  it("a tabela padrão não vem com valor real: versão qualquer é recusada", () => {
+    expect(() => resolverNeoForge("9.9.9", sha1)).toThrow(/ainda não tem o hash conferido/);
+  });
+  it("versão obrigatória, sem ../ nem -x, e sidecar válido", () => {
+    expect(() => resolverNeoForge("", sha1, tabela)).toThrow(/versão/);
+    expect(() => resolverNeoForge("../x", sha1, tabela)).toThrow(/versão/);
+    expect(() => resolverNeoForge("-x", sha1, tabela)).toThrow(/versão/);
+    expect(() => resolverNeoForge("..", sha1, tabela)).toThrow(/versão/);
+    expect(() => resolverNeoForge("x.1", sha1, tabela)).toThrow(/versão/);
+    expect(resolverNeoForge("1.x", sha1, { "1.x": sha1 }).url).toContain("/1.x/");
+    expect(() => resolverNeoForge("9.9.9", "não-é-hash", tabela)).toThrow(/hash/);
   });
 });

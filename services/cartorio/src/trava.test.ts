@@ -240,7 +240,7 @@ describe("trava: tempos", () => {
 function opcoesMinimas() {
   const banco = abrirBanco(join(pasta(), "c.db"));
   fechar.push(() => banco.close());
-  return { banco, segredoAdmin: gerarSegredo(), logger: { level: "silent" } };
+  return { banco, logger: { level: "silent" } };
 }
 
 describe("trava: rotas", () => {
@@ -249,7 +249,6 @@ describe("trava: rotas", () => {
     const banco = abrirBanco(join(pasta(), "c.db")); // o app fecha o banco ao fechar
     const app = criarCartorio({
       banco,
-      segredoAdmin: gerarSegredo(),
       logger: { level: "silent" },
       agora: () => relogio.agora,
     });

@@ -162,4 +162,63 @@ describe("cliente do cartório", () => {
   ])("aceita %s", (url) => {
     expect(() => criarCliente({ url, cofre: cofreEmMemoria() })).not.toThrow();
   });
+
+  it("convite: criar (sem repetir), usar sem token (repete, prazo maior), confirmar 204 e grupo", async () => {
+    const pacote = {
+      ip_pc: "10.66.0.12",
+      chave_publica_hub: "A".repeat(43) + "=",
+      endpoint: "hub.exemplo:51820",
+      allowed_ips: "10.66.0.0/24",
+    };
+    const criado = { convite: "sabre://convite/1.abc", expiraEm: 99 };
+    const grupo = { nome: "Grupo", endereco_jogar: "jogar.exemplo" };
+    const { cliente, chamadas } = montar([
+      json(201, criado),
+      semRede(),
+      json(200, { token: "t-novo", pacote }),
+      new Response(null, { status: 204 }),
+      json(200, grupo),
+    ]);
+    expect(await cliente.criarConvite("pc-da-ana", 48)).toEqual(criado);
+    expect(await cliente.usarConvite("codigo", "chave-pub")).toEqual({ token: "t-novo", pacote });
+    expect(await cliente.confirmarEntrada()).toBeUndefined();
+    expect(await cliente.grupo()).toEqual(grupo);
+    expect(chamadas.map((c) => [c.init.method, c.url.replace(URL_CARTORIO, "")])).toEqual([
+      ["POST", "/convites"],
+      ["POST", "/convites/usar"],
+      ["POST", "/convites/usar"],
+      ["POST", "/convites/confirmar"],
+      ["GET", "/grupo"],
+    ]);
+    expect(JSON.parse(String(chamadas[0]?.init.body))).toEqual({
+      nomePc: "pc-da-ana",
+      validadeHoras: 48,
+    });
+    expect(JSON.parse(String(chamadas[1]?.init.body))).toEqual({
+      convite: "codigo",
+      chave_publica: "chave-pub",
+    });
+    expect(new Headers(chamadas[1]?.init.headers).get("authorization")).toBeNull();
+    expect(new Headers(chamadas[3]?.init.headers).get("authorization")).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("usar o convite funciona sem token no cofre; 401 diz que o convite não vale", async () => {
+    const { cliente } = montar([json(401, {})], { cofre: cofreEmMemoria() });
+    const e = await erroDe(cliente.usarConvite("codigo", "chave"));
+    expect(e.tipo).toBe("acesso");
+    expect(e.message).toMatch(/convite/);
+  });
+
+  it("criar convite não repete e traz a mensagem do cartório (403 de quem não é dono)", async () => {
+    const { cliente, chamadas } = montar([
+      json(403, { erro: "Só o dono do grupo cria convites." }),
+    ]);
+    const e = await erroDe(cliente.criarConvite("pc-x"));
+    expect(e.tipo).toBe("resposta");
+    expect(e.message).toContain("Só o dono do grupo cria convites.");
+    const r = montar([semRede(), json(201, {})]);
+    expect((await erroDe(r.cliente.criarConvite("pc-x"))).tipo).toBe("rede");
+    expect(r.chamadas).toHaveLength(1);
+    expect(chamadas).toHaveLength(1);
+  });
 });

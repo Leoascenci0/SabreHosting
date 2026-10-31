@@ -27,7 +27,11 @@ function viva(): ElectronApplication {
   return aberto;
 }
 
-async function abrir(cenario: string, extra: Record<string, string> = {}): Promise<Page> {
+async function abrir(
+  cenario: string,
+  extra: Record<string, string> = {},
+  estado = cenario,
+): Promise<Page> {
   dados = mkdtempSync(join(tmpdir(), "sabre-e2e-"));
   aberto = await electron.launch({
     args: [...semSandbox, `--user-data-dir=${dados}`, pastaApp],
@@ -42,7 +46,7 @@ async function abrir(cenario: string, extra: Record<string, string> = {}): Promi
   });
   const pagina = await viva().firstWindow();
   await pagina.waitForLoadState("load");
-  await pagina.locator(`#cartao[data-estado="${cenario}"]`).waitFor();
+  await pagina.locator(`#cartao[data-estado="${estado}"]`).waitFor();
   return pagina;
 }
 
@@ -105,6 +109,21 @@ describe("tela inicial", () => {
     const e = await espiao();
     expect(e.spawns).toHaveLength(1);
     expect(e.spawns[0]?.args.at(-1)).toBe("nogui");
+  });
+
+  it("dono sou eu, sem servidor (app reaberto): Hospedar de novo sem esperar a trava vencer", async () => {
+    const p = await abrir("dono-eu", {}, "ninguem");
+    expect(await visiveis(p)).toEqual(["Hospedar"]);
+    await p.locator("#principal").click();
+    await p.locator('#cartao[data-estado="eu"]').waitFor();
+    expect((await espiao()).spawns).toHaveLength(1);
+  });
+
+  it("dono sou eu com servidor órfão vivo: não oferece Hospedar", async () => {
+    const p = await abrir("dono-eu-orfao", {}, "outro");
+    await expect(p.locator("#status").innerText()).resolves.toBe("Servidor no PC do Este PC");
+    expect(await visiveis(p)).toEqual(["Jogar"]);
+    expect((await espiao()).spawns).toEqual([]);
   });
 
   it("outro PC hospeda: nome, Jogar copia o endereço e nada sobe", async () => {

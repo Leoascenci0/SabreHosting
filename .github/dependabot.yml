@@ -1,0 +1,7 @@
+# Atualiza os hashes das actions do CI por PR (ver docs/agentes/planos/basemel-1.1.md).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

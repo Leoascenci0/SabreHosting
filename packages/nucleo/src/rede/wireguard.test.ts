@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -76,6 +76,9 @@ describe("validarPacote", () => {
       { chave_publica_hub: `${HUB_PUB}\nPostUp = x` },
       { endpoint: "hub.exemplo.org" },
       { endpoint: "hub:99999" },
+      { endpoint: "hub:0" },
+      { endpoint: "hub:00" },
+      { endpoint: "hub:051820" },
       { endpoint: "hub.org:51820\nPostUp = calc" },
       { allowed_ips: "0.0.0.0/0" },
       { allowed_ips: "10.66.0.0/24, 0.0.0.0/0" },
@@ -250,6 +253,54 @@ describe("aplicarNoWindows", () => {
     const adulterada = cfg.replace("10.66.0.0/24", "0.0.0.0/0");
     await expect(aplicarNoWindows(adulterada, opcoes(e))).rejects.toThrow(/config/i);
     expect(e.elevados).toEqual([]);
+  });
+
+  it("aceita só o texto exato do montador: linha a mais, valor trocado ou CRLF são recusados", async () => {
+    const e = executores();
+    const adulteradas = [
+      cfg.replace("10.66.0.0/24", "0.0.0.0/1, 128.0.0.0/1"),
+      cfg.replace("10.66.0.0/24", "10.66.0.0/24, 0.0.0.0/1, 128.0.0.0/1"),
+      cfg.replace("[Peer]", "PostUp = calc.exe\n\n[Peer]"),
+      cfg.replace("[Peer]", "DNS = 1.1.1.1\n\n[Peer]"),
+      cfg.replace("[Peer]", "Table = off\n\n[Peer]"),
+      `${cfg}AllowedIPs = 0.0.0.0/1\n`,
+      `${cfg}[Peer]\nPublicKey = ${HUB_PUB}\nAllowedIPs = 0.0.0.0/1\n`,
+      cfg.replace("PersistentKeepalive = 25", "PersistentKeepalive = 1"),
+      cfg.replace(/\n/g, "\r\n"),
+      "",
+    ];
+    for (const ruim of adulteradas) {
+      await expect(aplicarNoWindows(ruim, opcoes(e)), JSON.stringify(ruim)).rejects.toThrow(
+        /config/i,
+      );
+    }
+    expect(e.comuns).toEqual([]);
+    expect(e.elevados).toEqual([]);
+  });
+
+  it("se a instalação e o apagar falham, o erro que chega é o da instalação", async () => {
+    const e = executores();
+    e.execElevado = async (_a, args) => {
+      await rm(args[1] ?? "");
+      await mkdir(join(args[1] ?? "", "trava"), { recursive: true }); // o rm sem recursive passa a falhar
+      throw new Error("Acesso negado");
+    };
+    const erro = (await aplicarNoWindows(cfg, opcoes(e)).catch((x: unknown) => x)) as Error;
+    expect(erro.message).toMatch(/administrador/);
+    expect(String(erro.cause)).toContain("Acesso negado");
+  });
+
+  it("se instalou mas não conseguiu apagar o .conf, avisa sem mostrar a chave", async () => {
+    const e = executores();
+    e.execElevado = async (_a, args) => {
+      await rm(args[1] ?? "");
+      await mkdir(join(args[1] ?? "", "trava"), { recursive: true });
+      return "";
+    };
+    const erro = (await aplicarNoWindows(cfg, opcoes(e)).catch((x: unknown) => x)) as Error;
+    expect(erro).toBeInstanceOf(Error);
+    expect(erro.message).toMatch(/apagar/);
+    expect(erro.message).not.toContain(privada);
   });
 });
 

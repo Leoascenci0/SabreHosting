@@ -73,7 +73,7 @@ async function* percorrer(
   }
 }
 
-const MUDOU = "O mundo mudou durante a leitura; o servidor ainda está gravando?";
+export const MUDOU = "O mundo mudou durante a leitura; o servidor ainda está gravando?";
 
 /** Tamanho e hash vêm da mesma leitura; se o arquivo sumiu ou cresceu/encolheu no meio, recusa. */
 async function lerArquivo(caminho: string, completo: string): Promise<ArquivoDoManifesto> {
@@ -137,6 +137,7 @@ export function validarManifesto(bruto: unknown): Manifesto {
   }
   const vistos = new Set<string>();
   const vistosMinusculos = new Set<string>();
+  const pastasMinusculas = new Set<string>();
   const arquivos: ArquivoDoManifesto[] = [];
   for (const a of m.arquivos as Partial<ArquivoDoManifesto>[]) {
     if (!caminhoSeguro(a?.caminho)) {
@@ -154,13 +155,30 @@ export function validarManifesto(bruto: unknown): Manifesto {
         `O arquivo "${a.caminho}" está fundo demais (profundidade máxima ${MAX_PROFUNDIDADE} pastas).`,
       );
     }
-    const minusculo = a.caminho.toLowerCase();
+    // macOS grava "é" decomposto (e + acento): NFC faz as duas formas contarem como o mesmo nome.
+    const minusculo = a.caminho.normalize("NFC").toLowerCase();
     if (vistos.has(a.caminho)) {
       throw recusaArquivo(`O arquivo "${a.caminho}" aparece duas vezes (caminho repetido).`);
     }
     if (vistosMinusculos.has(minusculo)) {
       throw recusaArquivo(
         `O arquivo "${a.caminho}" só difere de outro na maiúscula; o Windows os trata como o mesmo arquivo.`,
+      );
+    }
+    // Um nome não pode ser arquivo num caminho e pasta em outro, em qualquer ordem da lista.
+    const partes = minusculo.split("/");
+    for (let i = 1; i < partes.length; i++) {
+      const pasta = partes.slice(0, i).join("/");
+      if (vistosMinusculos.has(pasta)) {
+        throw recusaArquivo(
+          `"${pasta}" é arquivo e pasta ao mesmo tempo (em "${a.caminho}"); não dá para extrair os dois.`,
+        );
+      }
+      pastasMinusculas.add(pasta);
+    }
+    if (pastasMinusculas.has(minusculo)) {
+      throw recusaArquivo(
+        `O arquivo "${a.caminho}" tem o nome de uma pasta que já existe no mundo (arquivo e pasta com o mesmo nome).`,
       );
     }
     vistos.add(a.caminho);

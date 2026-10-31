@@ -16,8 +16,7 @@ import type {
   EstadoServidor,
   ServidorMinecraft,
 } from "../../packages/nucleo/src/servidor/processo.js";
-import { abrirBanco } from "../../services/cartorio/src/banco.js";
-import { gerarSegredo } from "../../services/cartorio/src/segredo.js";
+import { abrirBanco, criarConvite } from "../../services/cartorio/src/banco.js";
 import { criarCartorio } from "../../services/cartorio/src/servidor.js";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -56,10 +55,9 @@ afterEach(async () => {
 });
 
 async function subirCartorio(trava = TEMPOS, esperaHttpMs = 200) {
-  const segredoAdmin = gerarSegredo();
+  const banco = abrirBanco(join(pasta, "cartorio.db"));
   const app = criarCartorio({
-    banco: abrirBanco(join(pasta, "cartorio.db")),
-    segredoAdmin,
+    banco,
     logger: { level: "silent" },
     trava,
   });
@@ -68,17 +66,9 @@ async function subirCartorio(trava = TEMPOS, esperaHttpMs = 200) {
   const url = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
   /** Um PC do grupo: convite → token no cofre → cliente. */
   async function pc(nomePc: string) {
-    const convite = await app.inject({
-      method: "POST",
-      url: "/convites",
-      headers: { authorization: `Bearer ${segredoAdmin}` },
-      payload: { nomePc },
-    });
-    const usado = await app.inject({
-      method: "POST",
-      url: "/convites/usar",
-      payload: { convite: convite.json<{ convite: string }>().convite },
-    });
+    // Convite sem sala de entrada (o PC de teste já está na rede): o caminho com ajudante está em convite.test.ts.
+    const convite = criarConvite(banco, nomePc, Date.now(), 60_000);
+    const usado = await app.inject({ method: "POST", url: "/convites/usar", payload: { convite } });
     const cofre = cofreEmMemoria();
     await cofre.guardar(usado.json<{ token: string }>().token);
     return criarCliente({ url, cofre, prazoMs: esperaHttpMs, esperaBaseMs: 10 });

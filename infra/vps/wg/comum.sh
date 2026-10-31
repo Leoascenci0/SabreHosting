@@ -49,7 +49,8 @@ chave_valida() {
 
 nome_valido() { [[ ${1:-} =~ ^[a-z0-9][a-z0-9-]{0,31}$ ]]; }
 
-endpoint_valido() { [[ ${1:-} =~ ^[A-Za-z0-9.-]+:[0-9]{1,5}$ ]] && [ "${1##*:}" -le 65535 ]; }
+# Porta 1–65535, sem zero à esquerda (a porta 0 não existe para quem conecta).
+endpoint_valido() { [[ ${1:-} =~ ^[A-Za-z0-9.-]+:[1-9][0-9]{0,4}$ ]] && [ "${1##*:}" -le 65535 ]; }
 
 # ip_na_faixa <ip> <primeiro> <último>: só "10.66.0.N" com N sem zero à esquerda.
 ip_na_faixa() {
@@ -58,13 +59,15 @@ ip_na_faixa() {
 }
 
 # Escreve o arquivo inteiro de uma vez (arquivo novo na mesma pasta + mv): nunca fica meio escrito.
-gravar_atomico() {
-  local destino=$1 tmp
+# Roda em subshell: o trap apaga o temporário se algo cair antes do mv, sem trocar o trap de quem chamou.
+gravar_atomico() (
+  destino=$1
   tmp=$(mktemp "$destino.XXXXXX")
+  trap 'rm -f "$tmp"' EXIT
   cat >"$tmp"
   chmod 600 "$tmp"
   mv -f "$tmp" "$destino"
-}
+)
 
 # Só uma execução por vez (dois cadastros ao mesmo tempo poderiam escolher o mesmo IP). Chamar só DEPOIS de validar
 # os argumentos. Também garante o wg0.conf (na simulação, cria um vazio).
@@ -116,9 +119,9 @@ sem_bloco() { # tira do wg0.conf o bloco que começa na linha <marca> até a lin
     { print }' "$CONF"
 }
 
-gravar_conf() { # lê o novo conteúdo na entrada; confere antes de trocar
-  local novo
+gravar_conf() ( # lê o novo conteúdo na entrada; confere antes de trocar (subshell + trap: como gravar_atomico)
   novo=$(mktemp "$CONF.XXXXXX")
+  trap 'rm -f "$novo"' EXIT
   cat >"$novo"
   # Cada AllowedIPs é um único IP /32 e fica na faixa do seu bloco: "sabre-pc" 2–199, "sabre-entrada" 200–254.
   if ! awk -v p1="$PC_PRIMEIRO" -v p2="$PC_ULTIMO" -v s1="$SALA_PRIMEIRO" -v s2="$SALA_ULTIMO" '
@@ -129,12 +132,11 @@ gravar_conf() { # lê o novo conteúdo na entrada; confere antes de trocar
       split($3, p, /[./]/); if (p[4] + 0 < a || p[4] + 0 > b) exit 1
     }
     /^$/ { a = 0 }' "$novo"; then
-    rm -f "$novo"
     falhar "wg0.conf teria um AllowedIPs fora da faixa do bloco ou que não é um único IP /32; nada foi alterado."
   fi
   chmod 600 "$novo"
   mv -f "$novo" "$CONF"
-}
+)
 
 registrar() { # nome ip chave estado: troca a linha do nome ativo (ou acrescenta)
   { awk -F'\t' -v n="$1" '!($1==n && $4=="ativo")' "$REGISTRO"; printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4"; } | gravar_atomico "$REGISTRO"

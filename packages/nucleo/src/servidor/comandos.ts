@@ -2,28 +2,40 @@ import type { ServidorMinecraft } from "./processo.js";
 
 const PRAZO_RESPOSTA_PADRAO_MS = 10_000;
 const PRAZO_SALVAR_PADRAO_MS = 120_000;
+const PRAZO_COPIA_PADRAO_MS = 600_000;
 const MAX_SAY = 256;
+/** Comandos aceitos por servidor (o que roda + os esperando); o excedente é recusado na hora. */
+export const MAX_FILA = 16;
 
 // Toda linha do servidor começa com "[hh:mm:ss] [Thread/NÍVEL]: ". A âncora no prefixo impede que o chat de um
 // jogador ("<Nick> Saved the game", ou texto com "]: ") passe por resposta do servidor.
 const PREFIXO = String.raw`^\[[^\]]*\] \[[^\]]*\]: `;
+const SALVO_DESLIGADO = new RegExp(`${PREFIXO}Automatic saving is now disabled\\s*$`);
 const SALVOU = new RegExp(`${PREFIXO}Saved the game\\s*$`);
 const LISTA = new RegExp(
   `${PREFIXO}There are (\\d+) of a max of (\\d+) players online:\\s*(.*?)\\s*$`,
 );
 
 const filas = new WeakMap<ServidorMinecraft, Promise<void>>();
+const pendentes = new WeakMap<ServidorMinecraft, number>();
 
-/** Um comando por vez por servidor, na ordem das chamadas; a falha de um não trava os seguintes. */
+/**
+ * Um comando por vez por servidor, na ordem das chamadas; a falha de um não trava os seguintes. Com `MAX_FILA`
+ * comandos já pendentes, recusa o novo sem enfileirar.
+ */
 function naFila<T>(servidor: ServidorMinecraft, tarefa: () => Promise<T>): Promise<T> {
+  const n = pendentes.get(servidor) ?? 0;
+  if (n >= MAX_FILA) {
+    return Promise.reject(
+      new Error(
+        `A fila de comandos do servidor está cheia (${MAX_FILA}); tente de novo em instantes.`,
+      ),
+    );
+  }
+  pendentes.set(servidor, n + 1);
   const atual = (filas.get(servidor) ?? Promise.resolve()).then(tarefa);
-  filas.set(
-    servidor,
-    atual.then(
-      () => {},
-      () => {},
-    ),
-  );
+  const fim = () => void pendentes.set(servidor, (pendentes.get(servidor) ?? 1) - 1);
+  filas.set(servidor, atual.then(fim, fim));
   return atual;
 }
 
@@ -73,6 +85,7 @@ export function say(servidor: ServidorMinecraft, texto: string): Promise<void> {
     if (/[\p{Cc}\p{Zl}\p{Zp}]/u.test(texto)) {
       throw new Error("O aviso não pode ter quebra de linha nem caractere de controle.");
     }
+    if (texto.includes("\u00a7")) throw new Error("O aviso não pode ter código de cor (§).");
     if (texto.trim() === "") throw new Error("O aviso está vazio.");
     if (texto.length > MAX_SAY) throw new Error(`O aviso passa de ${MAX_SAY} caracteres.`);
     servidor.enviar(`say ${texto}`);
@@ -101,20 +114,23 @@ export function list(
 }
 
 /**
- * Regra de ouro 2: `copiar` só roda depois do "Saved the game" (`save-off` + `save-all flush`), e o `save-on`
- * volta sempre, mesmo se a cópia falhar ou o servidor não confirmar no prazo. Servidor que não está pronto
- * é recusado sem mandar nada. Ocupa a fila inteira: duas cópias nunca se cruzam.
+ * Regra de ouro 2: `copiar` só roda depois do "Automatic saving is now disabled" (`save-off`) e do "Saved the game"
+ * (`save-all flush`), e o `save-on` volta sempre, mesmo se a cópia falhar ou o servidor não confirmar no prazo.
+ * A cópia tem prazo próprio: ao estourar, o `AbortSignal` que ela recebe dispara, o `salvarSeguro` ESPERA a cópia
+ * terminar (o `save-on` nunca liga com ela ainda lendo o mundo) e rejeita; o que ela fez fica por conta dela
+ * descartar. Servidor que não está pronto é recusado sem mandar nada. Ocupa a fila inteira: duas cópias nunca se cruzam.
  */
 export function salvarSeguro<T>(
   servidor: ServidorMinecraft,
-  copiar: () => Promise<T>,
+  copiar: (sinal: AbortSignal) => Promise<T>,
   prazoMs = PRAZO_SALVAR_PADRAO_MS,
+  prazoCopiaMs = PRAZO_COPIA_PADRAO_MS,
 ): Promise<T> {
   return naFila(servidor, async () => {
-    servidor.enviar("save-off");
     try {
+      await enviarEEsperar(servidor, "save-off", SALVO_DESLIGADO, prazoMs, "desligar o salvamento");
       await enviarEEsperar(servidor, "save-all flush", SALVOU, prazoMs, "salvar o mundo");
-      return await copiar();
+      return await copiarComPrazo(copiar, prazoCopiaMs);
     } finally {
       try {
         servidor.enviar("save-on");
@@ -123,4 +139,22 @@ export function salvarSeguro<T>(
       }
     }
   });
+}
+
+async function copiarComPrazo<T>(
+  copiar: (sinal: AbortSignal) => Promise<T>,
+  prazoMs: number,
+): Promise<T> {
+  const controle = new AbortController();
+  const timer = setTimeout(() => controle.abort(), prazoMs);
+  try {
+    const resultado = await copiar(controle.signal);
+    if (controle.signal.aborted) throw new Error("prazo");
+    return resultado;
+  } catch (erro) {
+    if (!controle.signal.aborted) throw erro;
+    throw new Error("A cópia do mundo passou do prazo; nada foi guardado.");
+  } finally {
+    clearTimeout(timer);
+  }
 }

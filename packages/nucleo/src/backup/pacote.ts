@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { Parser, type ReadEntry } from "tar";
 import { hashComTamanho } from "../integridade/hash.js";
-import { gerarManifesto, validarManifesto, type Manifesto } from "./manifesto.js";
+import { MUDOU, gerarManifesto, validarManifesto, type Manifesto } from "./manifesto.js";
 
 export interface PacoteCriado {
   caminho: string;
@@ -56,11 +56,15 @@ for (const arquivo of workerData.arquivos) pacote.write(arquivo);
 pacote.end();
 `;
 
+/** O pacote foi desfeito antes de ganhar o nome final (`confirmar` disse não, ou o sinal abortou). */
+export class PacoteDescartado extends Error {}
+
 function compactarEmWorker(
   mundo: string,
   manifesto: string,
   arquivos: string[],
   saida: string,
+  sinal?: AbortSignal,
 ): Promise<void> {
   const tar = createRequire(import.meta.url).resolve("tar");
   return new Promise((resolver, rejeitar) => {
@@ -68,23 +72,47 @@ function compactarEmWorker(
       eval: true,
       workerData: { tar, mundo, manifesto, arquivos, saida },
     });
+    // Abortado: derruba o worker; o "exit" abaixo só rejeita depois que ele saiu, para o `.parcial` poder ser apagado.
+    sinal?.addEventListener("abort", () => void worker.terminate(), { once: true });
     worker.once("message", (m: { ok?: true; erro?: string }) =>
       m.ok ? resolver() : rejeitar(new Error(m.erro)),
     );
     worker.once("error", rejeitar);
-    worker.once("exit", (codigo) => rejeitar(new Error(`compactação encerrou (código ${codigo})`)));
+    worker.once("exit", (codigo) =>
+      rejeitar(
+        sinal?.aborted
+          ? new PacoteDescartado("cancelado durante a compactação")
+          : new Error(`compactação encerrou (código ${codigo})`),
+      ),
+    );
   });
 }
 
+/**
+ * `confirmar` é chamado logo antes do rename (sem espera entre os dois): falso descarta o pacote, que nunca chega a
+ * ter o nome final. `sinal` abortado para a compactação e também descarta; a leitura do manifesto termina antes de o
+ * sinal ser olhado (a regra 2 segue salva: o `salvarSeguro` espera a cópia acabar antes do `save-on`). Se o aborto ou a
+ * queda vier durante o próprio rename, o destino recém-criado (só ele) é removido.
+ */
 export async function criarPacote(
   pastaDoMundo: string,
   destino: string,
-  opcoes: { versao: number; epoca: number },
+  opcoes: {
+    versao: number;
+    epoca: number;
+    confirmar?: () => boolean;
+    sinal?: AbortSignal;
+  },
 ): Promise<PacoteCriado> {
-  const manifesto = await gerarManifesto(pastaDoMundo, opcoes).catch((erro: unknown) => {
-    throw new Error("Não consegui ler o mundo para montar o pacote; o mundo não foi alterado.", {
-      cause: erro,
-    });
+  const { confirmar, sinal, ...paraManifesto } = opcoes;
+  const manifesto = await gerarManifesto(pastaDoMundo, paraManifesto).catch((erro: unknown) => {
+    const mudou = erro instanceof Error && erro.message === MUDOU;
+    throw new Error(
+      mudou
+        ? `${MUDOU} Nada foi guardado; o mundo não foi alterado.`
+        : "Não consegui ler o mundo para montar o pacote; o mundo não foi alterado.",
+      { cause: erro },
+    );
   });
   if (manifesto.arquivos.some((a) => a.caminho === NOME_MANIFESTO)) {
     throw new Error(
@@ -92,19 +120,28 @@ export async function criarPacote(
     );
   }
   const parcial = `${destino}.parcial`;
+  const desistiu = (): boolean => sinal?.aborted === true || confirmar?.() === false;
+  let renomeado = false;
   try {
+    if (sinal?.aborted) throw new PacoteDescartado("cancelado antes de começar");
     await mkdir(dirname(destino), { recursive: true });
     await compactarEmWorker(
       pastaDoMundo,
       JSON.stringify(manifesto),
       manifesto.arquivos.map((a) => a.caminho),
       parcial,
+      sinal,
     );
     const { hash, tamanho } = await hashComTamanho(parcial);
+    if (desistiu()) throw new PacoteDescartado("descartado antes do rename");
     await rename(parcial, destino);
+    renomeado = true;
+    if (desistiu()) throw new PacoteDescartado("descartado durante o rename");
     return { caminho: destino, sha256: hash, tamanho };
   } catch (erro) {
     await rm(parcial, { force: true });
+    if (renomeado) await rm(destino, { force: true });
+    if (erro instanceof PacoteDescartado) throw erro;
     throw new Error("Não consegui montar o pacote do mundo; o mundo não foi alterado.", {
       cause: erro,
     });
