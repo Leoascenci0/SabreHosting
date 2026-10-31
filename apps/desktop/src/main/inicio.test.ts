@@ -54,6 +54,19 @@ describe("hospedar durante uma restauração de backup", () => {
   });
 });
 
+describe("aviso da atualização do mundo (syncmel-1.14)", () => {
+  it("mostra o aviso no estado enquanto existir e some quando o app o limpa", async () => {
+    let aviso: string | undefined = "Não consegui atualizar o mundo: sem resposta da nuvem.";
+    const inicio = criarInicio(deps({ avisoAtualizacao: () => aviso }));
+    expect(await inicio.estado()).toEqual({
+      tipo: "ninguem",
+      aviso: "Não consegui atualizar o mundo: sem resposta da nuvem.",
+    });
+    aviso = undefined;
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+  });
+});
+
 describe("hospedar durante a atualização do mundo (sync-2.2)", () => {
   it("Hospedar é recusado com o percentual no estado; Jogar segue liberado; volta ao acabar", async () => {
     let pct: number | undefined = 40;

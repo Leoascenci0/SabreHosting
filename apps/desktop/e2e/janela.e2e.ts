@@ -73,6 +73,7 @@ describe("janela do SabreHosting", () => {
       "grupo",
       "importar",
       "inicio",
+      "mods",
       "versao",
       "versoes",
     ]);

@@ -39,6 +39,8 @@ import { backupParado, depsBackupsReais } from "./deps-backups.js";
 import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
 import { registrarBoasVindas } from "./boas-vindas-app.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
+import { criarModsGrupo, type ModsGrupo } from "./mods-grupo.js";
+import { sincronizarMods } from "@sabrehosting/nucleo/launcher/mods";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
@@ -305,6 +307,9 @@ const trocandoVersao = (): boolean => versaoApp?.trocando() ?? false;
 /** Percentual da atualização do mundo em curso (sync-2.2); `undefined` = nenhuma. */
 let atualizandoMundo: number | undefined;
 const atualizando = (): number | undefined => atualizandoMundo;
+/** Por que a última atualização do mundo falhou (syncmel-1.14); some quando a próxima rodada começa. */
+let avisoAtualizacaoMundo: string | undefined;
+const avisoAtualizacao = (): string | undefined => avisoAtualizacaoMundo;
 
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1")
@@ -313,6 +318,7 @@ async function criarInicioDoApp(): Promise<Inicio> {
       restaurando,
       trocandoVersao,
       atualizando,
+      avisoAtualizacao,
       aoServidor: (s) => agendaApp?.observar(s),
     });
   const { criarDepsE2E } = await import("./fake-e2e.js");
@@ -459,11 +465,31 @@ async function criarVersaoDoApp(
   return criarVersao(depsVersaoE2E(servidorRodando));
 }
 
+async function criarModsDoApp(servidorRodando: () => boolean): Promise<ModsGrupo> {
+  if (process.env["SABRE_E2E"] !== "1") {
+    const exigir = clienteDoAmbiente(process.env);
+    const servidor = process.env["SABRE_PASTA_SERVIDOR"];
+    const instancia = process.env["SABRE_PASTA_MODS_INSTANCIA"]; // vira automático com o lancmel-2.2
+    return criarModsGrupo({
+      eu: async () => exigir().eu(),
+      lerLista: async () => exigir().lerModsGrupo(),
+      gravarLista: async (mods) => void (await exigir().gravarModsGrupo(mods)),
+      pastaDoServidor: () => (servidor ? join(servidor, "mods") : undefined),
+      pastaDaInstancia: () => instancia,
+      servidorRodando,
+      sincronizar: sincronizarMods,
+    });
+  }
+  const { depsModsE2E } = await import("./fake-e2e.js");
+  return criarModsGrupo(depsModsE2E(servidorRodando));
+}
+
 function registrarPonte(
   inicio: Inicio,
   backups: Backups,
   grupo: Grupo,
   versao: Versao,
+  mods: ModsGrupo,
   importacao: Importacao,
 ): void {
   const configuracoes = criarConfiguracoes({
@@ -510,6 +536,15 @@ function registrarPonte(
   ipcMain.handle("sabre:grupo:tirar", (evento, id: unknown) => {
     permitir(evento);
     return grupo.tirar(id); // o main revalida dono, lista e "não é o dono" antes de revogar
+  });
+  ipcMain.handle("sabre:mods:estado", (evento) => (permitir(evento), mods.estado()));
+  ipcMain.handle("sabre:mods:adicionar", (evento, mod: unknown) => {
+    permitir(evento);
+    return mods.adicionar(mod); // o main confere dono, repetido e os campos (host, .jar, hash) antes de gravar
+  });
+  ipcMain.handle("sabre:mods:tirar", (evento, arquivo: unknown) => {
+    permitir(evento);
+    return mods.tirar(arquivo);
   });
   ipcMain.handle("sabre:versoes:estado", (evento) => (permitir(evento), versao.estado()));
   ipcMain.handle("sabre:versoes:opcoes", (evento, v: unknown) => {
@@ -587,8 +622,13 @@ if (!app.requestSingleInstanceLock()) {
       disparoEspalhar = ligarEspalhar({
         env: process.env,
         inicio: inicioApp,
-        aoAvisar: (texto) => console.warn(texto),
+        aoAvisar: (texto, paraTela) => {
+          console.warn(texto); // detalhe bruto só no console
+          avisoAtualizacaoMundo = `Não consegui atualizar o mundo: ${paraTela}`;
+          inicioApp?.mudou();
+        },
         aoProgresso: (p) => {
+          if (p === 0) avisoAtualizacaoMundo = undefined;
           atualizandoMundo = p;
           inicioApp?.mudou();
         },
@@ -602,13 +642,16 @@ if (!app.requestSingleInstanceLock()) {
       () => inicioPronto.ativo(),
       () => inicioPronto.temOrfao(),
     );
+    const modsApp = await criarModsDoApp(() => inicioPronto.ativo());
     registrarPonte(
       inicioApp,
       backupsApp,
       await criarGrupoDoApp(),
       versaoApp,
+      modsApp,
       await criarImportacaoDoApp(inicioApp),
     );
+    void modsApp.sincronizar(); // não segura a janela; o estado "Atualizando mods…" aparece em Configurações
     await registrarBoasVindas({
       dados: app.getPath("userData"),
       janela: () => janela,

@@ -1,5 +1,6 @@
-import type { ClienteCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
+import { ErroCartorio, type ClienteCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
 import { alcancar } from "@sabrehosting/nucleo/sync/alcancar";
+import { ErroLocal } from "@sabrehosting/nucleo/sync/aplicar";
 import {
   espalhar,
   type Espalhado,
@@ -61,16 +62,18 @@ export function criarEspalhador(o: OpcoesEspalhador) {
     aoProgresso?: (feitos: number, total: number) => void,
   ): Promise<Espalhado> => {
     const { pastaDoMundo, pastaDoServidor } = o;
-    if (!pastaDoMundo || !pastaDoServidor) throw new Error(SEM_PASTA);
+    if (!pastaDoMundo || !pastaDoServidor) throw new ErroLocal(SEM_PASTA);
     if (o.servidorRodando()) {
-      throw new Error("O servidor deste PC está no ar; a atualização do mundo fica para depois.");
+      throw new ErroLocal(
+        "O servidor deste PC está no ar; a atualização do mundo fica para depois.",
+      );
     }
-    if (emCurso) throw new Error(JA_ATUALIZANDO);
+    if (emCurso) throw new ErroLocal(JA_ATUALIZANDO);
     emCurso = true; // antes de qualquer await (S-06)
     try {
       // Um Java de sessão anterior ainda de pé usa o mundo mesmo sem `servidorRodando`: na dúvida, não troca.
       if (await o.servidorOrfao?.().catch(() => true)) {
-        throw new Error(
+        throw new ErroLocal(
           "Sobrou um servidor de antes aberto neste PC; feche o Java e a atualização do mundo continua depois.",
         );
       }
@@ -108,7 +111,15 @@ export interface OpcoesGatilho {
   versaoLocal: () => Promise<number>;
   /** Percentual da atualização em curso (a tela mostra); `undefined` = acabou. */
   aoProgresso?: (percentual: number | undefined) => void;
-  aoAvisar?: (texto: string) => void;
+  /** `texto` (com o erro bruto) é só para o console; `paraTela` é seguro de mostrar (sem caminho, IP ou porta). */
+  aoAvisar?: (texto: string, paraTela: string) => void;
+}
+
+const FALHA_GENERICA = "Não deu para atualizar seu mundo agora. Tento de novo em alguns minutos.";
+
+/** Só mensagens fixas em pt-BR do app (ErroLocal/ErroCartorio) vão à tela; o resto pode ter caminho ou endereço. */
+export function textoSeguroParaTela(erro: unknown): string {
+  return erro instanceof ErroLocal || erro instanceof ErroCartorio ? erro.message : FALHA_GENERICA;
 }
 
 /**
@@ -130,7 +141,10 @@ export function criarGatilhoEspalhar(o: OpcoesGatilho): () => Promise<void> {
         ...(o.aoProgresso ? { aoProgresso: o.aoProgresso } : {}),
       });
     } catch (erro) {
-      o.aoAvisar?.(`Atualização do mundo: ${erro instanceof Error ? erro.message : String(erro)}`);
+      o.aoAvisar?.(
+        `Atualização do mundo: ${erro instanceof Error ? erro.message : String(erro)}`,
+        textoSeguroParaTela(erro),
+      );
     } finally {
       emCurso = false;
     }

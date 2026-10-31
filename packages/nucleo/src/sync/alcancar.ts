@@ -7,6 +7,7 @@
  * não há trava nem relógio próprios. Falha no meio deixa o mundo como estava (o `espalhar` garante).
  */
 import type { ClienteCartorio } from "../cartorio/cliente.js";
+import { ErroLocal } from "./aplicar.js";
 import {
   fontesDeCopias,
   type Espalhado,
@@ -55,13 +56,21 @@ export async function alcancar(o: OpcoesAlcancar): Promise<Alcancado> {
       const progresso = (feitos: number, total: number) =>
         o.aoProgresso?.(total === 0 ? 100 : Math.floor((feitos / total) * 100));
       o.aoProgresso?.(0);
+      // Da nuvem, o download ocupa 0–50% (bytes) e a aplicação dos arquivos 50–100%: a barra nunca volta atrás.
       const daNuvem: PacoteDaNuvem = {
-        baixar: (destino) => o.cliente.baixarPacote(nova.numero, destino, TETO_PACOTE),
+        baixar: (destino) =>
+          o.cliente.baixarPacote(nova.numero, destino, TETO_PACOTE, undefined, (feitos, total) =>
+            o.aoProgresso?.(total <= 0 ? 0 : Math.min(50, Math.floor((feitos / total) * 50))),
+          ),
       };
+      const progressoNuvem = (feitos: number, total: number) =>
+        o.aoProgresso?.(50 + (total === 0 ? 50 : Math.floor((feitos / total) * 50)));
       try {
         if (fontes.length === 0) throw new SemPc();
         await o.espalhar(versao, fontes, undefined, progresso);
       } catch (erro) {
+        // Falha deste PC (servidor rodando, trava perdida): a nuvem não resolveria; o amigo vê o motivo.
+        if (erro instanceof ErroLocal) throw erro;
         // Nuvem só como último recurso e só se ela guarda essa versão; senão o erro dos PCs é o que o amigo vê.
         if (!copias.nuvem) {
           throw erro instanceof SemPc
@@ -70,7 +79,7 @@ export async function alcancar(o: OpcoesAlcancar): Promise<Alcancado> {
               )
             : erro;
         }
-        await o.espalhar(versao, [], daNuvem, progresso);
+        await o.espalhar(versao, [], daNuvem, progressoNuvem);
       }
       local = nova.numero;
       passos++;

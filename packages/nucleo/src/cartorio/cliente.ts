@@ -353,6 +353,8 @@ export function criarCliente(opcoes: OpcoesCliente) {
       destino: string,
       maximo: number,
       sinal?: AbortSignal,
+      /** Bytes já recebidos e o total (do cabeçalho `content-length`, já conferido contra o teto). */
+      aoBytes?: (feitos: number, total: number) => void,
     ): Promise<{ sha256: string }> => {
       const token = await cofre.ler();
       if (!token) {
@@ -398,10 +400,12 @@ export function criarCliente(opcoes: OpcoesCliente) {
         );
       }
       try {
-        await pipeline(
-          Readable.fromWeb(resposta.body as import("node:stream/web").ReadableStream),
-          createWriteStream(destino, { flags: "wx" }),
-        );
+        const fluxo = Readable.fromWeb(resposta.body as import("node:stream/web").ReadableStream);
+        if (aoBytes) {
+          let feitos = 0;
+          fluxo.on("data", (pedaco: Buffer) => aoBytes((feitos += pedaco.length), tamanho));
+        }
+        await pipeline(fluxo, createWriteStream(destino, { flags: "wx" }));
       } catch (e) {
         await rm(destino, { force: true });
         throw new ErroCartorio("O download do mundo da nuvem foi interrompido.", "rede", {

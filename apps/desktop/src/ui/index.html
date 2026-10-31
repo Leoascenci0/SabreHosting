@@ -241,6 +241,59 @@
           <p class="detalhe" id="grupo-aviso" role="status"></p>
           <p class="erro" id="grupo-erro" role="alert" hidden></p>
         </fieldset>
+        <fieldset id="cfg-mods">
+          <legend>Mods do grupo</legend>
+          <p class="dica" id="mods-dica">
+            Todos os PCs do grupo usam estes mods. Só o dono do grupo muda a lista.
+          </p>
+          <p class="dica" id="mods-atualizando" role="status" hidden>Atualizando mods…</p>
+          <ul class="lista-backups" id="mods-lista"></ul>
+          <div
+            class="confirmacao"
+            id="mods-confirmacao"
+            role="alertdialog"
+            aria-labelledby="mods-pergunta"
+            hidden
+          >
+            <p id="mods-pergunta"></p>
+            <p class="detalhe">
+              O mod sai da lista e é apagado dos PCs do grupo na próxima atualização. Mods que são
+              seus, fora da lista, não são mexidos.
+            </p>
+            <div class="acoes">
+              <button type="button" class="perigo" id="mods-confirmar">Tirar da lista</button>
+              <button type="button" class="secundario" id="mods-cancelar">Cancelar</button>
+            </div>
+          </div>
+          <div id="mods-adicionar" hidden>
+            <label for="mods-nome">Nome do mod</label>
+            <input type="text" id="mods-nome" maxlength="100" />
+            <label for="mods-versao">Versão do mod</label>
+            <input type="text" id="mods-versao" maxlength="100" />
+            <label for="mods-arquivo">Nome do arquivo (termina em .jar)</label>
+            <input type="text" id="mods-arquivo" maxlength="128" />
+            <label for="mods-url">Link de download (cdn.modrinth.com)</label>
+            <input type="url" id="mods-url" />
+            <label for="mods-hash">Hash SHA-512 do arquivo</label>
+            <input
+              type="text"
+              id="mods-hash"
+              maxlength="128"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <label for="mods-lado">Onde usar</label>
+            <select id="mods-lado">
+              <option value="ambos">No jogo e no servidor</option>
+              <option value="cliente">Só no jogo (cada amigo)</option>
+              <option value="servidor">Só no servidor</option>
+            </select>
+            <p class="dica">O link e o hash aparecem na página do arquivo, no Modrinth.</p>
+            <button type="button" id="mods-adicionar-botao">Adicionar à lista</button>
+          </div>
+          <p class="detalhe" id="mods-aviso" role="status"></p>
+          <p class="erro" id="mods-erro" role="alert" hidden></p>
+        </fieldset>
         <p class="detalhe" id="config-aviso" role="status"></p>
         <p class="erro" id="config-erro" role="alert" hidden></p>
         <div class="acoes">

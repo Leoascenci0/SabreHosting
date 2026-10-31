@@ -44,6 +44,13 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:estado"),
     tirar: (id: number): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:tirar", id),
   },
+  mods: {
+    estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:mods:estado"),
+    adicionar: (mod: unknown): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mods:adicionar", mod),
+    tirar: (arquivo: string): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mods:tirar", arquivo),
+  },
   versoes: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:versoes:estado"),
     opcoes: (versao: string): Promise<unknown> =>
