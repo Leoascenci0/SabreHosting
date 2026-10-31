@@ -38,6 +38,21 @@ const cancelarGrupo = $<HTMLButtonElement>("grupo-cancelar");
 const avisoGrupo = $("grupo-aviso");
 const erroGrupo = $("grupo-erro");
 
+const areaVersao = $("cfg-versao-area");
+const seletorVersao = $<HTMLSelectElement>("cfg-versao");
+const dicaVersao = $("cfg-versao-dica");
+const trocarVersao = $<HTMLButtonElement>("cfg-versao-trocar");
+const confVersao = $("cfg-versao-confirmacao");
+const perguntaVersao = $("cfg-versao-pergunta");
+const confirmarVersao = $<HTMLButtonElement>("cfg-versao-confirmar");
+const cancelarVersao = $<HTMLButtonElement>("cfg-versao-cancelar");
+const erroVersao = $("cfg-versao-erro");
+const avisoVersao = $("cfg-versao-aviso");
+
+let versaoAtual = "";
+/** Cada seleção ganha um número: resposta atrasada de uma versão já trocada é descartada. */
+let consulta = 0;
+
 let emCurso = false;
 let tirando: PcDaTela | undefined;
 let botaoDoTirado: HTMLElement | undefined;
@@ -167,8 +182,91 @@ confirmarGrupo.addEventListener("click", () => {
     .finally(() => ocuparGrupo(false));
 });
 
+function mostrarErroVersao(texto: string): void {
+  erroVersao.textContent = texto;
+  erroVersao.hidden = texto === "";
+}
+
+function ocuparVersao(ocupado: boolean): void {
+  seletorVersao.disabled = ocupado;
+  trocarVersao.disabled = ocupado || seletorVersao.value === versaoAtual;
+  confirmarVersao.disabled = ocupado;
+  cancelarVersao.disabled = ocupado;
+  confirmarVersao.textContent = ocupado ? "Trocando…" : "Trocar";
+}
+
+/** As opções só são buscadas quando o dono seleciona a versão (cada busca vai à internet). */
+async function mostrarOpcoes(): Promise<void> {
+  const minha = ++consulta;
+  const v = seletorVersao.value;
+  confVersao.hidden = true;
+  trocarVersao.disabled = v === versaoAtual;
+  dicaVersao.textContent = "Consultando o que esta versão roda…";
+  try {
+    const o = await window.sabre.versoes.opcoes(v);
+    if (minha !== consulta) return;
+    dicaVersao.textContent = o.ok ? o.texto : o.mensagem;
+  } catch {
+    if (minha === consulta) dicaVersao.textContent = "Não consegui consultar esta versão agora.";
+  }
+}
+
+async function carregarVersao(): Promise<void> {
+  confVersao.hidden = true;
+  mostrarErroVersao("");
+  try {
+    const e = await window.sabre.versoes.estado();
+    areaVersao.hidden = !e.dono;
+    if (!e.dono) return;
+    if (e.erro) return mostrarErroVersao(e.erro);
+    versaoAtual = e.atual;
+    // A atual pode não estar na lista (manifesto fora do ar ou versão antiga): entra para a tela não mentir.
+    const ids = e.versoes.includes(e.atual) ? e.versoes : [e.atual, ...e.versoes];
+    seletorVersao.replaceChildren(
+      ...ids.map(
+        (id) => new Option(id === e.atual ? `${id} (a de hoje)` : id, id, false, id === e.atual),
+      ),
+    );
+    await mostrarOpcoes();
+  } catch {
+    areaVersao.hidden = true;
+  }
+}
+
+seletorVersao.addEventListener("change", () => void mostrarOpcoes());
+trocarVersao.addEventListener("click", () => {
+  perguntaVersao.textContent = `Trocar a versão do Minecraft de ${versaoAtual} para ${seletorVersao.value}?`;
+  confVersao.hidden = false;
+  cancelarVersao.focus();
+});
+cancelarVersao.addEventListener("click", () => {
+  confVersao.hidden = true;
+  trocarVersao.focus();
+});
+confirmarVersao.addEventListener("click", () => {
+  const alvo = seletorVersao.value;
+  ocuparVersao(true);
+  mostrarErroVersao("");
+  avisoVersao.textContent = "";
+  window.sabre.versoes
+    .gravar(alvo)
+    .then(async (r) => {
+      confVersao.hidden = true;
+      if (r.ok) {
+        await carregarVersao();
+        avisoVersao.textContent = `Pronto: o grupo agora usa a versão ${alvo}.`;
+      } else mostrarErroVersao(r.mensagem);
+    })
+    .catch(() => mostrarErroVersao("Não consegui trocar a versão agora. Nada foi alterado."))
+    .finally(() => {
+      ocuparVersao(false);
+      trocarVersao.focus();
+    });
+});
+
 async function carregar(): Promise<void> {
   void carregarGrupo();
+  void carregarVersao();
   aviso.textContent = "Carregando…";
   try {
     const c = await window.sabre.configuracoes.ler();

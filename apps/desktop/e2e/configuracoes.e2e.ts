@@ -194,4 +194,32 @@ describe("tela de configurações", () => {
     expect(await p.evaluate(() => document.activeElement?.id)).toBe("grupo-aviso");
     expect(await p.locator("#grupo-lista button[aria-label]").count()).toBe(0);
   });
+  it("versão: não-dono não vê a área", async () => {
+    const p = await abrir();
+    await p.locator("#cfg-visao").waitFor();
+    expect(await p.locator("#cfg-versao-area").isHidden()).toBe(true);
+  });
+
+  it("versão: dono vê o que roda; cancelar não grava; confirmar grava", async () => {
+    const p = await abrir(true);
+    await p.locator("#cfg-versao-area:not([hidden])").waitFor();
+    await esperarTexto(p, "#cfg-versao-dica", "Fabric e Forge");
+    expect(await p.locator("#cfg-versao-trocar").isDisabled()).toBe(true); // a de hoje: nada a trocar
+    await p.locator("#cfg-versao").selectOption("1.12.2");
+    await esperarTexto(p, "#cfg-versao-dica", "Só roda sem mods");
+    await p.locator("#cfg-versao-trocar").click();
+    await esperarTexto(p, "#cfg-versao-pergunta", "de 1.21.1 para 1.12.2");
+    await p.locator("#cfg-versao-cancelar").click();
+    expect(await p.locator("#cfg-versao-confirmacao").isHidden()).toBe(true);
+    const gravados = (): Promise<string[]> =>
+      p.evaluate(
+        () =>
+          (globalThis as unknown as { __sabreE2EVersao?: { gravados: string[] } }).__sabreE2EVersao
+            ?.gravados ?? [],
+      );
+    expect(await gravados()).toEqual([]);
+    await p.locator("#cfg-versao-trocar").click();
+    await p.locator("#cfg-versao-confirmar").click();
+    await esperarTexto(p, "#cfg-versao-aviso", "usa a versão 1.12.2");
+  });
 });
