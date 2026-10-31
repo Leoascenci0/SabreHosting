@@ -33,6 +33,19 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
   *Confirmação:* teste em contêineres: dois "PCs" falam entre si só pela rede privada. **[P: prova real no PC]**
   *Depende de:* rede-1.1
 
+- [ ] **1.4 — Ajudante do WireGuard e sala de entrada**
+  *Desenho aprovado:* `docs/superpowers/specs/2026-10-31-convite-do-grupo-design.md` §5.4, §5.5, §5.7.
+  *O que fazer:* ajudante pequeno (root) liberado no `sudoers` para o usuário `sabre` **só** com os comandos
+  `entrada-adicionar`, `entrada-trocar` (adiciona o definitivo antes de tirar o provisório) e `entrada-remover`,
+  reaproveitando a validação do `adicionar-pc.sh`. Faixas: PCs definitivos `10.66.0.2–199`, sala de entrada
+  `10.66.0.200–254` (estado `entrada` no `pcs.tsv`). Firewall: a sala de entrada só alcança `10.66.0.1:7710`, sem
+  repasse a outros PCs. Nenhuma porta nova na internet.
+  *Arquivo:* `infra/vps/wg/`, `infra/vps/instalar.sh`, `infra/vps/LEIAME.md`
+  **Tela no app:** não se aplica.
+  *Confirmação:* simulação e contêiner: peer da sala de entrada não alcança outro PC; `sudoers` recusa comando fora da
+  lista; argumento torto não muda nada.
+  *Depende de:* rede-1.3
+
 ## Bloco 2 — Proxy
 
 - [x] **2.1 — Velocity com whitelist e modern forwarding** (PR #48, 30/10/2026; whitelist pendente em redemel-2.1, unidade desligada)

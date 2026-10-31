@@ -41,6 +41,21 @@ Objetivo: um serviço pequeno na nuvem que sabe qual é a versão mais nova do m
   *Confirmação:* teste: queda no meio do envio deixa a cópia anterior intacta.
   *Depende de:* cart-1.3, bkp-1.2
 
+- [ ] **1.5 — Convite completo: dono, chave provisória e grupo**
+  *Desenho aprovado:* `docs/superpowers/specs/2026-10-31-convite-do-grupo-design.md` §5.1, §5.2, §5.5–§5.7.
+  *O que fazer:* coluna `dono` no PC; `POST /convites` só para PC dono (403 para os outros; sai o segredo de
+  administrador), gera par provisório, reserva IP da sala de entrada pelo ajudante (rede-1.4) e devolve o texto
+  `sabre://convite/1.…`; guarda hash do código, IP e chave pública provisória (nunca a privada). `POST /convites/usar
+  {convite, chave_publica}` só do IP provisório, em duas fases (repetir com a mesma chave devolve o mesmo IP e token
+  novo); `POST /convites/confirmar` do IP definitivo tira o provisório; `GET /grupo` → `{nome, endereco_jogar}`.
+  Limpeza remove o peer provisório quando o convite vence. Comandos de root `criar-convite-dono` (recusa se já houver
+  dono) e `trocar-dono`. Validade padrão 24 h, máx. 72 h.
+  *Arquivo:* `services/cartorio/src/`, `packages/nucleo/src/cartorio/` (cliente)
+  **Tela no app:** Configurações › Grupo › "Validade do convite" (a tela é do app-1.3).
+  *Confirmação:* testes com ajudante falso: convite vencido remove o provisório; `usar` de outro IP → 401; PC não dono
+  → 403; resposta perdida + repetição não encalha o PC; código, token e chave privada fora do banco e do log.
+  *Depende de:* cart-1.1, rede-1.4 (contrato do ajudante; dá para começar com o falso)
+
 ## Bloco 2 — Cliente no app
 
 - [x] **2.1 — Cliente do cartório no núcleo** (PR #41, 30/10/2026)

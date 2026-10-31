@@ -30,7 +30,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* `npm run vistoria` seguido de `git status` limpo.
   *Origem:* app-1.2 · PR #74 · orquestradora
 
-- [ ] **1.4 — Endereço vindo da configuração do grupo**
+- [ ] **1.4 — Endereço vindo da configuração do grupo** (absorvido pelo app-1.3, desenho de 31/10/2026: `GET /grupo`)
   *O que fazer:* hoje o endereço do Jogar só vem de `SABRE_ENDERECO` (variável de ambiente); deve vir da configuração do
   grupo (cartório / tela de primeira vez do app-1.3). Juntar ao app-1.3 se couber.
   *Arquivo:* `services/cartorio`, `apps/desktop/src/main/deps-reais.ts`

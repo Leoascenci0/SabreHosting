@@ -26,12 +26,24 @@ item da mesma tela.
   *Depende de:* app-1.1, host-2.1
 
 - [ ] **1.3 — Primeira vez: convite, EULA e pasta**
-  *O que fazer:* assistente de 3 passos: colar convite do grupo, aceitar o EULA do Minecraft (link oficial), escolher
-  a pasta dos mundos.
-  *Arquivo:* `apps/desktop/src/telas/boas-vindas.*`
-  **Tela no app:** este item é a própria tela.
-  *Confirmação:* E2E: sem aceite do EULA não avança.
-  *Depende de:* app-1.1, host-1.2, cart-2.1
+  *Desenho aprovado pelo Eliel em 31/10/2026:* `docs/superpowers/specs/2026-10-31-convite-do-grupo-design.md` (§5.2,
+  §5.3, §6). Junta o appmel-1.4 (endereço do Jogar vem do cartório, fim do `SABRE_ENDERECO`).
+  *O que fazer:* assistente de 3 passos. (1) **Convite:** colar o texto `sabre://convite/1.…` (ou abrir pelo link,
+  registrando o `sabre://` no Windows); conferir formato e prazo antes de tudo; gerar a chave própria do PC; **um**
+  pedido de administrador que instala o túnel provisório, chama `usar`, regrava o túnel com a chave própria e confirma;
+  token no **cofre real** (`safeStorage`, implementando a interface `Cofre`); sem cofre, recusa e explica; depois
+  `GET /grupo` dá nome e endereço do Jogar. (2) **EULA** do Minecraft (link oficial; núcleo pronto em `configurar.ts`).
+  (3) **Pasta-base** (padrão `%LOCALAPPDATA%\SabreHosting`, com `servidor\` e `mundos\`). No PC do **dono**: botão
+  "Criar convite" (nome do PC, validade) que mostra o texto com "Copiar" e o prazo. `deps-reais.ts` deixa de ler
+  endereço e token do ambiente.
+  *Arquivo:* `apps/desktop/src/ui/boas-vindas.*`, `apps/desktop/src/main/boas-vindas.ts`, `apps/desktop/src/main/cofre.ts`,
+  `apps/desktop/src/main/deps-reais.ts`, `packages/nucleo/src/rede/convite.ts` (ler e validar o texto)
+  **Tela no app:** este item é a própria tela; Configurações › Grupo › "Criar convite" e "Validade do convite" (só o
+  dono); Configurações › Grupo › "Endereço do servidor" (só leitura); Configurações › Geral › "Pasta do SabreHosting".
+  *Confirmação:* E2E com cartório falso: convite vencido, torto ou usado → mensagem clara e nada muda; sem aceite do
+  EULA não avança; sem cofre não guarda token; texto do convite nunca aparece no log. **[P: prova real no PC Windows —
+  pedido de administrador e túnel]**
+  *Depende de:* app-1.1, host-1.2, cart-2.1, **cart-1.5**, **rede-1.4**
 
 ## Bloco 2 — Backups e configurações
 
