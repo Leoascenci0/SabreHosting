@@ -53,7 +53,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* os testes falham ao remover cada opção do servidor.
   *Origem:* syncmel-1.2 · PR #168 · qa integridade
 
-- [ ] **1.7 — Isolar `headersTimeout` de `requestTimeout` num teste**
+- [x] **1.7 — Isolar `headersTimeout` de `requestTimeout` num teste** (PR #191, 31/10/2026; arquivo de teste de 31,25 s para 4,3 s)
   *O que fazer:* expor os prazos do servidor como opção de teste (ou usar valores diferentes) para que cada um tenha prova própria; o teste de cabeçalho lento de hoje gasta ~30 s reais (Node confere a cada ~30 s): com prazos injetáveis cai para segundos.
   *Arquivo:* `packages/nucleo/src/sync/transferencia.ts`, `transferencia.test.ts`
   **Tela no app:** não se aplica.
@@ -76,7 +76,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Depende de:* cartmel-2.4 ✅ (PR #187), syncmel-1.8b ✅ (PR #182), piloto-1.1c ✅.
   *Origem:* sync-2.1b · onda 24 (não coube: 7º item)
 
-- [ ] **1.10 — Servir os arquivos do mundo no app (sync-2.1c)**
+- [x] **1.10 — Servir os arquivos do mundo no app (sync-2.1c)** (PR #195, 31/10/2026; a vitrine do último backup bom servida só em 10.66.0.x; IP fora da faixa ignorado; disparo após backup bom)
   *O que fazer:* nenhum código do app chama `servirArquivos`: nenhum PC escuta na `PORTA_ESPALHAR` (25570), então o espalhar (1.9a) não acha fonte de verdade. Iniciar o servidor de arquivos no app, só na IP da rede privada do PC (nunca em 0.0.0.0), com o token por PC conferido pelo cartório, servindo só pacotes fechados registrados (nunca a pasta do mundo vivo); parar ao sair. Também (notas do qa do #192): ignorar em `fontesDeCopias` IP fora da faixa (hoje um IP estranho derruba a rodada de todos); ligar o disparo também após backup bom; teste de `ligarEspalharDoApp`.
   *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/sync/transferencia.ts`, `espalhar.ts`
   **Tela no app:** não se aplica.

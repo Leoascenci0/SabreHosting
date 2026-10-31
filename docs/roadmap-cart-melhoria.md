@@ -117,7 +117,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* teste do cliente com cartório de teste devolvendo IP e nuvem; teste de que IP fora da rede privada é recusado.
   *Origem:* sync-2.1a · PR #173 · filha
 
-- [ ] **2.5 — Versão sem pacote não pode virar a "mais nova"**
+- [x] **2.5 — Versão sem pacote não pode virar a "mais nova"** (PR #194, 31/10/2026; `maisNovaGuardada` + `ultimoRegistrado` p/ o importador numerar após órfã)
   *O que fazer:* hoje `POST /versoes` publica a versão N antes do envio do pacote; se o envio cair, `maisNova` aponta para N, ninguém tem N e a regra 5 (versão manda) trava os hosts até o dono importar de novo. Fazer `maisNova` ignorar versão sem pacote guardado (ou aceitar o pacote antes de publicar). Também: `registrarVersao` marca o PC importador como tendo a cópia N, mas o mundo local dele não mudou, então ele aparece como fonte do espalhar.
   *Arquivo:* `services/cartorio/src/versoes.ts`, `servidor.ts`
   **Tela no app:** não se aplica.

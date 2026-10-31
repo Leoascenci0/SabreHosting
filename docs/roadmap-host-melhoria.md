@@ -100,7 +100,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   *Confirmação:* teste: versão sem Connector não oferece Fabric+Forge; trocar versão com servidor rodando é recusado.
   *Depende de:* app-2.2 ✅ · pode virar 2–3 itens na triagem (nucleo, cartório, tela).
 
-- [ ] **3.2 — Backup automático antes de trocar a versão do Minecraft**
+- [x] **3.2 — Backup automático antes de trocar a versão do Minecraft** (PR #193, 31/10/2026; falta: teste de colisão de nome do backup e do aviso "mods pendentes"; servidor pode subir enquanto o backup roda)
   *O que fazer:* hoje (3.1c) a tela chama a ação de backup se existir e, senão, só avisa. A regra do item 3.1 é "trocar de versão só com o servidor parado e **backup feito antes**": fazer a troca só depois de um backup bom concluído (servidor parado; reaproveitar a ação de backup do app, nunca copiar o mundo com o servidor rodando) e, se o backup falhar, recusar a troca e dizer por quê. Também: mostrar "mods pendentes" na tela enquanto `HASHES_NEOFORGE` estiver vazia.
   *Arquivo:* `apps/desktop/src/main/` (handler da troca de versão), `apps/desktop/src/ui/configuracoes.*`
   **Tela no app:** Configurações › Servidor › Versão (botão "Trocar versão": mostra "Fazendo backup antes…" e só então troca).
