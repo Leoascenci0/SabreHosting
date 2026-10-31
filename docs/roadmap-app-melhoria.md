@@ -57,7 +57,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Origem:* teste do Eliel no Windows · 31/10/2026
 
 
-- [ ] **1.7 — Tirar PC do grupo (tela)**
+- [x] **1.7 — Tirar PC do grupo (tela)** (PR #165, 31/10/2026)
   *O que fazer:* área Grupo em Configurações com a lista dos PCs (`cliente.listarPcs()`), só para o dono (`/eu.dono`),
   botão "Tirar PC do grupo" com confirmação que diz o NOME do PC, mensagens pt-BR para 403/409/404 e aviso de que o PC
   tirado precisa de novo convite; novo método `revogarPc` no cliente do núcleo.
@@ -82,3 +82,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: valor salvo em Configurações aparece em `server.properties` ao hospedar.
   *Depende de:* app-1.3
   *Origem:* app-2.2 · PR #160 · filha + qa
+
+- [ ] **1.10 — Acabamentos da tela "Tirar PC do grupo"**
+  *O que fazer:* (a) o `aria-label` do botão ("Tirar PC do Lucas do grupo") deve conter o texto visível ("Tirar PC do grupo"): deixar o texto visível com o nome ou usar `aria-describedby`; (b) depois de revogar com sucesso o foco se perde (o botão some): focar o aviso ou o título da área; (c) mensagem genérica de rede diz "Nada foi alterado", que pode ser falsa se a resposta se perder depois de o cartório já ter tirado o PC: trocar por "Atualize a lista para conferir."
+  *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`, `apps/desktop/src/main/grupo.ts`
+  **Tela no app:** Configurações › Grupo › "Tirar PC do grupo".
+  *Confirmação:* E2E: foco vai ao aviso depois de revogar; teste da mensagem de rede.
+  *Origem:* appmel-1.7 · PR #165 · qa interface
