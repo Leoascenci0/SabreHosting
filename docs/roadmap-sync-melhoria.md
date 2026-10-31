@@ -98,14 +98,14 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* teste de cada item.
   *Origem:* syncmel-1.11 e 1.9b · PRs #204, #202 · qa
 
-- [ ] **1.13 — Fechar o servidor de arquivos sem corrida com o primeiro `tentarLigar`**
+- [x] **1.13 — Fechar o servidor de arquivos sem corrida com o primeiro `tentarLigar`** (PR #216, 31/10/2026)
   *O que fazer:* se o usuário sai durante o primeiro `tentarLigar` do arranque, o `ligar()` em voo pode terminar depois do `fechar()` (efeito prático nulo, o app encerra). Flag `fechado` em `criarServidorDeArquivos` checada depois do `await servirArquivos`; teste.
   *Arquivo:* `apps/desktop/src/main/servir-arquivos.ts`, `principal.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* teste: sair durante o primeiro ligar não deixa servidor escutando.
   *Origem:* syncmel-1.12 · PR #209 · qa
 
-- [ ] **1.14 — Alcançar: erro de rede na tela e progresso durante o download do pacote**
+- [x] **1.14 — Alcançar: erro de rede na tela e progresso durante o download do pacote** (PR #214, 31/10/2026)
   *O que fazer:* erro de rede no download do pacote da nuvem vira só `console.warn` (a tela volta ao normal, sem mensagem para o amigo): mostrar mensagem em pt-BR; progresso fica em 0% durante o download do pacote: reportar bytes; se a falha com PCs for trava perdida ou servidor rodando, não tentar a nuvem.
   *Arquivo:* `packages/nucleo/src/sync/alcancar.ts`, `apps/desktop/src/main/espalhar-versao.ts`, `apps/desktop/src/ui/tela.ts`
   **Tela no app:** status na tela inicial ("Atualizando seu mundo… N%", e aviso se falhar).
