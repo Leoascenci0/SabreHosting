@@ -47,7 +47,6 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 - **Liberar `repo.papermc.io`** na rede do ambiente da nuvem (Allowed domains). *Trava:* rede-2.2.
 - **Versão do Minecraft** (e do NeoForge): escolha do Eliel antes do host-3.1 (teste no PC).
-- **cartmel-1.1 — quem pode tirar um PC do grupo** (recomendado: só o dono, pelo app; o PC tirado perde o acesso ao cartório; tirar da rede privada vira item de rede). *Trava:* cartmel-1.1.
 - **Dependabot #95 e #96** (actions do CI 4→7): PR de autor externo, merge é do Eliel.
 - **Provas no PC Windows:** appmel-1.5, hostmel-2.5, appmel-1.1 (passo a passo nos PRs #101, #114, #144).
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
@@ -56,7 +55,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 ## Backlog
 
 - Melhorias: quase tudo feito na madrugada de 31/10. Abertos: appmel-1.4 (vai com o app-1.3); lancmel-1.1 parte
-  "marcador da instância" (vai com o lanc-1.3); redemel-2.1 (com o rede-2.2), 2.2 e 2.3 [P: internet]; cartmel-1.1 [P];
+  "marcador da instância" (vai com o lanc-1.3); redemel-2.1 (com o rede-2.2), 2.2 e 2.3 [P: internet]; cartmel-1.1 (destravado: só o dono, pelo app — próximo da fila);
   hostmel-2.1 [P: PCs reais].
 - Achados menores para um próximo item: vigia dentro do `app.asar` (asarUnpack no app-3.1); teste do PUT com corpo > 1 MB;
   `::1` no download local; vistoria local também como usuário comum (S-03).
