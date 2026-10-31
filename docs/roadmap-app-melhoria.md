@@ -14,7 +14,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Origem:* app-1.1 · PR #70 · filha · **confirmado pelo Eliel no Windows (31/10): na bandeja o ícone fica pequeno e o
   texto não se lê.**
 
-- [ ] **1.2 — Teste de chamada de fora recusada pela ponte**
+- [x] **1.2 — Teste de chamada de fora recusada pela ponte** (PR #131, 31/10/2026)
   *O que fazer:* teste que prova que `veioDaPagina` (processo principal) recusa chamada cujo remetente não é a página
   do app (hoje o código confere, mas nenhum teste cai se a conferência sumir).
   *Arquivo:* `apps/desktop/src/main/principal.ts` (extrair a conferência para `seguranca.ts`), `seguranca.test.ts`
