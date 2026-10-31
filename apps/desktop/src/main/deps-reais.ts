@@ -169,12 +169,16 @@ export function depsReais(
           "A rede privada do grupo não está ativa neste PC. Ative a conexão e tente Hospedar de novo.",
         );
       }
-      // As distâncias de Configurações › Servidor entram no server.properties antes de subir.
-      const prefs = extras.pastaDados ? opcoesDoServidor(lerPreferencias(extras.pastaDados)) : {};
-      await gravarConfiguracao(pasta, { ipRedePrivada: ip, ...prefs });
       return hospedar({
         cliente: exigir(),
         aoPerder,
+        // As distâncias de Configurações › Servidor entram no server.properties só com a trava pega (hostmel-3.4).
+        antesDeSubir: async () => {
+          const prefs = extras.pastaDados
+            ? opcoesDoServidor(lerPreferencias(extras.pastaDados))
+            : {};
+          await gravarConfiguracao(pasta, { ipRedePrivada: ip, ...prefs });
+        },
         pasta,
         javaPath: java,
         versaoNeoForge: neoforge,

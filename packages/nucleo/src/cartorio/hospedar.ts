@@ -17,6 +17,11 @@ export interface OpcoesHospedar extends Omit<OpcoesIniciar, "temTrava"> {
    * somam 20 s, que cabem na margem do renovador (25 s) antes de o cartório liberar a trava para outro PC.
    */
   prazoSalvarMs?: number;
+  /**
+   * Roda com a trava já pega e antes do spawn (ex.: gravar o `server.properties`). Se lançar, a trava é solta e o
+   * erro sobe: trava ocupada nunca chega aqui, então nada local é reescrito sem hospedar.
+   */
+  antesDeSubir?: () => Promise<void>;
 }
 
 /**
@@ -26,7 +31,14 @@ export interface OpcoesHospedar extends Omit<OpcoesIniciar, "temTrava"> {
 export async function hospedar(
   opcoes: OpcoesHospedar,
 ): Promise<{ servidor: ServidorMinecraft; renovador: Renovador }> {
-  const { cliente, aoPerder, prazoSalvarMs = 10_000, renovador: tempos, ...iniciar } = opcoes;
+  const {
+    cliente,
+    aoPerder,
+    prazoSalvarMs = 10_000,
+    renovador: tempos,
+    antesDeSubir,
+    ...iniciar
+  } = opcoes;
   let servidor: ServidorMinecraft | undefined;
   let perdeu = false;
   /**
@@ -64,6 +76,7 @@ export async function hospedar(
   });
   await renovador.pegar();
   try {
+    await antesDeSubir?.();
     servidor = await iniciarServidor({ ...iniciar, temTrava: () => renovador.temTrava() });
   } catch (e) {
     await renovador.soltar().catch(() => {});
