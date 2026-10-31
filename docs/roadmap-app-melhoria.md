@@ -97,3 +97,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* E2E: valor salvo muda quantos backups ficam; teste de que o último bom e os não conferidos nunca saem.
   *Depende de:* appmel-1.8 e decisão do Eliel.
   *Origem:* appmel-1.8 · triagem · Máxima
+
+- [ ] **1.12 — Cofre: distinguir "não existe" de "corrompido"**
+  *O que fazer:* `ler()` do cofre devolve `undefined` também quando o decrypt falha; devolver estado distinto para o assistente pedir novo convite em vez de achar que é a primeira vez.
+  *Arquivo:* `apps/desktop/src/main/cofre.ts`
+  **Tela no app:** não se aplica (mensagem no assistente do app-1.3b).
+  *Confirmação:* teste com arquivo adulterado.
+  *Origem:* app-1.3a · PR #207 · qa
