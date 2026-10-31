@@ -2,6 +2,9 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node
 import { dirname } from "node:path";
 import type { Cofre } from "@sabrehosting/nucleo/cartorio/cofre";
 
+/** Arquivo do token na pasta de dados do app (assistente e arranque usam o mesmo). */
+export const ARQUIVO_COFRE = "cofre-token.bin";
+
 /** O pedaço do `safeStorage` do Electron que usamos (injetável: o teste passa um falso). */
 export interface CofreDoSistema {
   isEncryptionAvailable(): boolean;

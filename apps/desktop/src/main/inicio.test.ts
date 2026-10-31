@@ -298,6 +298,22 @@ describe("jogar", () => {
     });
   });
 
+  it("pergunta o endereço ao cartório antes de copiar e abrir (o do cartório vale)", async () => {
+    const d = deps({
+      endereco: "velho.exemplo.org:25565",
+      atualizarEndereco: async () => void (d.endereco = "novo.exemplo.org:25565"),
+      abrirJogo: vi.fn(async () => ({ ok: true as const })),
+    });
+    expect(await criarInicio(d).jogar()).toMatchObject({ endereco: "novo.exemplo.org:25565" });
+    expect(d.copiar).toHaveBeenCalledWith("novo.exemplo.org:25565");
+    expect(d.abrirJogo).toHaveBeenCalledWith("novo.exemplo.org:25565");
+  });
+
+  it("falha ao perguntar o endereço não impede o Jogar com o último conhecido", async () => {
+    const d = deps({ atualizarEndereco: async () => Promise.reject(new Error("rede")) });
+    expect(await criarInicio(d).jogar()).toMatchObject({ endereco: "10.0.0.5:25565" });
+  });
+
   it("sem endereço configurado, recusa sem copiar nada", async () => {
     const d = deps({ endereco: "" });
     await expect(criarInicio(d).jogar()).rejects.toThrow("endereço");

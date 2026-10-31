@@ -189,6 +189,7 @@ export function depsGrupoE2E(): DepsGrupo {
   return {
     eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
     listarPcs: async () => pcs,
+    lerEndereco: async () => ENDERECO,
     revogarPc: async (id) => {
       revogados.push(id);
       pcs = pcs.filter((p) => p.id !== id);

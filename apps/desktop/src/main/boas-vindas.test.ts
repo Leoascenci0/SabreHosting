@@ -176,6 +176,7 @@ describe("boas-vindas (main)", () => {
     expect(JSON.parse(readFileSync(join(dados, "boas-vindas.json"), "utf8"))).toMatchObject({
       concluido: true,
       pastaBase: base,
+      portaCartorio: 7710, // o app lê daqui o endereço do cartório; sem isso ele dependeria do ambiente
     });
   });
 

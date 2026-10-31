@@ -31,10 +31,12 @@ export interface DepsBoasVindas {
   pastaPadrao(): string;
 }
 
-interface Salvo {
+export interface Salvo {
   grupo?: { nome: string; endereco?: string };
   concluido?: boolean;
   pastaBase?: string;
+  /** Porta do cartório na rede privada (do convite). O token nunca vem para este arquivo (fica no cofre). */
+  portaCartorio?: number;
 }
 
 const ARQUIVO = "boas-vindas.json";
@@ -72,7 +74,8 @@ export function pastaPermitida(pasta: unknown): pasta is string {
   );
 }
 
-function lerSalvo(dados: string): Salvo {
+/** O que o assistente gravou; a configuração do app (`config-pc.ts`) parte daqui. Arquivo torto = tudo ausente. */
+export function lerSalvo(dados: string): Salvo {
   try {
     const v: unknown = JSON.parse(readFileSync(join(dados, ARQUIVO), "utf8"));
     if (typeof v !== "object" || v === null) return {};
@@ -86,6 +89,12 @@ function lerSalvo(dados: string): Salvo {
               ...(typeof g["endereco"] === "string" ? { endereco: g["endereco"] } : {}),
             },
           }
+        : {}),
+      ...(typeof o["portaCartorio"] === "number" &&
+      Number.isInteger(o["portaCartorio"]) &&
+      o["portaCartorio"] >= 1 &&
+      o["portaCartorio"] <= 65535
+        ? { portaCartorio: o["portaCartorio"] }
         : {}),
       ...(o["concluido"] === true && typeof o["pastaBase"] === "string"
         ? { concluido: true, pastaBase: o["pastaBase"] }
@@ -177,7 +186,7 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
         } catch {
           // Já entrou; o nome do convite basta e o endereço vem depois pelo Início.
         }
-        gravarSalvo(deps.dados, { grupo });
+        gravarSalvo(deps.dados, { grupo, portaCartorio: usar.portaCartorio });
         return {
           ok: true,
           grupo: grupo.nome,
@@ -214,7 +223,7 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
         await mkdir(join(pasta, "servidor"), { recursive: true });
         await mkdir(join(pasta, "mundos"), { recursive: true });
         await gravarAtomico(join(pasta, "servidor", "eula.txt"), gerarEula({ aceitoEm }));
-        gravarSalvo(deps.dados, { grupo: salvo.grupo, concluido: true, pastaBase: pasta });
+        gravarSalvo(deps.dados, { ...salvo, concluido: true, pastaBase: pasta });
         return { ok: true };
       } catch {
         return { ok: false, mensagem: FALHA_PASTA };
