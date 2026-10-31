@@ -75,7 +75,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* simulação do instalador: arquivo com 0600, unidade sobe com o segredo; rodar de novo não troca o segredo.
   *Origem:* cartmel-1.2 · PR #69 · filha (achado médio)
 
-- [ ] **1.8 — Teto do PUT sem enfeite e exemplo de endereço coerente**
+- [x] **1.8 — Teto do PUT sem enfeite e exemplo de endereço coerente** (PR #135, 31/10/2026; cartório e app só na rede 10.66)
   *O que fazer:* tirar o `bodyLimit` inerte da rota `PUT /versoes/:n/pacote` (o teto real é o do armazém, leitor em
   fluxo) ou trocar por comentário; na mensagem de `conferirEndereco`, trocar o exemplo `10.8.0.1` por `10.66.0.1`.
   *Arquivo:* `services/cartorio/src/servidor.ts`

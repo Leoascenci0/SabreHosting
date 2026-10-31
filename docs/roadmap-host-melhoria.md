@@ -39,7 +39,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   *Confirmação:* nota estável (±3 pontos) em 3 medições por PC e ordem coerente com a sensação dos amigos. **[P: PCs reais]**
   *Origem:* host-2.3 · PR #16 · filha
 
-- [ ] **2.2 — Workers da medição: corte e falha**
+- [x] **2.2 — Workers da medição: corte e falha** (PR #139, 31/10/2026)
   *O que fazer:* teste do corte por tempo na fase de vários núcleos; ao um worker falhar, abortar os demais.
   *Arquivo:* `packages/nucleo/src/nota/medir.ts`, `packages/nucleo/src/nota/medir.test.ts`
   **Tela no app:** não se aplica.

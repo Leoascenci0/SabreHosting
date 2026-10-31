@@ -47,7 +47,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* E2E com cenário "dono sou eu, sem servidor".
   *Origem:* app-1.2 · PR #74 · filha + qa (baixa-média)
 
-- [ ] **1.6 — Endereço continua visível depois de Jogar**
+- [x] **1.6 — Endereço continua visível depois de Jogar** (PR #137, 31/10/2026)
   *O que fazer:* no estado "Você está hospedando", depois de clicar em Jogar a frase "Endereço copiado. Cole no
   Minecraft para entrar." toma o lugar do endereço, que some da tela. Mostrar o aviso por alguns segundos e voltar ao
   endereço (ou mostrar os dois).
