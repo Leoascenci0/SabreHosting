@@ -30,7 +30,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* teste com mundo inventado e link simbólico para fora → 404.
   *Origem:* sync-1.1 · PR #156 · qa segurança + qa integridade
 
-- [ ] **1.4 — Recuperar o mundo se o app cair entre os dois `rename` da troca**
+- [x] **1.4 — Recuperar o mundo se o app cair entre os dois `rename` da troca** (PR #164, 31/10/2026)
   *O que fazer:* se o processo morrer (luz, kill) entre mundo→`.antigo` e temporária→mundo, só sobram `.antigo` e
   `.atualizando-*` e nada impede o servidor de subir com mundo ausente e criar um mundo novo. No início do app, detectar
   isso (marcador gravado antes da troca) e completar ou desfazer a troca. Vale também para `restaurar.ts` (mesma lacuna).
@@ -38,3 +38,10 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* teste: kill simulado entre os dois renames → na partida seguinte N volta (ou M completa) e o servidor não sobe com mundo ausente.
   *Origem:* sync-1.2 · PR #158 · qa integridade
+
+- [ ] **1.5 — Acabamentos da recuperação da troca**
+  *O que fazer:* (a) teste próprio de falha ao apagar o marcador no fluxo `restaurarBackup` (hoje só o `aplicarDelta` tem); (b) quando o sync for ligado ao app (sync-2.1), passar `pastaDoServidor` a `aplicarDelta` no chamador de produção; (c) mensagem de `podeSubir`/recuperação sem o nome do arquivo `TROCA-EM-ANDAMENTO.json` nem caminho absoluto na tela; (d) pasta temporária órfã quando gravar o marcador falha antes do 1º rename; (e) conferir no Windows `C:\` vs `c:\` na comparação do pai do marcador.
+  *Arquivo:* `packages/nucleo/src/backup/restaurar.ts`, `packages/nucleo/src/sync/aplicar.ts`, `packages/nucleo/src/servidor/configurar.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes de cada caso (falham antes, passam depois).
+  *Origem:* syncmel-1.4 · PR #164 · qa integridade + qa segurança
