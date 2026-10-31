@@ -116,7 +116,12 @@ export interface OpcoesGatilho {
  * PC, do pacote da nuvem. Nunca lança (quem chama não espera): erro vira aviso. Sem versão nova, não faz nada.
  */
 export function criarGatilhoEspalhar(o: OpcoesGatilho): () => Promise<void> {
+  let emCurso = false;
   return async () => {
+    // Uma rodada por vez, marcada ANTES de qualquer await (S-06): a 2ª sai sem tocar no progresso, e só a rodada dona
+    // do estado "atualizando" o limpa (senão Hospedar abriria no meio da atualização da 1ª).
+    if (emCurso) return;
+    emCurso = true;
     try {
       await alcancar({
         cliente: o.cliente,
@@ -126,6 +131,8 @@ export function criarGatilhoEspalhar(o: OpcoesGatilho): () => Promise<void> {
       });
     } catch (erro) {
       o.aoAvisar?.(`Atualização do mundo: ${erro instanceof Error ? erro.message : String(erro)}`);
+    } finally {
+      emCurso = false;
     }
   };
 }

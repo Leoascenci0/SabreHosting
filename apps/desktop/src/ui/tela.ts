@@ -56,6 +56,7 @@ function desenhar(): void {
     String(e.tipo === "carregando" || ocupado !== undefined || (e.tipo === "eu" && !!e.parando)),
   );
   ocupadoRemoto = undefined;
+  let bloqueado = false;
   principal.hidden = parar.hidden = tentar.hidden = true;
   principal.dataset["acao"] = "";
   switch (e.tipo) {
@@ -72,7 +73,10 @@ function desenhar(): void {
       if (e.atualizando !== undefined) {
         // Hospedar fica fechado até o mundo chegar à versão mais nova; Jogar não depende disto.
         status.textContent = `Atualizando seu mundo… ${e.atualizando}%`;
-        detalhe.textContent = "Você pode jogar normalmente. Hospedar volta quando terminar.";
+        detalhe.textContent = "Hospedar volta quando terminar.";
+        principal.textContent = "Hospedar";
+        principal.hidden = false;
+        bloqueado = true; // botão visível e desabilitado: o amigo vê o motivo em vez de o botão sumir
         break;
       }
       status.textContent = "Ninguém está hospedando";
@@ -113,7 +117,7 @@ function desenhar(): void {
     parar.hidden = true;
   }
   for (const b of [principal, parar, tentar, confirmarParar, cancelarParar]) {
-    b.disabled = emCurso !== undefined;
+    b.disabled = emCurso !== undefined || (bloqueado && b === principal);
   }
 }
 

@@ -40,9 +40,12 @@ export interface Alcancado {
 }
 
 export async function alcancar(o: OpcoesAlcancar): Promise<Alcancado> {
-  let local = await o.versaoLocal();
+  // Bloqueio de Hospedar já no começo (antes de perguntar ao cartório); solto no finally.
+  o.aoProgresso?.(0);
   let passos = 0;
+  let local = 0;
   try {
+    local = await o.versaoLocal();
     while (passos < MAX_PASSOS) {
       const nova = await o.cliente.maisNova();
       if (!nova || nova.numero <= local) break;

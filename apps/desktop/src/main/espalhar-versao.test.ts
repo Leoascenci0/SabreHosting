@@ -242,6 +242,31 @@ describe("criarGatilhoEspalhar (1.9a)", () => {
     expect(m.avisos).toEqual([]);
   });
 
+  it("duas rodadas ao mesmo tempo: a 2ª sai sem tocar no progresso; só a dona limpa (Hospedar não abre no meio)", async () => {
+    let liberar: () => void = () => undefined;
+    const trava = new Promise<void>((ok) => (liberar = ok));
+    const progresso: (number | undefined)[] = [];
+    const rodar = criarGatilhoEspalhar({
+      cliente: {
+        maisNova: async () => {
+          await trava; // a 1ª rodada fica pendurada aqui
+          return null;
+        },
+      } as never,
+      versaoLocal: async () => 0,
+      espalhar: (async () => undefined) as never,
+      aoProgresso: (p) => progresso.push(p),
+    });
+    const primeira = rodar();
+    await rodar(); // 2ª: volta na hora
+    expect(progresso).toEqual([0]); // só a 1ª sinalizou; nada de undefined ainda
+    liberar();
+    await primeira;
+    expect(progresso).toEqual([0, undefined]);
+    await rodar(); // acabou: uma rodada nova volta a valer
+    expect(progresso).toEqual([0, undefined, 0, undefined]);
+  });
+
   it("erro do cartório ou da troca vira aviso em pt-BR e nunca lança", async () => {
     const m = montar({ pcs: [{ id: 3, ip: "10.66.0.4" }] });
     const rodar = criarGatilhoEspalhar({
