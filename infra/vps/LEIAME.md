@@ -15,6 +15,9 @@ SABRE_SIMULAR=1 bash infra/vps/instalar.sh   # só mostra o que faria; não muda
 - Cria o usuário `sabre` (sem sudo, sem shell) e as pastas `/opt/sabre` e `/var/lib/sabre`.
 - Gera a chave do hub WireGuard **na própria máquina** (`/etc/wireguard/hub.key`, permissão 600) e sobe a rede privada
   `wg0` em `10.66.0.1/24`.
+- Gera o segredo do cartório **na própria máquina** em `/etc/sabre/cartorio.env` (dono root, permissão 600) e a unidade
+  `sabre-cartorio` o lê dali. Rodar de novo **não troca** o segredo, e ele nunca aparece na tela. Para ler quando
+  precisar (ex.: criar convites): `sudo cat /etc/sabre/cartorio.env`.
 - SSH só por chave, sem senha e sem login de root. Se nenhum usuário comum tiver chave autorizada, o script **para
   antes de mudar qualquer coisa** (senão você ficaria trancado fora).
 - Firewall: entrada negada; abertas só `22/tcp` (SSH), `25565/tcp` (Minecraft) e `51820/udp` (WireGuard). Repasse de
