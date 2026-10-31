@@ -199,7 +199,12 @@ async function baixarParcial(url: string, parcial: string, limites: Limites): Pr
     // Freio: o trecho só segue quando o total desta passada cabe na banda (bytes ÷ limite = instante mais cedo).
     const comeco = Date.now();
     let passou = 0;
+    let freio: NodeJS.Timeout | undefined;
     const contar = new Transform({
+      destroy(erro, fim) {
+        clearTimeout(freio); // abortou com o freio esperando: nenhum timer fica vivo
+        fim(erro);
+      },
       transform(trecho: Buffer, _enc, ok) {
         vigiar();
         recebido += trecho.length;
@@ -210,7 +215,7 @@ async function baixarParcial(url: string, parcial: string, limites: Limites): Pr
         const espera = limites.limiteBytesPorSeg
           ? comeco + (passou / limites.limiteBytesPorSeg) * 1000 - Date.now()
           : 0;
-        if (espera > 0) setTimeout(() => ok(null, trecho), espera);
+        if (espera > 0) freio = setTimeout(() => ok(null, trecho), espera);
         else ok(null, trecho);
       },
     });
