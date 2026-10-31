@@ -145,6 +145,7 @@ describe("tela de configurações", () => {
       "Geral",
       "Servidor",
       "Backups",
+      "Mods do grupo",
     ]);
   });
 
@@ -194,6 +195,46 @@ describe("tela de configurações", () => {
     expect(await p.evaluate(() => document.activeElement?.id)).toBe("grupo-aviso");
     expect(await p.locator("#grupo-lista button[aria-label]").count()).toBe(0);
   });
+  const listasDeMods = (): Promise<Array<Array<{ arquivo: string }>>> =>
+    aberto?.evaluate(
+      () =>
+        (globalThis as unknown as { __sabreE2EMods: { listas: unknown[] } }).__sabreE2EMods.listas,
+    ) as Promise<Array<Array<{ arquivo: string }>>>;
+
+  it("mods: amigo vê a lista, mas não tem como editar", async () => {
+    const p = await abrir();
+    await p.locator("#mods-lista li").first().waitFor();
+    expect(await p.locator("#mods-lista").textContent()).toContain("Sodium");
+    expect(await p.locator("#mods-adicionar").isHidden()).toBe(true);
+    expect(await p.locator("#mods-lista button").count()).toBe(0);
+  });
+
+  it("mods: dono adiciona (confirma só ao tirar) e a lista segue o cartório", async () => {
+    const p = await abrir(true);
+    await p.locator("#mods-adicionar:not([hidden])").waitFor();
+    await p.locator("#mods-nome").fill("Lithium");
+    await p.locator("#mods-versao").fill("0.13.0");
+    await p.locator("#mods-arquivo").fill("lithium.jar");
+    await p.locator("#mods-url").fill("https://evil.example/lithium.jar");
+    await p.locator("#mods-hash").fill("b".repeat(128));
+    await p.locator("#mods-adicionar-botao").click();
+    await esperarTexto(p, "#mods-erro", "cdn.modrinth.com");
+    expect(await listasDeMods()).toEqual([]); // link de outro site: nada gravado
+    await p.locator("#mods-url").fill("https://cdn.modrinth.com/data/x/versions/y/lithium.jar");
+    await p.locator("#mods-adicionar-botao").click();
+    await p.waitForFunction(() => document.querySelectorAll("#mods-lista li").length === 2);
+    expect((await listasDeMods())[0]?.map((m) => m.arquivo)).toEqual(["sodium.jar", "lithium.jar"]);
+
+    await p.locator("#mods-lista li", { hasText: "Sodium" }).getByRole("button").click();
+    await esperarTexto(p, "#mods-pergunta", "Sodium");
+    await p.locator("#mods-cancelar").click();
+    expect((await listasDeMods()).length).toBe(1); // cancelar não grava
+    await p.locator("#mods-lista li", { hasText: "Sodium" }).getByRole("button").click();
+    await p.locator("#mods-confirmar").click();
+    await p.waitForFunction(() => document.querySelectorAll("#mods-lista li").length === 1);
+    expect((await listasDeMods())[1]?.map((m) => m.arquivo)).toEqual(["lithium.jar"]);
+  });
+
   it("versão: não-dono não vê a área", async () => {
     const p = await abrir();
     await p.locator("#cfg-visao").waitFor();
