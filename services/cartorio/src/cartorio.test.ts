@@ -310,10 +310,10 @@ describe("cartório: endereço de escuta", () => {
       expect(() => conferirEndereco(e)).toThrow();
     }
     expect(conferirEndereco("127.0.0.1")).toBe("127.0.0.1");
-    expect(conferirEndereco("10.8.0.1")).toBe("10.8.0.1");
+    expect(conferirEndereco("10.66.0.1")).toBe("10.66.0.1");
   });
 
-  it("recusa IP público, IPv4 mapeado em IPv6, CGNAT e link-local; aceita só loopback e faixas privadas", () => {
+  it("recusa IP público, IPv4 mapeado em IPv6, CGNAT, link-local e outra rede privada; aceita só loopback e o hub", () => {
     for (const e of [
       "8.8.8.8",
       "200.160.2.3",
@@ -324,13 +324,21 @@ describe("cartório: endereço de escuta", () => {
       "169.254.1.1",
       "fe80::1",
       "172.32.0.1",
+      "10.8.0.1",
+      "10.66.0.5",
+      "172.16.0.1",
+      "192.168.1.1",
+      "fd00::1",
     ]) {
       expect(() => conferirEndereco(e), e).toThrow(/recusado/);
     }
-    for (const e of ["127.0.0.1", "127.1.2.3", "::1", "10.66.0.1", "172.16.0.1", "172.31.255.1"]) {
+    for (const e of ["127.0.0.1", "127.1.2.3", "::1", "10.66.0.1"]) {
       expect(conferirEndereco(e)).toBe(e);
     }
-    for (const e of ["192.168.1.1", "fd00::1", "fc00::1"]) expect(conferirEndereco(e)).toBe(e);
+  });
+
+  it("a mensagem de recusa dá como exemplo o IP do hub na rede privada", () => {
+    expect(() => conferirEndereco("10.8.0.1")).toThrow(/\(ex\.: 10\.66\.0\.1\)/);
   });
 });
 

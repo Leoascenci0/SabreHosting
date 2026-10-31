@@ -4,7 +4,7 @@ import { ErroCartorio, criarCliente, type OpcoesCliente } from "./cliente.js";
 import { cofreEmMemoria } from "./cofre.js";
 
 const TOKEN = randomBytes(16).toString("hex"); // gerado a cada execução
-const URL_CARTORIO = "http://10.8.0.1:7070";
+const URL_CARTORIO = "http://10.66.0.1:7070";
 
 type Resposta = Response | Error | "pendurar";
 
@@ -160,18 +160,23 @@ describe("cliente do cartório", () => {
     expect(chamadas).toHaveLength(0);
   });
 
-  it.each(["http://203.0.113.5:7070", "ftp://10.8.0.1", "http://cartorio.exemplo"])(
-    "recusa endereço inseguro %s",
-    (url) => {
-      expect(() => criarCliente({ url, cofre: cofreEmMemoria() })).toThrow(/https/);
-    },
-  );
+  it.each([
+    "http://203.0.113.5:7070",
+    "ftp://10.66.0.1",
+    "http://cartorio.exemplo",
+    "http://10.0.0.5",
+    "http://10.66.0.5",
+    "http://192.168.0.9",
+    "http://[fd00::1]",
+  ])("recusa endereço inseguro %s", (url) => {
+    expect(() => criarCliente({ url, cofre: cofreEmMemoria() })).toThrow(/https/);
+  });
 
   it.each([
     "https://cartorio.exemplo",
     "http://127.0.0.1:1",
-    "http://192.168.0.9",
-    "http://[fd00::1]",
+    "http://[::1]:7070",
+    "http://10.66.0.1",
   ])("aceita %s", (url) => {
     expect(() => criarCliente({ url, cofre: cofreEmMemoria() })).not.toThrow();
   });

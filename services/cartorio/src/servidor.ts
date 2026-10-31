@@ -120,14 +120,13 @@ const MUITAS_TENTATIVAS = {
 const MAX_FALHAS = 20;
 const JANELA_FALHAS_MS = 15 * 60_000;
 
-/** Onde o cartório pode escutar: loopback e faixas privadas (CGNAT 100.64/10 fica fora). */
+/** IP do hub na rede privada do SabreHosting (10.66.0.0/24): o único fora do loopback onde o cartório escuta. */
+const IP_DO_HUB = "10.66.0.1";
+/** Onde o cartório pode escutar: loopback (teste e proxy local) ou o IP do hub; outra rede privada fica fora. */
 const PERMITIDOS = new BlockList();
 PERMITIDOS.addSubnet("127.0.0.0", 8, "ipv4");
-PERMITIDOS.addSubnet("10.0.0.0", 8, "ipv4");
-PERMITIDOS.addSubnet("172.16.0.0", 12, "ipv4");
-PERMITIDOS.addSubnet("192.168.0.0", 16, "ipv4");
+PERMITIDOS.addAddress(IP_DO_HUB, "ipv4");
 PERMITIDOS.addAddress("::1", "ipv6");
-PERMITIDOS.addSubnet("fc00::", 7, "ipv6");
 /** O BlockList casa IPv4 mapeado em IPv6 (::ffff:10.0.0.1) com a regra IPv4; essa grafia fica fora. */
 const IPV4_MAPEADO = new BlockList();
 IPV4_MAPEADO.addSubnet("::ffff:0:0", 96, "ipv6");
@@ -142,7 +141,7 @@ export function conferirEndereco(endereco: string): string {
     !PERMITIDOS.check(endereco, tipo)
   ) {
     throw new Error(
-      `Endereço "${endereco}" recusado: use o IP do cartório na rede privada (ex.: 10.8.0.1).`,
+      `Endereço "${endereco}" recusado: use o IP do cartório na rede privada (ex.: ${IP_DO_HUB}).`,
     );
   }
   return endereco;
@@ -436,7 +435,7 @@ export function criarCartorio({
     app.addContentTypeParser("application/octet-stream", (_req, corpo, pronto) =>
       pronto(null, corpo),
     );
-    // O teto grande só vale para o leitor em fluxo: outro tipo é recusado antes de qualquer leitor ler o corpo.
+    // Só o leitor em fluxo foge do teto de 4 KB do JSON: outro tipo é recusado antes de qualquer leitor ler o corpo.
     function soOcteto(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
       const tipo = (req.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase();
       if (tipo === "application/octet-stream") pronto();
@@ -445,8 +444,8 @@ export function criarCartorio({
     app.put<{ Params: { n: number }; Querystring: Declarado & { epoca: number }; Body: Readable }>(
       "/versoes/:n/pacote",
       {
+        // Sem `bodyLimit`: o corpo é um fluxo que o Fastify não lê; o teto real (`armazem.tetoBytes`) é o do leitor.
         onRequest: [soPc, soOcteto],
-        bodyLimit: armazem.tetoBytes,
         schema: {
           params: paramN,
           querystring: {
