@@ -122,6 +122,34 @@ describe("sincronizarMods", () => {
     expect(await readFile(join(pasta, "sodium.jar"))).toEqual(SODIUM);
   });
 
+  it("mod novo que falha no download (404): o mod antigo do grupo continua na pasta e anotado", async () => {
+    await sincronizarMods({ lista: [mod("sodium.jar", SODIUM)], pasta, lado: "cliente" });
+    const novo = Buffer.from("sodium-v2-".repeat(50));
+    const r = await sincronizarMods({ lista: [mod("sodium.jar", novo)], pasta, lado: "cliente" });
+    expect(r.falhas[0]?.arquivo).toBe("sodium.jar");
+    expect(await readFile(join(pasta, "sodium.jar"))).toEqual(SODIUM);
+    // continua sendo nosso: sair da lista depois ainda o remove
+    const fim = await sincronizarMods({ lista: [], pasta, lado: "cliente" });
+    expect(fim.removidos).toEqual(["sodium.jar"]);
+  });
+
+  it("redirecionamento para outro host: recusado, o mod antigo fica e nada é pedido ao outro host", async () => {
+    await sincronizarMods({ lista: [mod("sodium.jar", SODIUM)], pasta, lado: "cliente" });
+    const novo = Buffer.from("sodium-v2-".repeat(50));
+    vi.stubGlobal("fetch", async (u: string | URL | Request) => {
+      pedidos.push(String(u));
+      return new Response(null, {
+        status: 302,
+        headers: { location: "https://evil.example/s.jar" },
+      });
+    });
+    pedidos.length = 0;
+    const r = await sincronizarMods({ lista: [mod("sodium.jar", novo)], pasta, lado: "cliente" });
+    expect(r.falhas).toHaveLength(1);
+    expect(pedidos).toEqual([NOME("sodium.jar")]);
+    expect(await readFile(join(pasta, "sodium.jar"))).toEqual(SODIUM);
+  });
+
   it("respeita o lado: servidor não recebe mod só de cliente, e o de cliente não sai do servidor por engano", async () => {
     const lista = [
       mod("sodium.jar", SODIUM, { lado: "cliente" }),
