@@ -191,13 +191,14 @@ describe("cartório: migrações", () => {
     const caminho = join(pasta, "m.db");
     const a = abrirBanco(caminho);
     const b = abrirBanco(caminho);
-    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 4 }]);
+    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 5 }]);
     a.close();
     b.close();
     abrirBanco(caminho).close();
     expect(tabelas(caminho)).toEqual([
       "convites",
       "copias",
+      "copias_nuvem",
       "esquema",
       "pcs",
       "tokens",
@@ -215,7 +216,7 @@ describe("cartório: migrações", () => {
       INSERT INTO convites (hash, nome_pc, criado_em, expira_em) VALUES ('c1', 'Caio', 30, 40)`);
     v1.close();
     const banco = abrirBanco(caminho);
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 4 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 5 }]);
     expect(banco.prepare("SELECT id, nome, criado_em FROM pcs ORDER BY id").all()).toEqual([
       { id: 1, nome: "Ana", criado_em: 10 },
       { id: 2, nome: "Bia", criado_em: 20 },
