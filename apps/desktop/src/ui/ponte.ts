@@ -72,6 +72,10 @@ export type EstadoGrupo = ({ dono: false } | { dono: true; pcs: PcDaTela[]; erro
   endereco?: string;
 };
 
+export type ResultadoConvite =
+  | { ok: true; convite: string; venceEm: number; nomeNaRede: string }
+  | { ok: false; mensagem: string };
+
 export type EstadoVersao =
   { dono: false } | { dono: true; atual: string; versoes: string[]; erro?: string };
 
@@ -145,6 +149,8 @@ export interface PonteSabre {
   grupo: {
     estado(): Promise<EstadoGrupo>;
     tirar(id: number): Promise<Resultado>;
+    /** Só o dono. O texto do convite é credencial: mostrar e esquecer (nunca guardar). */
+    criarConvite(nome: string, horas: number): Promise<ResultadoConvite>;
   };
   mods: {
     estado(): Promise<EstadoMods>;

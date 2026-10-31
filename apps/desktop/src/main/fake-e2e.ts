@@ -185,11 +185,20 @@ export function depsGrupoE2E(): DepsGrupo {
     { id: 3, nome: "PC da Ana", dono: false },
   ];
   const revogados: number[] = [];
-  (globalThis as Record<string, unknown>)["__sabreE2EGrupo"] = { revogados };
+  // Só nome e horas: o texto do convite nunca é guardado, nem no cartório falso.
+  const convites: Array<{ nomePc: string; horas: number }> = [];
+  (globalThis as Record<string, unknown>)["__sabreE2EGrupo"] = { revogados, convites };
   return {
     eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
     listarPcs: async () => pcs,
     lerEndereco: async () => ENDERECO,
+    criarConvite: async (nomePc, horas) => {
+      convites.push({ nomePc, horas });
+      return {
+        convite: `sabre://convite/1.FALSO-${nomePc}`,
+        expiraEm: Date.now() + horas * 3_600_000,
+      };
+    },
     revogarPc: async (id) => {
       revogados.push(id);
       pcs = pcs.filter((p) => p.id !== id);
