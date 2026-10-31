@@ -10,17 +10,17 @@ import {
   podeSubir,
 } from "./configurar.js";
 
-const base = { ipRedePrivada: "10.8.0.5" };
+const base = { ipRedePrivada: "10.66.0.5" };
 
 describe("gerarPropriedades", () => {
   it("liga whitelist, desliga rcon e fica na rede privada", () => {
     const t = gerarPropriedades(base);
-    expect(t).toContain("server-ip=10.8.0.5\n");
+    expect(t).toContain("server-ip=10.66.0.5\n");
     expect(t).toContain("server-port=25565\n");
     expect(t).toContain("online-mode=false\n");
     expect(t).toContain("white-list=true\n");
     expect(t).toContain("enforce-whitelist=true\n");
-    expect(t).toContain("enable-rcon=false\n");
+    expect(t).toContain("enable-rcon=false\nenable-query=false\n");
     expect(t).toContain("view-distance=10\n");
     expect(t).toContain("simulation-distance=8\n");
   });
@@ -31,14 +31,23 @@ describe("gerarPropriedades", () => {
     "8.8.8.8",
     "127.0.0.1",
     "172.32.0.1",
-    "10.8.0.5\nonline-mode=true",
+    "10.999.0.1",
+    "10.0.0.1",
+    "172.16.0.1",
+    "192.168.1.9",
+    "10.8.0.5",
+    "10.67.0.5",
+    "10.66.0.1",
+    "10.66.0.200",
+    "10.66.0.255",
+    "10.66.0.5\nonline-mode=true",
     "abc",
   ])("recusa IP %j fora da rede privada", (ip) => {
     expect(() => gerarPropriedades({ ipRedePrivada: ip })).toThrow(/rede privada/);
   });
 
-  it.each(["10.0.0.1", "172.16.0.1", "172.31.255.1", "192.168.1.9"])(
-    "aceita IP privado %s",
+  it.each(["10.66.0.2", "10.66.0.5", "10.66.0.199"])(
+    "aceita IP de PC definitivo da rede privada %s",
     (ip) => {
       expect(gerarPropriedades({ ipRedePrivada: ip })).toContain(`server-ip=${ip}\n`);
     },
