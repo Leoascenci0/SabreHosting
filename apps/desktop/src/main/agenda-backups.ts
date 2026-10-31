@@ -96,6 +96,8 @@ export interface OpcoesAgendaReal {
   historicoLongo?(): string | undefined;
   /** Onde a tela de Backups lê o último problema da cópia (limpo quando a cópia dá certo ou o recurso é desligado). */
   avisoHistorico?: AvisoHistorico;
+  /** Depois de cada backup bom: marca "bom" e roda a rotação (Configurações › Backups › Quantos guardar). */
+  aoBackupBom?(feito: { caminho: string; sha256: string }): Promise<void>;
   aoAvisar?(texto: string): void;
 }
 
@@ -147,7 +149,10 @@ export function iniciarAgendaReal(o: OpcoesAgendaReal) {
       epoca: await o.epoca(),
       intervaloMin,
       ...(o.relogio ? { relogio: o.relogio } : {}),
-      aoConcluir: (feito) => void copiarAoConcluir(o, feito),
+      aoConcluir: (feito) => {
+        void copiarAoConcluir(o, feito);
+        void o.aoBackupBom?.(feito);
+      },
       aoFalhar: (e) => o.aoAvisar?.(`Backup agendado falhou: ${e.message}`),
       ...(o.aoAvisar ? { aoAvisar: o.aoAvisar } : {}),
     });

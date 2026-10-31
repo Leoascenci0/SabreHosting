@@ -15,6 +15,7 @@ const valido = {
   distanciaVisao: 12,
   distanciaSimulacao: 6,
   intervaloBackupMin: 30,
+  quantosGuardar: 5,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -23,6 +24,7 @@ const padrao = {
   distanciaVisao: 10,
   distanciaSimulacao: 8,
   intervaloBackupMin: 10,
+  quantosGuardar: 10,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -41,6 +43,7 @@ describe("configurações", () => {
       distanciaVisao: 10,
       distanciaSimulacao: 8,
       intervaloBackupMin: 10,
+      quantosGuardar: 10,
       historicoLongoLigado: false,
       historicoLongoPasta: "",
     });
@@ -110,6 +113,7 @@ describe("configurações", () => {
     { ...valido, distanciaVisao: "12" },
     { ...valido, abrirComWindows: "sim" },
     { ...valido, intervaloBackupMin: "30" },
+    { ...valido, quantosGuardar: "5" },
     { abrirComWindows: true, distanciaVisao: 12, distanciaSimulacao: 6 },
   ])("formato errado vindo da tela é recusado (%j)", (entrada) => {
     expect(criar().salvar(entrada)).toEqual({
@@ -154,6 +158,23 @@ describe("histórico longo numa pasta (drive-1.1a)", () => {
       expect(existsSync(arquivo())).toBe(false);
     },
   );
+
+  it.each([0, -1, 1.5, 1001, Number.NaN])("quantosGuardar %j é recusado e nada é gravado", (v) => {
+    const c = criar();
+    expect(c.salvar(valido).ok).toBe(true);
+    const antes = readFileSync(arquivo(), "utf8");
+    const r = c.salvar({ ...valido, quantosGuardar: v });
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.campo).toBe("quantos");
+    expect(r.ok === false && r.mensagem).toContain("Quantos guardar");
+    expect(readFileSync(arquivo(), "utf8")).toBe(antes);
+  });
+
+  it("salvar quantosGuardar grava o valor", () => {
+    const c = criar();
+    expect(c.salvar({ ...valido, quantosGuardar: 3 }).ok).toBe(true);
+    expect(c.ler().quantosGuardar).toBe(3);
+  });
 
   it("o erro de cada campo traz o código do campo, não depende do texto (ajuste 3)", () => {
     const campo = (extra: object) => {

@@ -6,6 +6,7 @@ import {
   salvarPreferencias,
   validarHistoricoLongo,
   validarIntervaloBackup,
+  validarQuantosGuardar,
 } from "./preferencias.js";
 
 export interface DepsConfiguracoes {
@@ -29,12 +30,14 @@ function lerValor(valor: unknown): ConfiguracoesDaTela | undefined {
     return undefined;
   }
   if (typeof v["intervaloBackupMin"] !== "number") return undefined;
+  if (typeof v["quantosGuardar"] !== "number") return undefined;
   if (typeof v["historicoLongoLigado"] !== "boolean") return undefined;
   if (typeof v["historicoLongoPasta"] !== "string") return undefined;
   return {
     historicoLongoLigado: v["historicoLongoLigado"],
     historicoLongoPasta: v["historicoLongoPasta"].trim(),
     intervaloBackupMin: v["intervaloBackupMin"],
+    quantosGuardar: v["quantosGuardar"],
     abrirComWindows: v["abrirComWindows"],
     distanciaVisao: v["distanciaVisao"],
     distanciaSimulacao: v["distanciaSimulacao"],
@@ -60,6 +63,7 @@ export function criarConfiguracoes(deps: DepsConfiguracoes) {
       const checagens: [CampoComErro, () => void][] = [
         ["distancias", () => validarDistancias(novo.distanciaVisao, novo.distanciaSimulacao)],
         ["intervalo", () => validarIntervaloBackup(novo.intervaloBackupMin)],
+        ["quantos", () => validarQuantosGuardar(novo.quantosGuardar)],
         [
           "historico",
           () => validarHistoricoLongo(novo.historicoLongoLigado, novo.historicoLongoPasta),
