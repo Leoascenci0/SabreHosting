@@ -5,6 +5,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { rename } from "node:fs/promises";
@@ -297,6 +298,46 @@ describe("restaurarBackup", () => {
       expect(existsSync(join(base, "RESTAURACAO-INCOMPLETA.txt"))).toBe(true);
       writeFileSync(join(base, "eula.txt"), "eula=true\n");
       expect((await podeSubir(base)).pode).toBe(false);
+    },
+    PRAZO,
+  );
+
+  it.each([
+    ["link quebrado", (base: string) => join(base, "nao-existe")],
+    ["link para uma pasta", (base: string) => join(base, "outro")],
+  ])(
+    "%s no lugar do mundo: recusado sem tocar em nada",
+    async (_nome, alvo) => {
+      const { base, o, depois } = await cenario();
+      rmSync(o.pastaDoMundo, { recursive: true });
+      symlinkSync(alvo(base), o.pastaDoMundo);
+      await expect(restaurarBackup(o)).rejects.toThrow(/não é uma pasta; nada foi alterado/);
+      expect(hashesDoMundo(join(base, "outro"))).toEqual(depois);
+      expect(sobras(base)).toEqual([]);
+      expect(existsSync(o.pastaBackups)).toBe(false);
+    },
+    PRAZO,
+  );
+
+  it(
+    "nem o desfazer funciona e o marcador também falha: o erro avisa e diz os caminhos",
+    async () => {
+      const { base, o, antes } = await cenario();
+      mkdirSync(join(base, "RESTAURACAO-INCOMPLETA.txt")); // pasta no lugar do arquivo: não dá para gravar
+      let n = 0;
+      const renomear = async (de: string, para: string) => {
+        if (++n >= 2) throw new Error("EPERM");
+        await rename(de, para);
+      };
+      const erro = await restaurarBackup({ ...o, renomear }).catch((e: Error) => e);
+      expect(erro).toBeInstanceOf(Error);
+      const texto = (erro as Error).message;
+      const antigo = readdirSync(base).find((x) => x.startsWith("mundo.antigo-")) ?? "";
+      expect(texto).toMatch(/marcador.*não foi gravado/i);
+      expect(texto).toContain(join(base, "RESTAURACAO-INCOMPLETA.txt"));
+      expect(texto).toContain(join(base, antigo));
+      expect(texto).toContain(o.pastaBackups);
+      expect(hashesDoMundo(join(base, antigo))).toEqual(antes);
     },
     PRAZO,
   );
