@@ -47,7 +47,7 @@ item da mesma tela.
 
 ## Bloco 2 — Backups e configurações
 
-- [ ] **2.1 — Tela de backups e restaurar**
+- [x] **2.1 — Tela de backups e restaurar** (PR #157, 31/10/2026; 'De quem' = "Este PC"; Windows real ainda não conferido)
   *O que fazer:* lista (data, tamanho, de quem), restaurar com confirmação que diz nome e data.
   *Arquivo:* `apps/desktop/src/telas/backups.*`
   **Tela no app:** este item é a própria tela.

@@ -29,3 +29,12 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* teste com mundo inventado e link simbólico para fora → 404.
   *Origem:* sync-1.1 · PR #156 · qa segurança + qa integridade
+
+- [ ] **1.4 — Recuperar o mundo se o app cair entre os dois `rename` da troca**
+  *O que fazer:* se o processo morrer (luz, kill) entre mundo→`.antigo` e temporária→mundo, só sobram `.antigo` e
+  `.atualizando-*` e nada impede o servidor de subir com mundo ausente e criar um mundo novo. No início do app, detectar
+  isso (marcador gravado antes da troca) e completar ou desfazer a troca. Vale também para `restaurar.ts` (mesma lacuna).
+  *Arquivo:* `packages/nucleo/src/sync/aplicar.ts`, `packages/nucleo/src/backup/restaurar.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: kill simulado entre os dois renames → na partida seguinte N volta (ou M completa) e o servidor não sobe com mundo ausente.
+  *Origem:* sync-1.2 · PR #158 · qa integridade
