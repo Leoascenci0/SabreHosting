@@ -246,6 +246,33 @@ describe("cliente do cartório", () => {
     expect(chamadas).toHaveLength(1);
   });
 
+  it("config do grupo: lê e grava (PUT com o corpo certo); 409 e 403 trazem a mensagem do cartório", async () => {
+    const ok = { versaoMinecraft: "1.20.1", sha1Manifesto: "a".repeat(40), atualizadoEm: 5 };
+    const { cliente, chamadas } = montar([json(200, ok), json(200, ok)]);
+    expect(await cliente.lerConfigGrupo()).toEqual(ok);
+    expect(await cliente.gravarConfigGrupo("1.20.1", "a".repeat(40))).toEqual(ok);
+    expect(chamadas[1]?.url).toBe(`${URL_CARTORIO}/grupo/config`);
+    expect(chamadas[1]?.init.method).toBe("PUT");
+    expect(JSON.parse(String(chamadas[1]?.init.body))).toEqual({
+      versaoMinecraft: "1.20.1",
+      sha1Manifesto: "a".repeat(40),
+    });
+    for (const status of [409, 403]) {
+      const r = montar([json(status, { erro: "Pare o servidor antes." })]);
+      const e = await erroDe(r.cliente.gravarConfigGrupo("1.20.1", "a".repeat(40)));
+      expect(e.message).toContain(`(${status})`);
+      expect(e.message).toContain("Pare o servidor antes.");
+    }
+    const torta = montar([
+      json(200, { versaoMinecraft: "1.20.1", sha1Manifesto: "xyz", atualizadoEm: 1 }),
+    ]);
+    expect((await erroDe(torta.cliente.lerConfigGrupo())).tipo).toBe("resposta");
+    const sem = montar([
+      json(200, { versaoMinecraft: "1.21.1", sha1Manifesto: null, atualizadoEm: 0 }),
+    ]);
+    expect((await sem.cliente.lerConfigGrupo()).sha1Manifesto).toBeNull();
+  });
+
   it("revogarPc: 204 tira; 403, 409 e 404 trazem o status e a mensagem; 401 é acesso; nunca repete", async () => {
     const { cliente, chamadas } = montar([new Response(null, { status: 204 })]);
     expect(await cliente.revogarPc(5)).toBeUndefined();

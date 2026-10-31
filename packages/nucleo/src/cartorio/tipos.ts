@@ -70,6 +70,14 @@ export interface EstadoTrava {
   renovarMs: number;
 }
 
+/** `GET/PUT /grupo/config`: o que todos os PCs do grupo usam igual (hostmel-3.1b). */
+export interface ConfigGrupo {
+  versaoMinecraft: string;
+  /** sha1 do jar oficial da versão; vazio enquanto ninguém escolheu (padrão do cartório). */
+  sha1Manifesto: string | null;
+  atualizadoEm: number;
+}
+
 /** `GET /grupo`. */
 export interface Grupo {
   nome: string;
@@ -197,6 +205,18 @@ export function validarEstadoTrava(v: unknown): EstadoTrava {
 export function validarGrupo(v: unknown): Grupo {
   const o = objeto(v, "grupo");
   return { nome: texto(o, "nome"), endereco_jogar: texto(o, "endereco_jogar") };
+}
+
+export function validarConfigGrupo(v: unknown): ConfigGrupo {
+  const o = objeto(v, "configuração do grupo");
+  const sha1 = o.sha1Manifesto;
+  if (sha1 !== null && !(typeof sha1 === "string" && /^[0-9a-f]{40}$/.test(sha1)))
+    throw new Error("Resposta inválida do cartório: sha1Manifesto.");
+  return {
+    versaoMinecraft: texto(o, "versaoMinecraft"),
+    sha1Manifesto: sha1,
+    atualizadoEm: inteiro(o, "atualizadoEm"),
+  };
 }
 
 export function validarConviteCriado(v: unknown): ConviteCriado {
