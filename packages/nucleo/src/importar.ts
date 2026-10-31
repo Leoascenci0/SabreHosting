@@ -14,6 +14,7 @@ import { pipeline } from "node:stream/promises";
 import yauzl, { type Entry, type ZipFile } from "yauzl";
 import { caminhoSeguro } from "./backup/manifesto.js";
 import { criarPacote, type PacoteCriado } from "./backup/pacote.js";
+import { lerVersaoDoLevelDat } from "./nbt.js";
 
 export interface LimitesDaImportacao {
   /** Teto de bytes descompactados (declarados e, de novo, os realmente lidos). */
@@ -32,6 +33,10 @@ export interface ImportacaoPronta {
   sha256: string;
   tamanho: number;
   arquivos: number;
+  /** Versão do Minecraft lida do level.dat; 'desconhecida' só AVISA (não bloqueia). */
+  versaoMinecraft: string;
+  /** Pistas de que o mundo veio de servidor com plugins ou mods (a tela 1.1c avisa). */
+  indicios: { plugins: boolean; mods: boolean };
 }
 
 export interface OpcoesDeImportacao {
@@ -142,12 +147,43 @@ async function conferirLista(zip: string, lim: LimitesDaImportacao): Promise<str
   return nomes;
 }
 
+/** Pasta de topo única que contém TODO o zip (ex.: `world/`), ou "" quando o zip já começa no mundo. */
+function prefixoDaRaiz(nomes: string[]): string {
+  if (nomes.includes("level.dat")) return "";
+  const topo = nomes.find((n) => n.endsWith("/level.dat"))?.split("/")[0];
+  return topo !== undefined && nomes.every((n) => n.startsWith(`${topo}/`)) ? `${topo}/` : "";
+}
+
+/** Lê o level.dat direto do zip (antes de extrair), com teto de bytes; ausente ou estranho = 'desconhecida'. */
+async function lerVersao(zip: string, prefixo: string): Promise<string> {
+  const alvo = `${prefixo}level.dat`;
+  const teto = 16 * 1024 * 1024;
+  let versao: string | undefined;
+  await percorrer(zip, async (e, ler) => {
+    if (e.fileName !== alvo || e.uncompressedSize > teto) return;
+    const partes: Buffer[] = [];
+    let lidos = 0;
+    for await (const p of await ler()) {
+      lidos += (p as Buffer).length;
+      if (lidos > teto) return; // o declarado mentiu: ignora, não importa
+      partes.push(p as Buffer);
+    }
+    versao = lerVersaoDoLevelDat(Buffer.concat(partes))?.nome;
+  });
+  return versao ?? "desconhecida";
+}
+
 /** Passada 2: extrai conferindo cada destino e contando os bytes REALMENTE lidos (o declarado não vale). */
-async function extrair(zip: string, mundo: string, lim: LimitesDaImportacao): Promise<void> {
+async function extrair(
+  zip: string,
+  mundo: string,
+  lim: LimitesDaImportacao,
+  prefixo: string,
+): Promise<void> {
   let lidos = 0;
   await percorrer(zip, async (e, ler) => {
     if (e.fileName.endsWith("/")) return;
-    const destino = resolve(mundo, ...e.fileName.split("/"));
+    const destino = resolve(mundo, ...e.fileName.slice(prefixo.length).split("/"));
     const rel = relative(mundo, destino);
     if (
       rel === "" ||
@@ -176,17 +212,31 @@ export async function importarMundoZip(
 ): Promise<ImportacaoPronta> {
   const lim = { ...LIMITES_PADRAO, ...o.limites };
   const nomes = await conferirLista(zip, lim); // nada gravado até aqui
+  const prefixo = prefixoDaRaiz(nomes);
+  const versaoMinecraft = await lerVersao(zip, prefixo); // ainda só leitura
+  const dentro = nomes.map((n) => n.slice(prefixo.length));
+  const indicios = {
+    plugins: dentro.some((n) => n.startsWith("plugins/")),
+    mods: dentro.some((n) => /^mods\/[^/]+\.jar$/i.test(n)),
+  };
   const base = await mkdtemp(join(o.pastaDeTrabalho, "importar-"));
   try {
     const mundo = join(base, "mundo");
     await mkdir(mundo);
-    await extrair(zip, mundo, lim);
+    await extrair(zip, mundo, lim, prefixo);
     const pacote = await criarPacote(mundo, join(base, "mundo.tar.gz"), {
       versao: 1,
       epoca: o.epoca,
     });
     await o.enviar(pacote);
-    return { versao: 1, sha256: pacote.sha256, tamanho: pacote.tamanho, arquivos: nomes.length };
+    return {
+      versao: 1,
+      sha256: pacote.sha256,
+      tamanho: pacote.tamanho,
+      arquivos: nomes.length,
+      versaoMinecraft,
+      indicios,
+    };
   } finally {
     await rm(base, { recursive: true, force: true }); // só a pasta que esta chamada criou
   }

@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { levelDat } from "../test/ajuda/nbt.js";
 import { montarZip, type EntradaDeZip } from "../test/ajuda/zip.js";
 import { abrirPacote } from "./backup/pacote.js";
 import { importarMundoZip, type LimitesDaImportacao } from "./importar.js";
@@ -179,5 +180,67 @@ describe("importarMundoZip — zip hostil (cada um recusa antes de enviar e sem 
   });
   it("arquivo que não é zip", async () => {
     await esperarRecusa([], /zip/i, undefined, Buffer.from("isto não é um zip de verdade"));
+  });
+});
+
+describe("importarMundoZip — versão e indícios (piloto-1.1b)", () => {
+  const nivel = (nome = "level.dat"): EntradaDeZip => ({ nome, dados: levelDat("1.21.4", 4189) });
+
+  it("devolve a versão do level.dat e sem indícios num mundo limpo", async () => {
+    const { chamada } = await importar([nivel(), ok("region/r.0.0.mca")]);
+    const r = await chamada;
+    expect(r.versaoMinecraft).toBe("1.21.4");
+    expect(r.indicios).toEqual({ plugins: false, mods: false });
+  });
+
+  it("level.dat ilegível vira 'desconhecida' e a importação segue", async () => {
+    const { chamada, enviar } = await importar([ok("level.dat"), ok("region/r.0.0.mca")]);
+    expect((await chamada).versaoMinecraft).toBe("desconhecida");
+    expect(enviar).toHaveBeenCalledTimes(1);
+  });
+
+  it("sem level.dat também é 'desconhecida' (só avisa)", async () => {
+    const { chamada } = await importar([ok("region/r.0.0.mca")]);
+    expect((await chamada).versaoMinecraft).toBe("desconhecida");
+  });
+
+  it("detecta plugins/ e mods/*.jar", async () => {
+    const { chamada } = await importar([
+      nivel(),
+      ok("plugins/Essentials.jar"),
+      ok("mods/sodium.jar"),
+    ]);
+    expect((await chamada).indicios).toEqual({ plugins: true, mods: true });
+  });
+
+  it("mods/ sem .jar não conta como mod", async () => {
+    const { chamada } = await importar([nivel(), ok("mods/leiame.txt")]);
+    expect((await chamada).indicios.mods).toBe(false);
+  });
+
+  it("aceita pasta-raiz única (world/) e o pacote sai com o mundo na raiz", async () => {
+    const { raiz, trabalho } = area();
+    const zip = join(raiz, "mundo.zip");
+    writeFileSync(
+      zip,
+      montarZip([
+        nivel("world/level.dat"),
+        { nome: "world/region/r.0.0.mca", dados: randomBytes(300_000) },
+      ]),
+    );
+    const r = await importarMundoZip(zip, {
+      pastaDeTrabalho: trabalho,
+      epoca: 1,
+      enviar: async (p) => {
+        const m = await abrirPacote(p.caminho, p.sha256, join(raiz, "aberto"));
+        expect(m.arquivos.map((a) => a.caminho)).toEqual(["level.dat", "region/r.0.0.mca"]);
+      },
+    });
+    expect(r.versaoMinecraft).toBe("1.21.4");
+  });
+
+  it("pasta-raiz só vale se TUDO está nela (senão não mexe nos caminhos)", async () => {
+    const { chamada } = await importar([nivel("world/level.dat"), ok("outro/arquivo")]);
+    expect((await chamada).arquivos).toBe(2);
   });
 });
