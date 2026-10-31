@@ -47,6 +47,7 @@ function rodar(extra: Record<string, string> = {}) {
     env: {
       PATH: process.env.PATH,
       SABRE_SIMULAR: "1",
+      SABRE_FALSO_UID: "0",
       SABRE_ESTADO: join(estado, "estado"),
       SABRE_API_PAPERMC: `file://${api}`,
       ...extra,
