@@ -44,8 +44,8 @@ const PRAZO_PARADA_SEM_TRAVA_MS = 10_000;
 const PRAZO_TRAVA_PADRAO_MS = 10_000;
 /** Pastas com servidor deste PC em andamento (regra de ouro 1: um servidor por mundo). */
 const pastasEmUso = new Set<string>();
-/** "Pronto" só pela linha do próprio servidor (`...]: Done (`); chat vem como `<Nome> Done (`. */
-const LINHA_PRONTO = /(?:^|\]: )Done \(/;
+/** "Pronto" só pela linha da thread do servidor (`[Server thread/INFO] [classe]: Done (`); chat vem como `<Nome> Done (`. */
+const LINHA_PRONTO = /\[Server thread\/INFO\](?: \[[^\]]*\])?: Done \(/;
 
 /** Erro, demora e `false` valem como sem trava; só `true` dentro do prazo confirma. */
 export async function travaConfirmada(

@@ -343,6 +343,31 @@ describe("trava (regra de ouro 1)", () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(s.estado).toBe("pronto");
   });
+
+  it('"Done (" de outra thread não deixa pronto; o da thread do servidor, nos dois formatos, deixa', async () => {
+    const dizer = async (linha: string) => {
+      const s = await subir("semdone");
+      (s as unknown as { aoReceberLinha: (l: string) => void }).aoReceberLinha(linha);
+      const estado = s.estado;
+      await s.pararServidor();
+      return estado;
+    };
+    expect(await dizer("[12:00:00] [Worker-Main-1/INFO]: Done (1.0s)!")).toBe("subindo");
+    expect(await dizer("[12:00:00] [Server thread/INFO] [mod/Outro]: <A> Done (1.0s)!")).toBe(
+      "subindo",
+    );
+    expect(await dizer("[12:00:00] [Server thread/INFO]: Done (1.0s)!")).toBe("pronto");
+    expect(
+      await dizer("[12:00:00] [Server thread/INFO] [minecraft/DedicatedServer]: Done (1.0s)!"),
+    ).toBe("pronto");
+  });
+
+  it("no Windows a guarda ignora diferença de maiúscula na pasta", async () => {
+    await subir("normal", { plataforma: "win32" });
+    await expect(
+      iniciarServidor(opcoes("normal", { plataforma: "win32", pasta: pasta.toUpperCase() })),
+    ).rejects.toThrow(/Já está rodando/);
+  });
 });
 
 describe("antes de subir", () => {

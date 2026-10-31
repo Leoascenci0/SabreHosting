@@ -35,7 +35,13 @@ function filhoFalso(registrar: (e: string) => void): ChildProcess {
   f["stderr"] = new PassThrough();
   f["pid"] = 1;
   f["kill"] = () => f.emit("close", null);
-  setTimeout(() => stdout.write('Done (0.1s)! For help, type "help"\n'), 300);
+  setTimeout(
+    () =>
+      stdout.write(
+        '[12:00:00] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.1s)! For help, type "help"\n',
+      ),
+    300,
+  );
   return f as unknown as ChildProcess;
 }
 
