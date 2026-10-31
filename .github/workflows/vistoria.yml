@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0 # o verificador compara com origin/main (PR) ou com o commit anterior (push: github.event.before)
       # Em push na main o ramo ativo seria "main", que o verificador reprova de propósito.
       - run: git checkout --detach
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
