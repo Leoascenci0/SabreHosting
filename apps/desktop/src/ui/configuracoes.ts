@@ -1,4 +1,5 @@
 import type { CampoComErro, PcDaTela, PonteSabre } from "./ponte.js";
+import { rotuloConfirmarVersao } from "./rotulo-versao.js";
 
 declare global {
   interface Window {
@@ -192,7 +193,7 @@ function ocuparVersao(ocupado: boolean): void {
   trocarVersao.disabled = ocupado || seletorVersao.value === versaoAtual;
   confirmarVersao.disabled = ocupado;
   cancelarVersao.disabled = ocupado;
-  confirmarVersao.textContent = ocupado ? "Fazendo backup antes…" : "Trocar";
+  confirmarVersao.textContent = rotuloConfirmarVersao(ocupado);
 }
 
 /** As opções só são buscadas quando o dono seleciona a versão (cada busca vai à internet). */
