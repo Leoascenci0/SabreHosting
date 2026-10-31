@@ -13,7 +13,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* teste: 6ª tentativa errada → 429 sem chamar o cartório; token válido repetido chama o cartório 1 vez.
   *Origem:* sync-1.1 · PR #156 · qa segurança
 
-- [ ] **1.2 — Timeout e limite de conexões do servidor de sync; parcial já completo não rebaixa**
+- [x] **1.2 — Timeout e limite de conexões do servidor de sync; parcial já completo não rebaixa** (PR #168, 31/10/2026; 10 s cabeçalho, 60 s ocioso, 16 conexões)
   *O que fazer:* timeouts de cabeçalho/inatividade e teto de conexões simultâneas no servidor; cliente que já tem o
   arquivo inteiro como parcial só confere o hash em vez de baixar tudo de novo (416); o `expect` dentro do handler do
   servidor falso do teste de queda passa a fazer o teste falhar se quebrar.
@@ -45,3 +45,10 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* testes de cada caso (falham antes, passam depois).
   *Origem:* syncmel-1.4 · PR #164 · qa integridade + qa segurança
+
+- [ ] **1.6 — Provas que faltaram no servidor de sync (syncmel-1.2)**
+  *O que fazer:* (a) o teste "parcial do tamanho certo mas com conteúdo errado" passaria sem o código novo: contar os corpos servidos e exigir exatamente 1 (prova a conferência do hash antes de renomear); (b) testes próprios de `headersTimeout` e de `maxConnections` (17ª conexão não é atendida enquanto as 16 estão abertas).
+  *Arquivo:* `packages/nucleo/src/sync/transferencia.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* os testes falham ao remover cada opção do servidor.
+  *Origem:* syncmel-1.2 · PR #168 · qa integridade
