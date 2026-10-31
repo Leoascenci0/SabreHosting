@@ -12,7 +12,7 @@ import {
   type ExecArquivo,
   type ResultadoPrism,
 } from "@sabrehosting/nucleo/launcher/prism";
-import { ambienteLegado, type ConfigPc } from "./config-pc.js";
+import { ambienteLegado, ENDERECO_VALIDO, type ConfigPc } from "./config-pc.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 /** Ganchos só dos testes: rede e processo falsos no lugar dos reais. */
@@ -177,7 +177,8 @@ export function depsReais(
     // O cartório é quem sabe o endereço (GET /grupo); sem resposta, vale o último conhecido.
     atualizarEndereco: async () => {
       try {
-        endereco = (await exigir().grupo()).endereco_jogar;
+        const novo = (await exigir().grupo()).endereco_jogar;
+        if (ENDERECO_VALIDO.test(novo)) endereco = novo; // resposta torta não troca o endereço bom
       } catch {
         // cartório fora do ar ou sem grupo: mantém o endereço que já tinha
       }

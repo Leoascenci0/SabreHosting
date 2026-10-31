@@ -81,6 +81,33 @@ describe("lerConfigPc: tudo vem da config gravada e do cofre, nunca do ambiente"
   });
 });
 
+describe("arquivo adulterado não vira pasta nem endereço (S-07)", () => {
+  it.each([
+    "../fora",
+    "relativa/pasta",
+    "/",
+    "C:\\Windows\\System32",
+    "C:\\",
+    `${BASE}/../outra`,
+    42,
+  ])("pastaBase %j é tratada como ausente (nada para apagar ou trocar)", async (pastaBase) => {
+    gravar({ grupo: { nome: "A" }, portaCartorio: 7710, concluido: true, pastaBase });
+    const c = await lerConfigPc(dados, cofreCom("t"), {});
+    expect(c.pastaBase).toBeUndefined();
+    expect(c.pastaServidor).toBeUndefined();
+    expect(c.pastaMundo).toBeUndefined();
+    expect(c.pastaBackups).toBeUndefined();
+  });
+
+  it.each(["host", "a b:1", "-x:1", "h:99999x", "x:1 --demo", ""])(
+    "endereço gravado %j é ignorado",
+    async (endereco) => {
+      gravar({ grupo: { nome: "A", endereco }, portaCartorio: 7710 });
+      expect((await lerConfigPc(dados, cofreCom("t"), {})).enderecoGravado).toBeUndefined();
+    },
+  );
+});
+
 describe("ambienteLegado (para quem ainda lê no formato SABRE_*)", () => {
   it("monta as variáveis da config, sem nada do process.env", async () => {
     gravar({ grupo: { nome: "A" }, portaCartorio: 7710, concluido: true, pastaBase: BASE });

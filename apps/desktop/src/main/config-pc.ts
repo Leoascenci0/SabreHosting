@@ -1,6 +1,9 @@
 import { join } from "node:path";
 import { IP_DO_HUB } from "@sabrehosting/nucleo/rede/wireguard";
-import { lerSalvo } from "./boas-vindas.js";
+import { lerSalvo, pastaPermitida } from "./boas-vindas.js";
+
+/** Forma `host:porta` (mesma regra do `abrirJogo`); o que vem do disco ou da rede só vale se couber nela. */
+export const ENDERECO_VALIDO = /^[A-Za-z0-9][A-Za-z0-9.-]*:\d{1,5}$/;
 
 /**
  * Configuração deste PC (app-1.3c-i): vem do que o assistente gravou (`boas-vindas.json`) e do token no cofre real.
@@ -39,13 +42,17 @@ export async function lerConfigPc(
     salvo.grupo && salvo.portaCartorio ? `http://${IP_DO_HUB}:${salvo.portaCartorio}` : undefined;
   // Cofre que falha vale como "sem token": o app diz "ainda não entrou no grupo" (a mensagem do erro pode ter segredo).
   const token = urlCartorio ? await cofre.ler().catch(() => undefined) : undefined;
-  const pastaBase = salvo.concluido ? salvo.pastaBase : undefined;
+  // O arquivo do disco é entrada não confiável (S-07): pasta torta ("..", relativa, raiz, Windows) vale como ausente.
+  const pastaBase =
+    salvo.concluido && pastaPermitida(salvo.pastaBase) ? salvo.pastaBase : undefined;
   const pastaServidor = pastaBase ? join(pastaBase, "servidor") : undefined;
   return {
     ...(urlCartorio ? { urlCartorio } : {}),
     ...(token ? { token } : {}),
     ...(salvo.grupo ? { grupo: salvo.grupo.nome } : {}),
-    ...(salvo.grupo?.endereco ? { enderecoGravado: salvo.grupo.endereco } : {}),
+    ...(salvo.grupo?.endereco && ENDERECO_VALIDO.test(salvo.grupo.endereco)
+      ? { enderecoGravado: salvo.grupo.endereco }
+      : {}),
     ...(pastaBase && pastaServidor
       ? {
           pastaBase,

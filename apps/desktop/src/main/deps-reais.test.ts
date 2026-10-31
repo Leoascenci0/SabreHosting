@@ -252,6 +252,12 @@ describe("endereço do Jogar vem do cartório (GET /grupo)", () => {
     expect(d.endereco).toBe("novo.exemplo.org:25565");
   });
 
+  it("endereço torto vindo do cartório não troca o bom", async () => {
+    const d = depsReais(env(), () => {}, { fetchFn: resposta("x --demo") });
+    await d.atualizarEndereco?.();
+    expect(d.endereco).toBe("mundo.exemplo.net:25565");
+  });
+
   it("cartório fora do ar: segue com o último endereço e não lança", async () => {
     const falha = (async () =>
       Promise.reject(new TypeError("fetch failed"))) as unknown as typeof fetch;
