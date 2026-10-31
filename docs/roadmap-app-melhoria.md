@@ -133,7 +133,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste/e2e: região anuncia a cópia; um só normalizador de nome.
   *Origem:* app-1.3c-ii · PR #218 · qa
 
-- [ ] **1.16 — Entrada no grupo: esperar a sessão elevada antes de limpar; bloquear Jogar após trocar a pasta**
+- [x] **1.16 — Entrada no grupo: esperar a sessão elevada antes de limpar; bloquear Jogar após trocar a pasta** (PR #224, 31/10/2026; [P: parte (a) no Windows])
   *O que fazer:* (a) em `entrada-no-grupo.ts` (~172-196) no caminho de falha, `await sessao.catch(() => undefined)` antes de `limpar()`, para o script ver o `cancelar.flag` e desinstalar o túnel provisório na hora (hoje pode ficar até 150 s); (b) em `principal.ts` (~543-547), depois do sucesso da troca de pasta e antes do `app.exit(0)` (1,5 s), bloquear o botão Jogar.
   *Arquivo:* `apps/desktop/src/main/entrada-no-grupo.ts`, `principal.ts`
   **Tela no app:** não se aplica.
