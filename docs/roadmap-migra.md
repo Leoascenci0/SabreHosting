@@ -19,7 +19,7 @@ lógica de trava/migração).
 
 ## Bloco 2 — Trocar
 
-- [ ] **2.1 — Pré-cópia em segundo plano**
+- [x] **2.1 — Pré-cópia em segundo plano** (PR #197, 31/10/2026; `pedirPreCopia` reaproveita o espalhar e devolve manifesto+vazão; `medirDeltaFinal` pura: delta ~1,2% < 5% no mundo de 20 MB; falta teste de recusa do ramo "ja-tinha" com `hospedaAgora`; o `epoca: 0` do manifesto local não vale como época real na migra-2.2)
   *O que fazer:* o novo host puxa a versão atual enquanto o antigo joga; mede o tempo previsto do delta final.
   *Arquivo:* `packages/nucleo/src/migracao/precopia.ts`
   **Tela no app:** não se aplica.
