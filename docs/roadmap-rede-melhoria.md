@@ -44,7 +44,7 @@ Melhorias achadas durante os itens do `docs/roadmap-rede.md` (skill `maxima` ›
   *Confirmação:* simulação instala com o hash fixado; hash errado recusado.
   *Origem:* rede-2.3 · PR #62 · filha + qa
 
-- [ ] **1.2 — Ajudante por socket: acabamentos**
+- [x] **1.2 — Ajudante por socket: acabamentos** (PR #145, 31/10/2026)
   *O que fazer:* regra do ufw do cartório (7710 em wg0) só da faixa dos PCs definitivos 10.66.0.2–199 (ou documentar no
   LEIAME por que a sala já está coberta antes); o wrapper não devolve linha de eco `+ wg set …` no erro (filtrar); o cliente
   do socket no cartório limita a resposta a 4096 bytes mesmo quando o pedaço traz `\n`; testes de linha gigante e de 2º
