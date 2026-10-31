@@ -28,7 +28,11 @@ export function criarPastaBase(deps: DepsPastaBase) {
     // O arquivo do disco é entrada não confiável (S-07): pasta torta vale como ausente.
     return s.concluido && pastaPermitida(s.pastaBase) ? s.pastaBase : undefined;
   };
+  let trocada = false;
   return {
+    /** Verdadeiro depois de uma troca que deu certo: o app vai reiniciar e não deve aceitar Jogar/Hospedar até lá. */
+    trocada: (): boolean => trocada,
+
     estado(): { pasta?: string } {
       const pasta = atual();
       return pasta ? { pasta } : {};
@@ -51,6 +55,7 @@ export function criarPastaBase(deps: DepsPastaBase) {
         ).catch(() => undefined);
         // Relê logo antes de gravar: nada é perdido se o arquivo mudou no meio.
         gravarSalvo(deps.dados, { ...lerSalvo(deps.dados), concluido: true, pastaBase: pasta });
+        trocada = true;
         return { ok: true, anterior };
       } catch {
         return { ok: false, mensagem: FALHA };

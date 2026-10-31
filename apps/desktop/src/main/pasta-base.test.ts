@@ -98,4 +98,13 @@ describe("pasta do SabreHosting (appmel-1.13)", () => {
     expect(r).toEqual({ ok: false, mensagem: "Não consegui preparar a pasta. Escolha outra." });
     expect((await lerConfigPc(dados, cofre, {})).pastaBase).toBe(antiga);
   });
+
+  it("trocada() só vale depois de uma troca que deu certo (appmel-1.16)", async () => {
+    const pb = montar();
+    expect(pb.trocada()).toBe(false);
+    expect((await pb.trocar(antiga)).ok).toBe(false); // igual: falha
+    expect(pb.trocada()).toBe(false);
+    expect((await pb.trocar(nova)).ok).toBe(true);
+    expect(pb.trocada()).toBe(true);
+  });
 });
