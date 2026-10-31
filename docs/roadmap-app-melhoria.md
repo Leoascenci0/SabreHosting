@@ -105,7 +105,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste com arquivo adulterado.
   *Origem:* app-1.3a · PR #207 · qa
 
-- [ ] **1.13 — Campo "Pasta do SabreHosting" e fundir os pedidos de administrador**
+- [x] **1.13 — Campo "Pasta do SabreHosting" e fundir os pedidos de administrador** (PR #219, 31/10/2026; **[P: UAC e script no Windows]**)
   *O que fazer:* campo em Configurações › Geral para ver/trocar a pasta-base gravada pelo assistente (hoje `pastaBase` fica só em `boas-vindas.json` e não alimenta `SABRE_PASTA_*`; ligar no app-1.3c); fundir os 3 pedidos de administrador (instala provisório, desinstala, instala definitiva) em um.
   *Arquivo:* `apps/desktop/src/main/boas-vindas.ts`, `entrada-no-grupo.ts`, `apps/desktop/src/ui/`
   **Tela no app:** Configurações › Geral › "Pasta do SabreHosting".
@@ -132,3 +132,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** Configurações › Grupo › "Criar convite".
   *Confirmação:* teste/e2e: região anuncia a cópia; um só normalizador de nome.
   *Origem:* app-1.3c-ii · PR #218 · qa
+
+- [ ] **1.16 — Entrada no grupo: esperar a sessão elevada antes de limpar; bloquear Jogar após trocar a pasta**
+  *O que fazer:* (a) em `entrada-no-grupo.ts` (~172-196) no caminho de falha, `await sessao.catch(() => undefined)` antes de `limpar()`, para o script ver o `cancelar.flag` e desinstalar o túnel provisório na hora (hoje pode ficar até 150 s); (b) em `principal.ts` (~543-547), depois do sucesso da troca de pasta e antes do `app.exit(0)` (1,5 s), bloquear o botão Jogar.
+  *Arquivo:* `apps/desktop/src/main/entrada-no-grupo.ts`, `principal.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: falha de `esperarPronta` espera a sessão; Jogar recusado após a troca.
+  *Origem:* appmel-1.13 · PR #219 · qa
