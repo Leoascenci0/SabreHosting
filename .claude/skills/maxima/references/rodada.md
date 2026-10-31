@@ -3,6 +3,10 @@
 Origem: `rodada-milestone` de Felipe Marques (MIT), adaptada no SEURBH em 26/10/2026 e trazida para o SabreHosting
 em 30/10/2026. As regras de autonomia, milestone e `main` da `SKILL.md` vencem o que estiver aqui.
 
+**Quem executa este motor é a sessão de onda** (nível 2 de `references/coordenacao.md`), para a lista de itens da sua
+onda. Onde este texto diz "orquestradora", leia "sessão de onda"; o que é do Eliel (balão, `MILESTONE`, `bom-dia`,
+custos, heartbeat da rodada) fica com o coordenador. A sessão de onda arma só o próprio watchdog.
+
 ## Configuração (já preenchida)
 
 | Chave | Valor |
