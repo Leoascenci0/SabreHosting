@@ -22,7 +22,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* sabotar a conferência derruba o teste.
   *Origem:* app-1.1 · PR #70 · qa
 
-- [ ] **1.3 — Capturas do E2E só quando pedidas**
+- [x] **1.3 — Capturas do E2E só quando pedidas** (PR #126, 31/10/2026; `SABRE_CAPTURAS=1`)
   *O que fazer:* o E2E regrava `docs/imagens/app-1.1-*.png` (agora com a tela do app-1.2) a cada `npm run vistoria`,
   sujando o `git status`. Gravar capturas só com `SABRE_CAPTURAS=1` e numa pasta própria por item; atualizar as do app-1.1.
   *Arquivo:* `apps/desktop/e2e/`
