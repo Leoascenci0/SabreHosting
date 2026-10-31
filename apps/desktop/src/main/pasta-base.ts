@@ -10,12 +10,10 @@ import { gravarSalvo, lerSalvo, pastaPermitida } from "./boas-vindas.js";
 export interface DepsPastaBase {
   dados: string;
   /** Servidor rodando (ou sobra dele) neste PC. */
-  servidorRodando(): boolean;
+  servidorRodando(): boolean | Promise<boolean>;
 }
 
-export type ResultadoPasta =
-  | { ok: true; anterior: string }
-  | { ok: false; mensagem: string };
+export type ResultadoPasta = { ok: true; anterior: string } | { ok: false; mensagem: string };
 
 const RODANDO = "Pare o servidor antes de trocar a pasta do SabreHosting.";
 const SEM_PASTA = "A pasta ainda não foi escolhida: conclua o assistente de primeira vez.";
@@ -39,7 +37,7 @@ export function criarPastaBase(deps: DepsPastaBase) {
     async trocar(pasta: unknown): Promise<ResultadoPasta> {
       const anterior = atual();
       if (!anterior) return { ok: false, mensagem: SEM_PASTA };
-      if (deps.servidorRodando()) return { ok: false, mensagem: RODANDO };
+      if (await deps.servidorRodando()) return { ok: false, mensagem: RODANDO };
       // A pasta vem da janela: validada aqui no main (nunca confiar na tela).
       if (!pastaPermitida(pasta)) return { ok: false, mensagem: INVALIDA };
       if (pasta === anterior) return { ok: false, mensagem: IGUAL };
@@ -47,9 +45,10 @@ export function criarPastaBase(deps: DepsPastaBase) {
         await mkdir(join(pasta, "servidor"), { recursive: true });
         await mkdir(join(pasta, "mundos"), { recursive: true });
         // O aceite do contrato da Mojang já foi dado; o arquivo (pequeno) acompanha, o mundo não.
-        await copyFile(join(anterior, "servidor", "eula.txt"), join(pasta, "servidor", "eula.txt")).catch(
-          () => undefined,
-        );
+        await copyFile(
+          join(anterior, "servidor", "eula.txt"),
+          join(pasta, "servidor", "eula.txt"),
+        ).catch(() => undefined);
         // Relê logo antes de gravar: nada é perdido se o arquivo mudou no meio.
         gravarSalvo(deps.dados, { ...lerSalvo(deps.dados), concluido: true, pastaBase: pasta });
         return { ok: true, anterior };

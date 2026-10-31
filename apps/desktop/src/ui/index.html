@@ -100,18 +100,31 @@
           </label>
           <div id="cfg-pasta-area" hidden>
             <label for="cfg-pasta">Pasta do SabreHosting</label>
-            <input type="text" id="cfg-pasta" readonly aria-describedby="cfg-pasta-dica cfg-pasta-erro" />
+            <input
+              type="text"
+              id="cfg-pasta"
+              readonly
+              aria-describedby="cfg-pasta-dica cfg-pasta-erro"
+            />
             <p class="dica" id="cfg-pasta-dica">
               Onde ficam o servidor, o mundo e os backups. Só dá para trocar com o servidor parado.
             </p>
             <button type="button" class="secundario" id="cfg-pasta-trocar">Trocar pasta…</button>
-            <div id="cfg-pasta-confirmacao" role="alertdialog" aria-labelledby="cfg-pasta-pergunta" hidden>
+            <div
+              id="cfg-pasta-confirmacao"
+              role="alertdialog"
+              aria-labelledby="cfg-pasta-pergunta"
+              hidden
+            >
               <p id="cfg-pasta-pergunta"></p>
               <p class="detalhe">
-                O mundo e os backups atuais NÃO são movidos: continuam na pasta de hoje. O SabreHosting reinicia para usar a nova.
+                O mundo e os backups atuais NÃO são movidos: continuam na pasta de hoje. O
+                SabreHosting reinicia para usar a nova.
               </p>
               <div class="acoes">
-                <button type="button" class="principal" id="cfg-pasta-confirmar">Usar esta pasta</button>
+                <button type="button" class="principal" id="cfg-pasta-confirmar">
+                  Usar esta pasta
+                </button>
                 <button type="button" class="secundario" id="cfg-pasta-cancelar">Cancelar</button>
               </div>
             </div>

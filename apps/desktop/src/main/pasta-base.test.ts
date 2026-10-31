@@ -21,7 +21,12 @@ beforeEach(() => {
   writeFileSync(join(antiga, "servidor", "eula.txt"), "eula=true\n");
   writeFileSync(
     join(dados, "boas-vindas.json"),
-    JSON.stringify({ grupo: { nome: "G" }, portaCartorio: 7710, concluido: true, pastaBase: antiga }),
+    JSON.stringify({
+      grupo: { nome: "G" },
+      portaCartorio: 7710,
+      concluido: true,
+      pastaBase: antiga,
+    }),
   );
 });
 afterEach(() => rmSync(raiz, { recursive: true, force: true }));

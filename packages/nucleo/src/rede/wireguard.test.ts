@@ -391,3 +391,20 @@ describe("testarLigacao", () => {
     expect(Date.now() - inicio).toBeLessThan(2000);
   });
 });
+
+describe("criarExecutorElevado: prazo", () => {
+  it("o prazo é 60 s por padrão e pode ser alongado (entrada no grupo, que inclui o UAC)", async () => {
+    const prazos: unknown[] = [];
+    const falso = ((
+      _a: string,
+      _b: readonly string[],
+      o: { timeout?: number },
+      cb: (e: Error | null, s: string) => void,
+    ) => (prazos.push(o.timeout), cb(null, ""))) as unknown as Parameters<
+      typeof criarExecutorElevado
+    >[0];
+    await criarExecutorElevado(falso)("x", []);
+    await criarExecutorElevado(falso, 300_000)("x", []);
+    expect(prazos).toEqual([60_000, 300_000]);
+  });
+});
