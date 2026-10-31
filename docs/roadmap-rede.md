@@ -25,7 +25,7 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
   *Confirmação:* o Eliel conclui e a VM responde. **[P: criar conta/VM]**
   *Depende de:* rede-1.1
 
-- [ ] **1.3 — Rede privada: hub e convite de PC**
+- [x] **1.3 — Rede privada: hub e convite de PC** (PR #60, 31/10/2026; prova real no PC pendente [P])
   *O que fazer:* no hub, gerar a configuração WireGuard de um PC novo a partir de um convite; no núcleo, módulo que
   aplica a configuração no Windows (pede permissão de administrador uma vez) e testa a ligação.
   *Arquivo:* `infra/vps/wg/`, `packages/nucleo/src/rede/wireguard.ts`
