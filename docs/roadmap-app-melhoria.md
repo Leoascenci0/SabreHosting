@@ -67,7 +67,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Depende de:* cartmel-1.1 e cartmel-2.3 (feitos), app-2.2 (feito)
   *Origem:* app-2.2 · PR #160 · filha
 
-- [ ] **1.8 — Backups: intervalo e quantos guardar (ligar e expor)** *(cortado em 31/10: a onda 21 entrega só o intervalo; "quantos guardar" e a rotação viraram 1.11)*
+- [x] **1.8 — Backups: intervalo e quantos guardar (ligar e expor)** (PR #167, 31/10/2026) *(cortado em 31/10: a onda 21 entregou só o intervalo; "quantos guardar" e a rotação viraram 1.11)*
   *O que fazer:* ligar `agendarBackups` e a rotação do núcleo ao app (hoje sem consumidor em `apps/desktop`) e só então
   expor os dois campos em Configurações › Backups.
   *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/backup/agendador.ts`, `rotacao.ts`
