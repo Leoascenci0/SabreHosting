@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
 
 ## Bloco 1 — Janela e bandeja
 
-- [ ] **1.1 — Ícone próprio para a bandeja**
+- [x] **1.1 — Ícone próprio para a bandeja** (PR #144, 31/10/2026; conferência no Windows [P])
   *O que fazer:* recortar só a cabeça do tigre do ícone (o texto "SABRE HOSTING" não se lê em 16–32 px) e usar esse
   recorte na bandeja, nos tamanhos 16, 24 e 32 px.
   *Arquivo:* `apps/desktop/recursos/icone/`, `apps/desktop/src/main/principal.ts`
