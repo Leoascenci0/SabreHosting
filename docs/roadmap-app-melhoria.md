@@ -75,7 +75,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* valor salvo muda o intervalo do backup (E2E).
   *Origem:* app-2.2 · PR #160 · filha
 
-- [ ] **1.9 — Ligar as distâncias de visão/simulação ao subir o servidor**
+- [x] **1.9 — Ligar as distâncias de visão/simulação ao subir o servidor** (PR #228, 31/10/2026; Hospedar agora recusa sem o túnel privado)
   *O que fazer:* usar `opcoesDoServidor(lerPreferencias())` ao gravar a configuração no `hospedar` (hoje só os testes chamam).
   *Arquivo:* `apps/desktop/src/main/deps-reais.ts`
   **Tela no app:** não se aplica.

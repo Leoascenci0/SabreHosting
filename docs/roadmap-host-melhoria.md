@@ -113,3 +113,10 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   **Tela no app:** Configurações › Servidor › Versão.
   *Confirmação:* testes que falham ao remover cada proteção.
   *Origem:* hostmel-3.2 · PR #193 · qa
+
+- [ ] **3.4 — Gravar o `server.properties` só depois da trava (e recusar servidor órfão)**
+  *O que fazer:* hoje o app grava a configuração (appmel-1.9) antes de o `hospedar` do núcleo pegar a trava; com a trava ocupada o arquivo local fica reescrito sem hospedar. Criar o gancho `antesDeSubir` em `hospedar` para gravar só depois da trava. Conferir também se `hospedar` recusa quando sobrou um servidor órfão neste PC (`inicio.ts` não consulta `servidorOrfao` antes de `deps.hospedar`); se não recusar, recusar.
+  *Arquivo:* `packages/nucleo/src/cartorio/hospedar.ts`, `apps/desktop/src/main/deps-reais.ts`, `inicio.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: trava ocupada deixa o `server.properties` intacto; órfão vivo → Hospedar recusa sem trocar o arquivo.
+  *Origem:* appmel-1.9 · PR #228 · filha + qa
