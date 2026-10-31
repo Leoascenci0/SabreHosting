@@ -31,6 +31,7 @@ import {
   ipDaRedePrivada,
   pastaDaVitrine,
   type ServidorDeArquivos,
+  religarAteLigar,
 } from "./servir-arquivos.js";
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
@@ -110,7 +111,11 @@ async function sairDoApp(perguntar: boolean): Promise<void> {
     if (r.falha !== undefined) await avisarFalhaSair(r.falha);
     return;
   }
-  await servidorArquivosApp?.fechar().catch(() => undefined); // para de servir ao sair
+  pararRelogioRede?.(); // o relógio de 60 s não pode religar o servidor depois de fechado
+  pararRelogioRede = undefined;
+  const servindo = servidorArquivosApp;
+  servidorArquivosApp = undefined;
+  await servindo?.fechar().catch(() => undefined); // para de servir ao sair
   podeSair = true;
   saindo = true;
   app.quit();
@@ -333,6 +338,7 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
 
 const RELER_REDE_MS = 60_000;
 let servidorArquivosApp: ServidorDeArquivos | undefined;
+let pararRelogioRede: (() => void) | undefined;
 /** Disparo da atualização do mundo (relógio de 10 min, arranque e depois de cada backup bom). */
 let disparoEspalhar: (() => Promise<void>) | undefined;
 
@@ -360,12 +366,7 @@ async function ligarServidorDeArquivosDoApp(): Promise<void> {
   const servidor = servidorArquivosApp;
   if (await servidor.tentarLigar()) return;
   // Túnel que sobe depois do arranque: relê o IP até ligar (um relógio só; o aviso de "sem rede" sai uma vez).
-  const relogio = setInterval(() => {
-    void servidor.tentarLigar().then((ligou) => {
-      if (ligou) clearInterval(relogio);
-    });
-  }, RELER_REDE_MS);
-  relogio.unref();
+  pararRelogioRede = religarAteLigar(servidor, RELER_REDE_MS);
 }
 
 /** Importar mundo (piloto-1.1c): seletor só de .zip; o caminho escolhido fica aqui no main, nunca vem da janela. */

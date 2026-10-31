@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo } from "../../../../packages/nucleo/test/ajuda/mundos.js";
 import { criarPacote } from "@sabrehosting/nucleo/backup/pacote";
 import { marcarBackup } from "@sabrehosting/nucleo/backup/rotacao-pasta";
@@ -10,6 +10,7 @@ import {
   conferirTokenNoCartorio,
   criarServidorDeArquivos,
   ipDaRedePrivada,
+  religarAteLigar,
   type ServidorDeArquivos,
 } from "./servir-arquivos.js";
 
@@ -174,5 +175,30 @@ describe("criarServidorDeArquivos (1.10)", () => {
     marcarBackup(join(c.base, "backups"), "2026-10-31T10-00-00-000Z-v4.tar.gz", "ruim", c.p.sha256);
     await c.s.publicarUltimoBom();
     expect(c.s.vitrine.arquivos(c.p.manifesto.sha256)).toBeUndefined();
+  });
+});
+
+describe("religarAteLigar — relógio de 60 s (syncmel-1.12 a, c)", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("relê a cada intervalo até ligar e então para sozinho", async () => {
+    vi.useFakeTimers();
+    const tentarLigar = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    religarAteLigar({ tentarLigar }, 60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(tentarLigar).toHaveBeenCalledTimes(2);
+  });
+
+  it("parar() (sair do app) cancela o relógio: nenhuma releitura depois", async () => {
+    vi.useFakeTimers();
+    const tentarLigar = vi.fn(async () => false);
+    const parar = religarAteLigar({ tentarLigar }, 60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    parar();
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(tentarLigar).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
