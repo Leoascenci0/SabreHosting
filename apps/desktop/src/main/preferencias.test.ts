@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
 
-const PADRAO = { abrirComWindows: false, distanciaVisao: 10, distanciaSimulacao: 8 };
+const PADRAO = {
+  abrirComWindows: false,
+  distanciaVisao: 10,
+  distanciaSimulacao: 8,
+  intervaloBackupMin: 10,
+};
 let pasta: string;
 beforeEach(() => {
   pasta = mkdtempSync(join(tmpdir(), "sabre-pref-"));
@@ -40,6 +45,32 @@ describe("preferências", () => {
       '{"abrirComWindows":true,"distanciaVisao":6,"distanciaSimulacao":9}',
     );
     expect(lerPreferencias(pasta)).toEqual({ ...PADRAO, abrirComWindows: true });
+  });
+
+  it.each([0, -5, 1.5, 1441, "abc", null])(
+    "intervalo torto (%j) volta ao padrão e não perde o resto",
+    (v) => {
+      writeFileSync(
+        join(pasta, "preferencias.json"),
+        JSON.stringify({
+          abrirComWindows: true,
+          distanciaVisao: 12,
+          distanciaSimulacao: 6,
+          intervaloBackupMin: v,
+        }),
+      );
+      expect(lerPreferencias(pasta)).toEqual({
+        abrirComWindows: true,
+        distanciaVisao: 12,
+        distanciaSimulacao: 6,
+        intervaloBackupMin: 10,
+      });
+    },
+  );
+
+  it("intervalo válido é lido como está", () => {
+    salvarPreferencias(pasta, { ...PADRAO, intervaloBackupMin: 30 });
+    expect(lerPreferencias(pasta).intervaloBackupMin).toBe(30);
   });
 
   it("regravar troca o arquivo inteiro", () => {

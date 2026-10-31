@@ -10,7 +10,18 @@ let pasta: string;
 let aplicados: boolean[];
 const criar = () =>
   criarConfiguracoes({ pasta, aplicarAbrirComWindows: (l) => void aplicados.push(l) });
-const valido = { abrirComWindows: true, distanciaVisao: 12, distanciaSimulacao: 6 };
+const valido = {
+  abrirComWindows: true,
+  distanciaVisao: 12,
+  distanciaSimulacao: 6,
+  intervaloBackupMin: 30,
+};
+const padrao = {
+  abrirComWindows: false,
+  distanciaVisao: 10,
+  distanciaSimulacao: 8,
+  intervaloBackupMin: 10,
+};
 const arquivo = () => join(pasta, "preferencias.json");
 
 beforeEach(() => {
@@ -25,7 +36,34 @@ describe("configurações", () => {
       abrirComWindows: false,
       distanciaVisao: 10,
       distanciaSimulacao: 8,
+      intervaloBackupMin: 10,
     });
+  });
+
+  it("salvar o intervalo grava e avisa o agendador (só depois de gravar)", () => {
+    const novos: number[] = [];
+    const c = criarConfiguracoes({
+      pasta,
+      aplicarAbrirComWindows: () => undefined,
+      aplicarIntervaloBackup: (m) => void novos.push(m),
+    });
+    expect(c.salvar(valido)).toEqual({ ok: true });
+    expect(novos).toEqual([30]);
+    expect(c.ler().intervaloBackupMin).toBe(30);
+  });
+
+  it.each([0, -1, 1.5, 1441, Number.NaN])("intervalo %j é recusado e nada é gravado", (v) => {
+    const novos: number[] = [];
+    const c = criarConfiguracoes({
+      pasta,
+      aplicarAbrirComWindows: () => undefined,
+      aplicarIntervaloBackup: (m) => void novos.push(m),
+    });
+    const r = c.salvar({ ...valido, intervaloBackupMin: v });
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.mensagem).toContain("intervalo do backup");
+    expect(novos).toEqual([]);
+    expect(() => readFileSync(arquivo())).toThrow();
   });
 
   it("valor válido grava, liga o Windows e chega ao núcleo", () => {
@@ -47,7 +85,7 @@ describe("configurações", () => {
     [{ ...valido, distanciaVisao: 10.5 }, "inteiro"],
     [{ ...valido, distanciaVisao: Number.NaN }, "inteiro"],
   ])("valor inválido não salva nada (%j)", (entrada, trecho) => {
-    criar().salvar({ abrirComWindows: false, distanciaVisao: 10, distanciaSimulacao: 8 });
+    criar().salvar(padrao);
     aplicados.length = 0;
     const antes = readFileSync(arquivo(), "utf8");
     const r = criar().salvar(entrada);
@@ -64,6 +102,8 @@ describe("configurações", () => {
     {},
     { ...valido, distanciaVisao: "12" },
     { ...valido, abrirComWindows: "sim" },
+    { ...valido, intervaloBackupMin: "30" },
+    { abrirComWindows: true, distanciaVisao: 12, distanciaSimulacao: 6 },
   ])("formato errado vindo da tela é recusado (%j)", (entrada) => {
     expect(criar().salvar(entrada)).toEqual({
       ok: false,

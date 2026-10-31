@@ -16,6 +16,7 @@ export interface ConfiguracoesDaTela {
   abrirComWindows: boolean;
   distanciaVisao: number;
   distanciaSimulacao: number;
+  intervaloBackupMin: number;
 }
 
 export interface BackupDaTela {

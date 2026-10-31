@@ -90,6 +90,22 @@
           </p>
           <p class="dica">Vale na próxima vez que o servidor for ligado.</p>
         </fieldset>
+        <fieldset>
+          <legend>Backups</legend>
+          <label for="cfg-intervalo">Intervalo (minutos)</label>
+          <input
+            type="number"
+            id="cfg-intervalo"
+            inputmode="numeric"
+            min="1"
+            max="1440"
+            step="1"
+            aria-describedby="cfg-intervalo-dica"
+          />
+          <p class="dica" id="cfg-intervalo-dica">
+            De 1 a 1440. Padrão: 10. Vale já, com o servidor no ar.
+          </p>
+        </fieldset>
         <fieldset id="cfg-grupo" hidden>
           <legend>Grupo</legend>
           <p class="dica">PCs com acesso ao grupo. Só o dono do grupo vê esta área.</p>
