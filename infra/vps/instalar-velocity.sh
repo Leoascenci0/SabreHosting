@@ -127,6 +127,8 @@ prevent-client-proxy-connections = false
 [servers]
 # Destino provisório na rede privada; o plugin do rede-2.2 passa a trocar pelo host da vez.
 host = "$DESTINO"
+# Sala de espera (rede-2.3): limbo local, só em 127.0.0.1. Fora do "try": só o plugin do rede-2.2 manda gente para lá.
+espera = "127.0.0.1:25566"
 
 try = ["host"]
 

@@ -1,0 +1,25 @@
+# Sala de espera (limbo), só em 127.0.0.1:25566. Instalada DESLIGADA pelo instalar-limbo.sh.
+[Unit]
+Description=SabreHosting - sala de espera (limbo, só local)
+After=network-online.target
+
+[Service]
+User=sabre
+Group=sabre
+WorkingDirectory=/var/lib/sabre/limbo
+ExecStart=/opt/sabre/limbo/picolimbo
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+MemoryMax=128M
+ReadWritePaths=/var/lib/sabre/limbo
+
+[Install]
+WantedBy=multi-user.target

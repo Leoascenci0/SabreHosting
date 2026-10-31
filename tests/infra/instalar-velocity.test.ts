@@ -84,6 +84,15 @@ describe("infra/vps/instalar-velocity.sh em simulação", () => {
     }
   });
 
+  it("o toml traz o servidor espera (limbo local) sem mudar host nem try", () => {
+    apiFalsa();
+    const { stdout } = rodar();
+    expect(stdout).toContain('espera = "127.0.0.1:25566"');
+    expect(stdout).toContain('host = "10.66.0.2:25565"');
+    expect(stdout).toContain('try = ["host"]');
+    expect(stdout).not.toMatch(/try = .*espera/);
+  });
+
   it("o segredo nunca aparece no toml nem na saída", () => {
     apiFalsa();
     const { stdout, stderr } = rodar();
