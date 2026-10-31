@@ -24,11 +24,8 @@
 | 2026-10-30 | Autenticação dos jogadores: o **proxy Velocity confere a conta Microsoft** (`online-mode=true` no proxy); o servidor do host fica com `online-mode=false`, escuta **só no IP da rede privada** e confia no proxy pelo encaminhamento "modern forwarding". **Whitelist ligada por padrão**; quem entra na lista é regra do grupo (Eliel). Decidido pela Máxima (segurança da rede, reversível) | host-1.2, rede-2.1 |
 | 2026-10-30 | Comandos ao servidor (salvar, avisar, listar) pelo **console do processo** (stdin/stdout), **não por RCON**: nenhuma porta de rede nem senha a mais. Decidido pela Máxima (segurança, reversível) | host-2.2 |
 | 2026-10-30 | Dependência **`tar`** (ISC, mantida pelo time do npm) só em `packages/nucleo`, para o pacote do mundo em `.tar.gz` com `node:zlib` (zstd ainda não é estável no Node 22). Decidido pela Máxima (reversível) | bkp-1.2 |
-<<<<<<< HEAD
+| 2026-10-31 | Sala de espera = **PicoLimbo (MIT)**, programa separado só baixado e executado na máquina da nuvem (hash fixado em `infra/vps/limbo/limbo-release.env`, ainda a preencher), escutando só em 127.0.0.1:25566. NanoLimbo (GPL-3.0) descartado por licença | rede-2.3 |
 | 2026-10-30 | **D6:** regras do grupo nos padrões — guardar os 10 backups mais recentes + 1 por dia dos últimos 7 dias; trocar de host só com nota ≥ 1,3 × a do host; pode hospedar quem ligar a opção no próprio app. Tudo ajustável em Configurações | bkp-2.1, migra-1.1 |
 | 2026-10-30 | **D2:** rede privada com **WireGuard próprio** na máquina da nuvem (hub), sem Tailscale nem playit.gg | rede-1.1, rede-1.3 |
 | 2026-10-30 | **D3:** máquina na nuvem na **Oracle Cloud Always Free em São Paulo** (ARM). O cadastro é do Eliel, no item que cria a máquina | rede-1.1, rede-1.2 |
 | 2026-10-30 | **D4:** ícone enviado pelo Eliel (tigre-dente-de-sabre + blocos de grama), em `apps/desktop/recursos/icone/` | app-1.1 |
-=======
-| 2026-10-31 | Sala de espera = **PicoLimbo (MIT)**, programa separado só baixado e executado na máquina da nuvem (hash fixado em `infra/vps/limbo/limbo-release.env`, ainda a preencher), escutando só em 127.0.0.1:25566. NanoLimbo (GPL-3.0) descartado por licença | rede-2.3 |
->>>>>>> origin/main

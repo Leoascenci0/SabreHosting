@@ -20,4 +20,4 @@ explícito de 30 s nos testes pesados; medir pedaço lido (≤ 1 MiB) e arquivos
 Sintoma: `<<<<<<< HEAD` dentro de `docs/ops/DECISOES.md` e o verificador APROVADO · Causa: `git merge` da main deu
 conflito no fim da tabela (as duas pontas acrescentam linha) e o script seguinte fez `git add -A` sem conferir · Solução:
 resolver mantendo as duas linhas; sempre checar a saída do `git merge` antes de `git add` · Prova: `grep -c "<<<<<<<"` = 0 ·
-Vezes: 2 (Ondas 3 e 6) · Origem: orquestradora; trava no verificador em basemel-1.4
+Vezes: 3 (Ondas 3, 6 e 10) · Origem: orquestradora; trava no verificador em basemel-1.4. Regra: depois de `git merge`, se a saída tiver CONFLICT, resolver ANTES de qualquer edição ou commit
