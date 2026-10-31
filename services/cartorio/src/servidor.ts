@@ -52,7 +52,14 @@ import {
   soltar,
 } from "./trava.js";
 import { type MotivoConfig, gravarConfig, lerConfig } from "./configuracao.js";
-import { type DadosVersao, informarCopia, maisNova, quemTem, registrarVersao } from "./versoes.js";
+import {
+  type DadosVersao,
+  informarCopia,
+  maisNova,
+  nuvemTem,
+  quemTem,
+  registrarVersao,
+} from "./versoes.js";
 
 export interface OpcoesCartorio {
   banco: Banco;
@@ -534,7 +541,11 @@ export function criarCartorio({
       onRequest: soPc,
       schema: { params: { type: "object", required: ["n"], properties: { n: EPOCA } } },
     },
-    (req) => ({ numero: req.params.n, pcs: quemTem(banco, req.params.n) }),
+    (req) => ({
+      numero: req.params.n,
+      nuvem: nuvemTem(banco, req.params.n),
+      pcs: quemTem(banco, req.params.n),
+    }),
   );
 
   if (opcoesArmazem) {

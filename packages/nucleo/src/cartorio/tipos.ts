@@ -134,6 +134,63 @@ export function validarPc(v: unknown): Pc {
   return { id: inteiro(o, "id", 1), nome: texto(o, "nome") };
 }
 
+/** Versão registrada no cartório (`GET /versoes/mais-nova`). */
+export interface VersaoRegistrada {
+  numero: number;
+  epoca: number;
+  pcId: number;
+  manifestoSha256: string;
+  arquivos: number;
+  bytes: number;
+  criadaEm: number;
+}
+
+/** PC com a versão e o IP dele na rede privada (`null` até confirmar a entrada). */
+export interface PcComCopia extends Pc {
+  ip: string | null;
+}
+
+/** `GET /versoes/:n/copias`; `nuvem` diz só que a nuvem guarda a versão (não é fonte do espalhar ainda). */
+export interface Copias {
+  numero: number;
+  nuvem: boolean;
+  pcs: PcComCopia[];
+}
+
+export function validarMaisNova(v: unknown): VersaoRegistrada | null {
+  const o = objeto(v, "versão mais nova");
+  if (o.versao === null) return null;
+  const x = objeto(o.versao, "versão");
+  const sha = texto(x, "manifestoSha256");
+  if (!/^[0-9a-f]{64}$/.test(sha))
+    throw new Error("Resposta inválida do cartório: manifestoSha256.");
+  return {
+    numero: inteiro(x, "numero", 1),
+    epoca: inteiro(x, "epoca"),
+    pcId: inteiro(x, "pcId", 1),
+    manifestoSha256: sha,
+    arquivos: inteiro(x, "arquivos"),
+    bytes: inteiro(x, "bytes"),
+    criadaEm: inteiro(x, "criadaEm"),
+  };
+}
+
+export function validarCopias(v: unknown): Copias {
+  const o = objeto(v, "cópias");
+  if (typeof o.nuvem !== "boolean" || !Array.isArray(o.pcs))
+    throw new Error("Resposta inválida do cartório: cópias.");
+  return {
+    numero: inteiro(o, "numero", 1),
+    nuvem: o.nuvem,
+    pcs: o.pcs.map((p) => {
+      const c = objeto(p, "PC");
+      if (c.ip !== null && typeof c.ip !== "string")
+        throw new Error("Resposta inválida do cartório: ip.");
+      return { ...validarPc(c), ip: c.ip };
+    }),
+  };
+}
+
 export function validarEu(v: unknown): Eu {
   const o = objeto(v, "PC");
   if (typeof o.dono !== "boolean") throw new Error("Resposta inválida do cartório: dono.");
