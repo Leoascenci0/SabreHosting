@@ -211,6 +211,8 @@ o que se repete). No máximo 10 linhas:
   completo (`git rev-parse origin/main`).
 - **S-10** `qa` reprova correção sem `Regressão:`/`Tela no app:` no PR: todo briefing de correção ou de tela manda a
   filha escrever essas duas linhas.
+- **S-11** o gancho barra o comando inteiro se o TEXTO da flag que pula o pre-commit aparece (até num heredoc): não
+  escrever essa flag nem em mensagem ou documento; descrevê-la por extenso.
 
 ## Skills sob demanda
 

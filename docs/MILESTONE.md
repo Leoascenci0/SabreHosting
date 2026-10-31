@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 25**
+**Próxima onda: 26**
 
-Onda 24 (31/10) — hostmel-3.1b→c→d · piloto-1.1b→c · espalhar no app — sessão https://claude.ai/code/session_012qrjntg73vm87TWPY1tzjP
+Onda 25 (31/10) — cartmel-2.5 · syncmel-1.9 · syncmel-1.7 · syncmel-1.3 · backup antes de trocar versão · migra-2.1 — sessão https://claude.ai/code/session_012qrjntCnjHafcdk8F9QU2a
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -45,6 +45,9 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 ## Pendente do Eliel
 
+- **Liberar `maven.neoforged.net`** (e `repo.papermc.io`) na rede do ambiente: sem o hash do NeoForge 1.20.1 nenhuma versão com mods hospeda.
+- **Importar o mundo real** pelo tutorial `docs/tutoriais/piloto-importar.md` (no seu PC).
+
 - **redemel-1.3** — tirar o PC revogado da rede privada: precisa do WireGuard instalado de verdade na máquina da nuvem.
 
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
@@ -68,6 +71,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Feito
 
+- 31/10/2026 (dia) — Onda 24: piloto-1.1b #184, hostmel-3.1d #185, hostmel-3.1b #186, cartmel-2.4 #187, hostmel-3.1c #188, piloto-1.1c #189, controle #190.
 - 31/10/2026 (dia) — Onda 23: piloto-1.1a #177, syncmel-1.8a #178, appmel-1.11 #179, hostmel-3.1a #180, drive-1.1b #181, syncmel-1.8b #182, Dependabot #95/#96, controle #183.
 - 31/10/2026 (dia) — Onda 22: syncmel-1.5 #170, appmel-1.10 #171, syncmel-1.6 #172, sync-2.1a #173, drive-1.1a #174, controle #175.
 - 31/10/2026 (dia) — Onda 21: cartmel-2.2 #163, syncmel-1.4 #164, appmel-1.7 #165, syncmel-1.1 #166, appmel-1.8 #167, syncmel-1.2 #168, controle #169.

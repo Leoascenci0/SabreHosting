@@ -3,7 +3,7 @@
 - Coordenadora: session_012qrjnuauHQWFgAgmdzp4Fv (ramo `claude/serene-pasteur-xy85h8`), aberta 09:10 com `/maxima retomar`.
 - Turno: dia. Autorizações do Eliel (09:12): Onda 20 com os 5 itens; merge pela Máxima com vistoria + `qa`; nada na
   máquina da nuvem de verdade nem no mundo real.
-- Próximo número de onda livre: 25.
+- Próximo número de onda livre: 26.
 - Autorização 10:00: "Pode, e siga sozinha" — rodar as próximas ondas sem perguntar; parar só em item P.
 
 ## Ondas
@@ -14,7 +14,8 @@
 | 21 | syncmel-1.4 · appmel-1.7 · cartmel-2.2 · syncmel-1.1 · syncmel-1.2 · appmel-1.8 | session_012qrjnuVvPbMbr49Ryg8nY3 | 0b57326 | fechada 10:36 → main 5f440cc |
 | 22 | appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 | session_012qrjntw8ggfpCSw7mg4UfD (1ª: …AzcormV8 falhou, hash curto, S-09) | 5f440cc | fechada 11:33 → main 722501a |
 | 23 | appmel-1.11 · syncmel-1.8 · piloto-1.1 · Dependabot #95/#96 · hostmel-3.1 · drive-1.1b | session_012qrjnrPqSYeU1jDzU3Fmqk | 37baba7 | fechada 13:34 → main 565b9ee |
-| 24 | hostmel-3.1b→c→d · piloto-1.1b→c · espalhar no app | session_012qrjntg73vm87TWPY1tzjP | 565b9ee | aberta 13:34 |
+| 24 | hostmel-3.1b→c→d · piloto-1.1b→c · espalhar no app | session_012qrjntg73vm87TWPY1tzjP | 565b9ee | fechada 14:27 → main 0762634 |
+| 25 | cartmel-2.5 · syncmel-1.9 · syncmel-1.7 · syncmel-1.3 · backup antes de trocar versão · migra-2.1 | session_012qrjntCnjHafcdk8F9QU2a | 0762634 | aberta 14:27 |
 
 ## Relatórios das ondas
 
@@ -35,6 +36,10 @@
   drive-1.1b #181 · Dependabot #95/#96 · controle #183. P: nenhum. Decidi por você: rotação = N mais novos + tudo dos
   últimos 7 dias; marcas bom/ruim no app; rotação na pasta sincronizada apaga também na nuvem (tela avisa); versão: loaders
   consultados na hora com "sem mods" de reserva. Custo ~US$ 15,0. main 565b9ee APROVADA. Ficha S-10 → CLAUDE.md.
+- **Onda 24** (14:27): ✅ hostmel-3.1b #186 · 3.1c #188 · 3.1d #185 · piloto-1.1b #184 · 1.1c #189 · cartmel-2.4 #187 · controle #190.
+  ⏸️ sync-2.1b → syncmel-1.9. P: sha1 do NeoForge 1.20.1 (maven.neoforged.net bloqueado na nuvem); importar o mundo real
+  (tutorial docs/tutoriais/piloto-importar.md); PORTA_ESPALHAR=25570 → decidido pela coordenadora (fica). Custo ~US$ 15,2
+  (1.1c em Opus 8,37). main 0762634 APROVADA. Ficha S-11 → CLAUDE.md.
 
 ## Bastão
 
