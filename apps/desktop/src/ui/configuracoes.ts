@@ -1,4 +1,4 @@
-import type { CampoComErro, PcDaTela, PonteSabre } from "./ponte.js";
+import type { CampoComErro, ModDaTela, PcDaTela, PonteSabre } from "./ponte.js";
 import { rotuloConfirmarVersao } from "./rotulo-versao.js";
 
 declare global {
@@ -50,6 +50,31 @@ const confirmarVersao = $<HTMLButtonElement>("cfg-versao-confirmar");
 const cancelarVersao = $<HTMLButtonElement>("cfg-versao-cancelar");
 const erroVersao = $("cfg-versao-erro");
 const avisoVersao = $("cfg-versao-aviso");
+
+const listaMods = $("mods-lista");
+const atualizandoMods = $("mods-atualizando");
+const dicaMods = $("mods-dica");
+const confMods = $("mods-confirmacao");
+const perguntaMods = $("mods-pergunta");
+const confirmarMods = $<HTMLButtonElement>("mods-confirmar");
+const cancelarMods = $<HTMLButtonElement>("mods-cancelar");
+const formMods = $("mods-adicionar");
+const adicionarMods = $<HTMLButtonElement>("mods-adicionar-botao");
+const avisoMods = $("mods-aviso");
+const erroMods = $("mods-erro");
+const camposMod = {
+  nome: $<HTMLInputElement>("mods-nome"),
+  versao: $<HTMLInputElement>("mods-versao"),
+  arquivo: $<HTMLInputElement>("mods-arquivo"),
+  url: $<HTMLInputElement>("mods-url"),
+  sha512: $<HTMLInputElement>("mods-hash"),
+  lado: $<HTMLSelectElement>("mods-lado"),
+};
+const LADO_MOD = { ambos: "jogo e servidor", cliente: "só o jogo", servidor: "só o servidor" };
+let tirandoMod: ModDaTela | undefined;
+let botaoDoMod: HTMLElement | undefined;
+let consultaMods = 0;
+let aguardaMods: ReturnType<typeof setTimeout> | undefined;
 
 let versaoAtual = "";
 /** Cada seleção ganha um número: resposta atrasada de uma versão já trocada é descartada. */
@@ -186,6 +211,122 @@ confirmarGrupo.addEventListener("click", () => {
     .finally(() => ocuparGrupo(false));
 });
 
+function mostrarErroMods(texto: string): void {
+  erroMods.textContent = texto;
+  erroMods.hidden = texto === "";
+}
+
+function ocuparMods(ocupado: boolean): void {
+  for (const b of [adicionarMods, confirmarMods, cancelarMods]) b.disabled = ocupado;
+  for (const b of listaMods.querySelectorAll("button")) b.disabled = ocupado;
+  adicionarMods.textContent = ocupado ? "Adicionando…" : "Adicionar à lista";
+  confirmarMods.textContent = ocupado ? "Tirando…" : "Tirar da lista";
+}
+
+function desenharMods(mods: ModDaTela[], dono: boolean): void {
+  if (mods.length === 0) {
+    const vazio = document.createElement("li");
+    vazio.textContent = "Nenhum mod na lista ainda.";
+    listaMods.replaceChildren(vazio);
+    return;
+  }
+  listaMods.replaceChildren(
+    ...mods.map((m) => {
+      const li = document.createElement("li");
+      const nome = document.createElement("span");
+      nome.textContent = `${m.nome} ${m.versao} (${LADO_MOD[m.lado]})`;
+      li.append(nome);
+      if (dono) {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "secundario";
+        botao.textContent = "Tirar da lista";
+        botao.addEventListener("click", () => {
+          tirandoMod = m;
+          botaoDoMod = botao;
+          perguntaMods.textContent = `Tirar "${m.nome}" da lista de mods do grupo?`;
+          confMods.hidden = false;
+          cancelarMods.focus();
+        });
+        li.append(botao);
+      }
+      return li;
+    }),
+  );
+}
+
+async function carregarMods(): Promise<void> {
+  const minha = ++consultaMods;
+  clearTimeout(aguardaMods);
+  try {
+    const e = await window.sabre.mods.estado();
+    if (minha !== consultaMods) return; // resposta de uma consulta já substituída
+    formMods.hidden = !e.dono;
+    dicaMods.hidden = false;
+    atualizandoMods.hidden = !e.atualizando;
+    desenharMods(e.mods, e.dono);
+    if (e.erro) mostrarErroMods(e.erro);
+    else if (e.aviso) avisoMods.textContent = e.aviso;
+    // Atualizando no arranque: olha de novo até acabar, para o amigo ver o resultado.
+    if (e.atualizando) aguardaMods = setTimeout(() => void carregarMods(), 1500);
+  } catch {
+    mostrarErroMods("Não consegui ler a lista de mods agora.");
+  }
+}
+
+cancelarMods.addEventListener("click", () => {
+  confMods.hidden = true;
+  tirandoMod = undefined;
+  botaoDoMod?.focus();
+});
+confirmarMods.addEventListener("click", () => {
+  const alvo = tirandoMod;
+  if (!alvo) return;
+  ocuparMods(true);
+  mostrarErroMods("");
+  avisoMods.textContent = "";
+  atualizandoMods.hidden = false;
+  window.sabre.mods
+    .tirar(alvo.arquivo)
+    .then(async (r) => {
+      confMods.hidden = true;
+      tirandoMod = undefined;
+      if (r.ok) avisoMods.textContent = r.aviso ?? `${alvo.nome} saiu da lista de mods.`;
+      else mostrarErroMods(r.mensagem);
+    })
+    .catch(() => mostrarErroMods("Não consegui tirar o mod agora. Atualize a lista para conferir."))
+    .finally(() => {
+      ocuparMods(false);
+      void carregarMods();
+    });
+});
+adicionarMods.addEventListener("click", () => {
+  ocuparMods(true);
+  mostrarErroMods("");
+  avisoMods.textContent = "";
+  atualizandoMods.hidden = false;
+  window.sabre.mods
+    .adicionar({
+      nome: camposMod.nome.value,
+      versao: camposMod.versao.value,
+      arquivo: camposMod.arquivo.value,
+      url: camposMod.url.value,
+      sha512: camposMod.sha512.value,
+      lado: camposMod.lado.value as ModDaTela["lado"],
+    })
+    .then((r) => {
+      if (r.ok) {
+        for (const c of Object.values(camposMod)) if (c !== camposMod.lado) c.value = "";
+        avisoMods.textContent = r.aviso ?? "Mod adicionado e atualizado neste PC.";
+      } else mostrarErroMods(r.mensagem);
+    })
+    .catch(() => mostrarErroMods("Não consegui adicionar o mod agora. Nada foi alterado."))
+    .finally(() => {
+      ocuparMods(false);
+      void carregarMods();
+    });
+});
+
 function mostrarErroVersao(texto: string): void {
   erroVersao.textContent = texto;
   erroVersao.hidden = texto === "";
@@ -271,6 +412,7 @@ confirmarVersao.addEventListener("click", () => {
 async function carregar(): Promise<void> {
   void carregarGrupo();
   void carregarVersao();
+  void carregarMods();
   aviso.textContent = "Carregando…";
   try {
     const c = await window.sabre.configuracoes.ler();
