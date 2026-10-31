@@ -205,4 +205,46 @@ describe("histórico longo no backup agendado (drive-1.1a)", () => {
     expect(visivel.ler()).toBeUndefined();
     rmSync(local, { recursive: true });
   });
+
+  it("aoCopiar só roda depois da cópia conferida; pasta que some: não roda e o backup local fica (drive-1.1b)", async () => {
+    const { mkdtempSync, writeFileSync, readdirSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { createHash } = await import("node:crypto");
+    const { copiarAoConcluir } = await import("./agenda-backups.js");
+    const local = mkdtempSync(join(tmpdir(), "sabre-ag-local-"));
+    const drive = mkdtempSync(join(tmpdir(), "sabre-ag-drive-"));
+    const nome = "2026-10-31T10-00-00-000Z-v1.tar.gz";
+    const caminho = join(local, nome);
+    writeFileSync(caminho, "pacote de teste");
+    const sha256 = createHash("sha256").update("pacote de teste").digest("hex");
+    const copias: { caminho: string; sha256: string }[] = [];
+    const avisos: string[] = [];
+    const o = {
+      pastaBackups: local,
+      pastaDoMundo: undefined as string | undefined,
+      historicoLongo: () => drive,
+      aoCopiar: async (c: { caminho: string; sha256: string }) => void copias.push(c),
+      aoAvisar: (t: string) => void avisos.push(t),
+    };
+    await copiarAoConcluir(o, { caminho, sha256 });
+    expect(copias).toEqual([{ caminho: join(drive, nome), sha256 }]);
+    rmSync(drive, { recursive: true });
+    await copiarAoConcluir(o, { caminho, sha256 });
+    expect(copias).toHaveLength(1); // não marcou nem rotacionou
+    expect(readdirSync(local)).toEqual([nome]);
+    // erro dentro da rotação vira aviso, nunca lança
+    const drive2 = mkdtempSync(join(tmpdir(), "sabre-ag-drive-"));
+    await copiarAoConcluir(
+      {
+        ...o,
+        historicoLongo: () => drive2,
+        aoCopiar: async () => Promise.reject(new Error("lista torta")),
+      },
+      { caminho, sha256 },
+    );
+    expect(avisos.at(-1)).toContain("lista torta");
+    rmSync(local, { recursive: true });
+    rmSync(drive2, { recursive: true });
+  });
 });

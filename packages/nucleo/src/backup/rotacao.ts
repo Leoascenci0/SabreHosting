@@ -9,7 +9,7 @@
 import { lstat, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { abrirPacote } from "./pacote.js";
+import { PacoteRecusado, abrirPacote } from "./pacote.js";
 
 export type EstadoDoBackup = "bom" | "ruim" | "nao-conferido";
 
@@ -99,18 +99,32 @@ async function ehArquivoDoSabre(pasta: string, nome: string): Promise<boolean> {
   return info?.isFile() === true;
 }
 
-/** Conferência padrão: abre o pacote (hash + manifesto + cada arquivo) numa pasta temporária, que é apagada depois. */
-export async function conferirPacote(pasta: string, backup: BackupDaRotacao): Promise<boolean> {
-  if (backup.sha256 === undefined) return false;
+/**
+ * Resultado de uma conferência. "ruim": o pacote foi lido e o hash/manifesto não bate. "indisponivel": não deu para
+ * ler agora (Drive ainda baixando, disco cheio, sem hash conhecido): não prova nada e NUNCA vira marca "ruim".
+ */
+export type Veredito = "ok" | "ruim" | "indisponivel";
+
+/** Abre o pacote (hash + manifesto + cada arquivo) numa pasta temporária, que é apagada depois. */
+export async function conferirPacoteDetalhado(
+  pasta: string,
+  backup: BackupDaRotacao,
+): Promise<Veredito> {
+  if (backup.sha256 === undefined) return "indisponivel";
   const base = await mkdtemp(join(tmpdir(), "sabre-conferir-"));
   try {
     await abrirPacote(join(pasta, backup.nome), backup.sha256, join(base, "aberto"));
-    return true;
-  } catch {
-    return false;
+    return "ok";
+  } catch (erro) {
+    return erro instanceof PacoteRecusado ? "ruim" : "indisponivel";
   } finally {
-    await rm(base, { recursive: true, force: true });
+    await rm(base, { recursive: true, force: true }).catch(() => undefined);
   }
+}
+
+/** Conferência padrão: só "ok" conta como bom. */
+export async function conferirPacote(pasta: string, backup: BackupDaRotacao): Promise<boolean> {
+  return (await conferirPacoteDetalhado(pasta, backup)) === "ok";
 }
 
 export interface OpcoesAplicar {

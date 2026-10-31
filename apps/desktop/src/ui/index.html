@@ -141,8 +141,22 @@
           </div>
           <p class="dica" id="cfg-historico-dica">
             Cada backup novo também é copiado para a pasta escolhida (use a pasta do Drive, OneDrive
-            ou Dropbox no seu PC). Nada é apagado nela; se a pasta sumir, o backup deste PC continua
-            normal.
+            ou Dropbox no seu PC). Se a pasta sumir, o backup deste PC continua normal.
+          </p>
+          <label for="cfg-historico-quantos">Quantos guardar nesta pasta</label>
+          <input
+            type="number"
+            id="cfg-historico-quantos"
+            inputmode="numeric"
+            min="1"
+            max="1000"
+            step="1"
+            disabled
+            aria-describedby="cfg-historico-quantos-dica"
+          />
+          <p class="dica" id="cfg-historico-quantos-dica">
+            Padrão: 10, além dos últimos 7 dias, que sempre ficam. Os mais antigos são apagados da
+            pasta sozinhos, e apagar na pasta também apaga na nuvem do serviço sincronizado.
           </p>
         </fieldset>
         <fieldset id="cfg-grupo" hidden>

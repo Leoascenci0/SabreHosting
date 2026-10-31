@@ -43,6 +43,30 @@ export function resolverModrinth(versao: unknown): Alvo {
   return alvo(arquivo.url, "sha512", arquivo.hashes?.sha512, "Modrinth");
 }
 
+const HOSTS_MOJANG = new Set(["piston-data.mojang.com", "launcher.mojang.com"]);
+
+/** JSON de uma versão da Mojang: `downloads.server.{url,sha1}` e `javaVersion.majorVersion`. Entrada não confiável. */
+export function resolverMojang(json: unknown): Alvo & { javaMajor: number } {
+  const v = json as {
+    downloads?: { server?: { url?: unknown; sha1?: unknown } };
+    javaVersion?: { majorVersion?: unknown };
+  } | null;
+  const servidor = v?.downloads?.server;
+  if (!servidor) throw new Error("A Mojang não publicou servidor para essa versão.");
+  const resolvido = alvo(servidor.url, "sha1", servidor.sha1, "Mojang");
+  if (!HOSTS_MOJANG.has(new URL(resolvido.url).hostname))
+    throw new Error("A Mojang devolveu um endereço fora dos servidores oficiais; não vou baixar.");
+  const javaMajor = v?.javaVersion?.majorVersion;
+  if (
+    typeof javaMajor !== "number" ||
+    !Number.isInteger(javaMajor) ||
+    javaMajor < 8 ||
+    javaMajor > 99
+  )
+    throw new Error("A Mojang não informou a versão do Java dessa versão do Minecraft.");
+  return { ...resolvido, javaMajor };
+}
+
 /**
  * Hash sha1 do instalador de cada versão do NeoForge, conferido pelo grupo (versão → sha1). Vazia de valores reais
  * até o Eliel escolher a versão e o hash ser tirado num PC com acesso ao Maven (ver PR do hostmel-1.1).

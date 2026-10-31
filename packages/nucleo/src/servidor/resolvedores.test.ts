@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { resolverAdoptium, resolverModrinth, resolverNeoForge } from "./resolvedores.js";
+import {
+  resolverAdoptium,
+  resolverModrinth,
+  resolverMojang,
+  resolverNeoForge,
+} from "./resolvedores.js";
 
 const sha1 = "a".repeat(40);
 const sha256 = "b".repeat(64);
@@ -97,5 +102,32 @@ describe("resolverNeoForge", () => {
     expect(() => resolverNeoForge("x.1", sha1, tabela)).toThrow(/versão/);
     expect(resolverNeoForge("1.x", sha1, { "1.x": sha1 }).url).toContain("/1.x/");
     expect(() => resolverNeoForge("9.9.9", "não-é-hash", tabela)).toThrow(/hash/);
+  });
+});
+
+describe("resolverMojang", () => {
+  const json = (url: string, sha: unknown = sha1, java: unknown = 21) => ({
+    downloads: { server: { url, sha1: sha } },
+    javaVersion: { majorVersion: java },
+  });
+  const ok = "https://piston-data.mojang.com/v1/objects/abc/server.jar";
+  it("devolve url, sha1 e Java maior", () => {
+    expect(resolverMojang(json(ok))).toEqual({
+      url: ok,
+      hashEsperado: { algoritmo: "sha1", valor: sha1 },
+      javaMajor: 21,
+    });
+  });
+  it("recusa host fora da Mojang, http, sem sha1, sem servidor e Java estranho", () => {
+    expect(() => resolverMojang(json("https://evil.test/server.jar"))).toThrow(/oficiais/);
+    expect(() => resolverMojang(json("https://piston-data.mojang.com.evil.test/s.jar"))).toThrow(
+      /oficiais/,
+    );
+    expect(() => resolverMojang(json("http://piston-data.mojang.com/s.jar"))).toThrow(/https/);
+    expect(() => resolverMojang(json(ok, "zz"))).toThrow(/sha1/);
+    expect(() => resolverMojang({ downloads: {} })).toThrow(/servidor/);
+    expect(() => resolverMojang(json(ok, sha1, "21"))).toThrow(/Java/);
+    expect(() => resolverMojang(json(ok, sha1, 1000))).toThrow(/Java/);
+    expect(() => resolverMojang(null)).toThrow(/servidor/);
   });
 });

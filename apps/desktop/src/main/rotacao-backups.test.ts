@@ -1,4 +1,12 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, rmSync, truncateSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -125,5 +133,83 @@ describe("rotação ligada ao app", () => {
     expect(await rot.rodar()).toBeUndefined();
     expect(pacotes(pasta)).toEqual([...velhos].sort());
     expect(avisos.join(" ")).toMatch(/Não apaguei backups antigos/);
+  });
+});
+
+describe("rotação da pasta sincronizada (drive-1.1b)", () => {
+  const nomes = Array.from({ length: 12 }, (_, i) => nomeEm(i * 2));
+
+  function historico(pasta: string, marcas: string, deps: Partial<DepsRotacao> = {}) {
+    return criarRotacaoBackups({
+      pastaBackups: () => pasta,
+      quantosGuardar: () => 3,
+      arquivoMarcas: () => marcas,
+      agora: () => AGORA,
+      ...deps,
+    });
+  }
+  const chegar = async (rot: ReturnType<typeof criarRotacaoBackups>, pasta: string) => {
+    for (const n of [...nomes].reverse()) {
+      copyFileSync(modelo.caminho, join(pasta, n));
+      await rot.aoBackupBom({ caminho: join(pasta, n), sha256: modelo.sha256 });
+    }
+  };
+
+  it("apaga só o plano; não toca no que não é do Sabre (arquivo, link, pasta); último bom sobrevive", async () => {
+    const pasta = pastaVazia();
+    const marcas = join(mkdtempSync(join(raiz, "m-")), "marcas.json");
+    writeFileSync(join(pasta, "foto-de-familia.jpg"), "x");
+    writeFileSync(join(pasta, "2026-10-01T10-00-00-000Z-v1.tar.gz.parcial"), "x");
+    mkdirSync(join(pasta, "2026-09-01T10-00-00-000Z-v1.tar.gz")); // pasta com nome do Sabre: pulada
+    await chegar(historico(pasta, marcas), pasta);
+    const sobrou = readdirSync(pasta).sort();
+    expect(sobrou).toContain("foto-de-familia.jpg");
+    expect(sobrou).toContain("2026-10-01T10-00-00-000Z-v1.tar.gz.parcial");
+    expect(sobrou).toContain("2026-09-01T10-00-00-000Z-v1.tar.gz");
+    expect(pacotes(pasta).filter((n) => nomes.includes(n))).toEqual(nomes.slice(0, 4).sort());
+    expect(readdirSync(pasta).some((n) => n.endsWith(".marcas.json"))).toBe(false); // marcas fora da pasta
+  });
+
+  it("quantos guardar 0 nunca chega a apagar tudo: a rotação recusa e avisa", async () => {
+    const pasta = pastaVazia();
+    const marcas = join(mkdtempSync(join(raiz, "m-")), "marcas.json");
+    const avisos: string[] = [];
+    await chegar(
+      historico(pasta, marcas, { quantosGuardar: () => 0, aoAvisar: (t) => avisos.push(t) }),
+      pasta,
+    );
+    expect(pacotes(pasta)).toEqual([...nomes].sort());
+    expect(avisos.length).toBeGreaterThan(0);
+  });
+
+  it("pasta some no meio: nada apagado, sem erro e sem derrubar nada", async () => {
+    const pasta = pastaVazia();
+    const marcas = join(mkdtempSync(join(raiz, "m-")), "marcas.json");
+    const avisos: string[] = [];
+    const rot = historico(pasta, marcas, { aoAvisar: (t) => avisos.push(t) });
+    rmSync(pasta, { recursive: true });
+    await expect(
+      rot.aoBackupBom({ caminho: join(pasta, nomes[0] as string), sha256: modelo.sha256 }),
+    ).resolves.toBeUndefined();
+    expect(avisos).toEqual([]); // nada a rotacionar numa pasta que não existe; nada foi apagado
+  });
+
+  it("duas rotações ao mesmo tempo: a segunda pula (S-06)", async () => {
+    const pasta = pastaVazia();
+    let chamadas = 0;
+    let solta!: () => void;
+    const rot = historico(pasta, join(raiz, "m.json"), {
+      rotacionar: () => {
+        chamadas++;
+        return new Promise((r) => {
+          solta = () => r({ apagados: [], ignorados: [], falhas: [] });
+        });
+      },
+    });
+    const a = rot.rodar();
+    const b = rot.rodar();
+    solta();
+    await Promise.all([a, b]);
+    expect(chamadas).toBe(1);
   });
 });

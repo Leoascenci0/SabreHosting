@@ -31,6 +31,7 @@ function lerValor(valor: unknown): ConfiguracoesDaTela | undefined {
   }
   if (typeof v["intervaloBackupMin"] !== "number") return undefined;
   if (typeof v["quantosGuardar"] !== "number") return undefined;
+  if (typeof v["quantosGuardarHistorico"] !== "number") return undefined;
   if (typeof v["historicoLongoLigado"] !== "boolean") return undefined;
   if (typeof v["historicoLongoPasta"] !== "string") return undefined;
   return {
@@ -38,6 +39,7 @@ function lerValor(valor: unknown): ConfiguracoesDaTela | undefined {
     historicoLongoPasta: v["historicoLongoPasta"].trim(),
     intervaloBackupMin: v["intervaloBackupMin"],
     quantosGuardar: v["quantosGuardar"],
+    quantosGuardarHistorico: v["quantosGuardarHistorico"],
     abrirComWindows: v["abrirComWindows"],
     distanciaVisao: v["distanciaVisao"],
     distanciaSimulacao: v["distanciaSimulacao"],
@@ -64,6 +66,7 @@ export function criarConfiguracoes(deps: DepsConfiguracoes) {
         ["distancias", () => validarDistancias(novo.distanciaVisao, novo.distanciaSimulacao)],
         ["intervalo", () => validarIntervaloBackup(novo.intervaloBackupMin)],
         ["quantos", () => validarQuantosGuardar(novo.quantosGuardar)],
+        ["quantosHistorico", () => validarQuantosGuardar(novo.quantosGuardarHistorico)],
         [
           "historico",
           () => validarHistoricoLongo(novo.historicoLongoLigado, novo.historicoLongoPasta),
