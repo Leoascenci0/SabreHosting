@@ -1,5 +1,5 @@
 import type { SpawnOptions, ChildProcess } from "node:child_process";
-import { readdir, readFile, readlink, realpath } from "node:fs/promises";
+import { readdir, readFile, readlink, realpath, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
 import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
@@ -11,18 +11,31 @@ export interface ExtrasDepsReais {
   spawnFn?: (cmd: string, args: readonly string[], opcoes: SpawnOptions) => ChildProcess;
   prefixoArgs?: string[];
   plataforma?: NodeJS.Platform;
+  /** Pasta no lugar de `/proc` (Linux). */
+  raizProc?: string;
 }
 
 /**
  * Há servidor vivo na pasta (sobra de app fechado à força com o Java no ar)? Lado seguro: `true` também quando não
  * dá para saber, e quem chama trata erro como `true`.
  */
-async function servidorNaPasta(pasta: string, plataforma: NodeJS.Platform): Promise<boolean> {
+async function servidorNaPasta(
+  pasta: string,
+  plataforma: NodeJS.Platform,
+  raizProc = "/proc",
+): Promise<boolean> {
   if (plataforma === "linux") {
     const alvo = await realpath(pasta);
-    for (const pid of await readdir("/proc")) {
+    const ausente = (e: unknown) => (e as NodeJS.ErrnoException).code === "ENOENT";
+    for (const pid of await readdir(raizProc)) {
       if (!/^\d+$/.test(pid) || Number(pid) === process.pid) continue;
-      if ((await readlink(`/proc/${pid}/cwd`).catch(() => "")) === alvo) return true;
+      try {
+        // Processo de outro usuário não é o Java deste app (que roda como o próprio usuário).
+        if ((await stat(join(raizProc, pid))).uid !== process.getuid?.()) continue;
+        if ((await readlink(join(raizProc, pid, "cwd"))) === alvo) return true;
+      } catch (e) {
+        if (!ausente(e)) return true; // processo que não deixa conferir: talvez seja o órfão
+      }
     }
     return false;
   }
@@ -84,8 +97,9 @@ export function depsReais(
       });
     },
     eu: async () => exigir().eu(),
+    // Sem pasta não dá para conferir: na dúvida, não oferece Hospedar (que também recusaria sem configuração).
     servidorOrfao: async () =>
-      pasta ? servidorNaPasta(pasta, extras.plataforma ?? process.platform) : false,
+      pasta ? servidorNaPasta(pasta, extras.plataforma ?? process.platform, extras.raizProc) : true,
     endereco: env["SABRE_ENDERECO"] ?? "",
     copiar,
   };

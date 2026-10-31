@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -104,9 +104,49 @@ describe("quem sou eu e servidor órfão", () => {
     expect(new URL(String(fetchFn.mock.calls[0]?.[0 as never])).pathname).toBe("/eu");
   });
 
-  it("sem pasta configurada: não há onde ter servidor", async () => {
-    const d = depsReais({ ...env(), SABRE_PASTA_SERVIDOR: "" }, () => {}, { plataforma: "darwin" });
-    await expect(d.servidorOrfao()).resolves.toBe(false);
+  it("sem pasta configurada: não dá para conferir, na dúvida órfão", async () => {
+    const d = depsReais({ ...env(), SABRE_PASTA_SERVIDOR: "" }, () => {}, { plataforma: "linux" });
+    await expect(d.servidorOrfao()).resolves.toBe(true);
+  });
+
+  describe("Linux com /proc de mentira", () => {
+    const linux = (raizProc: string) =>
+      depsReais(env(), () => {}, { plataforma: "linux", raizProc });
+
+    it("cwd em outra pasta: sem órfão; cwd na pasta do servidor: órfão", async () => {
+      const proc = mkdtempSync(join(tmpdir(), "sabre-proc-"));
+      try {
+        mkdirSync(join(proc, "4242"));
+        symlinkSync(tmpdir(), join(proc, "4242", "cwd"));
+        await expect(linux(proc).servidorOrfao()).resolves.toBe(false);
+        mkdirSync(join(proc, "4343"));
+        symlinkSync(realpathSync(pasta), join(proc, "4343", "cwd"));
+        await expect(linux(proc).servidorOrfao()).resolves.toBe(true);
+      } finally {
+        rmSync(proc, { recursive: true, force: true });
+      }
+    });
+
+    it("processo que sumiu no meio (sem cwd) é ignorado", async () => {
+      const proc = mkdtempSync(join(tmpdir(), "sabre-proc-"));
+      try {
+        mkdirSync(join(proc, "4242"));
+        await expect(linux(proc).servidorOrfao()).resolves.toBe(false);
+      } finally {
+        rmSync(proc, { recursive: true, force: true });
+      }
+    });
+
+    it("processo que não deixa ler o cwd conta como órfão", async () => {
+      const proc = mkdtempSync(join(tmpdir(), "sabre-proc-"));
+      try {
+        mkdirSync(join(proc, "4242"));
+        writeFileSync(join(proc, "4242", "cwd"), "x"); // readlink falha (não é ENOENT), como num EACCES
+        await expect(linux(proc).servidorOrfao()).resolves.toBe(true);
+      } finally {
+        rmSync(proc, { recursive: true, force: true });
+      }
+    });
   });
 
   it("sistema sem como conferir: na dúvida, órfão", async () => {
@@ -119,7 +159,6 @@ describe("quem sou eu e servidor órfão", () => {
     "Linux: processo vivo com a pasta do servidor como diretório atual é órfão",
     async () => {
       const d = depsReais(env(), () => {}, { plataforma: "linux" });
-      await expect(d.servidorOrfao()).resolves.toBe(false);
       const vivo = spawn("sleep", ["30"], { cwd: pasta, stdio: "ignore" });
       try {
         await new Promise((ok) => vivo.once("spawn", ok));
