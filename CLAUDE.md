@@ -172,7 +172,8 @@ Bateu num erro: `grep -i "<trecho da mensagem>" docs/memoria/solucoes.md` antes 
 de fim de item vira ficha lá (a filha descreve no PR, seção "Soluções"; a Máxima consolida no merge e promove para cá
 o que se repete). No máximo 10 linhas:
 
-- _(nenhuma ainda)_
+- **S-02** `git merge` da `main` com CONFLICT (em geral no fim do `docs/ops/DECISOES.md`): resolver ANTES de editar ou
+  commitar; o verificador barra marcador de conflito desde o basemel-1.4.
 
 ## Skills sob demanda
 
