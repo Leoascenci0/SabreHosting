@@ -11,6 +11,8 @@ WorkingDirectory=/opt/sabre/cartorio
 # Escuta só na rede privada (IP do hub WireGuard); banco e cópia do mundo em /var/lib/sabre/cartorio.
 Environment=SABRE_CARTORIO_ENDERECO=10.66.0.1
 Environment=SABRE_CARTORIO_DADOS=/var/lib/sabre/cartorio
+# Segredo de admin (criado pelo instalar.sh, root, 0600); o systemd lê como root antes de largar para o usuário sabre.
+EnvironmentFile=/etc/sabre/cartorio.env
 ExecStart=/usr/bin/node /opt/sabre/cartorio/dist/index.js
 Restart=on-failure
 RestartSec=5

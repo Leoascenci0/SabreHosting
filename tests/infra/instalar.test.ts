@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -116,6 +124,24 @@ describe("infra/vps/instalar.sh em simulação", () => {
     expect(c.some((x) => /systemctl (enable|start)\b.*sabre-/.test(x))).toBe(false);
   });
 
+  it("segredo do cartório: criado pelo instalador na 1ª vez, mantido na 2ª, nunca impresso", () => {
+    const um = rodar();
+    const dois = rodar();
+    const gerou = (cmds: string[]) =>
+      cmds.some((c) => /gerar-segredo\.sh \/etc\/sabre\/cartorio\.env/.test(c));
+    expect(gerou(um.comandos)).toBe(true);
+    expect(gerou(dois.comandos)).toBe(false);
+    expect(um.stdout + um.stderr).not.toMatch(/SEGREDO_ADMIN=[0-9a-f]{8}/);
+  });
+
+  it("unidade do cartório lê o segredo de /etc/sabre/cartorio.env", () => {
+    const u = readFileSync(
+      resolve(import.meta.dirname, "../../infra/vps/systemd/sabre-cartorio.service"),
+      "utf8",
+    );
+    expect(u).toMatch(/^EnvironmentFile=\/etc\/sabre\/cartorio\.env$/m);
+  });
+
   it("o script não carrega segredo nenhum", () => {
     const fonte = readFileSync(SCRIPT, "utf8");
     expect(fonte).not.toMatch(/-----BEGIN [A-Z ]*PRIVATE KEY/);
@@ -194,5 +220,26 @@ describe("checagens reais com ferramentas falsas", () => {
       systemctl: '[ "$1" = is-active ] && exit 3; exit 0',
     }).comandos;
     expect(c).toContain("systemctl enable --now wg-quick@wg0");
+  });
+});
+
+describe("infra/vps/gerar-segredo.sh", () => {
+  const GERAR = resolve(import.meta.dirname, "../../infra/vps/gerar-segredo.sh");
+  const gerar = (arq: string) => spawnSync("bash", [GERAR, arq], { encoding: "utf8" });
+
+  it("cria o arquivo 0600 com 64 hex, não imprime o segredo e a 2ª execução não troca", () => {
+    const arq = join(estado, "cartorio.env");
+    const a = gerar(arq);
+    expect(a.status).toBe(0);
+    expect(statSync(arq).mode & 0o777).toBe(0o600);
+    const conteudo = readFileSync(arq, "utf8");
+    const m = conteudo.match(/^SABRE_CARTORIO_SEGREDO_ADMIN=([0-9a-f]{64})\n$/);
+    const segredo = m?.[1] ?? "";
+    expect(segredo).toHaveLength(64);
+    expect(a.stdout + a.stderr).not.toContain(segredo);
+    const b = gerar(arq);
+    expect(b.status).toBe(0);
+    expect(readFileSync(arq, "utf8")).toBe(conteudo);
+    expect(b.stdout + b.stderr).not.toContain(segredo);
   });
 });
