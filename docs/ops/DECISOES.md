@@ -48,3 +48,4 @@
 | 2026-10-31 | **Espalhar o mundo com trava separada:** cada PC atualiza a própria cópia em segundo plano mesmo com alguém hospedando (trava de atualização própria, distinta da trava de host); o mundo que está rodando nunca é tocado. Decisão do Eliel | syncmel-1.8, sync-2.1b |
 | 2026-10-31 | **Importar o mundo da hospedagem lendo o .zip direto:** dependência nova de leitura de zip (pequena, muito usada, versão fixada no lockfile); o app valida cada caminho do zip (nada fora da pasta de destino). Decisão do Eliel | piloto-1.1 |
 | 2026-10-31 | **Rotação na pasta sincronizada (drive-1.1b) segue a mesma regra 10 + 7 dias** da decisão do appmel-1.11. Decidido pela Máxima (aplicação direta da decisão do Eliel) | drive-1.1b |
+| 2026-10-31 | **Instalador Windows (app-3.1) antecipado para a Onda 26**, antes do fim do M2; a confirmação continua sendo o Eliel instalar num PC. Decisão do Eliel | app-3.1 |

@@ -49,3 +49,4 @@
 
 Passado às 15:10 (6 ondas, contexto 29%, custo US$ 5,09) → ver linha abaixo.
 Eliel (14:30): vai liberar maven.neoforged.net e repo.papermc.io; a Onda 26 confere com curl e puxa rede-2.2 + hashes NeoForge 1.20.1.
+Eliel (31/10, chat avulso): **app-3.1 (instalador Windows) entra na Onda 26**, junto com o que já estava previsto.
