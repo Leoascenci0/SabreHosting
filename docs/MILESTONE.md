@@ -16,6 +16,26 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
+_(nenhuma onda aberta; leva de 6 ondas concluída em 31/10/2026 — retomar com `/maxima retomar`)_
+
+## Fila
+
+**M1 — Fundação** — tudo feito, falta só:
+- host-3.1 [P: teste no PC — precisa da versão do Minecraft escolhida pelo Eliel]
+
+**M2 — Primeira partida**
+- **Próxima onda:** rede-2.2 (plugin do proxy: trocar o host da vez + whitelist = redemel-2.1) · app-1.1 (janela, bandeja,
+  ícone já enviado) · cartmel-1.2/1.3 (endurecer a entrada do cartório; banco fora do diretório atual)
+- Depois: app-1.2 · app-1.3 · redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
+- Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
+
+**M3 — Mundo em todos** | mundo chega sozinho a todos os PCs; quem voltou atualiza; instalador; botão Jogar abre o Prism já conectado | sync, app (blocos 2 e 3.1), lanc (bloco 1) |
+| **M4 — Troca sem queda** | servidor muda sozinho para o PC mais forte; host que cai é substituído | migra |
+| **M5 — Adeus hospedagem** | histórico no Drive, atualização automática, piloto e cancelamento da hospedagem | drive, app 3.2, piloto |
+| **M6 — Launcher próprio** | o SabreHosting abre o jogo sozinho, sem o Prism (depende da aprovação da Microsoft) | lanc (bloco 2) |
+
+## Em curso
+
 ## Fila
 
 **M1 — Fundação**
