@@ -262,6 +262,33 @@ describe("aplicarDelta", () => {
     expect(c.o.avisarCopia).not.toHaveBeenCalled();
   });
 
+  it("entre os renames só olha a trava LOCAL: nenhuma consulta de rede com o mundo fora do lugar (1.9a)", async () => {
+    const c = await cenario();
+    const temAtualizacao = vi.fn(async () => true);
+    const hospedaAgora = vi.fn(async () => false);
+    let rede = 0;
+    await aplicarDelta({
+      ...c.o,
+      temAtualizacao,
+      hospedaAgora,
+      temAtualizacaoLocal: async () => true,
+      aposPrimeiroRename: () => {
+        rede = temAtualizacao.mock.calls.length + hospedaAgora.mock.calls.length;
+      },
+    });
+    expect(temAtualizacao.mock.calls.length + hospedaAgora.mock.calls.length).toBe(rede);
+    expect(hashesDoMundo(c.mundo)).toEqual(hashesDoMundo(c.remoto));
+  });
+
+  it("trava local perdida entre os renames: M não entra e N volta (1.9a)", async () => {
+    const c = await cenario();
+    await expect(aplicarDelta({ ...c.o, temAtualizacaoLocal: async () => false })).rejects.toThrow(
+      /trava de atualização/i,
+    );
+    expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
+    expect(sobras(c.base)).toEqual([]);
+  });
+
   it("servidor deste PC ligado no meio da troca: para antes do 2º rename e N volta", async () => {
     const c = await cenario();
     let ligado = false;

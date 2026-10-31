@@ -23,9 +23,17 @@ import { analisarZip, importarNoCartorio } from "@sabrehosting/nucleo/importar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAvisoHistorico } from "./aviso-historico.js";
 import { criarRotacaoBackups, type RotacaoBackups } from "./rotacao-backups.js";
+import { ligarEspalhar } from "./ligar-espalhar.js";
+import {
+  conferirTokenNoCartorio,
+  criarServidorDeArquivos,
+  ipDaRedePrivada,
+  pastaDaVitrine,
+  type ServidorDeArquivos,
+} from "./servir-arquivos.js";
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
-import { depsBackupsReais } from "./deps-backups.js";
+import { backupParado, depsBackupsReais } from "./deps-backups.js";
 import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
 import { criarImportacao, type Importacao } from "./importar.js";
@@ -101,6 +109,7 @@ async function sairDoApp(perguntar: boolean): Promise<void> {
     if (r.falha !== undefined) await avisarFalhaSair(r.falha);
     return;
   }
+  await servidorArquivosApp?.fechar().catch(() => undefined); // para de servir ao sair
   podeSair = true;
   saindo = true;
   app.quit();
@@ -239,7 +248,11 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
         historicoLongo,
         avisoHistorico,
         aoCopiar: rotacaoHistorico.aoBackupBom,
-        aoBackupBom: rotacao.aoBackupBom,
+        aoBackupBom: async (feito) => {
+          await rotacao.aoBackupBom(feito); // marca "bom" primeiro: a vitrine só pega backup marcado
+          await servidorArquivosApp?.publicarUltimoBom();
+          void disparoEspalhar?.();
+        },
         aoAvisar,
       }),
       aoAvisar,
@@ -313,6 +326,34 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
   return criarBackups(depsBackupsE2E(servidorRodando));
 }
 
+let servidorArquivosApp: ServidorDeArquivos | undefined;
+/** Disparo da atualização do mundo (relógio de 10 min, arranque e depois de cada backup bom). */
+let disparoEspalhar: (() => Promise<void>) | undefined;
+
+/**
+ * Passa o mundo aos outros PCs (syncmel-1.10): só na IP da rede privada, só a vitrine do último backup bom, token
+ * conferido pelo cartório. Sem túnel, sem cartório ou sem pastas: não liga e avisa no log.
+ */
+async function ligarServidorDeArquivosDoApp(): Promise<void> {
+  if (process.env["SABRE_E2E"] === "1") return;
+  const { SABRE_CARTORIO_URL: url, SABRE_PASTA_BACKUPS: pastaBackups } = process.env;
+  if (!url || !pastaBackups) return;
+  const aoAvisar = (texto: string): void => console.warn(`[servir] ${texto}`);
+  try {
+    servidorArquivosApp = criarServidorDeArquivos({
+      endereco: () => ipDaRedePrivada(),
+      conferirToken: conferirTokenNoCartorio(url),
+      pastaBackups,
+      pastaVitrine: pastaDaVitrine(app.getPath("userData")),
+      aoAvisar,
+    });
+  } catch (e) {
+    aoAvisar(e instanceof Error ? e.message : String(e));
+    return;
+  }
+  if (await servidorArquivosApp.ligar()) await servidorArquivosApp.publicarUltimoBom();
+}
+
 /** Importar mundo (piloto-1.1c): seletor só de .zip; o caminho escolhido fica aqui no main, nunca vem da janela. */
 async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
   const servidorRodando = (): boolean => inicio.ativo();
@@ -368,10 +409,23 @@ async function criarGrupoDoApp(): Promise<Grupo> {
   return criarGrupo(depsGrupoE2E());
 }
 
-async function criarVersaoDoApp(servidorRodando: () => boolean): Promise<Versao> {
+async function criarVersaoDoApp(
+  servidorRodando: () => boolean,
+  temOrfao: () => Promise<boolean>,
+): Promise<Versao> {
   if (process.env["SABRE_E2E"] !== "1") {
     const exigir = clienteDoAmbiente(process.env);
+    const rotacao = criarRotacaoDoApp(() => process.env["SABRE_PASTA_BACKUPS"]);
     return criarVersao({
+      backupAntes: () =>
+        backupParado({
+          pastaBackups: process.env["SABRE_PASTA_BACKUPS"],
+          pastaDoMundo: process.env["SABRE_PASTA_MUNDO"],
+          cliente: exigir(),
+          servidorRodando,
+          servidorOrfao: temOrfao,
+          aoBom: rotacao.aoBackupBom,
+        }),
       eu: async () => exigir().eu(),
       lerAtual: async () => (await exigir().lerConfigGrupo()).versaoMinecraft,
       listar: async () => (await listarVersoes()).map((v) => v.id),
@@ -502,12 +556,23 @@ if (!app.requestSingleInstanceLock()) {
     agendaApp = await criarAgendaDoApp();
     inicioApp = await criarInicioDoApp();
     backupsApp = await criarBackupsDoApp(inicioApp);
+    if (process.env["SABRE_E2E"] !== "1") {
+      disparoEspalhar = ligarEspalhar({
+        env: process.env,
+        inicio: inicioApp,
+        aoAvisar: (texto) => console.warn(texto),
+      });
+    }
+    void ligarServidorDeArquivosDoApp();
     const inicioPronto = inicioApp;
     registrarPonte(
       inicioApp,
       backupsApp,
       await criarGrupoDoApp(),
-      await criarVersaoDoApp(() => inicioPronto.ativo()),
+      await criarVersaoDoApp(
+        () => inicioPronto.ativo(),
+        () => inicioPronto.temOrfao(),
+      ),
       await criarImportacaoDoApp(inicioApp),
     );
     bandeja = criarBandeja();

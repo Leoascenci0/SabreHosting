@@ -1,6 +1,7 @@
 import type { ClienteCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
 import {
   espalhar,
+  fontesDeCopias,
   type Espalhado,
   type Fonte,
   type VersaoNova,
@@ -25,6 +26,8 @@ export interface OpcoesEspalhador {
     | "estadoTrava"
   >;
   servidorRodando: () => boolean;
+  /** Servidor de sessão anterior ainda vivo na pasta? Erro ou "sim" recusam (o lado seguro). */
+  servidorOrfao?: () => Promise<boolean>;
   /** Versão do pacote que este PC tem agora (maior `versao` dos backups). */
   versaoLocal: () => Promise<number>;
   /** Só para teste: aceita 127.0.0.1. Nunca ligado pelo app. */
@@ -57,6 +60,12 @@ export function criarEspalhador(o: OpcoesEspalhador) {
     if (emCurso) throw new Error(JA_ATUALIZANDO);
     emCurso = true; // antes de qualquer await (S-06)
     try {
+      // Um Java de sessão anterior ainda de pé usa o mundo mesmo sem `servidorRodando`: na dúvida, não troca.
+      if (await o.servidorOrfao?.().catch(() => true)) {
+        throw new Error(
+          "Sobrou um servidor de antes aberto neste PC; feche o Java e a atualização do mundo continua depois.",
+        );
+      }
       return await espalhar({
         pastaDoMundo,
         pastaDoServidor,
@@ -77,6 +86,34 @@ export function criarEspalhador(o: OpcoesEspalhador) {
       });
     } finally {
       emCurso = false;
+    }
+  };
+}
+
+export interface OpcoesGatilho {
+  cliente: Pick<ClienteCartorio, "maisNova" | "quemTem" | "eu">;
+  espalhar: ReturnType<typeof criarEspalhador>;
+  /** Versão do pacote que este PC tem agora; só pergunta ao cartório pelas fontes se a mais nova for maior. */
+  versaoLocal: () => Promise<number>;
+  aoAvisar?: (texto: string) => void;
+}
+
+/**
+ * Dispara a atualização em segundo plano: pergunta ao cartório a versão mais nova e quem a tem, e chama o espalhador.
+ * Nunca lança (quem chama não espera): erro vira aviso. Sem versão nova ou sem fonte com IP, não faz nada. Fontes só de
+ * PCs (a nuvem não serve arquivo por hash) e sem este PC; o IP vem do cartório e é validado de novo em `espalhar`.
+ */
+export function criarGatilhoEspalhar(o: OpcoesGatilho): () => Promise<void> {
+  return async () => {
+    try {
+      const nova = await o.cliente.maisNova();
+      if (!nova || nova.numero <= (await o.versaoLocal())) return;
+      const [eu, copias] = await Promise.all([o.cliente.eu(), o.cliente.quemTem(nova.numero)]);
+      const fontes = fontesDeCopias(copias, eu.id);
+      if (fontes.length === 0) return; // ninguém com IP ainda: tenta na próxima rodada
+      await o.espalhar({ numero: nova.numero, manifestoSha256: nova.manifestoSha256 }, fontes);
+    } catch (erro) {
+      o.aoAvisar?.(`Atualização do mundo: ${erro instanceof Error ? erro.message : String(erro)}`);
     }
   };
 }

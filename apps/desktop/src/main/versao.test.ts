@@ -6,6 +6,7 @@ const SHA1 = "a".repeat(40);
 function montar(opts: { dono?: boolean; rodando?: boolean } & Partial<DepsVersao> = {}) {
   const { dono = true, rodando = false, ...extra } = opts;
   const gravados: [string, string][] = [];
+  const ordem: string[] = [];
   let consultouOpcoes = 0;
   const versao = criarVersao({
     eu: async () => ({ id: 1, dono }),
@@ -18,11 +19,12 @@ function montar(opts: { dono?: boolean; rodando?: boolean } & Partial<DepsVersao
         : { neoforge: v === "1.20.4", fabricForge: false, consultou: true };
     },
     sha1Do: async () => SHA1,
-    gravar: async (v, s) => void gravados.push([v, s]),
+    backupAntes: async () => void ordem.push("backup"),
+    gravar: async (v, s) => void (ordem.push("gravar"), gravados.push([v, s])),
     servidorRodando: () => rodando,
     ...extra,
   });
-  return { versao, gravados, consultas: () => consultouOpcoes };
+  return { versao, gravados, ordem, consultas: () => consultouOpcoes };
 }
 
 describe("versão do Minecraft (main)", () => {
@@ -130,5 +132,34 @@ describe("versão do Minecraft (main)", () => {
     expect((await versao.gravar("1.20.4")).ok).toBe(false);
     solta();
     expect(await primeira).toEqual({ ok: true });
+  });
+
+  it("grava a versão só depois do backup bom", async () => {
+    const { versao, gravados, ordem } = montar();
+    expect(await versao.gravar("1.20.4")).toEqual({ ok: true });
+    expect(ordem).toEqual(["backup", "gravar"]);
+    expect(gravados).toEqual([["1.20.4", SHA1]]);
+  });
+
+  it("backup que falha recusa a troca, diz por quê e a versão não muda", async () => {
+    const { versao, gravados } = montar({
+      backupAntes: async () => {
+        throw new Error("Não achei a pasta de backups.");
+      },
+    });
+    const r = await versao.gravar("1.20.4");
+    expect(r).toEqual({
+      ok: false,
+      mensagem:
+        "Não troquei a versão: o backup antes da troca falhou. Não achei a pasta de backups.",
+    });
+    expect(gravados).toEqual([]);
+  });
+
+  it("servidor rodando segue recusado, sem backup nem gravação", async () => {
+    const { versao, gravados, ordem } = montar({ rodando: true });
+    expect((await versao.gravar("1.20.4")).ok).toBe(false);
+    expect(ordem).toEqual([]);
+    expect(gravados).toEqual([]);
   });
 });

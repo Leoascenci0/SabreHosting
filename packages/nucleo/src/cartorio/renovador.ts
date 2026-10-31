@@ -23,6 +23,8 @@ export interface OpcoesRenovador {
   agora?: () => number;
   /** Relógio de parede (anda durante a hibernação, quando o monotônico pode parar). Padrão: `Date.now`. */
   agoraParede?: () => number;
+  /** Qual trava este renovador mantém; só muda o texto das mensagens (padrão: "host"). */
+  trava?: "host" | "atualização";
   /** `repetir` a cada `ms` e `depois` de `ms`; cada um devolve quem cancela. Padrão: `setInterval`/`setTimeout`. */
   relogio?: {
     repetir: (fn: () => void, ms: number) => () => void;
@@ -32,10 +34,16 @@ export interface OpcoesRenovador {
 
 const RENOVAR_MIN_MS = 50;
 const RENOVAR_MAX_MS = 10 * 60_000;
-const PERDEU_PRAZO =
-  "O cartório não respondeu a tempo e este PC perdeu a trava de host; parando o servidor.";
-const OUTRA_EPOCA =
-  "O cartório confirmou a trava com outra época; por segurança este PC deixa de hospedar.";
+const PERDEU_PRAZO = {
+  host: "O cartório não respondeu a tempo e este PC perdeu a trava de host; parando o servidor.",
+  atualização:
+    "O cartório não respondeu a tempo e este PC perdeu a trava de atualização; a atualização do mundo para.",
+};
+const OUTRA_EPOCA = {
+  host: "O cartório confirmou a trava com outra época; por segurança este PC deixa de hospedar.",
+  atualização:
+    "O cartório confirmou a trava de atualização com outra época; por segurança a atualização do mundo para.",
+};
 
 const RELOGIO_PADRAO: NonNullable<OpcoesRenovador["relogio"]> = {
   repetir: (fn, ms) => {
@@ -79,11 +87,13 @@ export class Renovador {
   private readonly agora: () => number;
   private readonly agoraParede: () => number;
   private readonly relogio: NonNullable<OpcoesRenovador["relogio"]>;
+  private readonly tipo: "host" | "atualização";
 
   constructor(private readonly opcoes: OpcoesRenovador) {
     this.agora = opcoes.agora ?? (() => performance.now());
     this.agoraParede = opcoes.agoraParede ?? Date.now;
     this.relogio = opcoes.relogio ?? RELOGIO_PADRAO;
+    this.tipo = opcoes.trava ?? "host";
   }
 
   private marcar(): Marca {
@@ -127,7 +137,9 @@ export class Renovador {
     const valido = Number.isInteger(renovarMs) && renovarMs >= RENOVAR_MIN_MS;
     if (!valido || renovarMs > RENOVAR_MAX_MS || !(prazoMs > renovarMs)) {
       await this.soltar().catch(() => {});
-      throw new Error("O cartório mandou um intervalo de renovação inválido; não vou hospedar.");
+      throw new Error(
+        `O cartório mandou um intervalo de renovação inválido; ${this.tipo === "host" ? "não vou hospedar" : "não vou atualizar o mundo"}.`,
+      );
     }
     this.prazoMs = prazoMs;
     this.marca = envio;
@@ -141,7 +153,7 @@ export class Renovador {
     this.cancelarAlarme = this.relogio.depois(
       () => {
         if (this.perdida || this.solta) return;
-        if (this.venceu()) this.perder(PERDEU_PRAZO);
+        if (this.venceu()) this.perder(PERDEU_PRAZO[this.tipo]);
         else this.armarAlarme();
       },
       Math.max(0, this.prazoMs - this.decorrido()),
@@ -150,7 +162,7 @@ export class Renovador {
 
   private async renovar(): Promise<void> {
     if (this.perdida || this.solta || this.epoca === undefined) return;
-    if (this.venceu()) return this.perder(PERDEU_PRAZO);
+    if (this.venceu()) return this.perder(PERDEU_PRAZO[this.tipo]);
     if (this.emCurso) return; // renovação anterior pendurada: não sobrepõe
     this.emCurso = true;
     const envio = this.marcar();
@@ -159,7 +171,7 @@ export class Renovador {
       if (this.perdida || this.solta) return;
       if (!r.ok) return this.perder(r.erro);
       // Só a época que ESTE PC ganhou vale; outra (cartório torto ou trocado) é perda, nunca adoção.
-      if (r.epoca !== this.epoca) return this.perder(OUTRA_EPOCA);
+      if (r.epoca !== this.epoca) return this.perder(OUTRA_EPOCA[this.tipo]);
       // Conta do ENVIO, e só avança (uma resposta velha nunca encurta nem estende além do que vale).
       if (!this.marca || envio.mono > this.marca.mono) this.marca = envio;
       this.armarAlarme();

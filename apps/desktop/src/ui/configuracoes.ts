@@ -192,7 +192,7 @@ function ocuparVersao(ocupado: boolean): void {
   trocarVersao.disabled = ocupado || seletorVersao.value === versaoAtual;
   confirmarVersao.disabled = ocupado;
   cancelarVersao.disabled = ocupado;
-  confirmarVersao.textContent = ocupado ? "Trocando…" : "Trocar";
+  confirmarVersao.textContent = ocupado ? "Fazendo backup antes…" : "Trocar";
 }
 
 /** As opções só são buscadas quando o dono seleciona a versão (cada busca vai à internet). */

@@ -17,7 +17,8 @@ export type ResultadoVersao = { ok: true; numero: number } | Extract<ResultadoTr
 
 /**
  * Só o dono da trava, com a época atual e a trava valendo, registra; tudo num INSERT … SELECT FROM trava
- * (a regra e o "max + 1" na mesma instrução). Aceita → o PC que enviou passa a ter essa cópia.
+ * (a regra e o "max + 1" na mesma instrução). Só registra: não marca cópia de ninguém, porque o mundo local de quem
+ * publica pode não ter mudado (importação). Quem de fato passa a ter a versão informa depois (`informarCopia`).
  */
 export function registrarVersao(
   banco: Banco,
@@ -37,7 +38,6 @@ export function registrarVersao(
       .get(manifestoSha256, arquivos, bytes, agora, pc, epoca, agora) as
       { numero: number } | undefined;
     if (!feito) return recusaNaTrava(banco, pc, epoca, agora);
-    informarCopia(banco, pc, feito.numero, agora);
     return { ok: true, numero: feito.numero };
   });
 }
@@ -64,6 +64,29 @@ export function maisNova(banco: Banco): Versao | null {
       )
       .get() as Versao | undefined) ?? null
   );
+}
+
+/**
+ * A mais nova com pacote guardado na nuvem. É a que o cliente enxerga como "a versão que manda" (regra 5): versão
+ * registrada cujo envio caiu fica no histórico, mas não trava os hosts. `maisNova` (sem o filtro) segue para o armazém.
+ */
+export function maisNovaGuardada(banco: Banco): Versao | null {
+  return (
+    (banco
+      .prepare(
+        `SELECT numero, epoca, pc_id AS pcId, manifesto_sha256 AS manifestoSha256, arquivos, bytes,
+                criada_em AS criadaEm
+         FROM versoes WHERE EXISTS (SELECT 1 FROM copias_nuvem WHERE copias_nuvem.versao = versoes.numero)
+         ORDER BY numero DESC LIMIT 1`,
+      )
+      .get() as Versao | undefined) ?? null
+  );
+}
+
+/** Maior número já registrado (0 se nenhum), com ou sem pacote: é de onde o importador numera a próxima. */
+export function ultimoRegistrado(banco: Banco): number {
+  return (banco.prepare("SELECT coalesce(max(numero), 0) AS n FROM versoes").get() as { n: number })
+    .n;
 }
 
 /** PC que tem a versão e o IP dele na rede privada (`null` até confirmar a entrada). Só para PC autenticado. */

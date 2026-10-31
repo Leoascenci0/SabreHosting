@@ -53,7 +53,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* os testes falham ao remover cada opção do servidor.
   *Origem:* syncmel-1.2 · PR #168 · qa integridade
 
-- [ ] **1.7 — Isolar `headersTimeout` de `requestTimeout` num teste**
+- [x] **1.7 — Isolar `headersTimeout` de `requestTimeout` num teste** (PR #191, 31/10/2026; arquivo de teste de 31,25 s para 4,3 s)
   *O que fazer:* expor os prazos do servidor como opção de teste (ou usar valores diferentes) para que cada um tenha prova própria; o teste de cabeçalho lento de hoje gasta ~30 s reais (Node confere a cada ~30 s): com prazos injetáveis cai para segundos.
   *Arquivo:* `packages/nucleo/src/sync/transferencia.ts`, `transferencia.test.ts`
   **Tela no app:** não se aplica.
@@ -68,10 +68,25 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Depende de:* decisão do Eliel e sync-2.1a (PR #173).
   *Origem:* sync-2.1a · PR #173 · filha
 
-- [ ] **1.9 — Ligar o espalhar ao app (sync-2.1b)**
+- [ ] **1.9 — Ligar o espalhar ao app (sync-2.1b)** *(onda 25: **1.9a ✅ PR #192** — núcleo+main: fontes sem ip null, órfão bloqueia, gatilho em segundo plano a cada 10 min, 2º rename local, integração `/atualizacao`; **falta 1.9b**: tela "Limite de banda" (padrão 10 MB/s) e limite real em `pedirArquivo`; nuvem NÃO é fonte, decidido 31/10)*
   *O que fazer:* montar as fontes com `quemTem`/`PORTA_ESPALHAR` (filtrando `ip === null`, senão um PC recém-chegado derruba a lista toda no `escolherFontes`), decidir se a nuvem entra como fonte (hoje serve só o pacote fechado, não arquivo por hash), checar `servidorOrfao` além de `servidorRodando` antes de aplicar, disparar após o backup/versão nova e em segundo plano, e a tela Configurações › Backups › "Limite de banda para atualizar o mundo". Notas do qa do #182: janela de ~20 s de rede entre os dois renames no aplicar (prazo menor); textos do renovador falam em "trava de host"; teste de integração de `/atualizacao`.
   *Arquivo:* `packages/nucleo/src/sync/espalhar.ts`, `aplicar.ts`, `apps/desktop/src/main/`, `apps/desktop/src/ui/`
   **Tela no app:** Configurações › Backups › Limite de banda para atualizar o mundo.
   *Confirmação:* teste com 3 PCs simulados: todos chegam à versão M sem tocar o mundo do host.
   *Depende de:* cartmel-2.4 ✅ (PR #187), syncmel-1.8b ✅ (PR #182), piloto-1.1c ✅.
   *Origem:* sync-2.1b · onda 24 (não coube: 7º item)
+
+- [x] **1.10 — Servir os arquivos do mundo no app (sync-2.1c)** (PR #195, 31/10/2026; a vitrine do último backup bom servida só em 10.66.0.x; IP fora da faixa ignorado; disparo após backup bom)
+  *O que fazer:* nenhum código do app chama `servirArquivos`: nenhum PC escuta na `PORTA_ESPALHAR` (25570), então o espalhar (1.9a) não acha fonte de verdade. Iniciar o servidor de arquivos no app, só na IP da rede privada do PC (nunca em 0.0.0.0), com o token por PC conferido pelo cartório, servindo só pacotes fechados registrados (nunca a pasta do mundo vivo); parar ao sair. Também (notas do qa do #192): ignorar em `fontesDeCopias` IP fora da faixa (hoje um IP estranho derruba a rodada de todos); ligar o disparo também após backup bom; teste de `ligarEspalharDoApp`.
+  *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/sync/transferencia.ts`, `espalhar.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste com 2 PCs simulados (mundo inventado): um serve, o outro atualiza; IP fora da faixa é ignorado sem derrubar a rodada; servidor não escuta fora da rede privada.
+  *Depende de:* syncmel-1.9a ✅ (PR #192). Libera 1.3, 1.9b e migra-2.1.
+  *Origem:* syncmel-1.9a · PR #192 · filha + qa
+
+- [ ] **1.11 — Acabamentos do servir/espalhar (notas do qa da onda 25)**
+  *O que fazer:* (a) `vitrine.fechar()` esperar a publicação em curso (hoje deixa pasta `v-*` órfã até o próximo arranque); (b) `before-quit` fechar o servidor de arquivos mesmo sem servidor Minecraft ativo; (c) reler o IP da rede privada quando o túnel sobe depois do arranque; (d) `ipDaRedePrivada` aceitar só a interface do WireGuard; (e) testes: filtro de IP privado, link simbólico na vitrine, `ligarEspalharDoApp`; (f) `hospedaAgora`/`exigirForaDoHost` seguem indo à rede antes do 1º rename (baixa); (g) teste de `ultimoRegistrado` no `cliente.test.ts` do cartório; (h) teste de recusa do ramo "ja-tinha" da pré-cópia com `hospedaAgora` verdadeiro (migra-2.1).
+  *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/sync/`, `packages/nucleo/src/cartorio/cliente.test.ts`, `packages/nucleo/src/migracao/precopia.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* cada item com teste que falha ao remover a proteção.
+  *Origem:* syncmel-1.9a/1.10 · PRs #192, #195, #194, #197 · qa

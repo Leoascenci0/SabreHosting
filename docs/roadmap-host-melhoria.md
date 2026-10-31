@@ -99,3 +99,17 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   **Tela no app:** Configurações › Servidor › Versão (só o dono); padrão 1.21.1.
   *Confirmação:* teste: versão sem Connector não oferece Fabric+Forge; trocar versão com servidor rodando é recusado.
   *Depende de:* app-2.2 ✅ · pode virar 2–3 itens na triagem (nucleo, cartório, tela).
+
+- [x] **3.2 — Backup automático antes de trocar a versão do Minecraft** (PR #193, 31/10/2026; falta: teste de colisão de nome do backup e do aviso "mods pendentes"; servidor pode subir enquanto o backup roda)
+  *O que fazer:* hoje (3.1c) a tela chama a ação de backup se existir e, senão, só avisa. A regra do item 3.1 é "trocar de versão só com o servidor parado e **backup feito antes**": fazer a troca só depois de um backup bom concluído (servidor parado; reaproveitar a ação de backup do app, nunca copiar o mundo com o servidor rodando) e, se o backup falhar, recusar a troca e dizer por quê. Também: mostrar "mods pendentes" na tela enquanto `HASHES_NEOFORGE` estiver vazia.
+  *Arquivo:* `apps/desktop/src/main/` (handler da troca de versão), `apps/desktop/src/ui/configuracoes.*`
+  **Tela no app:** Configurações › Servidor › Versão (botão "Trocar versão": mostra "Fazendo backup antes…" e só então troca).
+  *Confirmação:* teste: backup que falha → versão não muda; backup ok → versão muda depois dele; servidor rodando continua recusado.
+  *Origem:* hostmel-3.1c · PR #188 · relatório da Onda 24
+
+- [ ] **3.3 — Acabamentos do backup antes de trocar a versão (notas do qa do #193)**
+  *O que fazer:* o servidor pode subir enquanto o backup do 3.2 roda (a checagem é só no início: segurar a trava/estado até o fim); testes da colisão de nome do backup, do texto "Fazendo backup antes…" e do aviso "mods pendentes" (`SEM_HASH_MODS`).
+  *Arquivo:* `apps/desktop/src/main/deps-backups.ts`, `versao.ts`, `ui/configuracoes.ts`
+  **Tela no app:** Configurações › Servidor › Versão.
+  *Confirmação:* testes que falham ao remover cada proteção.
+  *Origem:* hostmel-3.2 · PR #193 · qa

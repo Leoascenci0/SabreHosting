@@ -19,6 +19,7 @@ import {
   validarPacoteGuardado,
   validarRespostaAtualizacao,
   validarRespostaTrava,
+  validarUltimoRegistrado,
   validarVersaoCriada,
 } from "./tipos.js";
 
@@ -278,6 +279,8 @@ export function criarCliente(opcoes: OpcoesCliente) {
     listarPcs: () => ler("/pcs", validarListaPcs),
     /** A versão mais nova do mundo (`null` se nenhuma foi registrada). */
     maisNova: () => ler("/versoes/mais-nova", validarMaisNova),
+    /** Maior número de versão já registrado, órfã (sem pacote) inclusive: a próxima importação numera depois dele. */
+    ultimoRegistrado: () => ler("/versoes/mais-nova", validarUltimoRegistrado),
     /** Quem tem a versão `n` (IP na rede privada de cada PC) e se a nuvem a guarda: fontes do espalhar. */
     quemTem: (n: number) => ler(`/versoes/${n}/copias`, validarCopias),
     estadoTrava: () => ler("/trava", validarEstadoTrava),

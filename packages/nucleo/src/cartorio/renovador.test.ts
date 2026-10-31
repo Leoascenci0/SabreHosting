@@ -340,3 +340,23 @@ describe("renovarAgora (syncmel-1.8b: antes de cada rename da troca)", () => {
     expect(m.renovacoes).toEqual([]);
   });
 });
+
+describe("texto da trava de atualização (1.9a)", () => {
+  it("perder o prazo da trava de atualização não fala em host nem em servidor", async () => {
+    const m = montar({ trava: "atualização" });
+    await m.r.pegar();
+    m.renovarResponde(() => new Promise(() => undefined));
+    await m.andar(120_000);
+    expect(m.perdas).toHaveLength(1);
+    expect(m.perdas[0]).toMatch(/trava de atualização/);
+    expect(m.perdas[0]).not.toMatch(/host|servidor/);
+  });
+
+  it("padrão continua falando da trava de host", async () => {
+    const m = montar();
+    await m.r.pegar();
+    m.renovarResponde(() => new Promise(() => undefined));
+    await m.andar(120_000);
+    expect(m.perdas[0]).toMatch(/trava de host/);
+  });
+});

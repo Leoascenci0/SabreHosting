@@ -5,6 +5,7 @@ import { type PacoteDeLigacao, validarPacote } from "../rede/wireguard.js";
 
 const MOTIVOS = [
   "ocupada",
+  "atualizando",
   "epoca_velha",
   "nao_e_dono",
   "vencida",
@@ -155,6 +156,11 @@ export interface Copias {
   numero: number;
   nuvem: boolean;
   pcs: PcComCopia[];
+}
+
+/** Maior número de versão registrado no cartório (0 se nenhum), com ou sem pacote guardado. */
+export function validarUltimoRegistrado(v: unknown): number {
+  return inteiro(objeto(v, "versão mais nova"), "ultimoRegistrado");
 }
 
 export function validarMaisNova(v: unknown): VersaoRegistrada | null {

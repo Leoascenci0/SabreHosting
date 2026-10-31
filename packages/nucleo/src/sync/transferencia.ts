@@ -16,6 +16,10 @@ const REDE_PRIVADA = /^10\.66\.0\.(?:[2-9]|[1-9]\d|1\d\d)$/;
 export const PORTA_ESPALHAR = 25570;
 const HASH_SHA256 = /^[0-9a-f]{64}$/;
 
+/** O texto é um IP deste grupo na rede privada (10.66.0.2 a 10.66.0.199)? Não lança; serve para filtrar listas. */
+export const ehEnderecoPrivado = (endereco: string): boolean =>
+  isIPv4(endereco) && REDE_PRIVADA.test(endereco);
+
 /** Só o IP da rede privada do SabreHosting; loopback apenas quando o teste pede. */
 export function conferirEnderecoPrivado(
   endereco: string,
@@ -46,6 +50,12 @@ export interface OpcoesServidor {
   agora?: () => number;
   /** Tempo ocioso do socket em ms (padrão 60 s, maior que os 30 s sem dados do cliente); só o teste troca. */
   tempoOciosoMs?: number;
+  /** Prazo para o cabeçalho HTTP chegar inteiro (padrão 10 s); só o teste troca. */
+  tempoCabecalhoMs?: number;
+  /** Prazo para a requisição chegar inteira, corpo incluso (padrão 10 s); só o teste troca. */
+  tempoRequisicaoMs?: number;
+  /** De quanto em quanto o Node confere esses prazos (padrão dele: 30 s); só o teste troca. */
+  intervaloConferenciaMs?: number;
 }
 
 /** Cabeçalho lento, conexão parada e excesso de conexões não seguram o PC que hospeda. */
@@ -180,8 +190,13 @@ export async function servirArquivos(opcoes: OpcoesServidor): Promise<Servidor> 
       resp.headersSent ? resp.destroy() : texto(resp, 500, "Erro interno."),
     );
   });
-  servidor.headersTimeout = TEMPO_CABECALHO_MS;
-  servidor.requestTimeout = TEMPO_CABECALHO_MS;
+  servidor.headersTimeout = opcoes.tempoCabecalhoMs ?? TEMPO_CABECALHO_MS;
+  servidor.requestTimeout = opcoes.tempoRequisicaoMs ?? TEMPO_CABECALHO_MS;
+  if (opcoes.intervaloConferenciaMs !== undefined) {
+    // Existe no Node 18+, mas falta nos tipos instalados.
+    (servidor as { connectionsCheckingInterval?: number }).connectionsCheckingInterval =
+      opcoes.intervaloConferenciaMs;
+  }
   servidor.keepAliveTimeout = 5_000;
   servidor.timeout = opcoes.tempoOciosoMs ?? TEMPO_OCIOSO_MS;
   servidor.maxConnections = MAX_CONEXOES;
