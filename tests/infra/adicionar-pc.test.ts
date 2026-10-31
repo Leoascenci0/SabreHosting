@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -103,11 +103,47 @@ describe("infra/vps/wg/adicionar-pc.sh em simulação", () => {
     for (const nome of ["", "PC Eliel", "../x", "a;b", "x".repeat(40), "-pc"]) {
       expect(rodar(["adicionar", nome, chaveNova()]).status, nome).not.toBe(0);
     }
-    for (const endpoint of ["", "hub", "hub:99999", "hub.org:51820\nPostUp = x", "$(id):51820"]) {
+    for (const endpoint of [
+      "",
+      "hub",
+      "hub:99999",
+      "hub:0",
+      "hub:00",
+      "hub:051820",
+      "hub.org:51820\nPostUp = x",
+      "$(id):51820",
+    ]) {
       const r = rodar(["adicionar", "pc-x", chaveNova()], { SABRE_ENDPOINT_HUB: endpoint });
       expect(r.status, JSON.stringify(endpoint)).not.toBe(0);
     }
   });
+
+  it.each(["pcs.tsv", "wg0.conf"])(
+    "se a gravação de %s cai no meio, o temporário do mktemp não fica para trás",
+    (alvo) => {
+      expect(rodar(["adicionar", "pc-eliel", chaveNova()]).status).toBe(0);
+      // "mv" falso que falha só na troca do arquivo-alvo: simula a queda entre o mktemp e o mv.
+      const bin = mkdtempSync(join(tmpdir(), "sabre-bin-"));
+      try {
+        const mvReal = spawnSync("bash", ["-c", "command -v mv"], {
+          encoding: "utf8",
+        }).stdout.trim();
+        writeFileSync(
+          join(bin, "mv"),
+          `#!/usr/bin/env bash\ncase "\${@: -1}" in */${alvo}) exit 1 ;; esac\nexec ${mvReal} "$@"\n`,
+          { mode: 0o755 },
+        );
+        const r = rodar(["adicionar", "pc-joao", chaveNova()], {
+          PATH: `${bin}:${process.env.PATH}`,
+        });
+        expect(r.status).not.toBe(0);
+      } finally {
+        rmSync(bin, { recursive: true, force: true });
+      }
+      const sobras = readdirSync(estado).filter((n) => /\.[A-Za-z0-9]{6}$/.test(n));
+      expect(sobras).toEqual([]);
+    },
+  );
 
   it("re-adicionar o mesmo PC é idempotente: mesmo IP, um só [Peer], registro intacto", () => {
     const k = chaveNova();
