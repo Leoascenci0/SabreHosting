@@ -113,6 +113,29 @@ export function conferirEndereco(endereco: string): string {
   return endereco;
 }
 
+/**
+ * Tentativas erradas por IP. `req.ip` é o endereço da conexão (`trustProxy` desligado de propósito): cada PC tem IP
+ * próprio no WireGuard; um proxy na frente do cartório exigiria configurar isso.
+ */
+export function criarLimitador(agora: () => number) {
+  const falhas = new Map<string, { falhas: number; inicio: number }>();
+  return {
+    barrado(ip: string): boolean {
+      const f = falhas.get(ip);
+      return f !== undefined && f.falhas >= MAX_FALHAS && agora() - f.inicio < JANELA_FALHAS_MS;
+    },
+    contarFalha(ip: string) {
+      const t = agora();
+      // Tira as vencidas (de qualquer IP) para o Map não crescer sem fim.
+      for (const [chave, f] of falhas) if (t - f.inicio >= JANELA_FALHAS_MS) falhas.delete(chave);
+      const f = falhas.get(ip);
+      if (f) f.falhas++;
+      else falhas.set(ip, { falhas: 1, inicio: t });
+    },
+    tamanho: () => falhas.size,
+  };
+}
+
 function bearer(req: FastifyRequest): string | undefined {
   const [tipo, valor] = (req.headers.authorization ?? "").split(" ");
   return tipo === "Bearer" && valor ? valor : undefined;
@@ -136,28 +159,18 @@ export function criarCartorio({
   });
   app.addHook("onClose", () => banco.close());
 
-  function soAdmin(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
-    const segredo = bearer(req);
-    if (segredo && iguais(segredo, segredoAdmin)) pronto();
-    else void resp.code(401).send(NAO_AUTORIZADO);
-  }
-
-  const falhas = new Map<string, { falhas: number; inicio: number }>();
-  function barrado(ip: string): boolean {
-    const f = falhas.get(ip);
-    return f !== undefined && f.falhas >= MAX_FALHAS && agora() - f.inicio < JANELA_FALHAS_MS;
-  }
-  function contarFalha(ip: string) {
-    const t = agora();
-    for (const [chave, f] of falhas) if (t - f.inicio >= JANELA_FALHAS_MS) falhas.delete(chave);
-    const f = falhas.get(ip);
-    if (f) f.falhas++;
-    else falhas.set(ip, { falhas: 1, inicio: t });
-  }
-  /** Confere o limite antes de olhar convite ou token. */
+  const { barrado, contarFalha } = criarLimitador(agora);
+  /** Confere o limite antes de olhar convite, token ou segredo. */
   function limiteFalhas(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
     if (barrado(req.ip)) void resp.code(429).send(MUITAS_TENTATIVAS);
     else pronto();
+  }
+  function soAdmin(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
+    if (barrado(req.ip)) return void resp.code(429).send(MUITAS_TENTATIVAS);
+    const segredo = bearer(req);
+    if (segredo && iguais(segredo, segredoAdmin)) return pronto();
+    contarFalha(req.ip);
+    void resp.code(401).send(NAO_AUTORIZADO);
   }
 
   const pcDaChamada = new WeakMap<FastifyRequest, Pc>();

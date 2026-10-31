@@ -12,7 +12,7 @@ import {
   usarConvite,
 } from "./banco.js";
 import { gerarSegredo } from "./segredo.js";
-import { conferirEndereco, criarCartorio } from "./servidor.js";
+import { conferirEndereco, criarCartorio, criarLimitador } from "./servidor.js";
 
 const pastas: string[] = [];
 const fechar: Array<() => Promise<unknown>> = [];
@@ -366,6 +366,32 @@ describe("cartório: entrada endurecida", () => {
       );
     expect((await app.inject({ url: "/trava", headers: auth(token) })).statusCode).toBe(429);
     expect((await app.inject({ url: "/eu", headers: auth(token) })).statusCode).toBe(429);
+  });
+
+  it("segredo de administrador errado conta no mesmo limite e é barrado antes de conferir", async () => {
+    const { app, segredoAdmin } = montar();
+    const criar = (segredo: string) =>
+      app.inject({
+        method: "POST",
+        url: "/convites",
+        headers: { authorization: `Bearer ${segredo}` },
+        payload: { nomePc: "PC" },
+      });
+    for (let i = 0; i < 20; i++) expect((await criar(gerarSegredo())).statusCode).toBe(401);
+    expect((await criar(segredoAdmin)).statusCode).toBe(429);
+  });
+
+  it("limitador tira do mapa as entradas vencidas de qualquer IP", () => {
+    const relogio = { agora: 0 };
+    const limite = criarLimitador(() => relogio.agora);
+    for (let i = 0; i < 100; i++) limite.contarFalha(`10.66.0.${i}`);
+    expect(limite.tamanho()).toBe(100);
+    relogio.agora = 15 * 60_000 - 1;
+    limite.contarFalha("10.66.1.1");
+    expect(limite.tamanho()).toBe(101);
+    relogio.agora = 15 * 60_000;
+    limite.contarFalha("10.66.1.2");
+    expect(limite.tamanho()).toBe(2);
   });
 
   it("acerto não conta nem zera; passada a janela de 15 min, o IP volta a entrar", async () => {

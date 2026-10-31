@@ -336,7 +336,7 @@ describe("armazém: migração v4 → v5", () => {
 });
 
 describe("rotas do pacote", () => {
-  function montarApp() {
+  function montarApp(opcoes: { tetoBytes?: number } = {}) {
     const dados = pastaNova();
     const segredoAdmin = gerarSegredo();
     const banco = abrirBanco(join(dados, "cartorio.db"));
@@ -346,7 +346,7 @@ describe("rotas do pacote", () => {
       segredoAdmin,
       logger: { level: "silent" },
       agora: () => relogio.agora,
-      armazem: { pasta: join(dados, "mundo") },
+      armazem: { pasta: join(dados, "mundo"), ...opcoes },
     });
     fechar.push(() => app.close());
     const token = usarConvite(banco, criarConvite(banco, "PC 1", 0, 60_000), 0) ?? "";
@@ -363,22 +363,36 @@ describe("rotas do pacote", () => {
   const url = (n: number, epoca: number, p: Pacote, sha = p.sha256) =>
     `/versoes/${n}/pacote?epoca=${epoca}&sha256=${sha}&bytes=${p.tamanho}`;
 
-  it("PUT de pacote maior que o teto do JSON (4 KB) continua aceito", async () => {
-    const { app, banco, auth, pc } = montarApp();
+  it("PUT: o teto de 4 KB do JSON não alcança o pacote; quem limita é o teto do armazém (413 acima dele)", async () => {
+    // O bodyLimit do Fastify só vale para leitor que junta o corpo; o do pacote é fluxo, limitado pelo armazém.
+    const { app, banco, auth, pc } = montarApp({ tetoBytes: 64 * 1024 });
     const epoca = pegar(banco, pc.id, 1_000, PRAZO).epoca;
-    registrarVersao(banco, pc.id, epoca, 1_000, {
-      manifestoSha256: "e".repeat(64),
-      arquivos: 1,
-      bytes: 1,
-    });
-    const p = pacote(64 * 1024);
+    const registrar = () =>
+      registrarVersao(banco, pc.id, epoca, 1_000, {
+        manifestoSha256: "e".repeat(64),
+        arquivos: 1,
+        bytes: 1,
+      });
+    const headers = { ...auth, "content-type": "application/octet-stream" };
+    registrar();
+    const cabe = pacote(64 * 1024);
     const r = await app.inject({
       method: "PUT",
-      url: url(1, epoca, p),
-      headers: { ...auth, "content-type": "application/octet-stream" },
-      payload: p.bytes,
+      url: url(1, epoca, cabe),
+      headers,
+      payload: cabe.bytes,
     });
     expect(r.statusCode).toBe(201);
+    registrar();
+    const passa = pacote(64 * 1024 + 1);
+    const grande = await app.inject({
+      method: "PUT",
+      url: url(2, epoca, passa),
+      headers,
+      payload: passa.bytes,
+    });
+    expect(grande.statusCode).toBe(413);
+    expect(grande.json()).toMatchObject({ motivo: "grande_demais" });
   });
 
   it("PUT guarda, GET devolve os mesmos bytes com o sha256 no cabeçalho; sem token ou sem cópia, recusa", async () => {
