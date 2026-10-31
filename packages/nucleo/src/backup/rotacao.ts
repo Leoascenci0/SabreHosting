@@ -1,10 +1,10 @@
 /**
  * Rotação dos backups: decide o que apagar (`planejarRotacao`, pura) e apaga (`aplicarRotacao`).
  *
- * Regra de ouro 4: nunca apagar o último backup bom. O plano guarda os N mais recentes, o mais recente de cada um dos
- * últimos dias, o bom mais recente e tudo o que ainda não foi conferido; a aplicação confere de novo, na hora, que um
- * bom sobrevive ANTES de apagar qualquer arquivo. Quem monta a lista (estado de cada backup) e a tela "Quantos guardar"
- * são de outros itens (cartório e app-2.2); restaurar é o bkp-2.2.
+ * Regra de ouro 4: nunca apagar o último backup bom. O plano guarda os N mais recentes, TODOS os dos últimos 7 dias
+ * (decisão do Eliel, 31/10/2026; a regra única mora aqui, o drive-1.1b reusa), o bom mais recente e tudo o que ainda
+ * não foi conferido; a aplicação confere de novo, na hora, que um bom sobrevive ANTES de apagar qualquer arquivo.
+ * Quem monta a lista (estado de cada backup) é `rotacao-pasta.ts`; restaurar é o bkp-2.2.
  */
 import { lstat, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -22,11 +22,16 @@ export interface BackupDaRotacao {
   sha256?: string;
 }
 
+/** Padrão de Configurações › Backups › Quantos guardar. */
+export const RECENTES_PADRAO = 10;
+/** Janela fixa: todo backup destes últimos dias (contando hoje) fica, qualquer que seja "Quantos guardar". */
+export const DIAS_PADRAO = 7;
+
 export interface OpcoesPlano {
   /** Configurações › Backups › Quantos guardar (padrão 10). */
   recentes?: number;
-  /** Quantos dias, contando hoje, guardam o backup mais recente do dia (padrão 7, decisão D6). */
-  diarios?: number;
+  /** Quantos dias, contando hoje, ficam por inteiro (padrão 7). */
+  dias?: number;
   agora: Date;
 }
 
@@ -43,12 +48,12 @@ const chaveDoDia = (d: Date): string => `${d.getFullYear()}-${d.getMonth()}-${d.
 /** Sem efeito colateral: devolve o que manter e o que apagar, sem alterar a lista recebida. */
 export function planejarRotacao(
   backups: readonly BackupDaRotacao[],
-  { recentes = 10, diarios = 7, agora }: OpcoesPlano,
+  { recentes = RECENTES_PADRAO, dias = DIAS_PADRAO, agora }: OpcoesPlano,
 ): PlanoDeRotacao {
   if (!Number.isInteger(recentes) || recentes < 1) {
     throw new Error("A rotação precisa guardar pelo menos 1 backup recente.");
   }
-  if (!Number.isInteger(diarios) || diarios < 0) {
+  if (!Number.isInteger(dias) || dias < 0) {
     throw new Error(
       "A quantidade de dias guardados na rotação precisa ser um número inteiro, 0 ou mais.",
     );
@@ -64,18 +69,12 @@ export function planejarRotacao(
 
   const diasQueValem = new Set<string>();
   // `new Date(a, m, d - i)` anda dias civis no fuso local, certo também na virada do horário de verão.
-  for (let i = 0; i < diarios; i++) {
+  for (let i = 0; i < dias; i++) {
     diasQueValem.add(
       chaveDoDia(new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - i)),
     );
   }
-  const jaTemDoDia = new Set<string>();
-  for (const b of lista) {
-    const chave = chaveDoDia(b.data);
-    if (!diasQueValem.has(chave) || jaTemDoDia.has(chave)) continue;
-    jaTemDoDia.add(chave);
-    manter.add(b);
-  }
+  for (const b of lista) if (diasQueValem.has(chaveDoDia(b.data))) manter.add(b);
 
   const ultimoBom = lista.find((b) => b.estado === "bom");
   // Sem nenhum bom conhecido não há o que a rotação possa proteger: ela não mexe em nada.
@@ -90,7 +89,7 @@ export function planejarRotacao(
 }
 
 /** Só estes nomes são do SabreHosting; qualquer outra coisa na pasta de backups não é da rotação. */
-const NOME_DE_BACKUP = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-v\d+\.tar\.gz$/;
+export const NOME_DE_BACKUP = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-v\d+\.tar\.gz$/;
 
 /** Arquivo comum (nunca link, pasta ou nome estranho) com nome do SabreHosting dentro da pasta. */
 async function ehArquivoDoSabre(pasta: string, nome: string): Promise<boolean> {

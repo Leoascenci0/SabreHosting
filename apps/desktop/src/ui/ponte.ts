@@ -10,7 +10,7 @@ export type EstadoInicio =
   | { tipo: "outro"; nomePc: string; endereco: string }
   | { tipo: "eu"; endereco: string; parando?: boolean };
 
-export type CampoComErro = "intervalo" | "distancias" | "historico";
+export type CampoComErro = "intervalo" | "quantos" | "distancias" | "historico";
 /** `campo` diz qual campo da tela errou (a tela marca e leva o foco para ele, sem ler o texto da mensagem). */
 export type Resultado = { ok: true } | { ok: false; mensagem: string; campo?: CampoComErro };
 
@@ -19,6 +19,7 @@ export interface ConfiguracoesDaTela {
   distanciaVisao: number;
   distanciaSimulacao: number;
   intervaloBackupMin: number;
+  quantosGuardar: number;
   historicoLongoLigado: boolean;
   historicoLongoPasta: string;
 }

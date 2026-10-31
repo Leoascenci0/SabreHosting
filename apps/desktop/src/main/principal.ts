@@ -15,6 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAvisoHistorico } from "./aviso-historico.js";
+import { criarRotacaoBackups, type RotacaoBackups } from "./rotacao-backups.js";
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { depsBackupsReais } from "./deps-backups.js";
@@ -185,11 +186,23 @@ const historicoLongo = (): string | undefined => {
   return p.historicoLongoLigado ? p.historicoLongoPasta : undefined;
 };
 
+/** Rotação dos backups: depois de cada backup bom e no arranque; guarda "Quantos guardar" + tudo dos últimos 7 dias. */
+function criarRotacaoDoApp(pastaBackups: () => string | undefined): RotacaoBackups {
+  return criarRotacaoBackups({
+    pastaBackups,
+    quantosGuardar: () => lerPreferencias(app.getPath("userData")).quantosGuardar,
+    ocupado: () => restaurando(),
+    aoAvisar: (texto) => console.warn(`[backup] ${texto}`),
+  });
+}
+
 /** Backup agendado: liga quando o servidor deste PC fica pronto e segue o intervalo de Configurações › Backups. */
 async function criarAgendaDoApp(): Promise<AgendaBackups> {
   const aoAvisar = (texto: string): void => console.warn(`[backup] ${texto}`);
   if (process.env["SABRE_E2E"] !== "1") {
     const exigir = clienteDoAmbiente(process.env);
+    const rotacao = criarRotacaoDoApp(() => process.env["SABRE_PASTA_BACKUPS"]);
+    void rotacao.rodar(); // no arranque: limpa o que passou do limite desde a última vez
     return criarAgendaBackups({
       intervaloMin: intervaloBackupMin,
       iniciar: iniciarAgendaReal({
@@ -198,6 +211,7 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
         epoca: async () => (await exigir().estadoTrava()).epoca,
         historicoLongo,
         avisoHistorico,
+        aoBackupBom: rotacao.aoBackupBom,
         aoAvisar,
       }),
       aoAvisar,
@@ -213,6 +227,13 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
     },
     clearInterval: (t: NodeJS.Timeout): void => clearTimeout(t),
   };
+  const rotacao = criarRotacaoDoApp(
+    () =>
+      (
+        (globalThis as Record<string, unknown>)["__sabreE2EBackups"] as
+          { backups: string } | undefined
+      )?.backups,
+  );
   return criarAgendaBackups({
     intervaloMin: intervaloBackupMin,
     iniciar: async (servidor, min) => {
@@ -225,6 +246,7 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
         pastaDoMundo: mundo,
         epoca: async () => 1,
         relogio,
+        aoBackupBom: rotacao.aoBackupBom,
       })(servidor, min);
     },
   });

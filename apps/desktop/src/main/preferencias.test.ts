@@ -9,6 +9,7 @@ const PADRAO = {
   distanciaVisao: 10,
   distanciaSimulacao: 8,
   intervaloBackupMin: 10,
+  quantosGuardar: 10,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -66,6 +67,7 @@ describe("preferências", () => {
         distanciaVisao: 12,
         distanciaSimulacao: 6,
         intervaloBackupMin: 10,
+        quantosGuardar: 10,
         historicoLongoLigado: false,
         historicoLongoPasta: "",
       });
@@ -75,6 +77,26 @@ describe("preferências", () => {
   it("intervalo válido é lido como está", () => {
     salvarPreferencias(pasta, { ...PADRAO, intervaloBackupMin: 30 });
     expect(lerPreferencias(pasta).intervaloBackupMin).toBe(30);
+  });
+
+  it.each([0, -3, 2.5, 1001, "dez", null, Number.NaN])(
+    "quantosGuardar torto (%j) volta ao padrão e não perde o resto",
+    (v) => {
+      writeFileSync(
+        join(pasta, "preferencias.json"),
+        JSON.stringify({ ...PADRAO, abrirComWindows: true, quantosGuardar: v }),
+      );
+      expect(lerPreferencias(pasta)).toEqual({ ...PADRAO, abrirComWindows: true });
+    },
+  );
+
+  it("quantosGuardar válido é lido como está; arquivo antigo sem o campo usa o padrão", () => {
+    salvarPreferencias(pasta, { ...PADRAO, quantosGuardar: 3 });
+    expect(lerPreferencias(pasta).quantosGuardar).toBe(3);
+    const velho: Record<string, unknown> = { ...PADRAO };
+    delete velho["quantosGuardar"];
+    writeFileSync(join(pasta, "preferencias.json"), JSON.stringify(velho));
+    expect(lerPreferencias(pasta).quantosGuardar).toBe(10);
   });
 
   it("regravar troca o arquivo inteiro", () => {
