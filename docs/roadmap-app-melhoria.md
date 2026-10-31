@@ -97,3 +97,24 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* E2E: valor salvo muda quantos backups ficam; teste de que o último bom e os não conferidos nunca saem.
   *Depende de:* appmel-1.8 e decisão do Eliel.
   *Origem:* appmel-1.8 · triagem · Máxima
+
+- [ ] **1.12 — Cofre: distinguir "não existe" de "corrompido"**
+  *O que fazer:* `ler()` do cofre devolve `undefined` também quando o decrypt falha; devolver estado distinto para o assistente pedir novo convite em vez de achar que é a primeira vez.
+  *Arquivo:* `apps/desktop/src/main/cofre.ts`
+  **Tela no app:** não se aplica (mensagem no assistente do app-1.3b).
+  *Confirmação:* teste com arquivo adulterado.
+  *Origem:* app-1.3a · PR #207 · qa
+
+- [ ] **1.13 — Campo "Pasta do SabreHosting" e fundir os pedidos de administrador**
+  *O que fazer:* campo em Configurações › Geral para ver/trocar a pasta-base gravada pelo assistente (hoje `pastaBase` fica só em `boas-vindas.json` e não alimenta `SABRE_PASTA_*`; ligar no app-1.3c); fundir os 3 pedidos de administrador (instala provisório, desinstala, instala definitiva) em um.
+  *Arquivo:* `apps/desktop/src/main/boas-vindas.ts`, `entrada-no-grupo.ts`, `apps/desktop/src/ui/`
+  **Tela no app:** Configurações › Geral › "Pasta do SabreHosting".
+  *Confirmação:* teste: trocar a pasta atualiza onde servidor e mundos são lidos; 1 só chamada do executor elevado **[P: UAC no Windows]**.
+  *Origem:* app-1.3b · PR #211 · qa
+
+- [ ] **1.14 — Retomar a conexão sem convite novo**
+  *O que fazer:* se a troca do túnel falha depois do convite gasto, hoje o assistente manda pedir convite novo; guardar o estado para "tentar de novo a conexão" com o token já no cofre.
+  *Arquivo:* `apps/desktop/src/main/boas-vindas.ts`, `entrada-no-grupo.ts`
+  **Tela no app:** botão "Tentar de novo" no assistente.
+  *Confirmação:* teste: falha na instalação definitiva, depois sucesso sem novo convite.
+  *Origem:* app-1.3b · PR #211 · filha

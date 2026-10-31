@@ -26,7 +26,7 @@ estava desligado atualiza ao ligar.
 
 ## Bloco 2 — Espalhar e alcançar
 
-- [ ] **2.1 — Espalhar a versão nova após o backup** *(corte de 31/10: 2.1a feito no PR #173 — núcleo `espalhar.ts` com fontes injetadas + ligação ao app com `pastaDoServidor` (1.5b), SEM gatilho; resta 2.1b: limite de banda e tela, e o gatilho no app, depois da descoberta de fontes no cartório (`cartmel` 2.4))*
+- [x] **2.1 — Espalhar a versão nova após o backup** (2.1a PR #173 + 2.1b via syncmel-1.9a/1.9b PRs #192/#202, 31/10/2026) *(corte de 31/10: 2.1a feito no PR #173 — núcleo `espalhar.ts` com fontes injetadas + ligação ao app com `pastaDoServidor` (1.5b), SEM gatilho; resta 2.1b: limite de banda e tela, e o gatilho no app, depois da descoberta de fontes no cartório (`cartmel` 2.4))*
   *O que fazer:* host avisa o cartório; PCs online recebem "versão M pronta" e puxam de quem tem (host, outro PC ou
   nuvem), em segundo plano e com limite de banda.
   *Arquivo:* `packages/nucleo/src/sync/espalhar.ts`
@@ -34,7 +34,7 @@ estava desligado atualiza ao ligar.
   *Confirmação:* teste com 3 PCs simulados: todos chegam à versão M.
   *Depende de:* sync-1.2, bkp-1.3
 
-- [ ] **2.2 — Quem voltou depois de muito tempo**
+- [x] **2.2 — Quem voltou depois de muito tempo** (PR #212, 31/10/2026)
   *O que fazer:* ao iniciar, perguntar a versão mais nova; buscar de PC online ou da nuvem; bloquear "Hospedar" até
   terminar (Jogar continua liberado).
   *Arquivo:* `packages/nucleo/src/sync/alcancar.ts`

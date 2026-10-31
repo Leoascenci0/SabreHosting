@@ -91,9 +91,23 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* cada item com teste que falha ao remover a proteção.
   *Origem:* syncmel-1.9a/1.10 · PRs #192, #195, #194, #197 · qa
 
-- [ ] **1.12 — Sobras do servir/espalhar (onda 26)**
+- [x] **1.12 — Sobras do servir/espalhar (onda 26)** (PR #209, 31/10/2026; a–f feitos)
   *O que fazer:* (a) `sairDoApp` limpar o relógio de 60 s que relê o IP da rede privada (hoje, entre `fechar()` e o fim do processo, `tentarLigar` poderia religar o servidor); (b) sub-item f do 1.11: `hospedaAgora`/`exigirForaDoHost` seguem indo à rede antes do 1º rename (baixa); (c) teste do `before-quit`/relógio de 60 s em `principal.ts`; (d) dica da tela de banda diz "vale na próxima atualização" mas o limite é lido a cada arquivo (só texto); (e) `setTimeout` do freio em `baixar.ts` não é cancelado ao abortar o download; (f) `vitrine.fechar()` pode atrasar o desligar do Windows se houver publicação longa.
   *Arquivo:* `apps/desktop/src/main/principal.ts`, `packages/nucleo/src/servidor/baixar.ts`, `packages/nucleo/src/sync/`
   **Tela no app:** Configurações › Backups › Limite de banda (só o texto da dica).
   *Confirmação:* teste de cada item.
   *Origem:* syncmel-1.11 e 1.9b · PRs #204, #202 · qa
+
+- [ ] **1.13 — Fechar o servidor de arquivos sem corrida com o primeiro `tentarLigar`**
+  *O que fazer:* se o usuário sai durante o primeiro `tentarLigar` do arranque, o `ligar()` em voo pode terminar depois do `fechar()` (efeito prático nulo, o app encerra). Flag `fechado` em `criarServidorDeArquivos` checada depois do `await servirArquivos`; teste.
+  *Arquivo:* `apps/desktop/src/main/servir-arquivos.ts`, `principal.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: sair durante o primeiro ligar não deixa servidor escutando.
+  *Origem:* syncmel-1.12 · PR #209 · qa
+
+- [ ] **1.14 — Alcançar: erro de rede na tela e progresso durante o download do pacote**
+  *O que fazer:* erro de rede no download do pacote da nuvem vira só `console.warn` (a tela volta ao normal, sem mensagem para o amigo): mostrar mensagem em pt-BR; progresso fica em 0% durante o download do pacote: reportar bytes; se a falha com PCs for trava perdida ou servidor rodando, não tentar a nuvem.
+  *Arquivo:* `packages/nucleo/src/sync/alcancar.ts`, `apps/desktop/src/main/espalhar-versao.ts`, `apps/desktop/src/ui/tela.ts`
+  **Tela no app:** status na tela inicial ("Atualizando seu mundo… N%", e aviso se falhar).
+  *Confirmação:* teste: falha de rede mostra aviso; progresso avança durante o download.
+  *Origem:* sync-2.2 · PR #212 · qa
