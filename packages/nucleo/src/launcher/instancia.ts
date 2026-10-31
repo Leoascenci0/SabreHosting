@@ -39,7 +39,11 @@ const PASTA_SABRE = "SabreHosting";
 /** Nome do grupo como nome de arquivo do Windows (mesmas regras do manifesto do mundo). */
 export function nomeSeguroDoGrupo(grupo: string): string {
   let nome = grupo.replace(PROIBIDO_WINDOWS, "").replace(/\s+/g, " ").trim();
-  nome = nome.slice(0, MAX_NOME).replace(/[. ]+$/, "");
+  // Corta por ponto de código: `slice` cortaria no meio de um emoji (par substituto).
+  nome = Array.from(nome)
+    .slice(0, MAX_NOME)
+    .join("")
+    .replace(/[. ]+$/, "");
   if (nome === "") {
     throw new Error(
       "O nome do grupo não pode ficar vazio nem ter só caracteres que o Windows não aceita.",
@@ -114,15 +118,24 @@ export function montarInstancia(entrada: EntradaInstancia): InstanciaMontada {
 
 /**
  * Grava `<pastaDestino>/SabreHosting/<grupo>.mrpack` por arquivo temporário + renomear. Só mexe no arquivo do
- * próprio grupo; conteúdo igual ao que já está lá não é regravado.
+ * próprio grupo; conteúdo igual ao que já está lá não é regravado. `lerArquivo` é injetável só para os testes.
  */
 export async function gravarInstancia(
-  entrada: EntradaInstancia & { pastaDestino: string },
+  entrada: EntradaInstancia & {
+    pastaDestino: string;
+    lerArquivo?: (caminho: string) => Promise<Buffer>;
+  },
 ): Promise<{ caminho: string; alterado: boolean }> {
   const { nomeArquivo, bytes } = montarInstancia(entrada);
   const pasta = join(entrada.pastaDestino, PASTA_SABRE);
   const caminho = join(pasta, nomeArquivo);
-  const atual = await readFile(caminho).catch(() => null);
+  const atual = await (entrada.lerArquivo ?? readFile)(caminho).catch(
+    (erro: NodeJS.ErrnoException) => {
+      // Só "não existe" conta como arquivo ausente; permissão ou disco com erro não pode virar gravação às cegas.
+      if (erro.code === "ENOENT") return null;
+      throw erro;
+    },
+  );
   if (atual?.equals(bytes)) return { caminho, alterado: false };
   await mkdir(pasta, { recursive: true });
   const temporario = `${caminho}.${process.pid}.tmp`;
