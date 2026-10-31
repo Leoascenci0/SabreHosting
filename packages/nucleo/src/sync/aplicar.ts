@@ -174,7 +174,11 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
     throw erro;
   }
 
-  await gravarMarcadorTroca({ mundo, antigo, temp });
+  // Sem marcador gravado a troca não começa: a temporária não pode ficar órfã.
+  await gravarMarcadorTroca({ mundo, antigo, temp }).catch(async (erro: unknown) => {
+    await apagar(temp);
+    throw erro;
+  });
   await renomear(mundo, antigo).catch(async (erro: unknown) => {
     await apagar(temp);
     await apagarMarcadorTroca(mundo);
