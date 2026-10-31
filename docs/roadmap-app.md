@@ -54,7 +54,7 @@ item da mesma tela.
   *Confirmação:* E2E: cancelar não muda nada; confirmar chama `restaurar` do núcleo.
   *Depende de:* app-1.1, bkp-2.2
 
-- [ ] **2.2 — Tela de configurações**
+- [x] **2.2 — Tela de configurações** (PR #160, 31/10/2026; corte: Geral + Servidor; o resto vira appmel 1.7–1.9)
   *O que fazer:* reunir os campos criados nos outros itens (Geral, Servidor, Backups, Grupo), com valores padrão e
   validação.
   *Arquivo:* `apps/desktop/src/telas/configuracoes.*`

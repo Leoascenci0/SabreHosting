@@ -56,3 +56,29 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* E2E: depois de Jogar, o endereço volta a aparecer.
   *Origem:* teste do Eliel no Windows · 31/10/2026
 
+
+- [ ] **1.7 — Tirar PC do grupo (tela)**
+  *O que fazer:* área Grupo em Configurações com a lista dos PCs (`cliente.listarPcs()`), só para o dono (`/eu.dono`),
+  botão "Tirar PC do grupo" com confirmação que diz o NOME do PC, mensagens pt-BR para 403/409/404 e aviso de que o PC
+  tirado precisa de novo convite; novo método `revogarPc` no cliente do núcleo.
+  *Arquivo:* `apps/desktop/src/ui/configuracoes.*`, `packages/nucleo/src/cartorio/cliente.ts`
+  **Tela no app:** Configurações › Grupo › "Tirar PC do grupo" (só o dono).
+  *Confirmação:* E2E com cartório falso: cancelar não revoga; confirmar chama `revogarPc`; não-dono não vê o botão.
+  *Depende de:* cartmel-1.1 e cartmel-2.3 (feitos), app-2.2 (feito)
+  *Origem:* app-2.2 · PR #160 · filha
+
+- [ ] **1.8 — Backups: intervalo e quantos guardar (ligar e expor)**
+  *O que fazer:* ligar `agendarBackups` e a rotação do núcleo ao app (hoje sem consumidor em `apps/desktop`) e só então
+  expor os dois campos em Configurações › Backups.
+  *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/backup/agendador.ts`, `rotacao.ts`
+  **Tela no app:** Configurações › Backups › "Intervalo" e "Quantos guardar".
+  *Confirmação:* valor salvo muda o intervalo do backup (E2E).
+  *Origem:* app-2.2 · PR #160 · filha
+
+- [ ] **1.9 — Ligar as distâncias de visão/simulação ao subir o servidor**
+  *O que fazer:* usar `opcoesDoServidor(lerPreferencias())` ao gravar a configuração no `hospedar` (hoje só os testes chamam).
+  *Arquivo:* `apps/desktop/src/main/deps-reais.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: valor salvo em Configurações aparece em `server.properties` ao hospedar.
+  *Depende de:* app-1.3
+  *Origem:* app-2.2 · PR #160 · filha + qa
