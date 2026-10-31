@@ -20,10 +20,16 @@ Avisos sobem um nível por vez: o item avisa a **onda** (`send_message` para o i
 
 - **Medida de 31/10:** cerca de **2% de contexto por item** quando um chat faz tudo; relatório de onda lido pelo
   coordenador ≈ 0,3%.
-- **Coordenador:** passa o bastão ao chegar em **35% de contexto** ou **8 ondas**, o que vier primeiro. Meta: fechar a
-  noite abaixo de 40%.
-- **Sessão de onda:** até **3 itens abertos ao mesmo tempo** (regra da fila) e até **6 itens no total**; fecha antes se
-  chegar a **40% de contexto**. Itens que sobrarem voltam ao coordenador para a próxima onda.
+- **Teto de contexto (regra do Eliel, 31/10/2026; vale para coordenador e sessão de onda):**
+  - **Meta: 30%.** Chegou a 30%, não começa demanda nova (onda nova, item novo): fecha ou passa o bastão.
+  - **Margem até 35%:** se está **concluindo** uma demanda (onda aberta, item em revisão, merge em curso), pode ir até
+    35% para terminá-la; não começa outra.
+  - **Exceção até 40%:** só para **um item muito específico** que não dá para cortar no meio sem risco (ex.: merge de
+    trava com revisão em duas lentes já rodando). Escreva no estado qual item e por quê. Passou de 40%: grava o estado e
+    fecha/passa o bastão mesmo assim.
+- **Coordenador:** também passa o bastão em **8 ondas**, o que vier primeiro.
+- **Sessão de onda:** até **3 itens abertos ao mesmo tempo** (regra da fila) e até **6 itens no total**. Itens que
+  sobrarem voltam ao coordenador para a próxima onda.
 - **Uma sessão de onda ativa por vez.** Assim só um PR de controle anda de cada vez e o `MILESTONE` não conflita.
 - **Saída da onda para o coordenador:** no máximo **10 linhas**, sempre neste formato:
   `ONDA <n> FECHADA · itens ✅ <lista com PR> · ⏸️ <lista com motivo> · P para o Eliel: <lista> · decidi por você:
@@ -45,9 +51,9 @@ Avisos sobem um nível por vez: o item avisa a **onda** (`send_message` para o i
 6. Próxima onda (volta ao passo 2). Fila vazia: **encerramento** (`rodada.md` §2, só a parte do coordenador:
    `MILESTONE`, `bom-dia`, `custos`, estado ao histórico, apagar heartbeat e watchdogs).
 
-### Passar o bastão (coordenador chegou a 35% ou 8 ondas)
+### Passar o bastão (coordenador chegou a 30% ou 8 ondas)
 
-Sem onda aberta (espere a atual fechar): grave o estado, commite e envie; crie a **sessão coordenadora seguinte**
+Sem onda aberta (espere a atual fechar, usando a margem até 35%): grave o estado, commite e envie; crie a **sessão coordenadora seguinte**
 (`create_session`, mesmo modelo, prompt abaixo); apague o seu heartbeat; escreva no estado "bastão → <id novo>";
 termine. De dia, avise o Eliel em uma linha com o link da nova sessão.
 
@@ -69,7 +75,8 @@ Siga references/rodada.md (§1 Loop por item, Revisão, merge pela SKILL.md §4)
 - Os itens avisam VOCÊ (use o seu próprio id no Template da filha).
 - Só mergeie depois do aviso de "pronto" da filha para o último pedido (S-04); item que mexe em infra/ ou tests/infra/:
   testes também como usuário comum (S-03); vistorias uma de cada vez (S-01).
-- Feche ao terminar a lista ou ao chegar a 40% de contexto: PR de controle (vistoria APROVADA) mergeado, watchdogs
+- Feche ao terminar a lista ou ao chegar a 30% de contexto (margem até 35% para terminar o item em curso; até 40% só
+  para um item muito específico, anotado no estado): PR de controle (vistoria APROVADA) mergeado, watchdogs
   apagados, e UMA mensagem para {{ID_COORDENADOR}} no formato "ONDA <n> FECHADA · …" (references/coordenacao.md,
   Calibragem), com no máximo 10 linhas. Depois termine.
 ```

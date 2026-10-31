@@ -110,8 +110,9 @@ APROVADO, sem conflito com outros PRs; merge commit, um por vez. Depois: `pull -
 - **O chat do Eliel é só coordenador.** Ele abre uma **sessão de onda** por vez, e a sessão de onda abre as **sessões de
   item**. O coordenador nunca faz triagem, briefing, vistoria, `qa` nem merge de item: lê só o relatório de ≤10 linhas
   de cada onda. Detalhe, calibragem e templates em **`references/coordenacao.md`** (leia antes da primeira onda).
-- **Tetos:** coordenador passa o bastão a uma nova sessão coordenadora em **35%** de contexto ou 8 ondas; sessão de onda
-  fecha em **6 itens** ou **40%**. Nenhum chat chega a 50%.
+- **Teto de contexto (coordenador e onda):** meta **30%**; margem até **35%** só para concluir a demanda em curso;
+  até **40%** só para um item muito específico, anotado no estado. Coordenador passa o bastão a uma nova sessão
+  coordenadora; sessão de onda fecha (também em 6 itens).
 - O chat que configura ou decide com o Eliel não executa rodada; diff, log e relatório grande vão para subagente.
 
 ## 5. A rodada (motor)

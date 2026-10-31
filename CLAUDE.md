@@ -140,8 +140,9 @@ qual parte detalhada (`references/*.md`) ler para o tipo da mudança.
   nunca vai para agente.
 - **Três níveis (regra do Eliel, 31/10/2026):** o chat aberto com `/maxima` (ou `/maxima retomar`) só **coordena**:
   abre uma **sessão de onda** por vez, e ela abre as sessões de item, revisa e mergeia. O coordenador lê só o relatório
-  de ≤10 linhas de cada onda e passa o bastão a uma nova sessão coordenadora em 35% de contexto; a sessão de onda fecha
-  em 6 itens ou 40%. Detalhe em `.claude/skills/maxima/references/coordenacao.md`.
+  de ≤10 linhas de cada onda e passa o bastão a uma nova sessão coordenadora. Teto de contexto: meta **30%**, margem até
+  **35%** para concluir a demanda em curso, até **40%** só para um item muito específico. Detalhe em
+  `.claude/skills/maxima/references/coordenacao.md`.
 - **Autonomia da Máxima:** sozinha ela revisa, mergeia e gera a versão de teste; toma decisão **reversível** de
   detalhe (texto de tela, ordem de botão) e relata ("decidi por você", com o PR para desfazer). **Fica com o Eliel:**
   regra do grupo (quem pode hospedar, quem entra), custo ou cadastro em serviço externo (máquina na nuvem, domínio),
