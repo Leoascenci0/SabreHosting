@@ -9,6 +9,7 @@ const MOTIVOS = [
   "nao_e_dono",
   "vencida",
   "destino_desconhecido",
+  "destino_sem_acesso",
   "destino_invalido",
 ] as const;
 export type MotivoRecusa = (typeof MOTIVOS)[number];

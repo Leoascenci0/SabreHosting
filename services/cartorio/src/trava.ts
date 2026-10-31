@@ -12,6 +12,7 @@ export type MotivoRecusa =
   | "nao_e_dono"
   | "vencida"
   | "destino_desconhecido"
+  | "destino_sem_acesso"
   | "destino_invalido";
 export type ResultadoTrava =
   | { ok: true; epoca: number; expiraEm: number }
@@ -148,7 +149,14 @@ export function passar(
      WHERE dono_pc_id = ? AND epoca = ? AND expira_em > ? AND ? <> ?
        AND EXISTS (SELECT 1 FROM tokens WHERE pc_id = ? AND revogado_em IS NULL)`,
     [para, agora + prazoMs, de, epoca, agora, para, de, para],
-    recusaDoDono(de, epoca, agora, para),
+    (l) => {
+      const motivo = recusaDoDono(de, epoca, agora, para)(l);
+      // PC do grupo, mas sem token ativo (revogado ou nunca recebeu): recusa própria, na mesma transação.
+      return motivo === "destino_desconhecido" &&
+        banco.prepare("SELECT 1 FROM pcs WHERE id = ?").get(para)
+        ? "destino_sem_acesso"
+        : motivo;
+    },
   );
 }
 

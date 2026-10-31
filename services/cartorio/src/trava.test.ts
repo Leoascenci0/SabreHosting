@@ -172,7 +172,7 @@ describe("trava: época (host zumbi)", () => {
     expect(estadoTrava(banco, 1)).toEqual({ donoPcId: 1, epoca: 1, expiraEm: PRAZO });
   });
 
-  it("passar para si mesmo ou para PC sem token ativo (sem token, revogado) → recusa, nada muda", () => {
+  it("passar para si mesmo ou para PC sem token ativo (sem token, revogado) → recusa própria, nada muda", () => {
     const { banco } = montarBanco();
     banco.prepare("INSERT INTO pcs (nome, criado_em) VALUES ('Sem token', 0)").run(); // id 4
     banco.prepare("UPDATE tokens SET revogado_em = 1 WHERE pc_id = 3").run();
@@ -184,7 +184,7 @@ describe("trava: época (host zumbi)", () => {
     for (const destino of [4, 3]) {
       expect(passar(banco, 1, destino, 1, 1, PRAZO)).toMatchObject({
         ok: false,
-        motivo: "destino_desconhecido",
+        motivo: "destino_sem_acesso",
       });
     }
     expect(estadoTrava(banco, 1)).toEqual({ donoPcId: 1, epoca: 1, expiraEm: PRAZO });
@@ -219,6 +219,22 @@ describe("trava: época (host zumbi)", () => {
     pegar(banco, 1, 0, PRAZO);
     expect(() => banco.exec("UPDATE trava SET epoca = 0")).toThrow(/época/);
     expect(() => banco.exec("INSERT INTO trava (id) VALUES (2)")).toThrow();
+  });
+
+  it("o banco barra época que não é número inteiro, mesmo por UPDATE direto", () => {
+    const { banco } = montarBanco();
+    pegar(banco, 1, 0, PRAZO);
+    for (const sql of [
+      "UPDATE trava SET epoca = 'abc'",
+      "UPDATE trava SET epoca = 2.5",
+      "UPDATE trava SET epoca = x'01'",
+    ]) {
+      expect(() => banco.exec(sql), sql).toThrow(/inteiro/);
+    }
+    expect(banco.prepare("SELECT epoca, typeof(epoca) AS t FROM trava").get()).toEqual({
+      epoca: 1,
+      t: "integer",
+    });
   });
 });
 
