@@ -545,3 +545,92 @@ describe("trava de atualização (syncmel-1.8b)", () => {
     expect(chamadas).toHaveLength(0);
   });
 });
+
+describe("versões do mundo (piloto-1.1c)", () => {
+  const DADOS = { manifestoSha256: "a".repeat(64), arquivos: 3, bytes: 4096 };
+
+  it("numeroMaisNovo devolve o número, ou null sem versão", async () => {
+    const { cliente, chamadas } = montar([
+      json(200, { versao: { numero: 4, epoca: 2, pcId: 1, ...DADOS, criadaEm: 9 } }),
+      json(200, { versao: null }),
+    ]);
+    expect(await cliente.numeroMaisNovo()).toBe(4);
+    expect(await cliente.numeroMaisNovo()).toBeNull();
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes/mais-nova`);
+  });
+
+  it("criarVersao manda época e totais e devolve o número; não repete", async () => {
+    const { cliente, chamadas } = montar([json(201, { numero: 5 })]);
+    expect(await cliente.criarVersao(7, DADOS)).toBe(5);
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes`);
+    expect(JSON.parse(String(chamadas[0]?.init.body))).toEqual({ epoca: 7, ...DADOS });
+    const sem = montar([json(503, {}), json(201, { numero: 6 })]);
+    expect((await erroDe(sem.cliente.criarVersao(7, DADOS))).tipo).toBe("servidor");
+    expect(sem.chamadas).toHaveLength(1);
+  });
+
+  it("criarVersao recusada pela trava vira erro com a mensagem do cartório", async () => {
+    const { cliente } = montar([
+      json(409, {
+        erro: "A trava está com outro PC.",
+        motivo: "ocupada",
+        donoPcId: 2,
+        epoca: 3,
+        expiraEm: 1,
+      }),
+    ]);
+    const e = await erroDe(cliente.criarVersao(7, DADOS));
+    expect(e.status).toBe(409);
+    expect(e.message).toContain("A trava está com outro PC.");
+  });
+
+  it("enviarPacote manda o arquivo em fluxo, com época, hash e tamanho na rota", async () => {
+    const { mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { createHash } = await import("node:crypto");
+    const dir = mkdtempSync(join(tmpdir(), "sabre-cliente-"));
+    try {
+      const caminho = join(dir, "p.tar.gz");
+      const conteudo = randomBytes(70_000);
+      writeFileSync(caminho, conteudo);
+      const sha256 = createHash("sha256").update(conteudo).digest("hex");
+      const { cliente, chamadas } = montar([
+        json(201, { versao: 5, sha256, bytes: conteudo.length }),
+      ]);
+      await cliente.enviarPacote(5, 7, { caminho, sha256, tamanho: conteudo.length });
+      const { url, init } = chamadas[0] ?? { url: "", init: {} };
+      expect(init.method).toBe("PUT");
+      expect(url).toBe(
+        `${URL_CARTORIO}/versoes/5/pacote?epoca=7&sha256=${sha256}&bytes=${conteudo.length}`,
+      );
+      expect(new Headers(init.headers).get("content-type")).toBe("application/octet-stream");
+      expect(init.body).toBeInstanceOf(ReadableStream);
+      const lido = Buffer.from(await new Response(init.body as ReadableStream).arrayBuffer());
+      expect(lido.equals(conteudo)).toBe(true);
+
+      // A nuvem diz que guardou outra coisa: erro (o pacote não pode valer).
+      const torto = montar([
+        json(201, { versao: 5, sha256: "b".repeat(64), bytes: conteudo.length }),
+      ]);
+      const e = await erroDe(
+        torto.cliente.enviarPacote(5, 7, { caminho, sha256, tamanho: conteudo.length }),
+      );
+      expect(e.tipo).toBe("resposta");
+      expect(torto.chamadas).toHaveLength(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("enviarPacote recusado (hash errado na nuvem) traz a mensagem e não repete", async () => {
+    const { cliente, chamadas } = montar([
+      json(422, { erro: "O pacote chegou diferente do declarado.", motivo: "hash_errado" }),
+    ]);
+    const e = await erroDe(
+      cliente.enviarPacote(5, 7, { caminho: "/nao/existe", sha256: "c".repeat(64), tamanho: 1 }),
+    );
+    expect(e.message).toContain("O pacote chegou diferente do declarado.");
+    expect(chamadas).toHaveLength(1);
+  });
+});

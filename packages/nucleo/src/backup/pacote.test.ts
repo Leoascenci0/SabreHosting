@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { c as criarTar } from "tar";
+import { c as criarTar, t as listarTar } from "tar";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo } from "../../test/ajuda/mundos.js";
 import { MUDOU, gerarManifesto } from "./manifesto.js";
@@ -92,6 +92,28 @@ describe("criarPacote / abrirPacote", () => {
     expect(manifesto).toMatchObject({ versao: 3, epoca: 1 });
     expect(manifesto.arquivos.length).toBe(Object.keys(hashesDoMundo(mundo)).length);
   }, 30_000);
+
+  it("devolve o hash e os totais do manifesto.json exato que entrou no pacote (piloto-1.1c)", async () => {
+    const base = pasta();
+    const mundo = join(base, "mundo");
+    mkdirSync(join(mundo, "region"), { recursive: true });
+    writeFileSync(join(mundo, "level.dat"), "abc");
+    writeFileSync(join(mundo, "region", "r.0.0.mca"), "x".repeat(1000));
+    const criado = await criarPacote(mundo, join(base, "p.tar.gz"), opcoes);
+    const partes: Buffer[] = [];
+    await listarTar({
+      file: criado.caminho,
+      onReadEntry: (e) => {
+        if (e.path === "manifesto.json") e.on("data", (d: Buffer) => partes.push(d));
+        else e.resume();
+      },
+    });
+    expect(criado.manifesto).toEqual({
+      sha256: createHash("sha256").update(Buffer.concat(partes)).digest("hex"),
+      arquivos: 2,
+      bytes: 1003,
+    });
+  });
 
   it("não trava o laço de eventos ao empacotar 20 MB (maior intervalo entre ticks de 10 ms)", async () => {
     const base = pasta();

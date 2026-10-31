@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { levelDat } from "../test/ajuda/nbt.js";
 import { montarZip, type EntradaDeZip } from "../test/ajuda/zip.js";
 import { abrirPacote } from "./backup/pacote.js";
-import { importarMundoZip, type LimitesDaImportacao } from "./importar.js";
+import { analisarZip, importarMundoZip, type LimitesDaImportacao } from "./importar.js";
 
 const raizes: string[] = [];
 function area() {
@@ -242,5 +242,50 @@ describe("importarMundoZip — versão e indícios (piloto-1.1b)", () => {
   it("pasta-raiz só vale se TUDO está nela (senão não mexe nos caminhos)", async () => {
     const { chamada } = await importar([nivel("world/level.dat"), ok("outro/arquivo")]);
     expect((await chamada).arquivos).toBe(2);
+  });
+});
+
+describe("analisarZip (piloto-1.1c)", () => {
+  it("diz versão, avisos e total sem gravar nada; recusa o hostil", async () => {
+    const { raiz } = area();
+    const zip = join(raiz, "mundo.zip");
+    writeFileSync(
+      zip,
+      montarZip([
+        { nome: "world/level.dat", dados: levelDat("1.20.4", 3700) },
+        ok("world/plugins/x.jar"),
+        ok("world/mods/y.jar"),
+      ]),
+    );
+    const antes = readdirSync(raiz).sort();
+    await expect(analisarZip(zip)).resolves.toEqual({
+      arquivos: 3,
+      versaoMinecraft: "1.20.4",
+      indicios: { plugins: true, mods: true },
+    });
+    expect(readdirSync(raiz).sort()).toEqual(antes);
+    writeFileSync(zip, montarZip([ok("level.dat"), ok("../fora")]));
+    await expect(analisarZip(zip)).rejects.toThrow(/recusado/);
+    expect(readdirSync(raiz).sort()).toEqual(antes);
+  });
+
+  it("importarMundoZip leva o número pedido no manifesto (N+1)", async () => {
+    const { raiz, trabalho } = area();
+    const zip = join(raiz, "mundo.zip");
+    writeFileSync(
+      zip,
+      montarZip([ok("level.dat"), { nome: "r.mca", dados: randomBytes(300_000) }]),
+    );
+    let manifesto: { versao: number } | undefined;
+    const r = await importarMundoZip(zip, {
+      pastaDeTrabalho: trabalho,
+      epoca: 4,
+      versao: 7,
+      enviar: async (p) => {
+        manifesto = await abrirPacote(p.caminho, p.sha256, join(raiz, "aberto"));
+      },
+    });
+    expect(r.versao).toBe(7);
+    expect(manifesto?.versao).toBe(7);
   });
 });
