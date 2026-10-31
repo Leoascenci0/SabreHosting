@@ -64,7 +64,7 @@ item da mesma tela.
 
 ## Bloco 3 — Distribuição
 
-- [ ] **3.1 — Instalador Windows e versão no GitHub Releases**
+- [x] **3.1 — Instalador Windows e versão no GitHub Releases** (✅ configuração PR #241, 31/10/2026; primeira tag de teste e instalação no PC Windows ⏸️ P; versão do app está em 0.0.0 e precisa subir antes da 1ª tag)
   *O que fazer:* electron-builder (NSIS) gerado no GitHub Actions (runner Windows) ao criar tag; checksums publicados.
   *Arquivo:* `.github/workflows/versao.yml`, `apps/desktop/electron-builder.*`
   **Tela no app:** não se aplica.

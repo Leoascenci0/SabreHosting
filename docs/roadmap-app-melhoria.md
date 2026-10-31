@@ -168,7 +168,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* e2e: duas cópias seguidas mudam o conteúdo da região entre as duas.
   *Origem:* appmel-1.15 · PR #229 · qa
 
-- [ ] **1.21 — Restaurar backup: reler o `level-name` na hora**
+- [x] **1.21 — Restaurar backup: reler o `level-name` na hora** (✅ PR #238, 31/10/2026)
   *O que fazer:* `restaurar` em `deps-backups.ts` ainda usa a `pastaDoMundo` lida ao abrir o app (o appmel-1.19 corrigiu só o backup agendado e o backup antes de trocar versão). Passar `mundoAgora` (`pastaDoMundoAgora` de `config-pc.ts`) também a `depsBackupsReais.restaurar`, para restaurar no mundo que o `server.properties` diz agora.
   *Arquivo:* `apps/desktop/src/main/deps-backups.ts`, `apps/desktop/src/main/principal.ts`
   **Tela no app:** não se aplica.

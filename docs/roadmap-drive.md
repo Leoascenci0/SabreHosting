@@ -15,7 +15,7 @@ ao vivo: só pacotes fechados.
   *Confirmação:* teste: pasta que some no meio não quebra o backup local.
   *Depende de:* bkp-2.1, app-2.2
 
-- [ ] **1.2 — Tutorial: ligar o Google Drive para Computador**
+- [x] **1.2 — Tutorial: ligar o Google Drive para Computador** (✅ texto PR #239, 31/10/2026; confirmação no PC ⏸️ P)
   *O que fazer:* passo a passo para instalar o Drive para Computador e apontar o app para a pasta.
   *Arquivo:* `docs/tutoriais/drive-historico.md`
   **Tela no app:** não se aplica.

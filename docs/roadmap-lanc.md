@@ -70,7 +70,7 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
   *Confirmação:* login real com a conta do Eliel. **[P: só depois da aprovação]**
   *Depende de:* lanc-2.1 (aprovado), app-2.2
 
-- [ ] **2.3 — Baixar e montar a versão do jogo**
+- [x] **2.3 — Baixar e montar a versão do jogo** (✅ parcial PR #240, 31/10/2026: montar.ts com download simulado; versão real no PC e extração do Java ⏸️ P)
   *O que fazer:* a partir do manifesto oficial de versões, baixar cliente, bibliotecas, assets e Java com hash conferido,
   em cache compartilhado; nada distribuído pelo SabreHosting.
   *Arquivo:* `packages/nucleo/src/launcher/montar.ts`
