@@ -13,11 +13,16 @@ const semSandbox = process.getuid?.() === 0 ? ["--no-sandbox"] : [];
 let aberto: ElectronApplication | undefined;
 let dados: string | undefined;
 
-async function abrir(): Promise<Page> {
+async function abrir(dono = false): Promise<Page> {
   dados = mkdtempSync(join(tmpdir(), "sabre-e2e-"));
   aberto = await electron.launch({
     args: [...semSandbox, `--user-data-dir=${dados}`, pastaApp],
-    env: { ...process.env, SABRE_E2E: "1", SABRE_E2E_CENARIO: "ninguem" } as Record<string, string>,
+    env: {
+      ...process.env,
+      SABRE_E2E: "1",
+      SABRE_E2E_CENARIO: "ninguem",
+      ...(dono ? { SABRE_E2E_DONO: "1" } : {}),
+    } as Record<string, string>,
     timeout: 20_000,
   });
   const pagina = await aberto.firstWindow();
@@ -81,8 +86,46 @@ describe("tela de configurações", () => {
     expect(await p.locator("#cfg-visao").inputValue()).toBe("12");
   });
 
-  it("não cria a área Grupo vazia", async () => {
+  it("não mostra a área Grupo a quem não é dono", async () => {
     const p = await abrir();
-    expect(await p.locator("legend").allTextContents()).toEqual(["Geral", "Servidor"]);
+    expect(await p.locator("legend:visible").allTextContents()).toEqual(["Geral", "Servidor"]);
+  });
+
+  const revogados = (): Promise<number[]> =>
+    aberto?.evaluate(
+      () =>
+        (globalThis as unknown as { __sabreE2EGrupo: { revogados: number[] } }).__sabreE2EGrupo
+          .revogados,
+    ) as Promise<number[]>;
+
+  it("grupo: não-dono não vê a área nem o botão", async () => {
+    const p = await abrir();
+    await p.locator("#cfg-visao").waitFor();
+    expect(await p.locator("#cfg-grupo").isHidden()).toBe(true);
+    expect(await p.locator("#grupo-lista button").count()).toBe(0);
+  });
+
+  it("grupo: dono vê os PCs; o dono não tem botão; cancelar não revoga; confirmar revoga", async () => {
+    const p = await abrir(true);
+    await p.locator("#grupo-lista li").first().waitFor();
+    expect(await p.locator("#grupo-lista li").count()).toBe(3);
+    expect(await p.locator("#grupo-lista button").count()).toBe(2); // sem botão no dono
+    expect(await p.locator("#grupo-lista button").first().textContent()).toBe("Tirar PC do grupo");
+
+    // Cancelar: a pergunta cita o NOME do PC e nada é revogado.
+    await p.getByRole("button", { name: "Tirar PC do Lucas do grupo" }).click();
+    await esperarTexto(p, "#grupo-pergunta", "PC do Lucas");
+    expect(await p.locator("#grupo-confirmacao").textContent()).toContain("novo convite");
+    await p.locator("#grupo-cancelar").click();
+    expect(await p.locator("#grupo-confirmacao").isHidden()).toBe(true);
+    expect(await revogados()).toEqual([]);
+    expect(await p.locator("#grupo-lista li").count()).toBe(3);
+
+    // Confirmar: chama revogarPc só desse PC e a lista perde o PC.
+    await p.getByRole("button", { name: "Tirar PC do Lucas do grupo" }).click();
+    await p.locator("#grupo-confirmar").click();
+    await esperarTexto(p, "#grupo-aviso", "PC do Lucas saiu do grupo");
+    expect(await revogados()).toEqual([2]);
+    expect(await p.locator("#grupo-lista li").count()).toBe(2);
   });
 });

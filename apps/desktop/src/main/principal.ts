@@ -15,7 +15,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { depsBackupsReais } from "./deps-backups.js";
-import { depsReais } from "./deps-reais.js";
+import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
+import { criarGrupo, type Grupo } from "./grupo.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
@@ -190,7 +191,20 @@ const aplicarAbrirComWindows = (ligado: boolean): void => {
   app.setLoginItemSettings({ openAtLogin: ligado, args: ligado ? [INICIO_OCULTO] : [] });
 };
 
-function registrarPonte(inicio: Inicio, backups: Backups): void {
+async function criarGrupoDoApp(): Promise<Grupo> {
+  if (process.env["SABRE_E2E"] !== "1") {
+    const exigir = clienteDoAmbiente(process.env);
+    return criarGrupo({
+      eu: async () => exigir().eu(),
+      listarPcs: async () => exigir().listarPcs(),
+      revogarPc: async (id) => exigir().revogarPc(id),
+    });
+  }
+  const { depsGrupoE2E } = await import("./fake-e2e.js");
+  return criarGrupo(depsGrupoE2E());
+}
+
+function registrarPonte(inicio: Inicio, backups: Backups, grupo: Grupo): void {
   const configuracoes = criarConfiguracoes({
     pasta: app.getPath("userData"),
     aplicarAbrirComWindows,
@@ -207,6 +221,11 @@ function registrarPonte(inicio: Inicio, backups: Backups): void {
   ipcMain.handle("sabre:backups:restaurar", (evento, nome: unknown) => {
     permitir(evento);
     return backups.restaurar(nome); // o nome só vale se estiver na lista; a cola confere
+  });
+  ipcMain.handle("sabre:grupo:estado", (evento) => (permitir(evento), grupo.estado()));
+  ipcMain.handle("sabre:grupo:tirar", (evento, id: unknown) => {
+    permitir(evento);
+    return grupo.tirar(id); // o main revalida dono, lista e "não é o dono" antes de revogar
   });
   ipcMain.handle("sabre:config:ler", (evento) => (permitir(evento), configuracoes.ler()));
   ipcMain.handle("sabre:config:salvar", (evento, valor: unknown) => {
@@ -250,7 +269,7 @@ if (!app.requestSingleInstanceLock()) {
     nativeTheme.themeSource = "system";
     inicioApp = await criarInicioDoApp();
     backupsApp = await criarBackupsDoApp(inicioApp);
-    registrarPonte(inicioApp, backupsApp);
+    registrarPonte(inicioApp, backupsApp, await criarGrupoDoApp());
     bandeja = criarBandeja();
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {

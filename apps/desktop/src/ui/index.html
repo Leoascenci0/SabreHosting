@@ -90,6 +90,29 @@
           </p>
           <p class="dica">Vale na próxima vez que o servidor for ligado.</p>
         </fieldset>
+        <fieldset id="cfg-grupo" hidden>
+          <legend>Grupo</legend>
+          <p class="dica">PCs com acesso ao grupo. Só o dono do grupo vê esta área.</p>
+          <ul class="lista-backups" id="grupo-lista"></ul>
+          <div
+            class="confirmacao"
+            id="grupo-confirmacao"
+            role="alertdialog"
+            aria-labelledby="grupo-pergunta"
+            hidden
+          >
+            <p id="grupo-pergunta"></p>
+            <p class="detalhe">
+              O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
+            </p>
+            <div class="acoes">
+              <button type="button" class="perigo" id="grupo-confirmar">Tirar do grupo</button>
+              <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
+            </div>
+          </div>
+          <p class="detalhe" id="grupo-aviso" role="status"></p>
+          <p class="erro" id="grupo-erro" role="alert" hidden></p>
+        </fieldset>
         <p class="detalhe" id="config-aviso" role="status"></p>
         <p class="erro" id="config-erro" role="alert" hidden></p>
         <div class="acoes">
