@@ -45,7 +45,10 @@ const MANTER = 3;
 const PARCIAL = ".parcial";
 const arquivo = (pasta: string, versao: number) => join(pasta, `v${versao}.tar.gz`);
 
-/** Prepara a pasta e apaga parciais de um processo que morreu no meio (nunca uma cópia guardada). */
+/**
+ * Prepara a pasta e apaga sobras de um processo que morreu no meio: parciais e `v<N>.tar.gz` sem linha em
+ * `copias_nuvem` (rotação que não chegou a apagar o arquivo, ou `rename` sem commit). Cópia registrada fica.
+ */
 export function criarArmazem({
   banco,
   pasta,
@@ -58,8 +61,11 @@ export function criarArmazem({
     );
   }
   mkdirSync(pasta, { recursive: true });
+  const guardada = banco.prepare("SELECT 1 FROM copias_nuvem WHERE versao = ?");
   for (const nome of readdirSync(pasta)) {
-    if (nome.endsWith(PARCIAL)) rmSync(join(pasta, nome), { force: true });
+    const versao = /^v(\d+)\.tar\.gz$/.exec(nome)?.[1];
+    const orfa = versao !== undefined && !guardada.get(Number(versao));
+    if (nome.endsWith(PARCIAL) || orfa) rmSync(join(pasta, nome), { force: true });
   }
   return { banco, pasta, tetoBytes, manter: MANTER, agora };
 }

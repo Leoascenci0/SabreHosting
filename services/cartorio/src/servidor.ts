@@ -69,6 +69,9 @@ const RECUSA_PACOTE: Record<MotivoPacote, { status: number; erro: string }> = {
   hash_errado: { status: 422, erro: "O pacote chegou diferente do enviado. Envie de novo." },
   interrompido: { status: 400, erro: "O envio do mundo foi interrompido. Envie de novo." },
 };
+const SO_OCTETO = {
+  erro: "O pacote do mundo vai como application/octet-stream. Atualize o app e envie de novo.",
+};
 const SEM_COPIA = { erro: "A nuvem não tem essa versão do mundo guardada." };
 const VERSAO_INEXISTENTE = { erro: "Essa versão do mundo não existe no cartório." };
 /** Inteiro exato em JS (≤ 2^53 − 1): número maior viraria decimal e ficaria gravado para sempre em `versoes`. */
@@ -280,10 +283,16 @@ export function criarCartorio({
     app.addContentTypeParser("application/octet-stream", (_req, corpo, pronto) =>
       pronto(null, corpo),
     );
+    // O teto grande só vale para o leitor em fluxo: outro tipo é recusado antes de qualquer leitor ler o corpo.
+    function soOcteto(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
+      const tipo = (req.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase();
+      if (tipo === "application/octet-stream") pronto();
+      else void resp.code(415).send(SO_OCTETO);
+    }
     app.put<{ Params: { n: number }; Querystring: Declarado & { epoca: number }; Body: Readable }>(
       "/versoes/:n/pacote",
       {
-        onRequest: soPc,
+        onRequest: [soPc, soOcteto],
         bodyLimit: armazem.tetoBytes,
         schema: {
           params: paramN,
@@ -318,7 +327,14 @@ export function criarCartorio({
         const copia = pacoteGuardado(armazem, req.params.n);
         if (!copia) return resp.code(404).send(SEM_COPIA);
         // Aberto na mesma volta em que a linha foi lida: a rotação não apaga o arquivo no meio do download.
-        const fluxo = createReadStream("", { fd: openSync(copia.caminho, "r") });
+        let fd: number;
+        try {
+          fd = openSync(copia.caminho, "r");
+        } catch (erro) {
+          req.log.error({ err: erro, versao: req.params.n }, "cópia registrada sem arquivo");
+          return resp.code(404).send(SEM_COPIA);
+        }
+        const fluxo = createReadStream("", { fd });
         return resp
           .header("content-type", "application/octet-stream")
           .header("content-length", copia.bytes)

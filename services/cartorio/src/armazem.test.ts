@@ -258,13 +258,15 @@ describe("armazém: guarda a cópia do mundo com troca atômica", () => {
     ).toBe(true);
   });
 
-  it("parciais de um processo que morreu são apagados ao abrir o armazém; cópias ficam", () => {
-    const { banco, pasta } = montar();
-    mkdirSync(pasta, { recursive: true });
-    writeFileSync(join(pasta, "v1.tar.gz"), "cópia");
+  it("ao abrir o armazém: apaga parciais e cópias órfãs (sem linha); cópia registrada fica", async () => {
+    const { banco, armazem, pasta } = montar();
+    const epoca = hospedarERegistrar(banco, 1);
+    await enviar(armazem, 1, epoca, pacote());
     writeFileSync(join(pasta, "v2.abc.tar.gz.parcial"), "meio");
+    writeFileSync(join(pasta, "v9.tar.gz"), "órfã");
+    writeFileSync(join(pasta, "leia-me.txt"), "outro arquivo");
     criarArmazem({ banco, pasta });
-    expect(arquivos(pasta)).toEqual(["v1.tar.gz"]);
+    expect(arquivos(pasta)).toEqual(["leia-me.txt", "v1.tar.gz"]);
   });
 
   it("teto padrão de 20 GiB e teto inválido recusado", () => {
@@ -420,6 +422,57 @@ describe("rotas do pacote", () => {
     expect(baixado.statusCode).toBe(200);
     expect(baixado.headers["x-sabre-sha256"]).toBe(p.sha256);
     expect(baixado.rawPayload.equals(p.bytes)).toBe(true);
+  });
+
+  it(
+    "corpo que não é application/octet-stream → 415 antes de ler (a memória não cresce)",
+    { timeout: 15_000 },
+    async () => {
+      const { app, auth, pasta } = montarApp();
+      const grande = Buffer.alloc(50 * 1024 * 1024, 0x61);
+      const memoria = () => process.memoryUsage().arrayBuffers + process.memoryUsage().heapUsed;
+      for (const tipo of ["text/plain", "application/json", undefined]) {
+        const antes = memoria();
+        let pico = antes;
+        const medir = setInterval(() => (pico = Math.max(pico, memoria())), 1);
+        const r = await app.inject({
+          method: "PUT",
+          url: `/versoes/1/pacote?epoca=1&sha256=${"a".repeat(64)}&bytes=${grande.length}`,
+          headers: tipo ? { ...auth, "content-type": tipo } : auth,
+          payload: Readable.from(
+            (function* () {
+              for (let i = 0; i < 800; i++) yield grande.subarray(0, 64 * 1024);
+            })(),
+          ),
+        });
+        clearInterval(medir);
+        pico = Math.max(pico, memoria());
+        expect(r.statusCode, String(tipo)).toBe(415);
+        expect(r.json().erro).toMatch(/pacote/);
+        expect(pico - antes, String(tipo)).toBeLessThan(16 * 1024 * 1024);
+      }
+      expect(arquivos(pasta)).toEqual([]);
+    },
+  );
+
+  it("cópia registrada cujo arquivo sumiu → 404 com mensagem, não 500", async () => {
+    const { app, banco, auth, pasta, pc } = montarApp();
+    const epoca = pegar(banco, pc.id, 1_000, PRAZO).epoca;
+    registrarVersao(banco, pc.id, epoca, 1_000, {
+      manifestoSha256: "e".repeat(64),
+      arquivos: 1,
+      bytes: 1,
+    });
+    const p = pacote();
+    const headers = { ...auth, "content-type": "application/octet-stream" };
+    expect(
+      (await app.inject({ method: "PUT", url: url(1, epoca, p), headers, payload: p.bytes }))
+        .statusCode,
+    ).toBe(201);
+    rmSync(join(pasta, "v1.tar.gz"));
+    const r = await app.inject({ method: "GET", url: "/versoes/1/pacote", headers: auth });
+    expect(r.statusCode).toBe(404);
+    expect(r.json().erro).toMatch(/nuvem/);
   });
 
   it("parâmetros inválidos → 400 sem gravar", async () => {
