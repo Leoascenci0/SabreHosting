@@ -156,7 +156,7 @@ describe("agenda de backups", () => {
 
 describe("histórico longo no backup agendado (drive-1.1a)", () => {
   it("copia o backup bom; pasta que some só vira aviso e o backup local fica intacto", async () => {
-    const { mkdtempSync, writeFileSync, readdirSync, rmSync } = await import("node:fs");
+    const { mkdirSync, mkdtempSync, writeFileSync, readdirSync, rmSync } = await import("node:fs");
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
     const { createHash } = await import("node:crypto");
@@ -188,6 +188,16 @@ describe("histórico longo no backup agendado (drive-1.1a)", () => {
     expect(avisos[0]).toBe(PASTA_NAO_ENCONTRADA);
     expect(visivel.ler()).toBe(PASTA_NAO_ENCONTRADA); // a tela de Backups lê daqui (ajuste 4)
     expect(readdirSync(local)).toEqual([nome]);
+    // Destino que CONTÉM a pasta do mundo é recusado pelo gancho (S-07) e vira aviso, sem copiar nada.
+    const raiz = mkdtempSync(join(tmpdir(), "sabre-ag-raiz-"));
+    const mundo = join(raiz, "mundo");
+    mkdirSync(mundo);
+    pasta = raiz;
+    avisos.length = 0;
+    await copiarAoConcluir({ ...o, pastaDoMundo: mundo }, feito);
+    expect(avisos[0]).toMatch(/nem ficar dentro/i);
+    expect(readdirSync(raiz)).toEqual(["mundo"]);
+    rmSync(raiz, { recursive: true });
     pasta = undefined; // desligado: nada acontece e o aviso antigo some
     await copiarAoConcluir(o, feito);
     expect(avisos).toHaveLength(1);

@@ -1,4 +1,12 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -66,6 +74,35 @@ describe("copiarParaPasta (drive-1.1a)", () => {
     );
   });
 
+  it("recusa destino igual, DENTRO ou CONTENDO a pasta de backups e a do mundo (S-07)", async () => {
+    const raiz = nova();
+    const local = join(raiz, "backups");
+    const mundo = join(raiz, "mundo");
+    mkdirSync(join(local, "sub"), { recursive: true });
+    mkdirSync(join(mundo, "region"), { recursive: true });
+    const p = await pacoteDeTeste(local);
+    const tenta = (destino: string) =>
+      copiarParaPasta(p.caminho, p.sha256, destino, [local, mundo]);
+    for (const ruim of [local, join(local, "sub"), raiz, mundo, join(mundo, "region")]) {
+      await expect(tenta(ruim), ruim).rejects.toThrow(/nem ficar dentro/i);
+    }
+    expect(readdirSync(join(local, "sub"))).toEqual([]); // nada escrito dentro dos backups
+    expect(readdirSync(raiz).sort()).toEqual(["backups", "mundo"]); // nem na pasta que contém
+    await expect(tenta(nova())).resolves.toContain("v1.tar.gz"); // pasta fora de tudo passa
+  });
+
+  it(".parcial antigo na pasta: aviso claro e o arquivo não é tocado", async () => {
+    const local = nova();
+    const destino = nova();
+    const p = await pacoteDeTeste(local);
+    const velho = join(destino, "2026-10-31T10-00-00-000Z-v1.tar.gz.parcial");
+    writeFileSync(velho, "de outra hora");
+    await expect(copiarParaPasta(p.caminho, p.sha256, destino, local)).rejects.toThrow(
+      /cópia incompleta/i,
+    );
+    expect(readFileSync(velho, "utf8")).toBe("de outra hora");
+  });
+
   it.each(["relativa/pasta", "", "."])(
     "pasta da config inválida (%j) é recusada",
     async (pasta) => {
@@ -81,7 +118,7 @@ describe("copiarParaPasta (drive-1.1a)", () => {
     const local = nova();
     const p = await pacoteDeTeste(local);
     await expect(copiarParaPasta(p.caminho, p.sha256, local, local)).rejects.toThrow(
-      /mesma pasta/i,
+      /nem ficar dentro/i,
     );
     const arquivo = join(nova(), "arq");
     writeFileSync(arquivo, "x");

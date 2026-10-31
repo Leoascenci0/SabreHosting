@@ -104,7 +104,10 @@ export interface OpcoesAgendaReal {
  * está guardado e continua valendo. Nunca apaga nada.
  */
 export async function copiarAoConcluir(
-  o: Pick<OpcoesAgendaReal, "pastaBackups" | "historicoLongo" | "avisoHistorico" | "aoAvisar">,
+  o: Pick<
+    OpcoesAgendaReal,
+    "pastaBackups" | "pastaDoMundo" | "historicoLongo" | "avisoHistorico" | "aoAvisar"
+  >,
   feito: { caminho: string; sha256: string },
 ): Promise<void> {
   const pasta = o.historicoLongo?.();
@@ -113,7 +116,10 @@ export async function copiarAoConcluir(
     return;
   }
   try {
-    await copiarParaPasta(feito.caminho, feito.sha256, pasta, o.pastaBackups);
+    await copiarParaPasta(feito.caminho, feito.sha256, pasta, [
+      o.pastaBackups,
+      o.pastaDoMundo ?? "",
+    ]);
     o.avisoHistorico?.definir(undefined);
   } catch (e) {
     const texto = e instanceof Error ? e.message : String(e);
