@@ -239,6 +239,7 @@ export function depsVersaoE2E(servidorRodando: () => boolean): DepsVersao {
       consultou: true,
     }),
     sha1Do: async () => "b".repeat(40),
+    backupAntes: async () => undefined,
     gravar: async (v) => void (gravados.push(v), (atual = v)),
     servidorRodando,
   };
