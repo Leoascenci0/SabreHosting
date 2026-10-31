@@ -21,8 +21,17 @@ Avisos sobem um nível por vez: o item avisa a **onda** (`send_message` para o i
 O Eliel se guia pela lista de chats do claude.ai/code; cada sessão tem que dizer de qual onda é.
 - **Numeração:** as ondas seguem um número único do projeto, que não volta a 1 (o próximo número fica no estado do
   coordenador e no `docs/MILESTONE.md`, seção "Em curso").
-- **Título da sessão de onda:** `Onda <N> — <itens separados por " · ">` (ex.: `Onda 12 — cartmel-1.1 · hostmel-2.1`).
-- **Título da sessão de item:** `O<N> · <sigla-id> — <título curto>` (ex.: `O12 · cartmel-1.1 — revogar PC`).
+- **Formato que o Eliel quer ver na lista:**
+  ```
+  Onda 20 — cartmel-1.1 · hostmel-2.1
+    Item 1 · cartmel-1.1 — revogar PC
+    Item 2 · hostmel-2.1 — calibrar a nota
+  Onda 21 — …
+    Item 1 · …
+  ```
+- **Título da sessão de onda:** `Onda <N> — <itens separados por " · ">`.
+- **Título da sessão de item:** `Item <k> · <sigla-id> — <título curto>`, com `k` = 1, 2, 3… na ordem em que a onda
+  despacha (recomeça em 1 em cada onda).
 - **Aninhamento:** quem cria as sessões de item é a sessão de onda, então elas aparecem dentro dela na lista lateral.
   O coordenador nunca cria sessão de item direto.
 - **Etiqueta:** toda sessão de onda e de item recebe `tags: ["maxima-onda-<N>"]` no `create_session`.
@@ -86,7 +95,7 @@ Siga references/rodada.md (§1 Loop por item, Revisão, merge pela SKILL.md §4)
 - Você não mexe em docs/MILESTONE.md, docs/ops/bom-dia.md nem docs/ops/custos.md (são da coordenadora).
   Marca [x] nos roadmaps, grava fichas em docs/memoria/solucoes.md e o seu estado em docs/ops/rodadas/onda-{{DATA}}-{{N}}.md.
 - Os itens avisam VOCÊ (use o seu próprio id no Template da filha). Cada sessão de item: título
-  "O{{N}} · <sigla-id> — <título curto>" e tags ["maxima-onda-{{N}}"] (ver "Ver as ondas na lista de chats").
+  "Item <k> · <sigla-id> — <título curto>" (k = 1, 2, 3… na ordem do despacho) e tags ["maxima-onda-{{N}}"] (ver "Ver as ondas na lista de chats").
 - Só mergeie depois do aviso de "pronto" da filha para o último pedido (S-04); item que mexe em infra/ ou tests/infra/:
   testes também como usuário comum (S-03); vistorias uma de cada vez (S-01).
 - Feche ao terminar a lista ou ao chegar a 30% de contexto (margem até 35% para terminar o item em curso; até 40% só
