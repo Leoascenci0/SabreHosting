@@ -67,7 +67,7 @@ function desenhar(itens: BackupDaTela[]): void {
       botao.addEventListener("click", () => {
         escolhido = b;
         botaoDoEscolhido = botao;
-        pergunta.textContent = `Restaurar o backup "${b.nome}", de ${dataDe(b.criadoEm)}? O mundo de agora será trocado por ele.`;
+        pergunta.textContent = `Restaurar o backup de ${dataDe(b.criadoEm)} (${tamanhoDe(b.tamanho)})? O mundo de agora será trocado por ele.`;
         confirmacao.hidden = false;
         cancelar.focus();
       });

@@ -26,6 +26,20 @@ function deps(extra: Partial<DepsInicio> = {}): DepsInicio {
   };
 }
 
+describe("hospedar durante uma restauração de backup", () => {
+  it("é recusado enquanto o mundo está sendo trocado, e volta a valer depois", async () => {
+    let restaurando = true;
+    const hospedar = vi.fn(async () => ({ servidor: servidorFalso() }));
+    const inicio = criarInicio(deps({ hospedar, restaurando: () => restaurando }));
+    const r = await inicio.hospedar();
+    expect(r).toMatchObject({ ok: false });
+    expect(r.ok ? "" : r.mensagem).toMatch(/backup está sendo restaurado/);
+    expect(hospedar).not.toHaveBeenCalled();
+    restaurando = false;
+    expect(await inicio.hospedar()).toEqual({ ok: true });
+  });
+});
+
 describe("estado da tela inicial", () => {
   it("ninguém hospedando", async () => {
     expect(await criarInicio(deps()).estado()).toEqual({ tipo: "ninguem" });

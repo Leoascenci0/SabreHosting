@@ -4,7 +4,6 @@ export interface BackupItem {
   nome: string;
   criadoEm: string;
   tamanho: number;
-  versao: number;
 }
 
 export interface DepsBackups {
@@ -28,6 +27,8 @@ const ESTE_PC = "Este PC";
 export function criarBackups(deps: DepsBackups) {
   let restaurando = false;
   return {
+    /** Restauração em andamento: o Hospedar espera (corrida entre trocar o mundo e subir o servidor). */
+    restaurando: (): boolean => restaurando,
     async estado(): Promise<EstadoBackups> {
       const bloqueado = deps.servidorRodando();
       try {

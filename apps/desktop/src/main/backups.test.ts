@@ -5,7 +5,6 @@ const item = (nome: string, extra: Partial<BackupItem> = {}): BackupItem => ({
   nome,
   criadoEm: "2026-10-31T10:00:00.000Z",
   tamanho: 2048,
-  versao: 4,
   ...extra,
 });
 
@@ -67,6 +66,23 @@ describe("backups (cola da tela)", () => {
     liberar();
     expect(await primeira).toEqual({ ok: true });
     expect(d.restaurar).toHaveBeenCalledTimes(1);
+  });
+
+  it("sinaliza 'restaurando' durante a troca (o Hospedar espera) e solta no fim, mesmo com erro", async () => {
+    let liberar: (erro?: Error) => void = () => undefined;
+    const d = deps({
+      restaurar: vi.fn(
+        () => new Promise<void>((ok, nao) => (liberar = (e) => (e ? nao(e) : ok()))),
+      ),
+    });
+    const b = criarBackups(d);
+    expect(b.restaurando()).toBe(false);
+    const feita = b.restaurar("a.tar.gz");
+    expect(b.restaurando()).toBe(true); // já vale antes de qualquer espera
+    await new Promise((ok) => setTimeout(ok, 5));
+    liberar(new Error("falhou"));
+    await feita;
+    expect(b.restaurando()).toBe(false);
   });
 
   it("erro do núcleo chega à tela com a mensagem em pt-BR", async () => {

@@ -14,6 +14,8 @@ export interface OpcoesDepsBackups {
     estadoTrava(): Promise<{ epoca: number }>;
   };
   servidorRodando: () => boolean;
+  /** Servidor de sessão anterior ainda vivo na pasta? (Pode não saber: erro conta como vivo.) */
+  servidorOrfao?: () => Promise<boolean>;
 }
 
 const SEM_PASTA = "Este PC ainda não tem a pasta de backups configurada.";
@@ -42,8 +44,19 @@ export function depsBackups(o: OpcoesDepsBackups): DepsBackups {
       const lista = await listarBackups(pastaBackups);
       const alvo = lista.find((b) => b.nome === nome);
       if (!alvo) throw new Error("Esse backup não está mais na lista.");
+      if (o.servidorRodando() || (await o.servidorOrfao?.().catch(() => true))) {
+        throw new Error(
+          "O servidor deste PC ainda está no ar. Pare o servidor (e feche o Java, se sobrou) antes de restaurar.",
+        );
+      }
       const renovador = new Renovador({ cliente: o.cliente, aoPerder: () => undefined });
-      await renovador.pegar();
+      // Só solta a vez que ESTA restauração pegou: se o `pegar` falhar, nada foi pego e nada é solto.
+      await renovador.pegar().catch((erro: unknown) => {
+        throw new Error(
+          "Não consegui pegar a vez de hospedar para restaurar. Confira a conexão com o grupo ou espere o outro PC terminar.",
+          { cause: erro },
+        );
+      });
       try {
         const { epoca } = await o.cliente.estadoTrava();
         await restaurarBackup({
@@ -67,6 +80,7 @@ export function depsBackups(o: OpcoesDepsBackups): DepsBackups {
 export function depsBackupsReais(
   env: NodeJS.ProcessEnv,
   servidorRodando: () => boolean,
+  servidorOrfao?: () => Promise<boolean>,
 ): DepsBackups {
   const { SABRE_CARTORIO_URL: url, SABRE_CARTORIO_TOKEN: token } = env;
   const semGrupo = (): never => {
@@ -86,5 +100,6 @@ export function depsBackupsReais(
       estadoTrava: semGrupo,
     },
     servidorRodando,
+    ...(servidorOrfao ? { servidorOrfao } : {}),
   });
 }

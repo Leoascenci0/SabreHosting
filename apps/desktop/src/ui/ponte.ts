@@ -16,7 +16,6 @@ export interface BackupDaTela {
   nome: string;
   criadoEm: string;
   tamanho: number;
-  versao: number;
   dePc: string;
 }
 
