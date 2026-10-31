@@ -36,15 +36,18 @@ function final(ip: unknown): number {
 export const naSalaDeEntrada = (ip: string) => final(ip) >= 200 && final(ip) <= 254;
 
 /** `execFile` sem shell, com tempo-limite: os argumentos vão em array, nada é interpretado. */
-export const execSemShell: ExecArquivo = (arquivo, args) =>
-  new Promise((ok, falha) => {
-    execFile(
-      arquivo,
-      [...args],
-      { shell: false, timeout: PRAZO_AJUDANTE_MS, encoding: "utf8" },
-      (erro, saida) => (erro ? falha(erro) : ok(saida)),
-    );
-  });
+export function criarExecSemShell(execFileFn: typeof execFile = execFile): ExecArquivo {
+  return (arquivo, args) =>
+    new Promise((ok, falha) => {
+      execFileFn(
+        arquivo,
+        [...args],
+        { shell: false, timeout: PRAZO_AJUDANTE_MS, encoding: "utf8" },
+        (erro, saida) => (erro ? falha(erro) : ok(saida)),
+      );
+    });
+}
+export const execSemShell = criarExecSemShell();
 
 /** A saída do ajudante é conferida como entrada de fora: um campo torto não chega ao PC. */
 function lerJson(saida: string): Record<string, unknown> {

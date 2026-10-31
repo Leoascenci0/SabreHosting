@@ -3,13 +3,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
+import { writeFileSync } from "node:fs";
+import type { execFile } from "node:child_process";
 import {
   type AjudanteEntrada,
   type PacoteLigacao,
   criarAjudanteSudo,
+  criarExecSemShell,
   gerarParProvisorio,
 } from "./ajudante.js";
-import { abrirBanco, apagarConvitesVencidos, donoAtual } from "./banco.js";
+import { ajudanteDoAmbiente } from "./ambiente.js";
+import { abrirBanco, apagarConvitesVencidos, criarConvite, donoAtual } from "./banco.js";
+import { hashSegredo } from "./segredo.js";
 import { criarConviteDono, rodarComando, trocarDono } from "./comandos.js";
 import { type Grupo, limparProvisorios } from "./convite.js";
 import { criarCartorio } from "./servidor.js";
@@ -531,5 +536,89 @@ describe("ajudante pelo sudo (contrato do rede-1.4)", () => {
         comSaida(JSON.stringify(torto)).ajudante.trocar("10.66.0.201", "pc", CHAVE),
       ).rejects.toThrow(/inválido/);
     }
+  });
+});
+
+describe("revisão do PR #84", () => {
+  it("execSemShell: execFile com argumentos em array, shell desligado e tempo-limite de 10 s", async () => {
+    const vistos: unknown[][] = [];
+    const espiao = ((...args: unknown[]) => {
+      vistos.push(args);
+      const pronto = args[3] as (e: Error | null, saida: string) => void;
+      pronto(null, '{"ip":"10.66.0.200"}');
+    }) as unknown as typeof execFile;
+    const exec = criarExecSemShell(espiao);
+    const chave = gerarParProvisorio().publica;
+    expect(await exec("sudo", ["-n", "/x.sh", "entrada-adicionar", `${chave}; rm -rf /`])).toBe(
+      '{"ip":"10.66.0.200"}',
+    );
+    expect(vistos).toHaveLength(1);
+    const [arquivo, args, opcoes] = vistos[0] ?? [];
+    expect(arquivo).toBe("sudo");
+    expect(args).toEqual(["-n", "/x.sh", "entrada-adicionar", `${chave}; rm -rf /`]);
+    expect(opcoes).toMatchObject({ shell: false, timeout: 10_000 });
+    const falhou = criarExecSemShell(((...a: unknown[]) => {
+      (a[3] as (e: Error | null, s: string) => void)(new Error("código 1"), "");
+    }) as unknown as typeof execFile);
+    await expect(falhou("sudo", [])).rejects.toThrow(/código 1/);
+  });
+
+  it("ajudanteDoAmbiente: arquivo ausente → sem ajudante → POST /convites 503 (falha fechada, nunca um falso)", async () => {
+    const pasta = mkdtempSync(join(tmpdir(), "sabre-amb-"));
+    pastas.push(pasta);
+    const ausente = join(pasta, "nao-existe.sh");
+    expect(ajudanteDoAmbiente({ SABRE_AJUDANTE_ENTRADA: ausente })).toBeUndefined();
+    const existe = join(pasta, "ajudante.sh");
+    writeFileSync(existe, "");
+    expect(ajudanteDoAmbiente({ SABRE_AJUDANTE_ENTRADA: existe })).toBeDefined();
+
+    const banco = abrirBanco(join(pasta, "c.db"));
+    const app = criarCartorio({
+      banco,
+      logger: { level: "silent" },
+      ajudante: ajudanteDoAmbiente({ SABRE_AJUDANTE_ENTRADA: ausente }),
+      grupo: GRUPO,
+    });
+    fechar.push(() => app.close());
+    const pc = banco.prepare("INSERT INTO pcs (nome, criado_em, dono) VALUES ('d', 0, 1)").run();
+    banco
+      .prepare("INSERT INTO tokens (hash, pc_id, criado_em) VALUES (?, ?, 0)")
+      .run(hashSegredo("token-do-dono"), pc.lastInsertRowid);
+    const r = await app.inject({
+      method: "POST",
+      url: "/convites",
+      headers: { authorization: "Bearer token-do-dono" },
+      payload: { nomePc: "pc-b" },
+    });
+    expect(r.statusCode).toBe(503);
+    expect(banco.prepare("SELECT count(*) AS n FROM convites").get()).toEqual({ n: 0 });
+  });
+
+  it("convite antigo (sem sala de entrada): vale uma vez de qualquer IP, sem chamar o ajudante", async () => {
+    const m = montar();
+    const antigo = criarConvite(m.banco, "pc-antigo", m.relogio.agora, 60_000);
+    const usar = (ip: string) =>
+      m.app.inject({
+        method: "POST",
+        url: "/convites/usar",
+        payload: { convite: antigo },
+        remoteAddress: ip,
+      });
+    const r = await usar("10.66.0.40");
+    expect(r.statusCode).toBe(200);
+    expect(Object.keys(r.json<object>())).toEqual(["token"]);
+    expect((await usar("10.66.0.40")).statusCode).toBe(401);
+    expect(m.chamadas).toEqual([]);
+    const vencido = criarConvite(m.banco, "pc-vencido", m.relogio.agora, 60_000);
+    m.relogio.agora += 60_000;
+    expect(
+      (
+        await m.app.inject({
+          method: "POST",
+          url: "/convites/usar",
+          payload: { convite: vencido },
+        })
+      ).statusCode,
+    ).toBe(401);
   });
 });
