@@ -66,7 +66,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* testes: resposta malformada recusada; nenhuma tentativa depois de soltar.
   *Origem:* cart-2.1 · PR #41 · qa segurança + qa integridade
 
-- [ ] **1.7 — Segredo do cartório num arquivo de ambiente**
+- [x] **1.7 — Segredo do cartório num arquivo de ambiente** (PR #75, 31/10/2026)
   *O que fazer:* a unidade `sabre-cartorio.service` não tem de onde tirar `SABRE_CARTORIO_SEGREDO_ADMIN` (sem ele o
   cartório recusa a partida): `EnvironmentFile=/etc/sabre/cartorio.env` (0600, root) e o instalador cria o arquivo com
   `openssl rand`, sem nunca imprimir o segredo. **Obrigatório antes do cart-2.2.**
