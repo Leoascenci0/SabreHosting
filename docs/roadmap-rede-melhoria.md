@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/roadmap-rede.md` (skill `maxima` ›
 
 ## Bloco 1 — Máquina e rede privada
 
-- [ ] **1.1 — Rede privada mais rígida**
+- [x] **1.1 — Rede privada mais rígida** (PR #115, 31/10/2026)
   *O que fazer:* `aplicarNoWindows` aceita só o texto exato que `montarConfigDoPc` produz (lista do que é permitido, não
   do que é proibido — hoje `0.0.0.0/1, 128.0.0.0/1` passaria se alguém chamasse sem o montador); o `rm` do `finally` não
   esconde o erro original; no hub, porta 0 recusada no endpoint e `trap` para limpar os temporários do `mktemp`.

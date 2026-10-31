@@ -4,7 +4,7 @@
 na fila. Ramos `roadmap/corr-<id>`. Toda correção traz teste que falhava antes e passa depois, e ficha em
 `docs/memoria/solucoes.md` se o erro pode voltar.
 
-- [ ] **1.1 — Testes de infra passam fora do root (CI vermelho na main)**
+- [x] **1.1 — Testes de infra passam fora do root (CI vermelho na main)** (PR #118, 31/10/2026)
   *O que fazer:* desde ~31/10 o check "Vistoria" da `main` fica vermelho no GitHub (usuário comum) e verde na sessão
   (root): `tests/infra/instalar.test.ts` (24), `instalar-limbo.test.ts` (11) e `instalar-velocity.test.ts` (23) rodam os
   scripts em simulação sem fingir root, e o script recusa ("rode como administrador"). Fazer os ajudantes de teste
