@@ -13,7 +13,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   *Confirmação:* teste com sidecar adulterado recusado pela tabela.
   *Origem:* host-1.1 · PR #12 · filha
 
-- [ ] **1.2 — Resolvedores mais rígidos e http local só por opção**
+- [x] **1.2 — Resolvedores mais rígidos e http local só por opção** (PR #106, 31/10/2026)
   *O que fazer:* resolvedores recusam URL que não seja https; regex da versão do NeoForge exige começar por dígito; a
   exceção http para localhost em `baixarConferido` vira opção injetada `permitirHttpLocal` (padrão falso).
   *Arquivo:* `packages/nucleo/src/servidor/resolvedores.ts`, `packages/nucleo/src/servidor/baixar.ts`
