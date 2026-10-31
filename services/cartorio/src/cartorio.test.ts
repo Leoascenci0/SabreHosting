@@ -268,4 +268,84 @@ describe("cartório: endereço de escuta", () => {
     expect(conferirEndereco("127.0.0.1")).toBe("127.0.0.1");
     expect(conferirEndereco("10.8.0.1")).toBe("10.8.0.1");
   });
+
+  it("recusa IP público, IPv4 mapeado em IPv6, CGNAT e link-local; aceita só loopback e faixas privadas", () => {
+    for (const e of [
+      "8.8.8.8",
+      "200.160.2.3",
+      "2001:4860:4860::8888",
+      "::ffff:10.66.0.1",
+      "::ffff:127.0.0.1",
+      "100.64.0.1",
+      "169.254.1.1",
+      "fe80::1",
+      "172.32.0.1",
+    ]) {
+      expect(() => conferirEndereco(e), e).toThrow(/recusado/);
+    }
+    for (const e of ["127.0.0.1", "127.1.2.3", "::1", "10.66.0.1", "172.16.0.1", "172.31.255.1"]) {
+      expect(conferirEndereco(e)).toBe(e);
+    }
+    for (const e of ["192.168.1.1", "fd00::1", "fc00::1"]) expect(conferirEndereco(e)).toBe(e);
+  });
+});
+
+describe("cartório: entrada endurecida", () => {
+  it("corpo JSON de 10 KB → 413, antes de chegar à rota", async () => {
+    const { app } = montar();
+    const r = await app.inject({
+      method: "POST",
+      url: "/convites/usar",
+      payload: { convite: "x", lixo: "a".repeat(10 * 1024) },
+    });
+    expect(r.statusCode).toBe(413);
+  });
+
+  it("20 convites errados do mesmo IP → a 21ª tentativa é 429, mesmo com o convite certo", async () => {
+    const { app, convidar, usar } = montar();
+    const bom = await convidar();
+    for (let i = 0; i < 20; i++) expect((await usar(gerarSegredo())).statusCode).toBe(401);
+    const barrado = await usar(bom);
+    expect(barrado.statusCode).toBe(429);
+    expect(barrado.json<{ erro: string }>().erro).toMatch(/tentativas/);
+    // Outro IP não paga pelo primeiro.
+    const outro = await app.inject({
+      method: "POST",
+      url: "/convites/usar",
+      payload: { convite: bom },
+      remoteAddress: "10.66.0.9",
+    });
+    expect(outro.statusCode).toBe(200);
+  });
+
+  it("token errado conta junto com convite errado; barrado antes de olhar o token", async () => {
+    const { app, convidar, usar } = montar();
+    const { token } = (await usar(await convidar())).json<{ token: string }>();
+    const auth = (t: string) => ({ authorization: `Bearer ${t}` });
+    for (let i = 0; i < 10; i++) expect((await usar(gerarSegredo())).statusCode).toBe(401);
+    for (let i = 0; i < 5; i++)
+      expect((await app.inject({ url: "/eu", headers: auth(gerarSegredo()) })).statusCode).toBe(
+        401,
+      );
+    for (let i = 0; i < 5; i++)
+      expect((await app.inject({ url: "/trava", headers: auth(gerarSegredo()) })).statusCode).toBe(
+        401,
+      );
+    expect((await app.inject({ url: "/trava", headers: auth(token) })).statusCode).toBe(429);
+    expect((await app.inject({ url: "/eu", headers: auth(token) })).statusCode).toBe(429);
+  });
+
+  it("acerto não conta nem zera; passada a janela de 15 min, o IP volta a entrar", async () => {
+    const { app, convidar, usar, relogio } = montar();
+    const { token } = (await usar(await convidar())).json<{ token: string }>();
+    const eu = (t: string) => app.inject({ url: "/eu", headers: { authorization: `Bearer ${t}` } });
+    for (let i = 0; i < 19; i++) expect((await eu(gerarSegredo())).statusCode).toBe(401);
+    for (let i = 0; i < 30; i++) expect((await eu(token)).statusCode).toBe(200);
+    expect((await eu(gerarSegredo())).statusCode).toBe(401); // a 20ª falha
+    expect((await eu(token)).statusCode).toBe(429);
+    relogio.agora += 15 * 60_000 - 1;
+    expect((await eu(token)).statusCode).toBe(429);
+    relogio.agora += 1;
+    expect((await eu(token)).statusCode).toBe(200);
+  });
 });

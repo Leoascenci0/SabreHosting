@@ -78,15 +78,34 @@ const VERSAO_INEXISTENTE = { erro: "Essa versão do mundo não existe no cartór
 const EPOCA = { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER };
 const TOTAL = { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 
-/** Endereços que significam "todas as interfaces", em qualquer grafia (inclusive ::ffff:0.0.0.0). */
-const TODAS_AS_INTERFACES = new BlockList();
-TODAS_AS_INTERFACES.addAddress("0.0.0.0", "ipv4");
-TODAS_AS_INTERFACES.addAddress("::", "ipv6");
+const MUITAS_TENTATIVAS = {
+  erro: "Muitas tentativas erradas deste PC. Espere 15 minutos e tente de novo.",
+};
+/** Limite de tentativas erradas (convite ou token) por IP: 20 em 15 min, contadas do primeiro erro. */
+const MAX_FALHAS = 20;
+const JANELA_FALHAS_MS = 15 * 60_000;
 
-/** O cartório só escuta na rede privada: recusa "todas as interfaces" e nome que não é IP. */
+/** Onde o cartório pode escutar: loopback e faixas privadas (CGNAT 100.64/10 fica fora). */
+const PERMITIDOS = new BlockList();
+PERMITIDOS.addSubnet("127.0.0.0", 8, "ipv4");
+PERMITIDOS.addSubnet("10.0.0.0", 8, "ipv4");
+PERMITIDOS.addSubnet("172.16.0.0", 12, "ipv4");
+PERMITIDOS.addSubnet("192.168.0.0", 16, "ipv4");
+PERMITIDOS.addAddress("::1", "ipv6");
+PERMITIDOS.addSubnet("fc00::", 7, "ipv6");
+/** O BlockList casa IPv4 mapeado em IPv6 (::ffff:10.0.0.1) com a regra IPv4; essa grafia fica fora. */
+const IPV4_MAPEADO = new BlockList();
+IPV4_MAPEADO.addSubnet("::ffff:0:0", 96, "ipv6");
+
+/** O cartório só escuta na rede privada: recusa IP público, "todas as interfaces" e nome que não é IP. */
 export function conferirEndereco(endereco: string): string {
   const versao = isIP(endereco);
-  if (versao === 0 || TODAS_AS_INTERFACES.check(endereco, versao === 4 ? "ipv4" : "ipv6")) {
+  const tipo = versao === 4 ? "ipv4" : "ipv6";
+  if (
+    versao === 0 ||
+    (versao === 6 && IPV4_MAPEADO.check(endereco, "ipv6")) ||
+    !PERMITIDOS.check(endereco, tipo)
+  ) {
     throw new Error(
       `Endereço "${endereco}" recusado: use o IP do cartório na rede privada (ex.: 10.8.0.1).`,
     );
@@ -111,6 +130,8 @@ export function criarCartorio({
     throw new Error("Segredo de administrador ausente ou curto (mínimo 32 caracteres).");
   const { prazoMs, renovarMs } = conferirTempos(trava);
   const app = Fastify({
+    // JSON pequeno; o PUT do pacote tem o próprio teto (o do armazém).
+    bodyLimit: 4096,
     logger: { level: "info", ...logger, redact: { paths: REDACT, censor: "[oculto]" } },
   });
   app.addHook("onClose", () => banco.close());
@@ -121,11 +142,33 @@ export function criarCartorio({
     else void resp.code(401).send(NAO_AUTORIZADO);
   }
 
+  const falhas = new Map<string, { falhas: number; inicio: number }>();
+  function barrado(ip: string): boolean {
+    const f = falhas.get(ip);
+    return f !== undefined && f.falhas >= MAX_FALHAS && agora() - f.inicio < JANELA_FALHAS_MS;
+  }
+  function contarFalha(ip: string) {
+    const t = agora();
+    for (const [chave, f] of falhas) if (t - f.inicio >= JANELA_FALHAS_MS) falhas.delete(chave);
+    const f = falhas.get(ip);
+    if (f) f.falhas++;
+    else falhas.set(ip, { falhas: 1, inicio: t });
+  }
+  /** Confere o limite antes de olhar convite ou token. */
+  function limiteFalhas(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
+    if (barrado(req.ip)) void resp.code(429).send(MUITAS_TENTATIVAS);
+    else pronto();
+  }
+
   const pcDaChamada = new WeakMap<FastifyRequest, Pc>();
   function soPc(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
+    if (barrado(req.ip)) return void resp.code(429).send(MUITAS_TENTATIVAS);
     const token = bearer(req);
     const pc = token ? pcDoToken(banco, token) : undefined;
-    if (!pc) return void resp.code(401).send(NAO_AUTORIZADO);
+    if (!pc) {
+      contarFalha(req.ip);
+      return void resp.code(401).send(NAO_AUTORIZADO);
+    }
     pcDaChamada.set(req, pc);
     pronto();
   }
@@ -185,6 +228,7 @@ export function criarCartorio({
   app.post<{ Body: { convite: string } }>(
     "/convites/usar",
     {
+      onRequest: limiteFalhas,
       schema: {
         body: {
           type: "object",
@@ -195,17 +239,15 @@ export function criarCartorio({
     },
     (req, resp) => {
       const token = usarConvite(banco, req.body.convite, agora());
-      if (!token) return resp.code(401).send(CONVITE_INVALIDO);
+      if (!token) {
+        contarFalha(req.ip);
+        return resp.code(401).send(CONVITE_INVALIDO);
+      }
       return { token };
     },
   );
 
-  app.get("/eu", (req, resp) => {
-    const token = bearer(req);
-    const pc = token ? pcDoToken(banco, token) : undefined;
-    if (!pc) return resp.code(401).send(NAO_AUTORIZADO);
-    return pc;
-  });
+  app.get("/eu", { onRequest: soPc }, (req) => pcDe(req));
 
   app.get("/trava", { onRequest: soPc }, () => {
     const { donoPcId, epoca, expiraEm } = estadoTrava(banco, agora());
