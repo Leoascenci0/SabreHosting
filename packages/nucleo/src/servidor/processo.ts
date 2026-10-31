@@ -5,6 +5,7 @@ import { stat } from "node:fs/promises";
 import { totalmem } from "node:os";
 import { isAbsolute, join, resolve as resolverCaminho } from "node:path";
 import { fileURLToPath } from "node:url";
+import { recuperarTroca } from "../backup/restaurar.js";
 import { gravarAtomico, podeSubir } from "./configurar.js";
 
 export type EstadoServidor = "parado" | "subindo" | "pronto" | "parando" | "caiu";
@@ -347,6 +348,7 @@ async function subirServidor(
 ): Promise<ServidorMinecraft> {
   const { pasta, versaoNeoForge, temTrava } = opcoes;
 
+  await recuperarTroca(pasta); // app morto entre os dois rename da troca: devolve o mundo antes de checar o portão
   const eula = await podeSubir(pasta);
   if (!eula.pode) throw new Error(eula.motivo);
   const argsNeoForge = `libraries/net/neoforged/neoforge/${versaoNeoForge}/${plataforma === "win32" ? "win" : "unix"}_args.txt`;
