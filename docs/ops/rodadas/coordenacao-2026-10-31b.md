@@ -13,6 +13,7 @@
 | 27 | syncmel-1.12 · lanc-1.3 · app-1.3a/b · lanc-1.4 · sync-2.2 | session_012qrjnsYkWJ95sHBXr89de8 | 2b3560a | fechada 16:37 → main c734988 |
 | 28 | app-1.3c · lancmel-2.1 · syncmel-1.13 · syncmel-1.14 · appmel-1.13 | session_012qrjnu4Sy5GTmvMBgcHhXA | c734988 | fechada 17:39 → main f6d674d |
 | 29 | lancmel-2.3 · 2.4 · appmel-1.12 · 1.14b · 1.16 | session_012qrjnvdGwPuWRwKRdMcMcm | f6d674d | fechada 18:04 → main 46dbcf6 |
+| 30 | appmel-1.9 · appmel-1.15 · consolidar melhorias #221–#226 | session_012qrjnuGuKVzHMX2SCj7Tsi | 46a3dcb | fechada 18:27 → main d720a63 |
 
 ## Relatórios
 
@@ -21,3 +22,4 @@
 - **Onda 28** (17:39): ✅ app-1.3c #217 e #218 (+appmel-1.4, lancmel-2.2) · lancmel-2.1 #215 · syncmel-1.13 #216 · syncmel-1.14 #214 · appmel-1.13 #219 · controle #220. P (provas no PC): Prism real abre o jogo; assistente/UAC/túnel/PowerShell no Windows; Criar convite com cartório real. Decidi por você: app-1.3c dividido em 1.3c-i/ii; trocar a pasta só avisa onde o mundo antigo ficou, não move. Ficha S-14. Custo n/d. main f6d674d APROVADA.
 - **Onda 29** (18:04): ✅ lancmel-2.3 #221 · lancmel-2.4 #226 · appmel-1.12 #223 (S-15) · appmel-1.14b #225 · appmel-1.16 #224 · controle #227. ⏸️ appmel-1.14a (cartório reemitir pacote da conexão a token já gasto: decisão de segurança, ~150-200 linhas). P: decidir 1.14a; provas Windows (UAC/túnel 1.16a, safeStorage 1.12, Jogar após trocar pasta). Decidi por você: 1.14b app empacotado (app.isPackaged) ignora SABRE_JAVA/SABRE_NEOFORGE (desfazer em #225); revisão por diff + vistoria, sem qa separado. Melhorias dos PRs #221–#226 não consolidadas → item da Onda 30. Custo ~US$ 0,87 (onda). main 46dbcf6 APROVADA.
 - Recado 15:15/20:44 da coordenadora anterior (via mensagem): Eliel saiu, totalmente autônomo → trato como modo noite para perguntas (P vira ⏸️).
+- **Onda 30** (18:27): ✅ appmel-1.9 #228 · appmel-1.15 #229 · consolidação melhorias #230. ⏸️ appmel-1.14a (decisão de segurança do Eliel). P: provas Windows (túnel/Hospedar 1.9; leitor de tela real e e2e Electron 1.15). Decidi por você: Hospedar recusa sem o túnel privado (#228, reversível). Custo n/d. main d720a63 APROVADA. Sugeridos: hostmel-3.4, appmel-1.17–1.20, lancmel-2.5.
