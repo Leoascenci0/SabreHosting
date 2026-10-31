@@ -134,6 +134,19 @@ describe("cliente do cartório", () => {
     expect(await cliente.pegar()).toEqual(recusa);
   });
 
+  it("409 com destino_sem_acesso (cartmel-1.6) é recusa válida", async () => {
+    const recusa = {
+      ok: false,
+      erro: "Sem acesso.",
+      motivo: "destino_sem_acesso",
+      donoPcId: 1,
+      epoca: 4,
+      expiraEm: 5,
+    };
+    const { cliente } = montar([json(409, recusa)]);
+    expect(await cliente.passar(4, 2)).toEqual(recusa);
+  });
+
   it("corpo que não é JSON vira erro de resposta", async () => {
     const { cliente } = montar([new Response("<html>", { status: 200 })]);
     expect((await erroDe(cliente.estadoTrava())).tipo).toBe("resposta");

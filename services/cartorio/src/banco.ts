@@ -103,6 +103,11 @@ export const MIGRACOES = [
    ALTER TABLE convites ADD COLUMN ip_def TEXT;
    ALTER TABLE convites ADD COLUMN confirmado_em INTEGER;
    ALTER TABLE convites ADD COLUMN prov_removido_em INTEGER;`,
+  // Época sempre inteira (cartmel-1.6): texto passaria por `nunca_desce` (texto > número no SQLite). Gatilho, não
+  // tabela nova: recriar a trava arriscaria zerar a época. INSERT já é barrado por `trava_nao_recria`.
+  `CREATE TRIGGER trava_epoca_inteira BEFORE UPDATE OF epoca ON trava
+   WHEN typeof(NEW.epoca) <> 'integer'
+   BEGIN SELECT RAISE(ABORT, 'A época da trava é sempre um número inteiro.'); END;`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */
