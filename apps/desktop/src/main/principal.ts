@@ -12,6 +12,7 @@ import {
 import type { IpcMainInvokeEvent } from "electron";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { depsBackupsReais } from "./deps-backups.js";
@@ -248,6 +249,14 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(async () => {
     nativeTheme.themeSource = "system";
+    // App morto entre os dois rename da troca do mundo: devolve o mundo antes de qualquer coisa. Falha não derruba o
+    // app; o servidor continua sem subir (o marcador fica) e o erro vai para o log.
+    const pastaDoServidor = process.env["SABRE_PASTA_SERVIDOR"];
+    if (pastaDoServidor) {
+      await recuperarTroca(pastaDoServidor).catch((erro: unknown) => {
+        console.error("Recuperar troca do mundo:", erro);
+      });
+    }
     inicioApp = await criarInicioDoApp();
     backupsApp = await criarBackupsDoApp(inicioApp);
     registrarPonte(inicioApp, backupsApp);

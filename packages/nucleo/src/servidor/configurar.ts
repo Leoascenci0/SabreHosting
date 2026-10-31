@@ -94,12 +94,25 @@ export function perguntaEula(): { texto: string; link: string } {
 /** Deixado ao lado do mundo quando uma restauração parou no meio (bkp-2.2); enquanto existir, o servidor não sobe. */
 export const MARCADOR_RESTAURACAO = "RESTAURACAO-INCOMPLETA.txt";
 
+/**
+ * Gravado ao lado do mundo antes da troca por `rename` (aplicar.ts, restaurar.ts) e apagado depois dela; se o app
+ * morreu no meio, sobra e o servidor não sobe até `recuperarTroca` devolver o mundo (syncmel-1.4).
+ */
+export const MARCADOR_TROCA = "TROCA-EM-ANDAMENTO.json";
+
 /** O servidor só sobe com `eula=true` na pasta e sem restauração incompleta. */
 export async function podeSubir(pasta: string): Promise<{ pode: boolean; motivo?: string }> {
   if (await existe(join(pasta, MARCADOR_RESTAURACAO))) {
     return {
       pode: false,
       motivo: `Uma restauração de backup parou no meio; leia ${MARCADOR_RESTAURACAO} na pasta do servidor antes de ligar.`,
+    };
+  }
+  if (await existe(join(pasta, MARCADOR_TROCA))) {
+    return {
+      pode: false,
+      motivo:
+        "A troca do mundo parou no meio; o app vai recuperar o mundo antes de ligar o servidor.",
     };
   }
   const recusa = { pode: false, motivo: "Aceite o EULA da Mojang antes de ligar o servidor." };

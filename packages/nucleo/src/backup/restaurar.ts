@@ -7,9 +7,9 @@
  * deixa um marcador que impede o servidor de subir com o mundo ausente. Avisar o cartório é outro item.
  */
 import { existsSync } from "node:fs";
-import { lstat, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { MARCADOR_RESTAURACAO } from "../servidor/configurar.js";
+import { lstat, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { MARCADOR_RESTAURACAO, MARCADOR_TROCA, gravarAtomico } from "../servidor/configurar.js";
 import { travaConfirmada } from "../servidor/processo.js";
 import { nomeDoBackup } from "./agendador.js";
 import type { Manifesto } from "./manifesto.js";
@@ -36,6 +36,8 @@ export interface OpcoesRestaurar {
   prazoTravaMs?: number;
   /** Só para os testes (injetar falha nos `rename`). */
   renomear?: (de: string, para: string) => Promise<void>;
+  /** Só para os testes: roda entre os dois `rename`; o que ele lançar simula o app morrendo ali (sem limpeza). */
+  aposPrimeiroRename?: () => void | Promise<void>;
 }
 
 export interface Restaurado {
@@ -116,18 +118,24 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
   }
 
   if (haMundoAtual) {
+    await gravarMarcadorTroca({ mundo, antigo, temp });
     await renomear(mundo, antigo).catch(async (erro: unknown) => {
       await apagar(temp);
+      await apagarMarcadorTroca(mundo);
       throw new Error("Não consegui tirar o mundo atual do lugar; o mundo continua como estava.", {
         cause: erro,
       });
     });
+    await o.aposPrimeiroRename?.();
   }
   try {
     await renomear(temp, mundo);
+    if (haMundoAtual) await apagarMarcadorTroca(mundo);
   } catch (erro) {
-    if (haMundoAtual)
+    if (haMundoAtual) {
       await desfazer(renomear, { mundo, antigo, temp, backup: backupDoAtual }, erro);
+      await apagarMarcadorTroca(mundo);
+    }
     await apagar(temp);
     throw new Error("Não consegui colocar o backup no lugar; o mundo continua como estava.", {
       cause: erro,
@@ -140,6 +148,81 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
   // Já restaurado e conferido; se o .antigo não sair, sobra lixo, nunca perda.
   if (haMundoAtual) await apagar(antigo).catch(() => undefined);
   return { backupDoAtual, restaurado };
+}
+
+export interface CaminhosDaTroca {
+  mundo: string;
+  antigo: string;
+  temp: string;
+}
+
+/** Grava (atômico) o que a troca vai mexer, ao lado do mundo, ANTES do primeiro `rename`. */
+export async function gravarMarcadorTroca(c: CaminhosDaTroca): Promise<void> {
+  await gravarAtomico(join(dirname(c.mundo), MARCADOR_TROCA), JSON.stringify(c));
+}
+
+/** Só depois do segundo `rename` (ou do desfazer que deu certo). */
+export const apagarMarcadorTroca = (mundo: string) => apagar(join(dirname(mundo), MARCADOR_TROCA));
+
+/**
+ * No início do app e antes de subir o servidor: se a última troca morreu no meio, devolve o mundo de antes (N).
+ * Nunca completa a troca e nunca apaga o `.antigo` (regra 4). Sem poder resolver, lança e MANTÉM o marcador,
+ * então o servidor continua sem subir. `pastaDoServidor` é onde o marcador fica (pasta pai do mundo).
+ */
+export async function recuperarTroca(
+  pastaDoServidor: string,
+  renomear: (de: string, para: string) => Promise<void> = rename,
+): Promise<"nada" | "limpou" | "desfez"> {
+  const arquivo = join(pastaDoServidor, MARCADOR_TROCA);
+  let texto: string;
+  try {
+    texto = await readFile(arquivo, "utf8");
+  } catch (erro) {
+    if ((erro as NodeJS.ErrnoException).code === "ENOENT") return "nada";
+    throw erro;
+  }
+  const c = lerMarcadorTroca(texto, pastaDoServidor);
+  if (await haMundo(c.mundo)) {
+    // O segundo rename (ou o desfazer) aconteceu; só sobrou o aviso e a temporária.
+    await apagar(c.temp);
+    await rm(arquivo, { force: true });
+    return "limpou";
+  }
+  if (!(await haMundo(c.antigo))) {
+    throw new Error(
+      `A troca do mundo parou no meio e não achei nem o mundo nem "${c.antigo}". Nada foi apagado; ` +
+        `procure a pasta do mundo de antes, renomeie para "${c.mundo}" e apague ${MARCADOR_TROCA}.`,
+    );
+  }
+  await desfazer(
+    renomear,
+    { ...c, backup: undefined },
+    new Error("app parou entre os dois rename"),
+  );
+  await apagar(c.temp);
+  await rm(arquivo, { force: true });
+  return "desfez";
+}
+
+/** Marcador ilegível ou apontando para fora da pasta do servidor não é obedecido: trava e pede mão humana. */
+function lerMarcadorTroca(texto: string, pasta: string): CaminhosDaTroca {
+  const ruim = () =>
+    new Error(
+      `O arquivo ${MARCADOR_TROCA} está ilegível ou fora do esperado; nada foi alterado. ` +
+        `Confira a pasta do mundo e apague o arquivo só depois.`,
+    );
+  let j: unknown;
+  try {
+    j = JSON.parse(texto);
+  } catch {
+    throw ruim();
+  }
+  const { mundo, antigo, temp } = (j ?? {}) as Record<string, unknown>;
+  const raiz = resolve(pasta);
+  for (const p of [mundo, antigo, temp]) {
+    if (typeof p !== "string" || !isAbsolute(p) || dirname(resolve(p)) !== raiz) throw ruim();
+  }
+  return { mundo, antigo, temp } as CaminhosDaTroca;
 }
 
 /** Devolve o mundo de antes ao lugar. Se nem isso der, trava o servidor e diz onde está cada coisa. */

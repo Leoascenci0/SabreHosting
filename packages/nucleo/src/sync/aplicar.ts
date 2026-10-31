@@ -18,7 +18,12 @@ import {
   type Diferenca,
   type Manifesto,
 } from "../backup/manifesto.js";
-import { desfazer, haMundo } from "../backup/restaurar.js";
+import {
+  apagarMarcadorTroca,
+  desfazer,
+  gravarMarcadorTroca,
+  haMundo,
+} from "../backup/restaurar.js";
 import { travaConfirmada } from "../servidor/processo.js";
 import { pedirArquivo, type OpcoesPedido } from "./transferencia.js";
 
@@ -40,6 +45,8 @@ export interface OpcoesAplicar {
   /** Só para os testes. */
   renomear?: (de: string, para: string) => Promise<void>;
   ligar?: (de: string, para: string) => Promise<void>;
+  /** Só para os testes: roda entre os dois `rename`; o que lançar simula o app morrendo ali (sem limpeza). */
+  aposPrimeiroRename?: () => void | Promise<void>;
 }
 
 export interface Aplicado {
@@ -163,16 +170,21 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
     throw erro;
   }
 
+  await gravarMarcadorTroca({ mundo, antigo, temp });
   await renomear(mundo, antigo).catch(async (erro: unknown) => {
     await apagar(temp);
+    await apagarMarcadorTroca(mundo);
     throw new Error("Não consegui tirar o mundo atual do lugar; o mundo continua como estava.", {
       cause: erro,
     });
   });
+  await o.aposPrimeiroRename?.();
   try {
     await renomear(temp, mundo);
+    await apagarMarcadorTroca(mundo);
   } catch (erro) {
     await desfazer(renomear, { mundo, antigo, temp, backup: undefined }, erro);
+    await apagarMarcadorTroca(mundo);
     await apagar(temp);
     throw new Error(
       "Não consegui colocar o mundo atualizado no lugar; o mundo continua como estava.",
