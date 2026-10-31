@@ -301,6 +301,9 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
 }
 const restaurando = (): boolean => backupsApp?.restaurando() ?? false;
 const trocandoVersao = (): boolean => versaoApp?.trocando() ?? false;
+/** Percentual da atualização do mundo em curso (sync-2.2); `undefined` = nenhuma. */
+let atualizandoMundo: number | undefined;
+const atualizando = (): number | undefined => atualizandoMundo;
 
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1")
@@ -308,6 +311,7 @@ async function criarInicioDoApp(): Promise<Inicio> {
       ...depsReais(process.env, (t) => clipboard.writeText(t)),
       restaurando,
       trocandoVersao,
+      atualizando,
       aoServidor: (s) => agendaApp?.observar(s),
     });
   const { criarDepsE2E } = await import("./fake-e2e.js");
@@ -583,6 +587,10 @@ if (!app.requestSingleInstanceLock()) {
         env: process.env,
         inicio: inicioApp,
         aoAvisar: (texto) => console.warn(texto),
+        aoProgresso: (p) => {
+          atualizandoMundo = p;
+          inicioApp?.mudou();
+        },
         limiteBytesPorSeg: () =>
           bytesPorSegundo(lerPreferencias(app.getPath("userData")).limiteBandaMBs),
       });

@@ -10,6 +10,8 @@ export interface OpcoesLigarEspalhar {
   env: NodeJS.ProcessEnv;
   inicio: { ativo(): boolean; temOrfao(): Promise<boolean> };
   aoAvisar: (texto: string) => void;
+  /** Percentual da atualização em curso (`undefined` = acabou): a tela inicial mostra "Atualizando seu mundo…". */
+  aoProgresso?: (percentual: number | undefined) => void;
   /** Limite de banda em bytes/s (Configurações › Backups), lido a cada arquivo; ausente: sem limite. */
   limiteBytesPorSeg?: () => number | undefined;
   /** Só para teste: relógio e rede trocados. */
@@ -50,6 +52,7 @@ export function ligarEspalhar(o: OpcoesLigarEspalhar): (() => Promise<void>) | u
       versaoLocal,
       ...(o.limiteBytesPorSeg ? { limiteBytesPorSeg: o.limiteBytesPorSeg } : {}),
     }),
+    ...(o.aoProgresso ? { aoProgresso: o.aoProgresso } : {}),
     aoAvisar: (texto) => o.aoAvisar(`[atualizar] ${texto}`),
   });
   void rodar();

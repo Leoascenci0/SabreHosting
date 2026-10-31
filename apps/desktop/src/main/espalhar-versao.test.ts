@@ -200,7 +200,7 @@ describe("criarGatilhoEspalhar (1.9a)", () => {
         eu: async () => ({ id: 1, nome: "Eu", dono: false }),
       } as never,
       versaoLocal: async () => o.local ?? 3,
-      espalhar: (async (...a: unknown[]) => void chamadas.push(a)) as never,
+      espalhar: (async (...a: unknown[]) => void chamadas.push(a.slice(0, 2))) as never,
       aoAvisar: (t) => avisos.push(t),
     });
     return { rodar, chamadas, avisos };
@@ -224,16 +224,22 @@ describe("criarGatilhoEspalhar (1.9a)", () => {
     expect(m.avisos).toEqual([]);
   });
 
-  it("sem versão nova, sem versão registrada ou sem fonte com IP: não faz nada e não avisa", async () => {
+  it("sem versão nova ou sem versão registrada: não faz nada e não avisa", async () => {
     for (const m of [
       montar({ local: 4, pcs: [{ id: 3, ip: "10.66.0.4" }] }),
       montar({ maisNova: null, pcs: [{ id: 3, ip: "10.66.0.4" }] }),
-      montar({ pcs: [{ id: 2, ip: null }] }),
     ]) {
       await m.rodar();
       expect(m.chamadas).toEqual([]);
       expect(m.avisos).toEqual([]);
     }
+  });
+
+  it("sem PC com IP, a nuvem guarda a versão: espalha só pela nuvem, sem fontes (sync-2.2)", async () => {
+    const m = montar({ pcs: [{ id: 2, ip: null }] });
+    await m.rodar();
+    expect(m.chamadas).toEqual([[{ numero: 4, manifestoSha256: "a".repeat(64) }, []]]);
+    expect(m.avisos).toEqual([]);
   });
 
   it("erro do cartório ou da troca vira aviso em pt-BR e nunca lança", async () => {

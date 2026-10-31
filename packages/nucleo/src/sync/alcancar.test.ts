@@ -53,7 +53,10 @@ async function grupo(opcoes: { pcOnline: boolean; nuvem: boolean }) {
     porta: 0,
     permitirLoopbackParaTeste: true,
     conferirToken: async (t) => (t === CREDENCIAL ? "pc" : null),
-    arquivos: (h) => (porHash.has(h) ? { caminho: porHash.get(h)! } : undefined),
+    arquivos: (h) => {
+      const caminho = porHash.get(h);
+      return caminho ? { caminho } : undefined;
+    },
   });
   servidores.push(servidor);
 

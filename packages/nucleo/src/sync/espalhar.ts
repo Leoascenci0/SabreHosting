@@ -145,7 +145,8 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
   // Barreiras antes de qualquer rede; `aplicarDelta` confere tudo de novo antes de trocar. Fora do host ANTES de
   // pegar a atualização (1.8b b): trava de host vencida com o servidor ainda de pé não pode virar atualização.
   exigirMundoNaPastaDoServidor(resolve(o.pastaDoMundo), o.pastaDoServidor);
-  const daNuvem = o.fontes.length === 0 && o.nuvem !== undefined;
+  const nuvem = o.fontes.length === 0 ? o.nuvem : undefined;
+  const daNuvem = nuvem !== undefined;
   const fontes = daNuvem ? [] : escolherFontes(o.fontes, o.permitirLoopbackParaTeste);
   await exigirForaDoHost(o);
 
@@ -198,7 +199,7 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
       // Pacote fechado: hash do pacote e de cada arquivo conferidos por `abrirPacote`; o manifesto de dentro tem de ser
       // o que o cartório registrou (hash do JSON). Os arquivos ficam extraídos ao lado e vão ao `aplicarDelta`.
       const pacote = join(dir, "pacote.tar.gz");
-      const { sha256 } = await o.nuvem!.baixar(pacote);
+      const { sha256 } = await nuvem.baixar(pacote);
       const extraido = join(dir, "nuvem");
       alvo = await abrirPacote(pacote, sha256, extraido);
       await rm(pacote, { force: true });

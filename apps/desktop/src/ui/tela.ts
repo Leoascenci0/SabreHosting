@@ -69,6 +69,12 @@ function desenhar(): void {
       tentar.hidden = false;
       break;
     case "ninguem":
+      if (e.atualizando !== undefined) {
+        // Hospedar fica fechado até o mundo chegar à versão mais nova; Jogar não depende disto.
+        status.textContent = `Atualizando seu mundo… ${e.atualizando}%`;
+        detalhe.textContent = "Você pode jogar normalmente. Hospedar volta quando terminar.";
+        break;
+      }
       status.textContent = "Ninguém está hospedando";
       detalhe.textContent = "Você pode ligar o servidor neste PC.";
       principal.textContent = "Hospedar";
@@ -82,7 +88,9 @@ function desenhar(): void {
       break;
     case "outro":
       status.textContent = `Servidor no PC do ${e.nomePc}`;
-      detalhe.textContent = e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO;
+      detalhe.textContent =
+        (e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO) +
+        (e.atualizando !== undefined ? ` · Atualizando seu mundo… ${e.atualizando}%` : "");
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
       principal.hidden = e.endereco === "";

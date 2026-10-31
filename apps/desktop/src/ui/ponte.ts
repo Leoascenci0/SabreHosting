@@ -4,10 +4,11 @@ export type MotivoSemCartorio = "rede" | "servidor" | "acesso";
 export type EstadoInicio =
   | { tipo: "carregando" }
   | { tipo: "sem-cartorio"; motivo: MotivoSemCartorio }
-  | { tipo: "ninguem" }
+  /** `atualizando`: percentual (0–100) do mundo sendo atualizado neste PC; Hospedar fica fechado, Jogar não. */
+  | { tipo: "ninguem"; atualizando?: number }
   /** Servidor de uma sessão anterior do app ainda vivo neste PC, sem sair sozinho. */
   | { tipo: "orfao" }
-  | { tipo: "outro"; nomePc: string; endereco: string }
+  | { tipo: "outro"; nomePc: string; endereco: string; atualizando?: number }
   | { tipo: "eu"; endereco: string; parando?: boolean };
 
 export type CampoComErro =
