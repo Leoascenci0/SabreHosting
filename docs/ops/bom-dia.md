@@ -1,42 +1,28 @@
 # Bom-dia
 
-_Reescrito pela Máxima no encerramento da rodada da madrugada de 31/10/2026, 04:15. Estado completo em
-`docs/ops/rodadas/historico/rodada-2026-10-31b.md`._
+_Reescrito pela coordenadora da Máxima em 31/10/2026, 15:10, ao passar o bastão. Estado completo em
+`docs/ops/rodadas/coordenacao-2026-10-31.md`._
 
-- **O que entrou nesta noite (33 PRs, todos com vistoria APROVADA aqui e `qa` nos de risco):**
-  - **Convite do grupo (M2):** ajudante da rede privada com sala de entrada (#85); convite completo no cartório — só o
-    dono cria, chave provisória, `/grupo` (#84); ajudante virou serviço próprio, sem `sudo` no cartório (#97, sua
-    decisão); acabamentos (#145, #143). Falta só o app-1.3 (tela do convite), que precisa da sua prova no PC.
-  - **Servidor:** "vigia" que salva e para o servidor se o app for fechado à força, para nunca haver dois hosts (#114);
-    processo e comandos mais firmes (#89, #99); servidor só escuta em IP de PC da rede privada (#122); downloads só
-    `https` e hash do NeoForge por versão (#102, #106, #109); medição da nota mais firme (#139).
-  - **Backup:** restauração recusa atalho no lugar do mundo (#86); nomes com acento (#90); backup agendado cancela de
-    verdade e não deixa sobra (#105).
-  - **App:** reabrir o app com a trava em seu nome oferece "Hospedar" (#101); endereço continua na tela depois de Jogar
-    (#137, o que você viu no Windows); ícone da bandeja só com a cabeça do tigre (#144); testes da ponte e das capturas (#131, #126).
-  - **Cartório e rede:** cliente valida tudo que o cartório responde (#123); época da trava garantida no banco (#127);
-    prova de que dois PCs não usam o mesmo convite (#133); cartório e app só na rede 10.66 (#135); config do WireGuard
-    no PC só aceita o que o app monta (#115).
-  - **CI:** actions fixadas por hash + Dependabot (#93); push na `main` confere arquivos (#111).
-  - **Correção:** o check da `main` no GitHub estava vermelho desde o começo da noite (os testes de infra só passavam
-    como administrador, e a sessão roda como administrador). Consertado (#118); verde em todos os pushes desde então.
-- **Tutoriais para testar:** nenhum tutorial novo; as provas no PC estão em "Esperando você", item 3.
-- **Decidi por você** (todos reversíveis, cada um tem o PR para desfazer): contrato do ajudante (IP da sala escolhido por
-  ele; chave provisória só sai na confirmação ou no prazo); Java aceita `java` do sistema ou caminho completo; cópia do
-  backup que passa do prazo é cancelada antes de religar o salvamento; "vigia" para o servidor órfão (opção que salva
-  antes de parar); tela "O servidor anterior não parou" depois de 2 min; servidor só escuta em 10.66.0.2–199; cartório só
-  em 10.66.0.1/loopback; endereço fixo + aviso de "copiado" por 4 s; ícone da bandeja em azulejo escuro; marcador da
-  instância do Prism fica para o lanc-1.3; intervalo de renovação da trava não mudou.
+- **O que entrou hoje (Ondas 20–25, ~40 PRs, vistoria APROVADA na `main` a cada onda):**
+  - **Grupo:** tirar PC do grupo (cartório, rede e tela), só o dono; escolha da versão do Minecraft pelo dono
+    (Configurações › Servidor › Versão, qualquer versão, padrão 1.21.1) com backup antes de trocar.
+  - **Backups:** telas de backups e Configurações; rotação ligada (10 mais novos + tudo dos últimos 7 dias, nunca o
+    último bom); destino em pasta sincronizada (Google Drive para Computador) com a mesma regra.
+  - **Mundo em todos (M3):** envio do mundo pela rede privada com limites; troca segura que se recupera se o app cair;
+    espalhar a versão nova com trava própria (atualiza mesmo com alguém hospedando); pré-cópia para a troca de host.
+  - **Piloto:** importar o mundo da hospedagem direto do .zip (tela + tutorial).
+  - **Dependabot #95/#96** mergeados sozinhos (sua regra nova).
+- **Tutoriais para testar:** `docs/tutoriais/piloto-importar.md` (importar o mundo real, no seu PC).
+- **Decidi por você** (reversíveis, com PR): "De quem" = "Este PC"; envio do mundo 60 s ocioso / 16 conexões / banda
+  10 MB/s; PC tirado ainda baixa por até 30 s; nuvem não é fonte do espalhar; pasta sincronizada apaga também na
+  nuvem (tela avisa); porta do espalhar 25570 (só rede privada); importar com grupo já existente só pelo dono, como
+  versão nova; versão órfã sem pacote nunca vira a "mais nova".
 - **Esperando você:**
-  1. **Quem pode tirar um PC do grupo?** (cartmel-1.1) Recomendo: só o dono, pelo app.
-  2. **Dependabot #95 e #96** (actions do CI 4→7): PR de autor externo, o merge é seu.
-  3. **Provas no PC Windows** (passo a passo nos PRs): fechar o app à força com o servidor no ar e ver que ele salva e para
-     sozinho (#114, #101); ícone da bandeja nítido a 100% e 150% (#144).
-  4. Os de antes: liberar `repo.papermc.io` (rede-2.2); versão do Minecraft/NeoForge (host-3.1 e os hashes da tabela do
-     #102); criar a máquina Oracle e instalar o cartório (cart-2.2); app-1.3 (tela do convite, prova no PC); D9.
-- **Custo:** filhas US$ 35,88 (31 sessões; a mais cara: vigia do servidor em Opus, US$ 5,09) + esta orquestradora
-  US$ 43,22 = **~US$ 79**. A orquestração custou mais que as filhas; na próxima rodada vou delegar mais conferência a
-  revisores baratos.
-- **O que não foi verificado:** nada rodou numa máquina de verdade (nuvem nem Windows); o firewall da sala de entrada
-  só foi provado com regras carregadas no `iptables`; o vigia dentro do instalador (`app.asar`) não foi testado; o ícone
-  a 16 px fica borrado (normal no tamanho, confira no PC).
+  1. **Liberar `repo.papermc.io` e `maven.neoforged.net`** no ambiente (você disse que libera; às 15:08 ainda bloqueados).
+     Destrava a troca do host no proxy (rede-2.2) e os mods na 1.20.1.
+  2. **Importar o mundo real** pelo tutorial acima.
+  3. **Provas no PC Windows** (PRs #101, #114, #144) e tirar o PC da rede privada de verdade (redemel-1.3, máquina real).
+  4. **D9** (assinatura do instalador, custo) quando chegar o app-3.2.
+- **Custo de hoje:** ondas e filhas ~US$ 48 (20 e 21 não medidas; 22 7,78; 23 ~15,0; 24 ~15,2; 25 ~10,2) +
+  coordenadora US$ 5,09 (era US$ 43 na madrugada, com um chat fazendo tudo).
+- **O que não foi verificado:** nada rodou num PC Windows nem na máquina da nuvem de verdade; rede privada real não testada.

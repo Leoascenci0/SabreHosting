@@ -8,3 +8,5 @@
 | 2026-10-31 | Leva app-1.1/cartmel: app-1.1, app-1.2, cartmel-1.2+1.3, cartmel-1.7, basemel-1.5 | 5 filhas (4 sonnet, 1 opus) + qa (não registrado) | 6,64 | 1,33 | cartmel-1.2+1.3 (opus, 2,50) |
 | 2026-10-31 (madrugada) | Rodada do convite + melhorias: 31 itens, 33 PRs | 31 filhas (10 opus, 18 sonnet, 3 haiku) + qa (não registrado à parte) | 35,88 | 1,16 | hostmel-2.5 (opus, 5,09) |
 | 2026-10-31 (madrugada) | Orquestradora (este chat, Opus) | 1 | 43,22 (lido às 04:15, ainda subindo) | — | — |
+| 2026-10-31 (dia) | Ondas 20–25 (três níveis): ~34 itens | 6 sessões de onda + filhas (Opus só em trava/migração/tela grande) + qa (não registrado) | ~48 (20 e 21 não medidas) | ~1,4 | piloto-1.1c (opus, 8,37) |
+| 2026-10-31 (dia) | Coordenadora (este chat, Opus) | 1 | 5,09 (lido às 15:10) | — | — |
