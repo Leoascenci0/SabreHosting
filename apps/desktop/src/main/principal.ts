@@ -336,8 +336,8 @@ async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
     analisar: (zip) => analisarZip(zip),
     situacao: async () => {
       const cliente = exigir();
-      const [versaoNoGrupo, eu] = await Promise.all([cliente.numeroMaisNovo(), cliente.eu()]);
-      return { versaoNoGrupo, dono: eu.dono };
+      const [nova, eu] = await Promise.all([cliente.maisNova(), cliente.eu()]);
+      return { versaoNoGrupo: nova?.numero ?? null, dono: eu.dono };
     },
     importar: async (zip, aceitarVersaoNova) => {
       // Pasta de trabalho do app (não a do mundo): a importação cria e apaga só a própria temporária dentro dela.

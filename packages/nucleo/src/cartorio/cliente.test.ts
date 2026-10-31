@@ -2,6 +2,8 @@ import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ErroCartorio, criarCliente, type OpcoesCliente } from "./cliente.js";
 import { cofreEmMemoria } from "./cofre.js";
+import { escolherFontes } from "../sync/espalhar.js";
+import { PORTA_ESPALHAR } from "../sync/transferencia.js";
 
 const TOKEN = randomBytes(16).toString("hex"); // gerado a cada execução
 const URL_CARTORIO = "http://10.66.0.1:7070";
@@ -463,6 +465,66 @@ describe("cliente do cartório", () => {
   });
 });
 
+describe("descoberta de fontes (cartmel-2.4)", () => {
+  const SHA = "b".repeat(64);
+  const VERSAO = {
+    numero: 4,
+    epoca: 2,
+    pcId: 1,
+    manifestoSha256: SHA,
+    arquivos: 3,
+    bytes: 9,
+    criadaEm: 5,
+  };
+
+  it("maisNova: GET /versoes/mais-nova, com e sem versão", async () => {
+    const { cliente, chamadas } = montar([
+      json(200, { versao: VERSAO }),
+      json(200, { versao: null }),
+    ]);
+    expect(await cliente.maisNova()).toEqual(VERSAO);
+    expect(await cliente.maisNova()).toBeNull();
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes/mais-nova`);
+    expect(chamadas[0]?.init.method).toBe("GET");
+  });
+
+  it("quemTem: devolve IP de cada PC (ou null) e se a nuvem tem a versão", async () => {
+    const corpo = {
+      numero: 4,
+      nuvem: true,
+      pcs: [
+        { id: 1, nome: "Ana", ip: "10.66.0.5" },
+        { id: 2, nome: "Bia", ip: null },
+      ],
+    };
+    const { cliente, chamadas } = montar([json(200, corpo)]);
+    expect(await cliente.quemTem(4)).toEqual(corpo);
+    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes/4/copias`);
+  });
+
+  it.each([
+    ["sem o sinalizador da nuvem", { numero: 4, pcs: [] }],
+    ["ip que não é texto", { numero: 4, nuvem: false, pcs: [{ id: 1, nome: "Ana", ip: 5 }] }],
+    ["hash do manifesto inválido", { versao: { ...VERSAO, manifestoSha256: "xx" } }],
+  ])("resposta inválida (%s) vira erro do cartório", async (_nome, corpo) => {
+    const { cliente } = montar([json(200, corpo), json(200, corpo)]);
+    const p = "versao" in corpo ? cliente.maisNova() : cliente.quemTem(4);
+    expect((await erroDe(p)).tipo).toBe("resposta");
+  });
+
+  it("IP fora da rede privada devolvido pelo cartório é recusado ao escolher fontes", async () => {
+    const { cliente } = montar([
+      json(200, { numero: 4, nuvem: false, pcs: [{ id: 1, nome: "Ana", ip: "8.8.8.8" }] }),
+    ]);
+    const { pcs } = await cliente.quemTem(4);
+    expect(() =>
+      escolherFontes(
+        pcs.map((p) => ({ tipo: "pc" as const, endereco: String(p.ip), porta: PORTA_ESPALHAR })),
+      ),
+    ).toThrow(/rede privada/);
+  });
+});
+
 describe("informarCopia", () => {
   it("avisa a versão que este PC tem: POST /copias com a versão, sem corpo na resposta", async () => {
     const { cliente, chamadas } = montar([new Response(null, { status: 204 })]);
@@ -548,16 +610,6 @@ describe("trava de atualização (syncmel-1.8b)", () => {
 
 describe("versões do mundo (piloto-1.1c)", () => {
   const DADOS = { manifestoSha256: "a".repeat(64), arquivos: 3, bytes: 4096 };
-
-  it("numeroMaisNovo devolve o número, ou null sem versão", async () => {
-    const { cliente, chamadas } = montar([
-      json(200, { versao: { numero: 4, epoca: 2, pcId: 1, ...DADOS, criadaEm: 9 } }),
-      json(200, { versao: null }),
-    ]);
-    expect(await cliente.numeroMaisNovo()).toBe(4);
-    expect(await cliente.numeroMaisNovo()).toBeNull();
-    expect(chamadas[0]?.url).toBe(`${URL_CARTORIO}/versoes/mais-nova`);
-  });
 
   it("criarVersao manda época e totais e devolve o número; não repete", async () => {
     const { cliente, chamadas } = montar([json(201, { numero: 5 })]);

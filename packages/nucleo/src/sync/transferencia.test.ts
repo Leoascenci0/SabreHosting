@@ -60,11 +60,18 @@ describe("endereço do servidor", () => {
     "8.8.8.8",
     "192.168.0.5",
     "10.66.1.5",
+    "10.66.0.1",
+    "10.66.0.0",
+    "10.66.0.200",
+    "10.66.0.255",
+    "10.66.0.07",
     "localhost",
     "::ffff:10.66.0.2",
   ])("recusa %s", (e) => expect(() => conferirEnderecoPrivado(e)).toThrow(/rede privada/));
   it("aceita só o IP da rede privada; loopback apenas no teste", () => {
     expect(conferirEnderecoPrivado("10.66.0.7")).toBe("10.66.0.7");
+    expect(conferirEnderecoPrivado("10.66.0.2")).toBe("10.66.0.2");
+    expect(conferirEnderecoPrivado("10.66.0.199")).toBe("10.66.0.199");
     expect(() => conferirEnderecoPrivado("127.0.0.1")).toThrow();
     expect(conferirEnderecoPrivado("127.0.0.1", true)).toBe("127.0.0.1");
   });

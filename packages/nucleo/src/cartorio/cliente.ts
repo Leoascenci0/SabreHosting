@@ -13,8 +13,9 @@ import {
   validarGrupo,
   validarConfigGrupo,
   validarEu,
+  validarCopias,
   validarListaPcs,
-  validarNumeroMaisNovo,
+  validarMaisNova,
   validarPacoteGuardado,
   validarRespostaAtualizacao,
   validarRespostaTrava,
@@ -273,8 +274,12 @@ export function criarCliente(opcoes: OpcoesCliente) {
 
   return {
     eu: () => ler("/eu", validarEu),
-    /** Só o dono: os PCs com acesso ao cartório (tela Configurações › Grupo). */
+    /** Só o dono: os PCs com acesso ao cartório (tela Configurações › Grupo). Nunca traz IP; o IP só vem em `quemTem`. */
     listarPcs: () => ler("/pcs", validarListaPcs),
+    /** A versão mais nova do mundo (`null` se nenhuma foi registrada). */
+    maisNova: () => ler("/versoes/mais-nova", validarMaisNova),
+    /** Quem tem a versão `n` (IP na rede privada de cada PC) e se a nuvem a guarda: fontes do espalhar. */
+    quemTem: (n: number) => ler(`/versoes/${n}/copias`, validarCopias),
     estadoTrava: () => ler("/trava", validarEstadoTrava),
     pegar: () => trava("/trava/pegar", false),
     /** `sinal`: o renovador cancela ao soltar ou perder, e nenhuma tentativa nova sai. */
@@ -305,8 +310,6 @@ export function criarCliente(opcoes: OpcoesCliente) {
     /** Este PC diz que agora tem a versão N inteira (substitui a anterior). Repete: dizer duas vezes não muda nada. */
     informarCopia: (versao: number) =>
       chamar<undefined>({ metodo: "POST", rota: "/copias", corpo: { versao }, repetir: true }),
-    /** Número da versão mais nova do mundo no cartório, ou `null` se o grupo ainda não tem versão. */
-    numeroMaisNovo: () => ler("/versoes/mais-nova", validarNumeroMaisNovo),
     /**
      * Registra a próxima versão (só o dono da trava de host, com a época atual). Não repete: cada tentativa aceita
      * criaria outra versão. Devolve o número dado pelo cartório.

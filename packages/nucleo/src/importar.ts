@@ -274,7 +274,7 @@ export type ClienteDeImportacao = Pick<
   | "pegar"
   | "renovar"
   | "soltar"
-  | "numeroMaisNovo"
+  | "maisNova"
   | "criarVersao"
   | "enviarPacote"
 >;
@@ -291,6 +291,8 @@ export interface OpcoesNoCartorio {
   /** Só para os testes: relógios do renovador. */
   relogioDaTrava?: Pick<OpcoesRenovador, "agora" | "agoraParede" | "relogio" | "margemMs">;
 }
+
+const numeroMaisNovo = async (c: ClienteDeImportacao) => (await c.maisNova())?.numero ?? null;
 
 const NADA_ALTERADO = "Nada foi importado nem alterado.";
 const SEM_TRAVA = `Este PC perdeu a vez de mexer no mundo do grupo no meio da importação. ${NADA_ALTERADO}`;
@@ -329,7 +331,7 @@ export async function importarNoCartorio(
       `Este PC está hospedando agora. Pare o servidor antes de importar. ${NADA_ALTERADO}`,
     );
   }
-  conferirPermissao(await cliente.numeroMaisNovo(), eu.dono, aceitar);
+  conferirPermissao(await numeroMaisNovo(cliente), eu.dono, aceitar);
 
   let epoca: number | undefined;
   const perdeu = new AbortController();
@@ -357,7 +359,7 @@ export async function importarNoCartorio(
     if (epoca === undefined) throw new Error(SEM_TRAVA);
     const comTrava = epoca;
     // Com a trava ninguém mais registra versão: N+1 é certo daqui até o envio.
-    const n = await cliente.numeroMaisNovo();
+    const n = await numeroMaisNovo(cliente);
     conferirPermissao(n, eu.dono, aceitar);
     const proxima = (n ?? 0) + 1;
     return await importarMundoZip(zip, {
