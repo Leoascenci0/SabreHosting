@@ -1,5 +1,9 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
 import { restaurarBackup } from "@sabrehosting/nucleo/backup/restaurar";
+import { criarPacote } from "@sabrehosting/nucleo/backup/pacote";
+import { nomeDoBackup } from "@sabrehosting/nucleo/backup/agendador";
 import { listarBackups } from "@sabrehosting/nucleo/backup/listar";
 import { Renovador, type OpcoesRenovador } from "@sabrehosting/nucleo/cartorio/renovador";
 import { hashDoArquivo } from "@sabrehosting/nucleo/integridade/hash";
@@ -77,6 +81,33 @@ export function depsBackups(o: OpcoesDepsBackups): DepsBackups {
       }
     },
   };
+}
+
+/**
+ * Backup avulso com o servidor PARADO (antes de trocar a versão do Minecraft). Regra 2: com o servidor rodando (ou
+ * sobra dele) recusa, porque aqui não há `save-off`; o pacote é fechado e conferido pelo núcleo. Regra 4: nunca
+ * escreve por cima de backup existente e nunca apaga. `aoBom` roda a rotação normal depois.
+ */
+export async function backupParado(
+  o: OpcoesDepsBackups & {
+    agora?: () => Date;
+    aoBom?(feito: { caminho: string; sha256: string }): Promise<void>;
+  },
+): Promise<void> {
+  const { pastaBackups, pastaDoMundo } = o;
+  if (!pastaBackups || !pastaDoMundo) throw new Error(SEM_PASTA);
+  if (o.servidorRodando() || (await o.servidorOrfao?.().catch(() => true))) {
+    throw new Error(
+      "O servidor deste PC ainda está no ar. Pare o servidor antes de trocar a versão.",
+    );
+  }
+  const lista = await listarBackups(pastaBackups);
+  const versao = Math.max(0, ...lista.map((b) => b.versao));
+  const { epoca } = await o.cliente.estadoTrava();
+  const destino = join(pastaBackups, nomeDoBackup((o.agora ?? (() => new Date()))(), versao));
+  if (existsSync(destino)) throw new Error("Já existe um backup com esse nome; tente de novo.");
+  const feito = await criarPacote(pastaDoMundo, destino, { versao, epoca });
+  await o.aoBom?.({ caminho: feito.caminho, sha256: feito.sha256 }).catch(() => undefined);
 }
 
 /** Cartório, pastas e token vêm do ambiente até a tela de primeira vez (app-1.3); ver .env.exemplo. */

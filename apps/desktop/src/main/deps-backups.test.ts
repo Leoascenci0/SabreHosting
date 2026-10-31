@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { gerarMundo } from "../../../../packages/nucleo/test/ajuda/mundos.js";
 import { criarPacote } from "@sabrehosting/nucleo/backup/pacote";
 import { nomeDoBackup } from "@sabrehosting/nucleo/backup/agendador";
-import { depsBackups } from "./deps-backups.js";
+import { backupParado, depsBackups } from "./deps-backups.js";
 
 const pastas: string[] = [];
 afterEach(() => {
@@ -130,5 +130,45 @@ describe("depsBackups", () => {
     await expect(d.restaurar(nome)).rejects.toThrow(/ainda está no ar/);
     expect(c.eventos).toEqual([]);
     expect(readFileSync(join(c.mundo, "level.dat")).toString()).toBe("atual");
+  });
+});
+
+describe("backupParado (antes de trocar a versão)", () => {
+  it("servidor parado: cria um pacote do mundo inventado e roda a rotação", async () => {
+    const c = cenario();
+    const bons: string[] = [];
+    await backupParado({
+      pastaBackups: c.backups,
+      pastaDoMundo: c.mundo,
+      cliente: c.cliente,
+      servidorRodando: () => false,
+      servidorOrfao: async () => false,
+      aoBom: async (f) => void bons.push(f.caminho),
+    });
+    const arquivos = readdirSync(c.backups).filter((n) => n.endsWith(".tar.gz"));
+    expect(arquivos).toHaveLength(1);
+    expect(bons).toEqual(arquivos.map((n) => join(c.backups, n)));
+  });
+
+  it("servidor rodando ou órfão vivo: recusa sem criar nada", async () => {
+    const c = cenario();
+    const base = { pastaBackups: c.backups, pastaDoMundo: c.mundo, cliente: c.cliente };
+    await expect(backupParado({ ...base, servidorRodando: () => true })).rejects.toThrow(/no ar/);
+    await expect(
+      backupParado({ ...base, servidorRodando: () => false, servidorOrfao: async () => true }),
+    ).rejects.toThrow(/no ar/);
+    expect(readdirSync(c.backups)).toEqual([]);
+  });
+
+  it("sem pasta de backups configurada: recusa", async () => {
+    const c = cenario();
+    await expect(
+      backupParado({
+        pastaBackups: undefined,
+        pastaDoMundo: c.mundo,
+        cliente: c.cliente,
+        servidorRodando: () => false,
+      }),
+    ).rejects.toThrow(/pasta de backups/);
   });
 });
