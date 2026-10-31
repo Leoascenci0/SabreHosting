@@ -39,14 +39,21 @@ function motivoDe(e: unknown): MotivoSemCartorio {
 
 const GENERICA = "Não consegui fazer isso agora. Tente de novo em instantes.";
 
-/** Tempos de espera da liberação da trava; só os testes mexem. */
+/** Tempos de espera da liberação da trava e do servidor órfão; só os testes mexem. */
 export interface TemposInicio {
   passoMs?: number;
   tentativas?: number;
+  /** De quanto em quanto tempo reconferir o órfão. Padrão: 1 s. */
+  orfaoPassoMs?: number;
+  /** Quanto esperar o órfão encerrar (o vigia salva e para em ≤ ~20 s). Padrão: 30 s. */
+  orfaoPrazoMs?: number;
+  /** Com a trava livre, quanto esperar o órfão antes de dizer o que fazer. Padrão: 2 min. */
+  orfaoTetoMs?: number;
 }
 
 export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
   const { passoMs = 300, tentativas = 20 } = tempos;
+  const { orfaoPassoMs = 1000, orfaoPrazoMs = 30_000, orfaoTetoMs = 120_000 } = tempos;
   let ativo: ServidorAtivo | undefined;
   let ocupado = false;
   let parando = false;
@@ -66,18 +73,40 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     }
   }
 
-  /**
-   * App reaberto com a trava ainda em nome deste PC: o cartório aceita o `pegar` de novo, então a tela oferece
-   * Hospedar. Só sem servidor desta sessão e sem servidor órfão; na dúvida, não (regra de ouro 1).
-   */
-  async function possoRetomar(donoId: number): Promise<boolean> {
-    if (ocupado) return false;
+  async function souEu(donoId: number): Promise<boolean> {
     try {
       meuId ??= (await deps.eu()).id;
-      return donoId === meuId && !(await deps.servidorOrfao()) && !ocupado && !ativo;
+      return donoId === meuId;
     } catch {
       return false;
     }
+  }
+
+  /** Servidor órfão vivo na pasta (app fechado à força)? Erro conta como vivo: na dúvida, não oferece Hospedar. */
+  const temOrfao = () => deps.servidorOrfao().catch(() => true);
+  /** Desde quando (relógio monotônico) há órfão vivo; `undefined` = nenhum. */
+  let orfaoDesde: number | undefined;
+  let semDono = false;
+  let reconferindo = false;
+  /** Ainda esperando o órfão encerrar? Com a trava livre, espera mais (até o teto): Hospedar ali duplicaria o mundo. */
+  const esperandoOrfao = () =>
+    performance.now() - (orfaoDesde ?? performance.now()) < (semDono ? orfaoTetoMs : orfaoPrazoMs);
+
+  /** Reconfere o órfão até ele sair ou o prazo vencer, e então avisa a tela. Um laço por vez. */
+  function reconferirOrfao(): void {
+    if (reconferindo) return;
+    reconferindo = true;
+    void (async () => {
+      try {
+        while (esperandoOrfao() && !ativo && !ocupado) {
+          await new Promise((ok) => setTimeout(ok, orfaoPassoMs));
+          if (!(await temOrfao())) return void (orfaoDesde = undefined);
+        }
+      } finally {
+        reconferindo = false;
+        avisar();
+      }
+    })();
   }
 
   let paradaEmCurso: Promise<Resultado> | undefined;
@@ -139,8 +168,24 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       if (ativo) return { tipo: "eu", endereco: deps.endereco, ...(parando ? { parando } : {}) };
       try {
         const { dono } = await deps.lerTrava();
-        if (!dono || (await possoRetomar(dono.id))) return { tipo: "ninguem" };
-        return { tipo: "outro", nomePc: dono.nome, endereco: deps.endereco };
+        const outro = dono
+          ? { tipo: "outro" as const, nomePc: dono.nome, endereco: deps.endereco }
+          : undefined;
+        if (ocupado) return outro ?? { tipo: "ninguem" };
+        if (dono && outro && !(await souEu(dono.id))) return outro;
+        // Trava livre, ou ainda em nome deste PC (app reaberto: o cartório aceita o `pegar` de novo). Hospedar só
+        // sem servidor desta sessão e sem órfão na pasta (regra de ouro 1).
+        if (!(await temOrfao())) {
+          orfaoDesde = undefined;
+          return outro && (ocupado || ativo) ? outro : { tipo: "ninguem" };
+        }
+        semDono = !dono;
+        orfaoDesde ??= performance.now();
+        // Órfão de app sem vigia (versão antiga) que não sai no prazo: volta ao "servidor neste PC" (trava minha)
+        // ou diz o que fazer (trava livre); nunca oferece Hospedar.
+        if (!esperandoOrfao()) return outro ?? { tipo: "orfao" };
+        reconferirOrfao();
+        return { tipo: "eu", endereco: deps.endereco, parando: true };
       } catch (e) {
         return { tipo: "sem-cartorio", motivo: motivoDe(e) };
       }

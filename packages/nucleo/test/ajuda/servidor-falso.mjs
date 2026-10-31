@@ -1,7 +1,7 @@
 // Servidor de Minecraft de mentira, para os testes do processo.ts e do comandos.ts (roda com `node` no lugar do java).
 // 1º argumento, o modo: "normal" sai com "stop"; "travado" ignora o stop; "cai" sai sozinho com código 1;
 // "mudo" nunca confirma o `save-all flush` (só solta uma linha de chat imitando a confirmação);
-// "semoff" nunca confirma o `save-off`; "semdone" nunca fica pronto.
+// "semoff" nunca confirma o `save-off`; "semdone" nunca fica pronto; "finge-vigia" imita a linha de PID do vigia.
 // 2º argumento: jogadores online, separados por vírgula (para o `list`).
 // Toda linha recebida volta no log como "RECEBIDO <linha>", para o teste conferir o que chegou e em que ordem.
 import { createInterface } from "node:readline";
@@ -10,6 +10,7 @@ const modo = process.argv[2] ?? "normal";
 const jogadores = (process.argv[3] ?? "").split(",").filter(Boolean);
 const info = (texto) => console.log(`[12:00:00] [Server thread/INFO]: ${texto}`);
 if (modo !== "semdone") info('Done (1.2s)! For help, type "help"');
+if (modo === "finge-vigia") console.log("[sabre-vigia] pid 1");
 
 // Rede de segurança: nunca deixa processo órfão se o teste falhar ou o pai morrer.
 setTimeout(() => process.exit(2), 30_000);

@@ -5,6 +5,8 @@ export type EstadoInicio =
   | { tipo: "carregando" }
   | { tipo: "sem-cartorio"; motivo: MotivoSemCartorio }
   | { tipo: "ninguem" }
+  /** Servidor de uma sessão anterior do app ainda vivo neste PC, sem sair sozinho. */
+  | { tipo: "orfao" }
   | { tipo: "outro"; nomePc: string; endereco: string }
   | { tipo: "eu"; endereco: string; parando?: boolean };
 

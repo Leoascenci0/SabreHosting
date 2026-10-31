@@ -67,6 +67,11 @@ function desenhar(): void {
       principal.dataset["acao"] = "hospedar";
       principal.hidden = false;
       break;
+    case "orfao":
+      status.textContent = "O servidor anterior não parou";
+      detalhe.textContent = "Feche o Java no Gerenciador de Tarefas ou reinicie o PC.";
+      tentar.hidden = false;
+      break;
     case "outro":
       status.textContent = `Servidor no PC do ${e.nomePc}`;
       detalhe.textContent = copiado
