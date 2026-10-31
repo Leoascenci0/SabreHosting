@@ -16,6 +16,7 @@ const valido = {
   distanciaSimulacao: 6,
   intervaloBackupMin: 30,
   quantosGuardar: 5,
+  quantosGuardarHistorico: 5,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -25,6 +26,7 @@ const padrao = {
   distanciaSimulacao: 8,
   intervaloBackupMin: 10,
   quantosGuardar: 10,
+  quantosGuardarHistorico: 10,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -44,6 +46,7 @@ describe("configurações", () => {
       distanciaSimulacao: 8,
       intervaloBackupMin: 10,
       quantosGuardar: 10,
+      quantosGuardarHistorico: 10,
       historicoLongoLigado: false,
       historicoLongoPasta: "",
     });
@@ -168,6 +171,24 @@ describe("histórico longo numa pasta (drive-1.1a)", () => {
     expect(r.ok === false && r.campo).toBe("quantos");
     expect(r.ok === false && r.mensagem).toContain("Quantos guardar");
     expect(readFileSync(arquivo(), "utf8")).toBe(antes);
+  });
+
+  it.each([0, -1, 1.5, 1001, Number.NaN])(
+    "quantosGuardarHistorico %j é recusado e nada é gravado",
+    (v) => {
+      const c = criar();
+      const r = c.salvar({ ...valido, quantosGuardarHistorico: v });
+      expect(r.ok).toBe(false);
+      expect(r.ok === false && r.campo).toBe("quantosHistorico");
+      expect(existsSync(arquivo())).toBe(false);
+    },
+  );
+
+  it("salvar quantosGuardarHistorico grava o valor; texto no lugar do número é recusado", () => {
+    const c = criar();
+    expect(c.salvar({ ...valido, quantosGuardarHistorico: 4 }).ok).toBe(true);
+    expect(c.ler().quantosGuardarHistorico).toBe(4);
+    expect(c.salvar({ ...valido, quantosGuardarHistorico: "4" }).ok).toBe(false);
   });
 
   it("salvar quantosGuardar grava o valor", () => {

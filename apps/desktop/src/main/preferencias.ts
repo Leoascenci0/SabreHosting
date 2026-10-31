@@ -19,6 +19,8 @@ export interface Preferencias {
   intervaloBackupMin: number;
   /** Configurações › Backups › Quantos guardar (os dos últimos 7 dias sempre ficam além destes). */
   quantosGuardar: number;
+  /** Configurações › Backups › Histórico longo numa pasta › Quantos guardar nesta pasta (+ os dos últimos 7 dias). */
+  quantosGuardarHistorico: number;
   /** Configurações › Backups › Histórico longo numa pasta (liga). */
   historicoLongoLigado: boolean;
   /** Configurações › Backups › Histórico longo numa pasta (pasta). Vem do arquivo: entrada não confiável. */
@@ -65,10 +67,15 @@ const PADRAO: Preferencias = {
   distanciaSimulacao: DISTANCIA_SIMULACAO_PADRAO,
   intervaloBackupMin: INTERVALO_BACKUP_PADRAO,
   quantosGuardar: QUANTOS_GUARDAR_PADRAO,
+  quantosGuardarHistorico: QUANTOS_GUARDAR_PADRAO,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
 const ARQUIVO = "preferencias.json";
+
+/** Só número de verdade (true, "5" e [3] não viram número); ausente usa o padrão. */
+const numeroOuPadrao = (v: unknown, padrao: number): number =>
+  v === undefined ? padrao : typeof v === "number" ? v : Number.NaN;
 
 /** Lê campo a campo: o que estiver torto volta ao padrão sem derrubar os outros campos. */
 export function lerPreferencias(pasta: string): Preferencias {
@@ -85,7 +92,11 @@ export function lerPreferencias(pasta: string): Preferencias {
     distanciaVisao: Number(bruto.distanciaVisao),
     distanciaSimulacao: Number(bruto.distanciaSimulacao),
     intervaloBackupMin: Number(bruto.intervaloBackupMin ?? PADRAO.intervaloBackupMin),
-    quantosGuardar: Number(bruto.quantosGuardar ?? PADRAO.quantosGuardar),
+    quantosGuardar: numeroOuPadrao(bruto.quantosGuardar, PADRAO.quantosGuardar),
+    quantosGuardarHistorico: numeroOuPadrao(
+      bruto.quantosGuardarHistorico,
+      PADRAO.quantosGuardarHistorico,
+    ),
     historicoLongoLigado:
       typeof bruto.historicoLongoLigado === "boolean" ? bruto.historicoLongoLigado : false,
     historicoLongoPasta:
@@ -105,6 +116,11 @@ export function lerPreferencias(pasta: string): Preferencias {
     validarQuantosGuardar(resultado.quantosGuardar);
   } catch {
     resultado.quantosGuardar = PADRAO.quantosGuardar; // arquivo torto nunca vira "guardar 0"
+  }
+  try {
+    validarQuantosGuardar(resultado.quantosGuardarHistorico);
+  } catch {
+    resultado.quantosGuardarHistorico = PADRAO.quantosGuardarHistorico;
   }
   try {
     // As duas distâncias andam juntas (simulação < visão): par inválido volta ao par padrão.

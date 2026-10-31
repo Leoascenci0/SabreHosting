@@ -11,6 +11,7 @@ import {
 } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
 import { criarConfiguracoes } from "./configuracoes.js";
@@ -196,6 +197,23 @@ function criarRotacaoDoApp(pastaBackups: () => string | undefined): RotacaoBacku
   });
 }
 
+/**
+ * Rotação da pasta sincronizada (drive-1.1b): só roda depois de uma cópia conferida por hash, só nessa pasta, e as
+ * marcas ficam na pasta de dados do app (nunca dentro do Drive). Erro vira aviso na tela e nunca apaga nada.
+ */
+function criarRotacaoDoHistorico(): RotacaoBackups {
+  const dados = (): string => app.getPath("userData");
+  return criarRotacaoBackups({
+    pastaBackups: historicoLongo,
+    quantosGuardar: () => lerPreferencias(dados()).quantosGuardarHistorico,
+    arquivoMarcas: () => join(dados(), "marcas-historico.json"),
+    aoAvisar: (texto) => {
+      console.warn(`[backup] ${texto}`);
+      avisoHistorico.definir(texto);
+    },
+  });
+}
+
 /** Backup agendado: liga quando o servidor deste PC fica pronto e segue o intervalo de Configurações › Backups. */
 async function criarAgendaDoApp(): Promise<AgendaBackups> {
   const aoAvisar = (texto: string): void => console.warn(`[backup] ${texto}`);
@@ -203,6 +221,7 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
     const exigir = clienteDoAmbiente(process.env);
     const rotacao = criarRotacaoDoApp(() => process.env["SABRE_PASTA_BACKUPS"]);
     void rotacao.rodar(); // no arranque: limpa o que passou do limite desde a última vez
+    const rotacaoHistorico = criarRotacaoDoHistorico();
     return criarAgendaBackups({
       intervaloMin: intervaloBackupMin,
       iniciar: iniciarAgendaReal({
@@ -211,6 +230,7 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
         epoca: async () => (await exigir().estadoTrava()).epoca,
         historicoLongo,
         avisoHistorico,
+        aoCopiar: rotacaoHistorico.aoBackupBom,
         aoBackupBom: rotacao.aoBackupBom,
         aoAvisar,
       }),

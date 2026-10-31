@@ -7,6 +7,8 @@ export interface DepsRotacao {
   pastaBackups(): string | undefined;
   /** Configurações › Backups › Quantos guardar (lido a cada rotação). */
   quantosGuardar(): number;
+  /** Onde ficam as marcas (padrão: ao lado da pasta). A pasta sincronizada usa a pasta de dados do app. */
+  arquivoMarcas?(): string | undefined;
   /** Restauração em curso: a pasta está sendo usada, a rotação espera a próxima vez. */
   ocupado?(): boolean;
   agora?(): Date;
@@ -22,6 +24,10 @@ export interface DepsRotacao {
 export function criarRotacaoBackups(deps: DepsRotacao) {
   let emCurso = false;
   const rotacionar = deps.rotacionar ?? rotacionarPasta;
+  const arquivoMarcas = (): { arquivoMarcas?: string } => {
+    const a = deps.arquivoMarcas?.();
+    return a === undefined ? {} : { arquivoMarcas: a };
+  };
 
   async function rodar(): Promise<ResultadoDaRotacao | undefined> {
     const pasta = deps.pastaBackups();
@@ -30,6 +36,7 @@ export function criarRotacaoBackups(deps: DepsRotacao) {
     try {
       return await rotacionar(pasta, {
         recentes: deps.quantosGuardar(),
+        ...arquivoMarcas(),
         agora: (deps.agora ?? (() => new Date()))(),
       });
     } catch (e) {
@@ -47,7 +54,7 @@ export function criarRotacaoBackups(deps: DepsRotacao) {
       const pasta = deps.pastaBackups();
       if (!pasta) return;
       try {
-        marcarBackup(pasta, basename(feito.caminho), "bom", feito.sha256);
+        marcarBackup(pasta, basename(feito.caminho), "bom", feito.sha256, deps.arquivoMarcas?.());
       } catch (e) {
         // Sem marca o backup fica "não-conferido": a rotação nunca o apaga. Só avisa.
         deps.aoAvisar?.(

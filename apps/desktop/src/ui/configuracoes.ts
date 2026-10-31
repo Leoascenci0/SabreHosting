@@ -20,6 +20,7 @@ const simulacao = $<HTMLInputElement>("cfg-simulacao");
 const intervalo = $<HTMLInputElement>("cfg-intervalo");
 const quantos = $<HTMLInputElement>("cfg-quantos");
 const historico = $<HTMLInputElement>("cfg-historico");
+const historicoQuantos = $<HTMLInputElement>("cfg-historico-quantos");
 const historicoPasta = $<HTMLInputElement>("cfg-historico-pasta");
 const historicoEscolher = $<HTMLButtonElement>("cfg-historico-escolher");
 const aviso = $("config-aviso");
@@ -54,6 +55,7 @@ function mostrarErro(texto: string, campo?: CampoComErro): void {
   intervalo.setAttribute("aria-invalid", marca("intervalo"));
   quantos.setAttribute("aria-invalid", marca("quantos"));
   historicoPasta.setAttribute("aria-invalid", marca("historico"));
+  historicoQuantos.setAttribute("aria-invalid", marca("quantosHistorico"));
 }
 
 /** A pasta e o botão só funcionam com a opção ligada; ocupado desliga tudo. */
@@ -61,6 +63,7 @@ function atualizarHistorico(): void {
   const livre = historico.checked && !emCurso;
   historicoPasta.disabled = !livre;
   historicoEscolher.disabled = !livre;
+  historicoQuantos.disabled = !livre;
 }
 
 function ocupar(ocupado: boolean): void {
@@ -74,6 +77,7 @@ function ocupar(ocupado: boolean): void {
     quantos,
     historico,
     historicoPasta,
+    historicoQuantos,
     salvar,
     voltar,
   ])
@@ -173,6 +177,7 @@ async function carregar(): Promise<void> {
     simulacao.value = String(c.distanciaSimulacao);
     intervalo.value = String(c.intervaloBackupMin);
     quantos.value = String(c.quantosGuardar);
+    historicoQuantos.value = String(c.quantosGuardarHistorico);
     historico.checked = c.historicoLongoLigado;
     historicoPasta.value = c.historicoLongoPasta;
     atualizarHistorico();
@@ -227,6 +232,8 @@ form.addEventListener("submit", (evento) => {
       distanciaSimulacao: simulacao.value === "" ? Number.NaN : Number(simulacao.value),
       intervaloBackupMin: intervalo.value === "" ? Number.NaN : Number(intervalo.value),
       quantosGuardar: quantos.value === "" ? Number.NaN : Number(quantos.value),
+      quantosGuardarHistorico:
+        historicoQuantos.value === "" ? Number.NaN : Number(historicoQuantos.value),
       historicoLongoLigado: historico.checked,
       historicoLongoPasta: historicoPasta.value,
     })
@@ -241,6 +248,7 @@ form.addEventListener("submit", (evento) => {
         distancias: visao,
         intervalo,
         quantos,
+        quantosHistorico: historicoQuantos.disabled ? historico : historicoQuantos,
         historico: historicoPasta.disabled ? historico : historicoPasta,
       };
       (campoComErro ? alvo[campoComErro] : erro.hidden ? salvar : visao).focus();
