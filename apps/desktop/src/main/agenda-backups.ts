@@ -96,6 +96,10 @@ export interface OpcoesAgendaReal {
   historicoLongo?(): string | undefined;
   /** Onde a tela de Backups lê o último problema da cópia (limpo quando a cópia dá certo ou o recurso é desligado). */
   avisoHistorico?: AvisoHistorico;
+  /** Depois de cada backup bom: marca "bom" e roda a rotação (Configurações › Backups › Quantos guardar). */
+  aoBackupBom?(feito: { caminho: string; sha256: string }): Promise<void>;
+  /** Depois de a cópia ser conferida por hash na pasta do histórico: marca "bom" e roda a rotação dela. */
+  aoCopiar?(copia: { caminho: string; sha256: string }): Promise<void>;
   aoAvisar?(texto: string): void;
 }
 
@@ -106,7 +110,7 @@ export interface OpcoesAgendaReal {
 export async function copiarAoConcluir(
   o: Pick<
     OpcoesAgendaReal,
-    "pastaBackups" | "pastaDoMundo" | "historicoLongo" | "avisoHistorico" | "aoAvisar"
+    "pastaBackups" | "pastaDoMundo" | "historicoLongo" | "avisoHistorico" | "aoCopiar" | "aoAvisar"
   >,
   feito: { caminho: string; sha256: string },
 ): Promise<void> {
@@ -115,8 +119,9 @@ export async function copiarAoConcluir(
     o.avisoHistorico?.definir(undefined);
     return;
   }
+  let copiado: string;
   try {
-    await copiarParaPasta(feito.caminho, feito.sha256, pasta, [
+    copiado = await copiarParaPasta(feito.caminho, feito.sha256, pasta, [
       o.pastaBackups,
       o.pastaDoMundo ?? "",
     ]);
@@ -125,6 +130,13 @@ export async function copiarAoConcluir(
     const texto = e instanceof Error ? e.message : String(e);
     o.avisoHistorico?.definir(texto);
     o.aoAvisar?.(texto);
+    return;
+  }
+  // Só aqui o hash da cópia foi conferido: pode marcar "bom" e rotacionar. Erro da rotação nunca afeta o backup.
+  try {
+    await o.aoCopiar?.({ caminho: copiado, sha256: feito.sha256 });
+  } catch (e) {
+    o.aoAvisar?.(`Rotação do histórico: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -147,7 +159,10 @@ export function iniciarAgendaReal(o: OpcoesAgendaReal) {
       epoca: await o.epoca(),
       intervaloMin,
       ...(o.relogio ? { relogio: o.relogio } : {}),
-      aoConcluir: (feito) => void copiarAoConcluir(o, feito),
+      aoConcluir: (feito) => {
+        void copiarAoConcluir(o, feito);
+        void o.aoBackupBom?.(feito);
+      },
       aoFalhar: (e) => o.aoAvisar?.(`Backup agendado falhou: ${e.message}`),
       ...(o.aoAvisar ? { aoAvisar: o.aoAvisar } : {}),
     });

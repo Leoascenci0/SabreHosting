@@ -2,6 +2,7 @@ import { BlockList, isIP } from "node:net";
 import { IP_DO_HUB } from "../rede/wireguard.js";
 import type { Cofre } from "./cofre.js";
 import {
+  type RespostaAtualizacao,
   type RespostaTrava,
   cortarErro,
   validarConviteCriado,
@@ -10,6 +11,7 @@ import {
   validarGrupo,
   validarEu,
   validarListaPcs,
+  validarRespostaAtualizacao,
   validarRespostaTrava,
 } from "./tipos.js";
 
@@ -218,11 +220,15 @@ export function criarCliente(opcoes: OpcoesCliente) {
   }
 
   /** Aceita só com 200 e recusa só com 409: o contrário é resposta torta. */
-  const validarTrava = (corpo: unknown, status: number) => {
-    const r = validarRespostaTrava(corpo);
-    if (r.ok === (status === 409)) throw new Error("Resposta inválida do cartório: trava.");
-    return r;
-  };
+  const so200ou409 =
+    <T extends { ok: boolean }>(validar: (corpo: unknown) => T) =>
+    (corpo: unknown, status: number) => {
+      const r = validar(corpo);
+      if (r.ok === (status === 409)) throw new Error("Resposta inválida do cartório: trava.");
+      return r;
+    };
+  const validarTrava = so200ou409(validarRespostaTrava);
+  const validarAtualizacao = so200ou409(validarRespostaAtualizacao);
   const trava = (rota: string, repetir: boolean, corpo?: object, sinal?: AbortSignal) =>
     chamar<RespostaTrava>({
       metodo: "POST",
@@ -231,6 +237,17 @@ export function criarCliente(opcoes: OpcoesCliente) {
       repetir,
       recusaE409: true,
       validar: validarTrava,
+      sinal,
+    });
+  /** Mesmo molde da trava de host: só `renovar` repete (pegar e soltar mudam a época). */
+  const atualizacao = (rota: string, repetir: boolean, corpo?: object, sinal?: AbortSignal) =>
+    chamar<RespostaAtualizacao>({
+      metodo: "POST",
+      rota,
+      corpo,
+      repetir,
+      recusaE409: true,
+      validar: validarAtualizacao,
       sinal,
     });
   const ler = <T>(rota: string, validar: (corpo: unknown) => T) =>
@@ -247,6 +264,11 @@ export function criarCliente(opcoes: OpcoesCliente) {
       trava("/trava/renovar", true, { epoca }, sinal),
     passar: (epoca: number, para: number) => trava("/trava/passar", false, { epoca, para }),
     soltar: (epoca: number) => trava("/trava/soltar", false, { epoca }),
+    /** Trava de atualização (syncmel-1.8a/b): atualizar a PRÓPRIA cópia com outro PC hospedando. Nunca dá o host. */
+    pegarAtualizacao: () => atualizacao("/atualizacao/pegar", false),
+    renovarAtualizacao: (epoca: number, sinal?: AbortSignal) =>
+      atualizacao("/atualizacao/renovar", true, { epoca }, sinal),
+    soltarAtualizacao: (epoca: number) => atualizacao("/atualizacao/soltar", false, { epoca }),
     grupo: () => ler("/grupo", validarGrupo),
     /** Este PC diz que agora tem a versão N inteira (substitui a anterior). Repete: dizer duas vezes não muda nada. */
     informarCopia: (versao: number) =>

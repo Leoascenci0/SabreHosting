@@ -217,11 +217,12 @@ describe("cartório: migrações", () => {
     const caminho = join(pasta, "m.db");
     const a = abrirBanco(caminho);
     const b = abrirBanco(caminho);
-    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 7 }]);
+    expect(b.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 8 }]);
     a.close();
     b.close();
     abrirBanco(caminho).close();
     expect(tabelas(caminho)).toEqual([
+      "atualizacao",
       "convites",
       "copias",
       "copias_nuvem",
@@ -242,7 +243,7 @@ describe("cartório: migrações", () => {
       INSERT INTO convites (hash, nome_pc, criado_em, expira_em) VALUES ('c1', 'Caio', 30, 40)`);
     v1.close();
     const banco = abrirBanco(caminho);
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 7 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 8 }]);
     expect(banco.prepare("SELECT id, nome, criado_em FROM pcs ORDER BY id").all()).toEqual([
       { id: 1, nome: "Ana", criado_em: 10 },
       { id: 2, nome: "Bia", criado_em: 20 },
@@ -269,7 +270,7 @@ describe("cartório: migrações", () => {
       UPDATE trava SET dono_pc_id = 1, expira_em = 500, epoca = 3`);
     v6.close();
     const banco = abrirBanco(caminho);
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 7 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 8 }]);
     expect(banco.prepare("SELECT dono_pc_id, expira_em, epoca FROM trava").all()).toEqual([
       { dono_pc_id: 1, expira_em: 500, epoca: 3 },
     ]);

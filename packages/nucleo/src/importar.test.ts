@@ -1,0 +1,183 @@
+import { randomBytes } from "node:crypto";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { montarZip, type EntradaDeZip } from "../test/ajuda/zip.js";
+import { abrirPacote } from "./backup/pacote.js";
+import { importarMundoZip, type LimitesDaImportacao } from "./importar.js";
+
+const raizes: string[] = [];
+function area() {
+  const raiz = mkdtempSync(join(tmpdir(), "sabre-importar-"));
+  raizes.push(raiz);
+  const trabalho = join(raiz, "trabalho");
+  mkdirSync(trabalho);
+  return { raiz, trabalho };
+}
+afterEach(() => {
+  for (const r of raizes.splice(0)) rmSync(r, { recursive: true, force: true });
+});
+
+const ok = (nome: string, texto = "dados de " + nome): EntradaDeZip => ({
+  nome,
+  dados: Buffer.from(texto),
+});
+
+async function importar(
+  entradas: EntradaDeZip[],
+  limites?: Partial<LimitesDaImportacao>,
+  zipPronto?: Buffer,
+) {
+  const { raiz, trabalho } = area();
+  const zip = join(raiz, "mundo.zip");
+  writeFileSync(zip, zipPronto ?? montarZip(entradas));
+  const enviar = vi.fn(async () => undefined);
+  const antes = readdirSync(raiz).sort();
+  const chamada = importarMundoZip(zip, { pastaDeTrabalho: trabalho, epoca: 1, enviar, limites });
+  return { raiz, trabalho, enviar, antes, chamada };
+}
+
+/** Recusa: nada enviado, nada sobrando na pasta de trabalho, nada novo fora dela. */
+async function esperarRecusa(
+  entradas: EntradaDeZip[],
+  mensagem: RegExp,
+  limites?: Partial<LimitesDaImportacao>,
+  zipPronto?: Buffer,
+) {
+  const { raiz, trabalho, enviar, antes, chamada } = await importar(entradas, limites, zipPronto);
+  await expect(chamada).rejects.toThrow(mensagem);
+  expect(enviar).not.toHaveBeenCalled();
+  expect(readdirSync(trabalho)).toEqual([]);
+  expect(readdirSync(raiz).sort()).toEqual(antes);
+}
+
+describe("importarMundoZip — zip honesto", () => {
+  it("vira a versão 1 com o hash do pacote que criarPacote gerou", async () => {
+    const { chamada, enviar, trabalho } = await importar([
+      ok("level.dat"),
+      ok("region/r.0.0.mca", "x".repeat(5000)),
+      ok("playerdata/a.dat"),
+    ]);
+    const r = await chamada;
+    expect(r.versao).toBe(1);
+    expect(r.arquivos).toBe(3);
+    expect(enviar).toHaveBeenCalledTimes(1);
+    const enviado = (enviar.mock.calls[0] as unknown as [{ sha256: string; tamanho: number }])[0];
+    expect(enviado.sha256).toBe(r.sha256);
+    expect(enviado.tamanho).toBe(r.tamanho);
+    expect(readdirSync(trabalho)).toEqual([]);
+  });
+
+  it("o pacote enviado abre com o hash e traz exatamente os arquivos do zip", async () => {
+    const { raiz, trabalho } = area();
+    const zip = join(raiz, "mundo.zip");
+    // Bytes incompressíveis: um pacote minúsculo esbarra numa corrida já existente em abrirPacote (fora do escopo).
+    const regiao = { nome: "region/r.0.0.mca", dados: randomBytes(300_000) };
+    writeFileSync(zip, montarZip([ok("level.dat"), regiao]));
+    const aberto = join(raiz, "aberto");
+    let enviado: string | undefined;
+    const r = await importarMundoZip(zip, {
+      pastaDeTrabalho: trabalho,
+      epoca: 7,
+      enviar: async (p) => {
+        enviado = p.sha256;
+        const m = await abrirPacote(p.caminho, p.sha256, aberto);
+        expect(m.versao).toBe(1);
+        expect(m.epoca).toBe(7);
+        expect(m.arquivos.map((a) => a.caminho)).toEqual(["level.dat", "region/r.0.0.mca"]);
+      },
+    });
+    expect(enviado).toBe(r.sha256);
+  });
+
+  it("entradas de pasta (terminam em /) não viram erro", async () => {
+    const { chamada } = await importar([
+      { nome: "region/", dados: Buffer.alloc(0) },
+      ok("region/r.0.0.mca"),
+    ]);
+    expect((await chamada).arquivos).toBe(1);
+  });
+
+  it("apaga a pasta temporária mesmo quando o envio falha", async () => {
+    const { raiz, trabalho } = area();
+    const zip = join(raiz, "mundo.zip");
+    writeFileSync(zip, montarZip([ok("level.dat")]));
+    await expect(
+      importarMundoZip(zip, {
+        pastaDeTrabalho: trabalho,
+        epoca: 1,
+        enviar: async () => {
+          throw new Error("cartório fora");
+        },
+      }),
+    ).rejects.toThrow("cartório fora");
+    expect(readdirSync(trabalho)).toEqual([]);
+  });
+});
+
+describe("importarMundoZip — zip hostil (cada um recusa antes de enviar e sem sobra)", () => {
+  it("zip-slip: ../fora", async () => {
+    await esperarRecusa([ok("level.dat"), ok("../fora.txt")], /caminho|nome/i);
+  });
+  it("zip-slip escondido no meio: a/../../fora", async () => {
+    await esperarRecusa([ok("a/../../fora.txt")], /caminho|nome/i);
+  });
+  it("caminho absoluto", async () => {
+    await esperarRecusa([ok("/etc/cron.d/x")], /caminho|nome/i);
+  });
+  it("letra de unidade do Windows", async () => {
+    await esperarRecusa([ok("C:/Windows/x.dll")], /caminho|nome/i);
+  });
+  it("barra invertida", async () => {
+    await esperarRecusa([ok("region\\..\\..\\x")], /caminho|nome/i);
+  });
+  it("NUL no nome", async () => {
+    await esperarRecusa([ok("level.dat\u0000.txt")], /caminho|nome/i);
+  });
+  it("link simbólico (modo Unix 0o120777)", async () => {
+    await esperarRecusa(
+      [ok("level.dat"), { nome: "atalho", dados: Buffer.from("/etc/passwd"), modo: 0o120777 }],
+      /link/i,
+    );
+  });
+  it("entrada repetida", async () => {
+    await esperarRecusa([ok("level.dat"), ok("level.dat", "outro")], /repetid|duas vezes/i);
+  });
+  it("entrada repetida só na maiúscula", async () => {
+    await esperarRecusa([ok("Level.dat"), ok("level.dat")], /repetid|maiúscula/i);
+  });
+  it("arquivo e pasta com o mesmo nome", async () => {
+    await esperarRecusa([ok("a"), ok("a/b")], /pasta|arquivo/i);
+  });
+  it("bomba de zip: tamanho declarado acima do teto (nada é lido)", async () => {
+    await esperarRecusa(
+      [{ nome: "region/r.0.0.mca", dados: Buffer.alloc(2_000_000) }],
+      /grande|tamanho|limite/i,
+      { maxBytes: 1_000_000 },
+    );
+  });
+  it("bomba de zip: cabeçalho mente (declara pouco, entrega muito)", async () => {
+    await esperarRecusa(
+      [{ nome: "region/r.0.0.mca", dados: Buffer.alloc(3_000_000), tamanhoDeclarado: 10 }],
+      /./,
+      { maxBytes: 1_000_000 },
+    );
+  });
+  it("bomba de zip: soma de várias entradas passa do teto", async () => {
+    await esperarRecusa(
+      [1, 2, 3].map((n) => ({ nome: `r${n}.mca`, dados: Buffer.alloc(400_000) })),
+      /grande|tamanho|limite/i,
+      { maxBytes: 1_000_000 },
+    );
+  });
+  it("entradas demais", async () => {
+    await esperarRecusa([ok("a"), ok("b"), ok("c")], /entradas|arquivos/i, { maxEntradas: 2 });
+  });
+  it("zip sem nenhum arquivo", async () => {
+    await esperarRecusa([{ nome: "region/", dados: Buffer.alloc(0) }], /vazio|nenhum/i);
+  });
+  it("arquivo que não é zip", async () => {
+    await esperarRecusa([], /zip/i, undefined, Buffer.from("isto não é um zip de verdade"));
+  });
+});

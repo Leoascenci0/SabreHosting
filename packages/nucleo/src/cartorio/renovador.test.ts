@@ -291,3 +291,52 @@ describe("renovador da trava", () => {
     expect(m.sinais[0]?.aborted).toBe(true);
   });
 });
+
+describe("renovarAgora (syncmel-1.8b: antes de cada rename da troca)", () => {
+  it("renova na hora, estende o prazo a partir desse envio e diz que vale", async () => {
+    const m = montar();
+    await m.r.pegar();
+    m.t.agora += 30_000; // perto do fim do prazo local (35 s), sem tique ainda
+    m.t.parede += 30_000;
+    expect(await m.r.renovarAgora()).toBe(true);
+    expect(m.renovacoes).toEqual([4]);
+    m.t.agora += 34_999;
+    m.t.parede += 34_999;
+    expect(await m.r.temTrava()).toBe(true);
+  });
+
+  it("recusa na renovação: perde (avisa uma vez) e devolve false", async () => {
+    const m = montar();
+    await m.r.pegar();
+    m.renovarResponde(async () => recusa("epoca_velha", 5));
+    expect(await m.r.renovarAgora()).toBe(false);
+    expect(m.perdas).toHaveLength(1);
+    expect(await m.r.renovarAgora()).toBe(false);
+    expect(m.renovacoes).toEqual([4]); // perdida: não pede de novo
+  });
+
+  it("época diferente na resposta ou cartório fora com o prazo vencido: false", async () => {
+    const a = montar();
+    await a.r.pegar();
+    a.renovarResponde(async () => aceita(9));
+    expect(await a.r.renovarAgora()).toBe(false);
+    const b = montar();
+    await b.r.pegar();
+    b.renovarResponde(async () => {
+      throw new ErroCartorio("fora", "rede");
+    });
+    expect(await b.r.renovarAgora()).toBe(true); // rede falhou, mas o prazo local ainda vale
+    b.t.agora += 35_000;
+    b.t.parede += 35_000;
+    expect(await b.r.renovarAgora()).toBe(false);
+  });
+
+  it("sem pegar, ou depois de soltar: false e nenhum pedido", async () => {
+    const m = montar();
+    expect(await m.r.renovarAgora()).toBe(false);
+    await m.r.pegar();
+    await m.r.soltar();
+    expect(await m.r.renovarAgora()).toBe(false);
+    expect(m.renovacoes).toEqual([]);
+  });
+});

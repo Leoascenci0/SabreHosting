@@ -108,6 +108,17 @@ export const MIGRACOES = [
   `CREATE TRIGGER trava_epoca_inteira BEFORE UPDATE OF epoca ON trava
    WHEN typeof(NEW.epoca) <> 'integer'
    BEGIN SELECT RAISE(ABORT, 'A época da trava é sempre um número inteiro.'); END;`,
+  // Trava de atualização (syncmel-1.8a): uma linha por PC, separada da trava de host. Soltar zera o prazo, a linha
+  // fica: a época (fencing) continua subindo nos próximos `pegar` e nunca desce.
+  `CREATE TABLE atualizacao (
+     pc_id INTEGER PRIMARY KEY REFERENCES pcs(id),
+     epoca INTEGER NOT NULL CHECK (typeof(epoca) = 'integer' AND epoca >= 1),
+     expira_em INTEGER NOT NULL CHECK (typeof(expira_em) = 'integer' AND expira_em >= 0)
+   );
+   CREATE TRIGGER atualizacao_epoca_nunca_desce BEFORE UPDATE OF epoca ON atualizacao
+   WHEN NEW.epoca < OLD.epoca BEGIN SELECT RAISE(ABORT, 'A época da atualização nunca desce.'); END;
+   CREATE TRIGGER atualizacao_nao_apaga BEFORE DELETE ON atualizacao
+   BEGIN SELECT RAISE(ABORT, 'A atualização não se apaga.'); END;`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */

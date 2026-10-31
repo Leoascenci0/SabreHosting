@@ -13,7 +13,8 @@ export type MotivoRecusa =
   | "vencida"
   | "destino_desconhecido"
   | "destino_sem_acesso"
-  | "destino_invalido";
+  | "destino_invalido"
+  | "atualizando";
 export type ResultadoTrava =
   | { ok: true; epoca: number; expiraEm: number }
   | { ok: false; motivo: MotivoRecusa; donoPcId: number | null; epoca: number; expiraEm: number };
@@ -107,14 +108,20 @@ export function recusaNaTrava(
   };
 }
 
-/** Livre, vencida ou já deste PC (app que reiniciou) → dono = pc, época + 1. */
+/** PC com trava de atualização valendo (`atualizacao.ts`) não recebe o host: a troca da cópia dele está no meio. */
+const NAO_ATUALIZANDO = "NOT EXISTS (SELECT 1 FROM atualizacao WHERE pc_id = ? AND expira_em > ?)";
+
+/** Livre, vencida ou já deste PC (app que reiniciou) → dono = pc, época + 1. Nunca para quem está atualizando. */
 export function pegar(banco: Banco, pc: number, agora: number, prazoMs: number): ResultadoTrava {
   return mudar(
     banco,
     `dono_pc_id = ?, expira_em = ?, epoca = epoca + 1
-     WHERE dono_pc_id IS NULL OR dono_pc_id = ? OR expira_em <= ?`,
-    [pc, agora + prazoMs, pc, agora],
-    () => "ocupada",
+     WHERE (dono_pc_id IS NULL OR dono_pc_id = ? OR expira_em <= ?) AND ${NAO_ATUALIZANDO}`,
+    [pc, agora + prazoMs, pc, agora, pc, agora],
+    (l) =>
+      l.dono_pc_id !== null && l.dono_pc_id !== pc && l.expira_em > agora
+        ? "ocupada"
+        : "atualizando",
   );
 }
 
@@ -134,7 +141,10 @@ export function renovar(
   );
 }
 
-/** Migração de host: só o dono atual (época atual, valendo) passa para outro PC com token ativo; época + 1. */
+/**
+ * Migração de host: só o dono atual (época atual, valendo) passa para outro PC com token ativo e sem atualização
+ * valendo; época + 1.
+ */
 export function passar(
   banco: Banco,
   de: number,
@@ -147,15 +157,18 @@ export function passar(
     banco,
     `dono_pc_id = ?, expira_em = ?, epoca = epoca + 1
      WHERE dono_pc_id = ? AND epoca = ? AND expira_em > ? AND ? <> ?
-       AND EXISTS (SELECT 1 FROM tokens WHERE pc_id = ? AND revogado_em IS NULL)`,
-    [para, agora + prazoMs, de, epoca, agora, para, de, para],
+       AND EXISTS (SELECT 1 FROM tokens WHERE pc_id = ? AND revogado_em IS NULL)
+       AND ${NAO_ATUALIZANDO}`,
+    [para, agora + prazoMs, de, epoca, agora, para, de, para, para, agora],
     (l) => {
       const motivo = recusaDoDono(de, epoca, agora, para)(l);
-      // PC do grupo, mas sem token ativo (revogado ou nunca recebeu): recusa própria, na mesma transação.
-      return motivo === "destino_desconhecido" &&
-        banco.prepare("SELECT 1 FROM pcs WHERE id = ?").get(para)
-        ? "destino_sem_acesso"
-        : motivo;
+      if (motivo !== "destino_desconhecido") return motivo;
+      // Recusas do destino, lidas na mesma transação. PC do grupo sem token ativo (revogado ou nunca recebeu); com
+      // token, a única condição que sobra é a atualização valendo.
+      if (!banco.prepare("SELECT 1 FROM pcs WHERE id = ?").get(para)) return motivo;
+      return banco.prepare("SELECT 1 FROM tokens WHERE pc_id = ? AND revogado_em IS NULL").get(para)
+        ? "atualizando"
+        : "destino_sem_acesso";
     },
   );
 }

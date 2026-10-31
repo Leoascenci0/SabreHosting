@@ -494,6 +494,27 @@ describe("comando e memória", () => {
     expect(c.opcoes.stdio).toEqual(["pipe", "pipe", "pipe"]);
   });
 
+  it("modo jar: sobe -jar server.jar com o arquivo de memória, sem shell", async () => {
+    await writeFile(join(pasta, "server.jar"), "x");
+    const s = await subir("normal", { versaoNeoForge: undefined, jar: true });
+    await esperarEstado(s, "pronto");
+    const args = chamadas[0]?.args as readonly string[];
+    expect(args.slice(-4)).toEqual(["@user_jvm_args.txt", "-jar", "server.jar", "nogui"]);
+    expect(args.some((a) => a.includes("neoforge"))).toBe(false);
+    expect(chamadas[0]?.opcoes.shell).toBe(false);
+  });
+
+  it("modo jar sem server.jar na pasta recusa; os dois modos juntos ou nenhum também", async () => {
+    await expect(
+      iniciarServidor(opcoes("normal", { versaoNeoForge: undefined, jar: true })),
+    ).rejects.toThrow(/server\.jar/);
+    await expect(iniciarServidor(opcoes("normal", { jar: true }))).rejects.toThrow(/modo/i);
+    await expect(iniciarServidor(opcoes("normal", { versaoNeoForge: undefined }))).rejects.toThrow(
+      /modo/i,
+    );
+    expect(chamadas).toHaveLength(0);
+  });
+
   it("no Windows usa win_args.txt", async () => {
     const s = await subir("normal", { plataforma: "win32" });
     await esperarEstado(s, "pronto");

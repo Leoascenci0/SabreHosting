@@ -13,7 +13,10 @@ export type EstadoServidor = "parado" | "subindo" | "pronto" | "parando" | "caiu
 export interface OpcoesIniciar {
   pasta: string;
   javaPath: string;
-  versaoNeoForge: string;
+  /** Modo NeoForge (`@args`). Sem ele, `jar` tem de ser verdadeiro. */
+  versaoNeoForge?: string;
+  /** Modo sem mods: sobe `java -jar server.jar` (o `server.jar` oficial já baixado e conferido na pasta). */
+  jar?: boolean;
   /** Dono da trava do cartório agora? Obrigatório: sem trava o servidor não sobe nem continua. */
   temTrava: () => Promise<boolean>;
   /** Configurações › Servidor › Memória máxima (MB). Sem valor: automático. */
@@ -309,7 +312,13 @@ export async function iniciarServidor(opcoes: OpcoesIniciar): Promise<ServidorMi
       "O Java precisa ser o nome do programa (ex.: java) ou um caminho completo, não um caminho relativo.",
     );
   }
-  if (!/^\d[\w.+-]*$/.test(versaoNeoForge) || versaoNeoForge.includes("..")) {
+  if (opcoes.jar ? versaoNeoForge !== undefined : versaoNeoForge === undefined) {
+    throw new Error("Escolha um modo só: NeoForge ou sem mods (jar).");
+  }
+  if (
+    versaoNeoForge !== undefined &&
+    (!/^\d[\w.+-]*$/.test(versaoNeoForge) || versaoNeoForge.includes(".."))
+  ) {
     throw new Error("Versão do NeoForge inválida.");
   }
   const totalBytes = opcoes.memoriaTotalBytes ?? totalmem();
@@ -352,10 +361,15 @@ async function subirServidor(
   const eula = await podeSubir(pasta);
   if (!eula.pode) throw new Error(eula.motivo);
   const argsNeoForge = `libraries/net/neoforged/neoforge/${versaoNeoForge}/${plataforma === "win32" ? "win" : "unix"}_args.txt`;
+  const argsPrincipais = versaoNeoForge ? [`@${argsNeoForge}`] : ["-jar", "server.jar"];
   try {
-    await stat(join(pasta, argsNeoForge));
+    await stat(join(pasta, versaoNeoForge ? argsNeoForge : "server.jar"));
   } catch {
-    throw new Error(`O NeoForge ${versaoNeoForge} ainda não foi instalado nesta pasta.`);
+    throw new Error(
+      versaoNeoForge
+        ? `O NeoForge ${versaoNeoForge} ainda não foi instalado nesta pasta.`
+        : "O server.jar do Minecraft ainda não foi baixado nesta pasta.",
+    );
   }
 
   // Reconferida logo antes do spawn: é a regra de ouro 1.
@@ -383,7 +397,7 @@ async function subirServidor(
       opcoes.javaPath,
       ...(opcoes.prefixoArgs ?? []),
       "@user_jvm_args.txt",
-      `@${argsNeoForge}`,
+      ...argsPrincipais,
       "nogui",
     ],
     {

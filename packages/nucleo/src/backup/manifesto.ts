@@ -107,7 +107,7 @@ export async function gerarManifesto(
 }
 
 /** Caminho que qualquer PC (Windows incluso) consegue extrair sem escapar da pasta do mundo. */
-function caminhoSeguro(caminho: unknown): caminho is string {
+export function caminhoSeguro(caminho: unknown): caminho is string {
   if (typeof caminho !== "string" || caminho === "") return false;
   if (caminho.includes("\\") || caminho.startsWith("/") || /^[a-zA-Z]:/.test(caminho)) return false;
   return caminho
