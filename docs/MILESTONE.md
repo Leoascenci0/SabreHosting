@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-Leva 31/10: app-1.1 ✅ (#70) · cartmel-1.2/1.3 ✅ (#69) · app-1.2 🔄 · rede-2.2 ⏸️ [P: liberar repo.papermc.io na rede do ambiente]
+Leva 31/10: app-1.1 ✅ (#70) · cartmel-1.2/1.3 ✅ (#69) · app-1.2 ✅ (#74) · rede-2.2 ⏸️ [P: liberar repo.papermc.io na rede do ambiente]
 
 ## Fila
 
@@ -49,7 +49,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Backlog
 
-- Melhorias do app: `docs/roadmap-app-melhoria.md` (appmel-1.1, 1.2).
+- Melhorias do app: `docs/roadmap-app-melhoria.md` (appmel-1.1 a 1.5; 1.4 junto do app-1.3).
 - Melhorias do launcher: `docs/roadmap-lanc-melhoria.md` (lancmel-1.1).
 - Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-1.1; 2.1 obrigatório antes de ligar o proxy; 2.2; 2.3 [P]).
 - Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
@@ -63,7 +63,7 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Feito
 
-- 31/10/2026 — app-1.1 janela, bandeja e design system (#70); cartmel-1.2/1.3 cartório endurecido e banco em /var/lib (#69); basemel-1.5 teste da trava estável (#76); cartmel-1.7 segredo do cartório em arquivo 0600 (#75).
+- 31/10/2026 — app-1.1 janela, bandeja e design system (#70); cartmel-1.2/1.3 cartório endurecido e banco em /var/lib (#69); basemel-1.5 teste da trava estável (#76); cartmel-1.7 segredo do cartório em arquivo 0600 (#75); app-1.2 tela inicial com 4 estados e saída segura (#74).
 
 - 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
 

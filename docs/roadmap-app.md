@@ -17,7 +17,7 @@ item da mesma tela.
   *Confirmação:* teste E2E (Playwright para Electron) abre a janela; `audit` do impeccable sem crítico.
   *Depende de:* base-1.1 · D4 decidida (ícone em apps/desktop/recursos/icone/)
 
-- [ ] **1.2 — Tela inicial: Jogar / Hospedar e status**
+- [x] **1.2 — Tela inicial: Jogar / Hospedar e status** (PR #74, 31/10/2026; confirmação no Windows pendente)
   *O que fazer:* estado vindo do núcleo/cartório: "Servidor no PC do X" + Jogar (copia o endereço / abre o launcher);
   "Ninguém hospedando" + Hospedar; progresso em toda ação demorada.
   *Arquivo:* `apps/desktop/src/telas/inicio.*`
