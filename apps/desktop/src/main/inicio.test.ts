@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { criarInicio, erroSemGrupo, mensagemFalhaSair, type DepsInicio } from "./inicio.js";
 
 const RAPIDO = { passoMs: 1, tentativas: 5 };
+const ORFAO = { orfaoPassoMs: 5, orfaoPrazoMs: 30 };
+const encerrando = { tipo: "eu", endereco: "10.0.0.5:25565", parando: true };
 
 function servidorFalso() {
   const e = new EventEmitter();
@@ -61,6 +63,21 @@ describe("estado da tela inicial", () => {
     expect(await criarInicio(d).estado()).toEqual({ tipo: "sem-cartorio", motivo: "acesso" });
   });
 
+  describe("trava livre com servidor órfão vivo na pasta", () => {
+    it("não oferece Hospedar, nem depois do prazo de espera", async () => {
+      let vivo = true;
+      const servidorOrfao = vi.fn(async () => vivo);
+      const inicio = criarInicio(deps({ servidorOrfao }), ORFAO);
+      expect(await inicio.estado()).toEqual(encerrando);
+      await new Promise((ok) => setTimeout(ok, 60));
+      expect(await inicio.estado()).toEqual(encerrando);
+      const mudou = new Promise<void>((ok) => inicio.aoMudar(ok));
+      vivo = false;
+      await mudou; // segue reconferindo até o órfão sair
+      expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+    });
+  });
+
   describe("dono da trava sou eu (app reaberto)", () => {
     const minha = async () => ({ dono: { id: 1, nome: "Este PC" } });
     const outro = { tipo: "outro", nomePc: "Este PC", endereco: "10.0.0.5:25565" };
@@ -69,19 +86,37 @@ describe("estado da tela inicial", () => {
       expect(await criarInicio(deps({ lerTrava: minha })).estado()).toEqual({ tipo: "ninguem" });
     });
 
-    it("dono sou eu com órfão vivo não oferece Hospedar", async () => {
+    it("dono sou eu com órfão vivo não oferece Hospedar: mostra o servidor anterior encerrando", async () => {
       const d = deps({ lerTrava: minha, servidorOrfao: async () => true });
-      expect(await criarInicio(d).estado()).toEqual(outro);
+      expect(await criarInicio(d, ORFAO).estado()).toEqual(encerrando);
     });
 
-    it("falha ao conferir órfão ou quem sou eu: mantém o estado atual", async () => {
+    it("falha ao conferir órfão ou quem sou eu: não oferece Hospedar", async () => {
       const falha = async () => {
         throw Object.assign(new Error("x"), { tipo: "rede" });
       };
-      expect(await criarInicio(deps({ lerTrava: minha, servidorOrfao: falha })).estado()).toEqual(
-        outro,
-      );
+      expect(
+        await criarInicio(deps({ lerTrava: minha, servidorOrfao: falha }), ORFAO).estado(),
+      ).toEqual(encerrando);
       expect(await criarInicio(deps({ lerTrava: minha, eu: falha })).estado()).toEqual(outro);
+    });
+
+    it("órfão que encerra (o vigia salvou e parou): avisa a tela e oferece Hospedar", async () => {
+      let vivo = true;
+      const inicio = criarInicio(deps({ lerTrava: minha, servidorOrfao: async () => vivo }), ORFAO);
+      const mudou = new Promise<void>((ok) => inicio.aoMudar(ok));
+      expect(await inicio.estado()).toEqual(encerrando);
+      vivo = false;
+      await mudou;
+      expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+    });
+
+    it("órfão que não encerra no prazo (sem vigia): volta ao estado de hoje, sem Hospedar", async () => {
+      const inicio = criarInicio(deps({ lerTrava: minha, servidorOrfao: async () => true }), ORFAO);
+      const mudou = new Promise<void>((ok) => inicio.aoMudar(ok));
+      expect(await inicio.estado()).toEqual(encerrando);
+      await mudou;
+      expect(await inicio.estado()).toEqual(outro);
     });
 
     it("pergunta quem sou eu ao cartório uma vez só", async () => {

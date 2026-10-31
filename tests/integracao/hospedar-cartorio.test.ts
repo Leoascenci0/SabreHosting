@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { salvarSeguro } from "../../packages/nucleo/src/servidor/comandos.js";
+import { ARGS_VIGIA_TESTE } from "../../packages/nucleo/test/ajuda/vigia.js";
 import { criarCliente } from "../../packages/nucleo/src/cartorio/cliente.js";
 import { cofreEmMemoria } from "../../packages/nucleo/src/cartorio/cofre.js";
 import { hospedar } from "../../packages/nucleo/src/cartorio/hospedar.js";
@@ -94,6 +95,7 @@ async function hospedarFalso(
     javaPath: process.execPath,
     versaoNeoForge: NEO,
     prefixoArgs: [FALSO, modo],
+    vigiaArgs: ARGS_VIGIA_TESTE,
     spawnFn: espiao,
     memoriaTotalBytes: 16 * 1024 ** 3,
     plataforma: "linux",
@@ -186,6 +188,7 @@ describe("trava de host contra o cartório real", () => {
       javaPath: process.execPath,
       versaoNeoForge: NEO,
       prefixoArgs: [FALSO, "mudo"], // nunca confirma o `save-all flush`
+      vigiaArgs: ARGS_VIGIA_TESTE,
       spawnFn: espiao,
       memoriaTotalBytes: 16 * 1024 ** 3,
       plataforma: "linux",

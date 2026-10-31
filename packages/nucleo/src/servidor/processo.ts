@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { stat } from "node:fs/promises";
 import { totalmem } from "node:os";
 import { isAbsolute, join, resolve as resolverCaminho } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gravarAtomico, podeSubir } from "./configurar.js";
 
 export type EstadoServidor = "parado" | "subindo" | "pronto" | "parando" | "caiu";
@@ -30,6 +31,8 @@ export interface OpcoesIniciar {
   // Só para os testes (servidor falso no lugar do java):
   spawnFn?: (cmd: string, args: readonly string[], opcoes: SpawnOptions) => ChildProcess;
   prefixoArgs?: string[];
+  /** Argumentos do Node no lugar do vigia compilado (os testes rodam sem build). */
+  vigiaArgs?: string[];
   plataforma?: NodeJS.Platform;
   memoriaTotalBytes?: number;
 }
@@ -46,6 +49,10 @@ const PRAZO_TRAVA_PADRAO_MS = 10_000;
 const pastasEmUso = new Set<string>();
 /** Teto de uma linha de comando ao console. */
 const MAX_LINHA = 1024;
+/** Quanto o vigia espera o `save-all flush` quando o app some (o `stop` usa o `prazoParadaSemTravaMs`). */
+const PRAZO_SALVAR_ORFAO_MS = 10_000;
+/** 1ª linha do vigia (vigia.ts): o PID do Java ou por que ele não subiu. */
+const LINHA_VIGIA = /^\[sabre-vigia\] (pid|falhou) (.*)$/;
 /** "Pronto" só pela linha da thread do servidor (`[Server thread/INFO] [classe]: Done (`); chat vem como `<Nome> Done (`. */
 const LINHA_PRONTO = /\[Server thread\/INFO\](?: \[[^\]]*\])?: Done \(/;
 
@@ -103,6 +110,8 @@ export class ServidorMinecraft extends EventEmitter {
   /** `null` quando o processo foi morto por sinal; `undefined` enquanto roda. */
   codigoSaida?: number | null;
   aviso?: string;
+  /** PID do Java atrás do vigia (vigia.ts), para matá-lo junto se for preciso forçar. */
+  pidJava?: number;
   private paradaEmCurso?: Promise<void>;
   /** Quando (relógio monotônico) o processo será morto se não sair; um prazo menor sempre encurta. */
   private morte?: { quando: number; timer: NodeJS.Timeout };
@@ -140,11 +149,16 @@ export class ServidorMinecraft extends EventEmitter {
     filho.stdin?.on("error", () => {}); // EPIPE se o servidor já saiu.
     for (const fluxo of [filho.stdout, filho.stderr]) {
       let resto = "";
+      // Só a 1ª linha do stdout pode ser do vigia: o Java nunca se passa por ele.
+      let primeira = fluxo === filho.stdout;
       fluxo?.setEncoding("utf8");
       fluxo?.on("data", (pedaco: string) => {
         const linhas = (resto + pedaco).split(/\r?\n/);
         resto = linhas.pop() ?? "";
-        for (const linha of linhas) this.aoReceberLinha(linha);
+        for (const linha of linhas) {
+          if (primeira && ((primeira = false), this.aoLinhaVigia(linha))) continue;
+          this.aoReceberLinha(linha);
+        }
       });
     }
     this.cancelarRelogio = relogio.repetir(
@@ -161,6 +175,16 @@ export class ServidorMinecraft extends EventEmitter {
 
   private registrar(nivel: "info" | "aviso", texto: string): void {
     this.emit("log", { nivel, texto });
+  }
+
+  private aoLinhaVigia(linha: string): boolean {
+    const [, tipo, resto = ""] = LINHA_VIGIA.exec(linha) ?? [];
+    if (tipo === "pid") this.pidJava = Number(resto);
+    else if (tipo === "falhou") {
+      this.falhouAoIniciar = true;
+      this.registrar("aviso", `Não consegui iniciar o Java: ${resto}`);
+    }
+    return tipo !== undefined;
   }
 
   private aoReceberLinha(linha: string): void {
@@ -244,7 +268,16 @@ export class ServidorMinecraft extends EventEmitter {
         "aviso",
         `O servidor não encerrou em ${prazoMs} ms; forçando o encerramento (o mundo pode perder os últimos instantes).`,
       );
-      this.filho.kill("SIGKILL");
+      // O Java primeiro: morto só o vigia, o Java seguiria no ar sem ninguém (regra de ouro 1). O vigia vê o Java
+      // sair e sai junto; se não sair em 1 s, morre também.
+      if (this.pidJava === undefined) return void this.filho.kill("SIGKILL");
+      try {
+        process.kill(this.pidJava, "SIGKILL");
+      } catch {
+        // já saiu
+      }
+      const reserva = setTimeout(() => this.filho.kill("SIGKILL"), 1000);
+      void this.saiu.then(() => clearTimeout(reserva));
     }, prazoMs);
     this.morte = { quando, timer };
   }
@@ -331,10 +364,28 @@ async function subirServidor(
   }
   await gravarAtomico(join(pasta, "user_jvm_args.txt"), textoJvm(ramMb));
 
+  // Sobe o Java por trás do vigia (vigia.ts), que o salva e para se o app morrer. No app, `process.execPath` é o
+  // Electron, que roda o vigia como Node com ELECTRON_RUN_AS_NODE=1; nos testes já é o Node.
+  const prazoParadaSemTravaMs = opcoes.prazoParadaSemTravaMs ?? PRAZO_PARADA_SEM_TRAVA_MS;
   const filho = (opcoes.spawnFn ?? spawnPadrao)(
-    opcoes.javaPath,
-    [...(opcoes.prefixoArgs ?? []), "@user_jvm_args.txt", `@${argsNeoForge}`, "nogui"],
-    { cwd: pasta, shell: false, stdio: ["pipe", "pipe", "pipe"] },
+    process.execPath,
+    [
+      ...(opcoes.vigiaArgs ?? [fileURLToPath(new URL("./vigia.js", import.meta.url))]),
+      String(PRAZO_SALVAR_ORFAO_MS),
+      String(prazoParadaSemTravaMs),
+      opcoes.javaPath,
+      ...(opcoes.prefixoArgs ?? []),
+      "@user_jvm_args.txt",
+      `@${argsNeoForge}`,
+      "nogui",
+    ],
+    {
+      cwd: pasta,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+    },
   );
   const relogio = opcoes.relogio ?? {
     repetir: (fn, ms) => {
@@ -346,7 +397,7 @@ async function subirServidor(
   const servidor = new ServidorMinecraft(
     filho,
     opcoes.prazoParadaMs ?? PRAZO_PARADA_PADRAO_MS,
-    opcoes.prazoParadaSemTravaMs ?? PRAZO_PARADA_SEM_TRAVA_MS,
+    prazoParadaSemTravaMs,
     confirmar,
     relogio,
   );

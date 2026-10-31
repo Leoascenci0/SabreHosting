@@ -119,10 +119,11 @@ describe("tela inicial", () => {
     expect((await espiao()).spawns).toHaveLength(1);
   });
 
-  it("dono sou eu com servidor órfão vivo: não oferece Hospedar", async () => {
-    const p = await abrir("dono-eu-orfao", {}, "outro");
-    await expect(p.locator("#status").innerText()).resolves.toBe("Servidor no PC do Este PC");
-    expect(await visiveis(p)).toEqual(["Jogar"]);
+  it("dono sou eu com servidor órfão vivo: espera ele encerrar, sem oferecer Hospedar", async () => {
+    const p = await abrir("dono-eu-orfao", {}, "eu");
+    await expect(p.locator("#principal").innerText()).resolves.toBe("Parando o servidor…");
+    await expect(p.locator("#principal").isDisabled()).resolves.toBe(true);
+    expect(await visiveis(p)).not.toContain("Hospedar");
     expect((await espiao()).spawns).toEqual([]);
   });
 

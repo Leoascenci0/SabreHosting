@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MAX_FILA, list, salvarSeguro, say } from "./comandos.js";
 import { iniciarServidor, type ServidorMinecraft } from "./processo.js";
+import { ARGS_VIGIA_TESTE } from "../../test/ajuda/vigia.js";
 
 const FALSO = join(dirname(fileURLToPath(import.meta.url)), "../../test/ajuda/servidor-falso.mjs");
 const NEO = "21.1.172";
@@ -29,6 +30,7 @@ async function subir(modo = "normal", jogadores = ""): Promise<ServidorMinecraft
     versaoNeoForge: NEO,
     temTrava: async () => true,
     prefixoArgs: [FALSO, modo, jogadores],
+    vigiaArgs: ARGS_VIGIA_TESTE,
     spawnFn: espiao,
     memoriaTotalBytes: 16 * 1024 ** 3,
     plataforma: "linux",
