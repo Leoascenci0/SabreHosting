@@ -107,6 +107,8 @@ export type EstadoBoasVindas =
       passo: "convite" | "eula" | "pasta";
       grupo?: { nome: string; endereco?: string };
       pastaPadrao: string;
+      /** O token guardado no PC não abre mais: a tela pede convite novo (texto: app-1.3b). */
+      cofreCorrompido?: true;
     };
 export type ConviteConferido =
   { ok: true; grupo: string; venceEm: number } | { ok: false; mensagem: string };

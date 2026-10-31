@@ -18,7 +18,7 @@ export interface DepsBoasVindas {
   gerarChaves(): ParDeChaves;
   /** O cofre do sistema existe? Conferido ANTES de gastar o convite (que só vale uma vez). */
   cofreDisponivel(): boolean;
-  cofre: Cofre;
+  cofre: Cofre & { estado?(): Promise<{ tipo: string }> };
   /** Passo elevado: conexão provisória → usar o convite → conexão definitiva com a chave própria. Devolve o token. */
   entrar(
     convite: Convite,
@@ -130,8 +130,13 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
   return {
     async estado(): Promise<EstadoBoasVindas> {
       const salvo = lerSalvo(deps.dados);
-      if (salvo.concluido) return { aberto: false };
       const pastaPadrao = deps.pastaPadrao();
+      if (salvo.concluido) {
+        // PC configurado, mas o token no cofre não decifra: não é a primeira vez, precisa de convite novo.
+        const e = await deps.cofre.estado?.().catch(() => undefined);
+        if (e?.tipo !== "corrompido") return { aberto: false };
+        return { aberto: true, passo: "convite", pastaPadrao, cofreCorrompido: true };
+      }
       if (!salvo.grupo) return { aberto: true, passo: "convite", pastaPadrao };
       return {
         aberto: true,
