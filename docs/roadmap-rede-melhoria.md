@@ -43,3 +43,16 @@ Melhorias achadas durante os itens do `docs/roadmap-rede.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* simulação instala com o hash fixado; hash errado recusado.
   *Origem:* rede-2.3 · PR #62 · filha + qa
+
+- [ ] **1.2 — Ajudante por socket: acabamentos**
+  *O que fazer:* regra do ufw do cartório (7710 em wg0) só da faixa dos PCs definitivos 10.66.0.2–199 (ou documentar no
+  LEIAME por que a sala já está coberta antes); o wrapper não devolve linha de eco `+ wg set …` no erro (filtrar); o cliente
+  do socket no cartório limita a resposta a 4096 bytes mesmo quando o pedaço traz `\n`; testes de linha gigante e de 2º
+  pedido na mesma conexão no wrapper; teste automático de concorrência (2+ pedidos em paralelo = IPs distintos);
+  socket reiniciado quando a unidade muda numa reinstalação.
+  *Arquivo:* `infra/vps/wg/ajudante-socket.sh`, `infra/vps/instalar.sh`, `infra/vps/LEIAME.md`,
+  `services/cartorio/src/ajudante.ts`, `tests/infra/`
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes de cada caso; `tests/infra` verde como root e como usuário comum (S-03).
+  *Origem:* rede-1.5 · PR #97 · qa segurança + qa integridade
+

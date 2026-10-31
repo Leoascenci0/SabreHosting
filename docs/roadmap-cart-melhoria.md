@@ -82,3 +82,14 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* teste do PUT igual; teste do texto do erro.
   *Origem:* cartmel-1.2 · PR #69 · filha (achados baixos)
+
+- [ ] **1.9 — Acabamentos do cliente do cartório**
+  *O que fazer:* cortar em ~200 caracteres o campo `erro` vindo do cartório antes de pôr no `ErroCartorio` e na recusa
+  da trava (vai para o log e para a tela); o teste "content-length acima de 64 KB nem é lido" passa a provar que o corpo
+  não foi lido (hoje a contagem por fluxo também barra e o teste não distingue); convite antigo sem `ip_prov` (só
+  `{token}`) recusado com mensagem clara em vez de "resposta inválida".
+  *Arquivo:* `packages/nucleo/src/cartorio/cliente.ts`, `packages/nucleo/src/cartorio/tipos.ts`, testes
+  **Tela no app:** não se aplica.
+  *Confirmação:* testes de cada caso (falham antes, passam depois).
+  *Origem:* cartmel-2.1 · PR #123 · qa segurança + qa integridade + filha
+
