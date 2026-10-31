@@ -46,6 +46,12 @@ export interface OpcoesServidor {
   agora?: () => number;
   /** Tempo ocioso do socket em ms (padrão 60 s, maior que os 30 s sem dados do cliente); só o teste troca. */
   tempoOciosoMs?: number;
+  /** Prazo para o cabeçalho HTTP chegar inteiro (padrão 10 s); só o teste troca. */
+  tempoCabecalhoMs?: number;
+  /** Prazo para a requisição chegar inteira, corpo incluso (padrão 10 s); só o teste troca. */
+  tempoRequisicaoMs?: number;
+  /** De quanto em quanto o Node confere esses prazos (padrão dele: 30 s); só o teste troca. */
+  intervaloConferenciaMs?: number;
 }
 
 /** Cabeçalho lento, conexão parada e excesso de conexões não seguram o PC que hospeda. */
@@ -180,8 +186,13 @@ export async function servirArquivos(opcoes: OpcoesServidor): Promise<Servidor> 
       resp.headersSent ? resp.destroy() : texto(resp, 500, "Erro interno."),
     );
   });
-  servidor.headersTimeout = TEMPO_CABECALHO_MS;
-  servidor.requestTimeout = TEMPO_CABECALHO_MS;
+  servidor.headersTimeout = opcoes.tempoCabecalhoMs ?? TEMPO_CABECALHO_MS;
+  servidor.requestTimeout = opcoes.tempoRequisicaoMs ?? TEMPO_CABECALHO_MS;
+  if (opcoes.intervaloConferenciaMs !== undefined) {
+    // Existe no Node 18+, mas falta nos tipos instalados.
+    (servidor as { connectionsCheckingInterval?: number }).connectionsCheckingInterval =
+      opcoes.intervaloConferenciaMs;
+  }
   servidor.keepAliveTimeout = 5_000;
   servidor.timeout = opcoes.tempoOciosoMs ?? TEMPO_OCIOSO_MS;
   servidor.maxConnections = MAX_CONEXOES;
