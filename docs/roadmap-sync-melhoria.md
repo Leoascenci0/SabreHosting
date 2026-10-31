@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
 
 ## Bloco 1 — Servidor de transferência
 
-- [ ] **1.1 — Limite de tentativas erradas e cache curto de token no servidor de sync**
+- [x] **1.1 — Limite de tentativas erradas e cache curto de token no servidor de sync** (PR #166, 31/10/2026; revogação de token leva até 30 s no servidor de sync)
   *O que fazer:* limite de falhas de token por IP (ex.: 5 falhas, espera de 1 min, em memória) e cache curto (segundos)
   do token já conferido, para não consultar o cartório a cada pedido nem deixar token inválido virar amplificação.
   *Arquivo:* `packages/nucleo/src/sync/transferencia.ts`
