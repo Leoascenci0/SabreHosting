@@ -17,6 +17,7 @@ const form = $<HTMLFormElement>("config-form");
 const windows = $<HTMLInputElement>("cfg-windows");
 const visao = $<HTMLInputElement>("cfg-visao");
 const simulacao = $<HTMLInputElement>("cfg-simulacao");
+const intervalo = $<HTMLInputElement>("cfg-intervalo");
 const aviso = $("config-aviso");
 const erro = $("config-erro");
 const salvar = $<HTMLButtonElement>("config-salvar");
@@ -39,7 +40,7 @@ let botaoDoTirado: HTMLElement | undefined;
 function mostrarErro(texto: string): void {
   erro.textContent = texto;
   erro.hidden = texto === "";
-  for (const campo of [visao, simulacao]) {
+  for (const campo of [visao, simulacao, intervalo]) {
     campo.setAttribute("aria-invalid", String(texto !== ""));
   }
 }
@@ -47,7 +48,7 @@ function mostrarErro(texto: string): void {
 function ocupar(ocupado: boolean): void {
   emCurso = ocupado;
   tela.setAttribute("aria-busy", String(ocupado));
-  for (const el of [windows, visao, simulacao, salvar, voltar]) el.disabled = ocupado;
+  for (const el of [windows, visao, simulacao, intervalo, salvar, voltar]) el.disabled = ocupado;
   salvar.textContent = ocupado ? "Salvando…" : "Salvar";
 }
 
@@ -138,6 +139,7 @@ async function carregar(): Promise<void> {
     windows.checked = c.abrirComWindows;
     visao.value = String(c.distanciaVisao);
     simulacao.value = String(c.distanciaSimulacao);
+    intervalo.value = String(c.intervaloBackupMin);
     aviso.textContent = "";
   } catch {
     aviso.textContent = "";
@@ -169,6 +171,7 @@ form.addEventListener("submit", (evento) => {
       // Campo vazio vira NaN: o servidor do app recusa com a mensagem da faixa.
       distanciaVisao: visao.value === "" ? Number.NaN : Number(visao.value),
       distanciaSimulacao: simulacao.value === "" ? Number.NaN : Number(simulacao.value),
+      intervaloBackupMin: intervalo.value === "" ? Number.NaN : Number(intervalo.value),
     })
     .then((r) => {
       if (r.ok) aviso.textContent = "Salvo.";
@@ -177,6 +180,6 @@ form.addEventListener("submit", (evento) => {
     .catch(() => mostrarErro("Não consegui salvar agora. Nada foi alterado."))
     .finally(() => {
       ocupar(false);
-      (erro.hidden ? salvar : visao).focus();
+      (erro.hidden ? salvar : erro.textContent?.includes("backup") ? intervalo : visao).focus();
     });
 });

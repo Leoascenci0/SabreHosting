@@ -14,12 +14,28 @@ export interface Preferencias {
   distanciaVisao: number;
   /** Configurações › Servidor › Distância de simulação. */
   distanciaSimulacao: number;
+  /** Configurações › Backups › Intervalo (minutos entre um backup e o próximo). */
+  intervaloBackupMin: number;
+}
+
+export const INTERVALO_BACKUP_PADRAO = 10;
+export const INTERVALO_BACKUP_MIN = 1;
+export const INTERVALO_BACKUP_MAX = 1440;
+
+/** Só inteiro de 1 a 1440 minutos (1 dia); lança erro em pt-BR. */
+export function validarIntervaloBackup(min: number): void {
+  if (!Number.isInteger(min) || min < INTERVALO_BACKUP_MIN || min > INTERVALO_BACKUP_MAX) {
+    throw new Error(
+      `O intervalo do backup precisa ser um número inteiro de minutos, de ${INTERVALO_BACKUP_MIN} a ${INTERVALO_BACKUP_MAX}.`,
+    );
+  }
 }
 
 const PADRAO: Preferencias = {
   abrirComWindows: false,
   distanciaVisao: DISTANCIA_VISAO_PADRAO,
   distanciaSimulacao: DISTANCIA_SIMULACAO_PADRAO,
+  intervaloBackupMin: INTERVALO_BACKUP_PADRAO,
 };
 const ARQUIVO = "preferencias.json";
 
@@ -37,7 +53,13 @@ export function lerPreferencias(pasta: string): Preferencias {
       typeof bruto.abrirComWindows === "boolean" ? bruto.abrirComWindows : PADRAO.abrirComWindows,
     distanciaVisao: Number(bruto.distanciaVisao),
     distanciaSimulacao: Number(bruto.distanciaSimulacao),
+    intervaloBackupMin: Number(bruto.intervaloBackupMin ?? PADRAO.intervaloBackupMin),
   };
+  try {
+    validarIntervaloBackup(resultado.intervaloBackupMin);
+  } catch {
+    resultado.intervaloBackupMin = PADRAO.intervaloBackupMin;
+  }
   try {
     // As duas distâncias andam juntas (simulação < visão): par inválido volta ao par padrão.
     validarDistancias(resultado.distanciaVisao, resultado.distanciaSimulacao);
