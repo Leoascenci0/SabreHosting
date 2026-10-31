@@ -106,7 +106,7 @@ export function lerSalvo(dados: string): Salvo {
 }
 
 /** Troca atômica (regra de ouro 3). Nunca recebe token, convite nem chave. */
-function gravarSalvo(dados: string, s: Salvo): void {
+export function gravarSalvo(dados: string, s: Salvo): void {
   mkdirSync(dados, { recursive: true });
   const temporario = join(dados, `${ARQUIVO}.tmp`);
   writeFileSync(temporario, JSON.stringify(s, null, 2));
