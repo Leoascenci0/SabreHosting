@@ -47,3 +47,79 @@ h1 {
   font-size: 0.875rem;
   color: var(--cor-texto-suave);
 }
+
+.status {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.detalhe {
+  margin: 0;
+  min-height: 1.5em;
+  color: var(--cor-texto-suave);
+}
+
+.erro {
+  margin: 0;
+  color: var(--cor-erro);
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--espaco-2);
+}
+
+button {
+  font: inherit;
+  min-height: 44px;
+  padding: var(--espaco-2) var(--espaco-4);
+  border-radius: var(--raio);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+button.principal {
+  min-width: 200px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  background: var(--cor-destaque);
+  border-color: var(--cor-destaque);
+  color: var(--cor-sobre-destaque);
+}
+
+button.perigo {
+  background: var(--cor-erro);
+  border-color: var(--cor-erro);
+  color: var(--cor-sobre-destaque);
+}
+
+button:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.confirmacao {
+  display: grid;
+  gap: var(--espaco-2);
+  padding: var(--espaco-3);
+  border: 1px solid var(--cor-erro);
+  border-radius: var(--raio);
+}
+
+.confirmacao p {
+  margin: 0;
+}

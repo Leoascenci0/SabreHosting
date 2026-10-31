@@ -16,6 +16,8 @@ Tema claro por padrão; o escuro vem pelo tema do sistema (`prefers-color-scheme
 | `--cor-texto`       | texto principal                        | `#14232a` | `#eaf2f4` |
 | `--cor-texto-suave` | apoio (versão, dicas)                  | `#4a5d66` | `#9fb4bd` |
 | `--cor-destaque`    | título e ação principal (cor do ícone) | `#0a6b80` | `#4fd1e8` |
+| `--cor-sobre-destaque` | texto dentro de botão destacado     | `#ffffff` | `#0e171c` |
+| `--cor-erro`        | erro e ação que derruba algo (Parar)   | `#b3261e` | `#ff8a80` |
 
 Texto sobre fundo ou superfície tem contraste mínimo 4,5:1 (AA); `tokens.test.ts` confere nos dois temas.
 
@@ -35,3 +37,8 @@ Texto sobre fundo ou superfície tem contraste mínimo 4,5:1 (AA); `tokens.test.
 
 `apps/desktop/recursos/icone/` (D4). Na bandeja o app usa o ícone reduzido a 32 px; o recorte só da cabeça do tigre
 fica como melhoria (o texto "SABRE HOSTING" não se lê em 16–32 px).
+
+## Componentes
+
+- **Botão** (`button`): 44 px de altura mínima, foco visível. `.principal` (uma por tela), `.secundario`, `.perigo` (confirmação de Parar).
+- **Confirmação** (`.confirmacao`): bloco na própria tela, sem janela separada; foco começa em "Cancelar".
