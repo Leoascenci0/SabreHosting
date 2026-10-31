@@ -364,6 +364,16 @@ describe("fontesDeCopias (1.9a)", () => {
     expect(fontes).toEqual([{ tipo: "pc", endereco: "10.66.0.4", porta: 25570 }]);
     expect(() => escolherFontes(fontes)).not.toThrow();
   });
+  it("IP fora da faixa da rede privada é ignorado sem derrubar a rodada (1.10)", () => {
+    const copias = {
+      numero: 4,
+      nuvem: true,
+      pcs: [pc(2, "8.8.8.8"), pc(3, "10.66.0.1"), pc(4, "lixo"), pc(5, "10.66.0.7")],
+    };
+    const fontes = fontesDeCopias(copias, 1);
+    expect(fontes).toEqual([{ tipo: "pc", endereco: "10.66.0.7", porta: 25570 }]);
+    expect(() => escolherFontes(fontes)).not.toThrow();
+  });
   it("só PCs sem IP: lista vazia (a nuvem não é fonte)", () => {
     expect(fontesDeCopias({ numero: 4, nuvem: true, pcs: [pc(2, null)] }, 1)).toEqual([]);
   });
