@@ -258,6 +258,8 @@ export function depsVersaoE2E(servidorRodando: () => boolean): DepsVersao {
   };
 }
 
+const PASTA_INSTANCIA_FALSA = "/sabre-e2e/instancia/mods";
+
 /** Mods do grupo falsos para o E2E: dono com `SABRE_E2E_DONO=1`; as gravações ficam em `__sabreE2EMods.listas`. */
 export function depsModsE2E(servidorRodando: () => boolean): DepsModsGrupo {
   const souDono = process.env["SABRE_E2E_DONO"] === "1";
@@ -272,13 +274,18 @@ export function depsModsE2E(servidorRodando: () => boolean): DepsModsGrupo {
     },
   ];
   const listas: ModGrupo[][] = [];
-  (globalThis as Record<string, unknown>)["__sabreE2EMods"] = { listas };
+  // Interruptores do teste: `semInstancia` deixa a pasta da instância do Prism inexistente; `falhaLer` faz a leitura falhar.
+  const interruptores = { listas, semInstancia: false, falhaLer: false };
+  (globalThis as Record<string, unknown>)["__sabreE2EMods"] = interruptores;
   return {
     eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
-    lerLista: async () => lista,
+    lerLista: async () => {
+      if (interruptores.falhaLer) throw new Error("cartório não respondeu");
+      return lista;
+    },
     gravarLista: async (nova) => void (listas.push(nova), (lista = nova)),
     pastaDoServidor: () => undefined,
-    pastaDaInstancia: () => undefined,
+    pastaDaInstancia: () => (interruptores.semInstancia ? undefined : PASTA_INSTANCIA_FALSA),
     servidorRodando,
     sincronizar: async () => ({ baixados: [], mantidos: [], removidos: [], falhas: [] }),
   };

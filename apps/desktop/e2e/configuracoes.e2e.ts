@@ -293,6 +293,67 @@ describe("tela de configurações", () => {
     expect((await listasDeMods())[1]?.map((m) => m.arquivo)).toEqual(["lithium.jar"]);
   });
 
+  it("mods: aviso e erro antigos somem quando a lista volta a carregar", async () => {
+    const p = await abrir(true);
+    // O Electron passa o módulo do Electron antes do argumento; o argumento é o par [nome, ligado].
+    const interruptor = (nome: "semInstancia" | "falhaLer", ligado: boolean): Promise<unknown> =>
+      aberto?.evaluate(
+        (_electron, [n, v]: [string, boolean]) => {
+          const falso = (globalThis as unknown as Record<string, Record<string, boolean>>)[
+            "__sabreE2EMods"
+          ];
+          if (falso) falso[n] = v;
+        },
+        [nome, ligado],
+      ) as Promise<unknown>;
+    const reabrir = async (): Promise<void> => {
+      await p.locator("#config-voltar").click();
+      await p.locator("#ver-config").click();
+      await p.locator("#mods-adicionar:not([hidden])").waitFor();
+    };
+    const adicionar = async (nome: string, arquivo: string): Promise<void> => {
+      await p.locator("#mods-nome").fill(nome);
+      await p.locator("#mods-versao").fill("1.0.0");
+      await p.locator("#mods-arquivo").fill(arquivo);
+      await p.locator("#mods-url").fill(`https://cdn.modrinth.com/data/x/versions/y/${arquivo}`);
+      await p.locator("#mods-hash").fill("c".repeat(128));
+      await p.locator("#mods-adicionar-botao").click();
+    };
+
+    // Aviso: sem a pasta da instância, o aviso aparece; depois a pasta existe e o aviso some.
+    await p.locator("#mods-adicionar:not([hidden])").waitFor();
+    await interruptor("semInstancia", true);
+    await adicionar("Lithium", "lithium.jar");
+    await esperarTexto(p, "#mods-aviso", "Prism ainda não foi criada");
+    await interruptor("semInstancia", false);
+    await adicionar("Iris", "iris.jar"); // uma conferência que dá certo limpa o aviso no servidor
+    await p.waitForFunction(() => document.querySelectorAll("#mods-lista li").length === 3);
+    await reabrir();
+    await p.waitForFunction(
+      () => document.querySelector("#mods-aviso")?.textContent === "",
+      undefined,
+      {
+        timeout: 5000,
+      },
+    );
+
+    // Erro de leitura: some quando a leitura volta.
+    await interruptor("falhaLer", true);
+    await reabrir();
+    const erroVisivel = (): boolean =>
+      (document.querySelector("#mods-erro") as HTMLElement | null)?.hidden === false;
+    await p.waitForFunction(erroVisivel, undefined, { timeout: 5000 });
+    await interruptor("falhaLer", false);
+    await reabrir();
+    await p.waitForFunction(
+      () => (document.querySelector("#mods-erro") as HTMLElement | null)?.hidden === true,
+      undefined,
+      {
+        timeout: 5000,
+      },
+    );
+  });
+
   it("versão: não-dono não vê a área", async () => {
     const p = await abrir();
     await p.locator("#cfg-visao").waitFor();
