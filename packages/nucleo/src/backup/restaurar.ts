@@ -7,7 +7,7 @@
  * deixa um marcador que impede o servidor de subir com o mundo ausente. Avisar o cartório é outro item.
  */
 import { existsSync } from "node:fs";
-import { rename, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { MARCADOR_RESTAURACAO } from "../servidor/configurar.js";
 import { travaConfirmada } from "../servidor/processo.js";
@@ -60,13 +60,13 @@ async function exigirPodeTrocar(o: OpcoesRestaurar): Promise<void> {
 
 const apagar = (p: string) => rm(p, { recursive: true, force: true });
 
-/** Existe? `undefined` se não; recusa o que não é pasta (o app nunca cria o mundo como arquivo). */
+/** Existe? Recusa o que não é pasta, inclusive link simbólico (quebrado ou não): o app nunca cria o mundo assim. */
 async function haMundo(pasta: string): Promise<boolean> {
-  const info = await stat(pasta).catch((erro: NodeJS.ErrnoException) => {
+  const info = await lstat(pasta).catch((erro: NodeJS.ErrnoException) => {
     if (erro.code === "ENOENT") return undefined;
     throw erro;
   });
-  if (info !== undefined && !info.isDirectory()) {
+  if (info !== undefined && (info.isSymbolicLink() || !info.isDirectory())) {
     throw new Error("O caminho do mundo não é uma pasta; nada foi alterado.");
   }
   return info !== undefined;
@@ -158,12 +158,21 @@ async function desfazer(
       `Backup do estado de antes: ${c.backup?.caminho ?? "(não feito)"}\n` +
       `O que fazer: com o servidor desligado, renomeie a pasta do mundo de antes de volta para ${c.mundo} ` +
       `e apague este arquivo.\n`;
-    await writeFile(join(dirname(c.mundo), MARCADOR_RESTAURACAO), texto).catch(() => undefined);
+    const marcador = join(dirname(c.mundo), MARCADOR_RESTAURACAO);
+    const falhaDoMarcador = await writeFile(marcador, texto).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    const aviso =
+      falhaDoMarcador === undefined
+        ? "O servidor não sobe até lá."
+        : `ATENÇÃO: o marcador que impede o servidor de subir não foi gravado (${marcador}); ` +
+          `não ligue o servidor antes de renomear a pasta.`;
     throw new Error(
       `Não consegui nem desfazer a troca. O mundo de antes está inteiro em "${c.antigo}"; ` +
         `o backup do estado de antes está em "${c.backup?.caminho ?? "(não feito)"}". ` +
-        `Renomeie "${c.antigo}" para "${c.mundo}" com o servidor desligado. O servidor não sobe até lá.`,
-      { cause: [causa, erro] },
+        `Renomeie "${c.antigo}" para "${c.mundo}" com o servidor desligado. ${aviso}`,
+      { cause: [causa, erro, ...(falhaDoMarcador === undefined ? [] : [falhaDoMarcador])] },
     );
   }
 }

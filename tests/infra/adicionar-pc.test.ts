@@ -148,14 +148,14 @@ describe("infra/vps/wg/adicionar-pc.sh em simulação", () => {
     expect(rodar(["remover", "pc-fantasma"]).status).toBe(0);
   });
 
-  it("acaba o espaço (253 PCs) com erro claro, sem repetir IP", () => {
+  it("acaba o espaço (198 PCs, 10.66.0.2–199) com erro claro, sem repetir IP nem invadir a sala de entrada", () => {
     const antigas = Array.from(
-      { length: 252 },
+      { length: 197 },
       (_, i) => `pc-${i}\t10.66.0.${i + 2}\t${chaveNova()}\tativo`,
     );
     writeFileSync(join(estado, "pcs.tsv"), antigas.join("\n") + "\n", { mode: 0o600 });
     const ultimo = rodar(["adicionar", "pc-ultimo", chaveNova()]);
-    expect(ultimo.pacote?.ip_pc).toBe("10.66.0.254");
+    expect(ultimo.pacote?.ip_pc).toBe("10.66.0.199");
     const r = rodar(["adicionar", "pc-extra", chaveNova()]);
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(/endereço livre/);
@@ -163,7 +163,7 @@ describe("infra/vps/wg/adicionar-pc.sh em simulação", () => {
       .trim()
       .split("\n")
       .map((l) => l.split("\t")[1]);
-    expect(new Set(ips).size).toBe(253);
+    expect(new Set(ips).size).toBe(198);
   });
 
   it("usa o modo de simulação por padrão sem tocar em /etc (estado só em SABRE_ESTADO)", () => {

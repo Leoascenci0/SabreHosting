@@ -182,6 +182,187 @@ describe("infra/vps/instalar.sh em simulação", () => {
   });
 });
 
+// Bloco gravado por "GRAVAR <modo> <destino>" na simulação: as linhas "|" seguintes.
+function gravado(stdout: string, destino: RegExp) {
+  const linhas = stdout.split("\n");
+  const i = linhas.findIndex((l) => /^SIMULADO: GRAVAR \d+ /.test(l) && destino.test(l));
+  if (i < 0) return undefined;
+  const corpo: string[] = [];
+  for (const l of linhas.slice(i + 1)) {
+    if (!l.startsWith("SIMULADO:   | ")) break;
+    corpo.push(l.slice("SIMULADO:   | ".length));
+  }
+  return { modo: (linhas[i] ?? "").split(" ")[2], texto: corpo.join("\n") + "\n" };
+}
+
+const BEFORE_UBUNTU = [
+  "*filter",
+  ":ufw-before-input - [0:0]",
+  ":ufw-before-output - [0:0]",
+  ":ufw-before-forward - [0:0]",
+  ":ufw-not-local - [0:0]",
+  "# End required lines",
+  "",
+  "# allow all on loopback",
+  "-A ufw-before-input -i lo -j ACCEPT",
+  "-A ufw-before-input -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
+  "-A ufw-before-forward -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
+  "-A ufw-before-input -p icmp --icmp-type echo-request -j ACCEPT",
+  "COMMIT",
+  "",
+].join("\n");
+
+// Dá para carregar regras num namespace de rede isolado (root + unshare + iptables-restore)?
+const podeIptables =
+  spawnSync("unshare", ["-n", "iptables-restore", "--test"], { input: "*filter\nCOMMIT\n" })
+    .status === 0;
+
+describe("instalar.sh: ajudante da sala de entrada (rede-1.4)", () => {
+  it("sudoers: só o caminho do ajudante, sem curinga, modo 440, ambiente limpo", () => {
+    const g = gravado(rodar().stdout, /\/etc\/sudoers\.d\/sabre-entrada$/);
+    expect(g?.modo).toBe("440");
+    const regras = (g?.texto ?? "").split("\n").filter((l) => l && !l.startsWith("#"));
+    expect(regras).toEqual([
+      "Defaults!/opt/sabre/wg/ajudante-entrada.sh env_reset",
+      "sabre ALL=(root) NOPASSWD: /opt/sabre/wg/ajudante-entrada.sh",
+    ]);
+    expect(g?.texto ?? "").not.toMatch(/\*|adicionar-pc|SETENV|ALL\s*$/m);
+  });
+
+  it.skipIf(!existsSync("/usr/sbin/visudo"))("sudoers passa no visudo -cf", () => {
+    const g = gravado(rodar().stdout, /sabre-entrada$/);
+    const arq = join(estado, "sudoers-teste");
+    writeFileSync(arq, g.texto, { mode: 0o440 });
+    const r = spawnSync("/usr/sbin/visudo", ["-cf", arq], { encoding: "utf8" });
+    expect(r.status, r.stdout + r.stderr).toBe(0);
+  });
+
+  it("o instalador confere o sudoers no visudo antes de gravar", () => {
+    const src = readFileSync(SCRIPT, "utf8");
+    const visudo = src.indexOf("visudo -cf");
+    expect(visudo).toBeGreaterThan(0);
+    expect(src.indexOf("install -m 440", visudo)).toBeGreaterThan(visudo);
+  });
+
+  it("ajudante e fonte comum vão para /opt/sabre/wg, do root; registro em pasta só do root", () => {
+    const c = rodar().comandos;
+    expect(c).toContain("install -d -m 755 -o root -g root /opt/sabre/wg");
+    expect(
+      c.some((x) =>
+        /^install -m 755 -o root -g root \S+\/wg\/ajudante-entrada\.sh \/opt\/sabre\/wg\/ajudante-entrada\.sh$/.test(
+          x,
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      c.some((x) =>
+        /^install -m 644 -o root -g root \S+\/wg\/comum\.sh \/opt\/sabre\/wg\/comum\.sh$/.test(x),
+      ),
+    ).toBe(true);
+    expect(c).toContain("install -d -m 700 -o root -g root /var/lib/sabre-wg");
+  });
+
+  it("2ª vez não regrava sudoers, before.rules nem o ajudante", () => {
+    rodar();
+    const dois = rodar().comandos;
+    expect(dois.some((x) => /GRAVAR .*(sudoers|before\.rules)/.test(x))).toBe(false);
+    expect(dois.some((x) => /ajudante-entrada\.sh \/opt/.test(x))).toBe(false);
+  });
+
+  it("endereço do hub vai para /etc/sabre/hub.env só quando informado; torto para o instalador", () => {
+    expect(gravado(rodar().stdout, /hub\.env$/)).toBeUndefined();
+    const g = gravado(
+      rodar({ SABRE_ENDPOINT_HUB: "hub.exemplo.org:51820" }).stdout,
+      /\/etc\/sabre\/hub\.env$/,
+    );
+    expect(g).toEqual({ modo: "644", texto: "SABRE_ENDPOINT_HUB=hub.exemplo.org:51820\n" });
+    const torto = rodar({ SABRE_ENDPOINT_HUB: "x;rm -rf /:1" });
+    expect(torto.status).not.toBe(0);
+  });
+
+  describe("firewall da sala de entrada", () => {
+    const comBefore = (conteudo: string, extra: Record<string, string> = {}) => {
+      const arq = join(estado, "before-ubuntu.rules");
+      writeFileSync(arq, conteudo);
+      const r = rodar({ SABRE_UFW_BEFORE_FALSO: arq, ...extra });
+      return { r, g: gravado(r.stdout, /before-ubuntu\.rules$/) };
+    };
+    const regrasSala = (texto: string) =>
+      texto.split("\n").filter((l) => l.startsWith("-A") && l.includes("iprange"));
+
+    it("a sala só alcança 10.66.0.1:7710/tcp e não tem repasse de nem para outro PC", () => {
+      const { g } = comBefore(BEFORE_UBUNTU);
+      expect(g?.modo).toBe("640");
+      expect(regrasSala(g?.texto ?? "")).toEqual([
+        "-A ufw-before-input -i wg0 -p tcp -m iprange --src-range 10.66.0.200-10.66.0.254 -d 10.66.0.1 -m tcp --dport 7710 -j ACCEPT",
+        "-A ufw-before-input -m iprange --src-range 10.66.0.200-10.66.0.254 -j DROP",
+        "-A ufw-before-forward -m iprange --src-range 10.66.0.200-10.66.0.254 -j DROP",
+        "-A ufw-before-forward -m iprange --dst-range 10.66.0.200-10.66.0.254 -j DROP",
+      ]);
+    });
+
+    it("as regras da sala vêm antes de qualquer ACCEPT do ufw (inclusive conexão já aberta e ping)", () => {
+      const { g } = comBefore(BEFORE_UBUNTU);
+      const l = (g?.texto ?? "").split("\n");
+      const fimSala = l.findIndex((x) => x.startsWith("# sabre-sala-de-entrada: fim"));
+      const primeiroAcceptUfw = l.findIndex(
+        (x) => x.startsWith("-A") && !x.includes("iprange") && x.endsWith("ACCEPT"),
+      );
+      expect(l.indexOf("# End required lines")).toBeLessThan(fimSala);
+      expect(fimSala).toBeLessThan(primeiroAcceptUfw);
+      // O resto do arquivo do ufw continua igual.
+      expect(l.filter((x) => !x.includes("iprange") && !x.startsWith("# sabre-sala"))).toEqual(
+        BEFORE_UBUNTU.split("\n"),
+      );
+    });
+
+    it("bloco antigo é trocado, nunca duplicado", () => {
+      const velho = BEFORE_UBUNTU.replace(
+        "# End required lines\n",
+        "# End required lines\n# sabre-sala-de-entrada: início (gravado pelo instalar.sh)\n-A ufw-before-input -j ACCEPT\n# sabre-sala-de-entrada: fim\n",
+      );
+      const { g } = comBefore(velho, { SABRE_CHECAR_REAL: "1" });
+      expect((g?.texto ?? "").match(/sabre-sala-de-entrada: início/g)).toHaveLength(1);
+      expect(regrasSala(g?.texto ?? "")).toHaveLength(4);
+      expect(g?.texto ?? "").not.toContain("-A ufw-before-input -j ACCEPT\n");
+    });
+
+    it("arquivo do ufw desconhecido (sem '# End required lines'): para sem gravar", () => {
+      const { r, g } = comBefore("*filter\nCOMMIT\n");
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toMatch(/End required lines/);
+      expect(g).toBeUndefined();
+    });
+
+    it.skipIf(!podeIptables)(
+      "o iptables aceita as regras (carregadas num namespace de rede isolado)",
+      () => {
+        const { g } = comBefore(BEFORE_UBUNTU);
+        const r = spawnSync(
+          "unshare",
+          ["-n", "sh", "-c", "iptables-restore && iptables -S ufw-before-forward"],
+          {
+            input: g?.texto ?? "",
+            encoding: "utf8",
+          },
+        );
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain(
+          "-A ufw-before-forward -m iprange --src-range 10.66.0.200-10.66.0.254 -j DROP",
+        );
+        expect(r.stdout).toContain(
+          "-A ufw-before-forward -m iprange --dst-range 10.66.0.200-10.66.0.254 -j DROP",
+        );
+      },
+    );
+
+    it("nenhuma porta nova na internet: o cartório não ganha ufw allow", () => {
+      const c = rodar().comandos;
+      expect(c.some((x) => /^ufw .*7710/.test(x))).toBe(false);
+    });
+  });
+});
+
 // Testes com dpkg/node/systemctl falsos no PATH: a simulação roda só os testes reais (que apenas leem).
 describe("checagens reais com ferramentas falsas", () => {
   function comFalsos(scripts: Record<string, string>) {
