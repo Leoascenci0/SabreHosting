@@ -14,7 +14,7 @@
  */
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { validarManifesto, type ArquivoDoManifesto } from "../backup/manifesto.js";
+import { validarManifesto, type ArquivoDoManifesto, type Manifesto } from "../backup/manifesto.js";
 import { exigirMundoNaPastaDoServidor } from "../backup/restaurar.js";
 import { Renovador, type ClienteDeTrava, type OpcoesRenovador } from "../cartorio/renovador.js";
 import { aplicarDelta, exigirForaDoHost, type Aplicado, type OpcoesAplicar } from "./aplicar.js";
@@ -107,7 +107,11 @@ const SEM_VEZ =
 
 export type Espalhado =
   | { estado: "ja-tinha"; arquivosBaixados: 0; bytesBaixados: 0 }
-  | ({ estado: "atualizado" } & Aplicado);
+  | ({
+      estado: "atualizado";
+      /** Manifesto de M, conferido inteiro antes da troca (base do delta final da migração). */
+      manifesto: Manifesto;
+    } & Aplicado);
 
 export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
   if (!Number.isInteger(o.versao.numero) || o.versao.numero < 1) {
@@ -191,7 +195,7 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
         await pedir(a.sha256, destino, a.tamanho);
       },
     });
-    return { estado: "atualizado", ...aplicado };
+    return { estado: "atualizado", manifesto: alvo, ...aplicado };
   } finally {
     // Sempre: para o relógio e devolve a vez (falhar ao soltar não esconde o resultado; o prazo vence sozinho).
     await renovador.soltar().catch(() => undefined);
