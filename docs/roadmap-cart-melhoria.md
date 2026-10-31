@@ -57,7 +57,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
 
 ## Bloco 2 — Cliente do cartório
 
-- [ ] **2.1 — Cliente mais rígido**
+- [x] **2.1 — Cliente mais rígido** (PR #123, 31/10/2026; intervalo de renovação mantido)
   *O que fazer:* validar as respostas do cartório (tipos, campos, teto de ~64 KB no corpo) em vez de `as T`; renovar
   confere a época na resposta; parar as novas tentativas do renovar depois de soltar/perder; na perda, o salvar pode
   furar a fila de comandos (hoje é só melhor esforço); considerar renovar a cada renovarMs/2.
