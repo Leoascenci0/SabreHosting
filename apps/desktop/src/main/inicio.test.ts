@@ -54,6 +54,22 @@ describe("hospedar durante uma restauração de backup", () => {
   });
 });
 
+describe("hospedar durante a atualização do mundo (sync-2.2)", () => {
+  it("Hospedar é recusado com o percentual no estado; Jogar segue liberado; volta ao acabar", async () => {
+    let pct: number | undefined = 40;
+    const hospedar = vi.fn(async () => ({ servidor: servidorFalso() }));
+    const inicio = criarInicio(deps({ hospedar, atualizando: () => pct }));
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem", atualizando: 40 });
+    const r = await inicio.hospedar();
+    expect(r.ok ? "" : r.mensagem).toMatch(/mundo está sendo atualizado/);
+    expect(hospedar).not.toHaveBeenCalled();
+    await expect(inicio.jogar()).resolves.toMatchObject({ copiado: true });
+    pct = undefined;
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+    expect(await inicio.hospedar()).toEqual({ ok: true });
+  });
+});
+
 describe("estado da tela inicial", () => {
   it("ninguém hospedando", async () => {
     expect(await criarInicio(deps()).estado()).toEqual({ tipo: "ninguem" });

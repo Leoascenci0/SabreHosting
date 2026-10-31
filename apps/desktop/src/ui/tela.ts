@@ -56,6 +56,7 @@ function desenhar(): void {
     String(e.tipo === "carregando" || ocupado !== undefined || (e.tipo === "eu" && !!e.parando)),
   );
   ocupadoRemoto = undefined;
+  let bloqueado = false;
   principal.hidden = parar.hidden = tentar.hidden = true;
   principal.dataset["acao"] = "";
   switch (e.tipo) {
@@ -69,6 +70,15 @@ function desenhar(): void {
       tentar.hidden = false;
       break;
     case "ninguem":
+      if (e.atualizando !== undefined) {
+        // Hospedar fica fechado até o mundo chegar à versão mais nova; Jogar não depende disto.
+        status.textContent = `Atualizando seu mundo… ${e.atualizando}%`;
+        detalhe.textContent = "Hospedar volta quando terminar.";
+        principal.textContent = "Hospedar";
+        principal.hidden = false;
+        bloqueado = true; // botão visível e desabilitado: o amigo vê o motivo em vez de o botão sumir
+        break;
+      }
       status.textContent = "Ninguém está hospedando";
       detalhe.textContent = "Você pode ligar o servidor neste PC.";
       principal.textContent = "Hospedar";
@@ -82,7 +92,9 @@ function desenhar(): void {
       break;
     case "outro":
       status.textContent = `Servidor no PC do ${e.nomePc}`;
-      detalhe.textContent = e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO;
+      detalhe.textContent =
+        (e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO) +
+        (e.atualizando !== undefined ? ` · Atualizando seu mundo… ${e.atualizando}%` : "");
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
       principal.hidden = e.endereco === "";
@@ -105,7 +117,7 @@ function desenhar(): void {
     parar.hidden = true;
   }
   for (const b of [principal, parar, tentar, confirmarParar, cancelarParar]) {
-    b.disabled = emCurso !== undefined;
+    b.disabled = emCurso !== undefined || (bloqueado && b === principal);
   }
 }
 

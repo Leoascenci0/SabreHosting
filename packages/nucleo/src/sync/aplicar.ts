@@ -49,6 +49,8 @@ export interface OpcoesAplicar {
    * espera de rede é um segundo sem mundo no lugar. Ausente: usa `temAtualizacao`.
    */
   temAtualizacaoLocal?: () => Promise<boolean>;
+  /** Depois de cada arquivo entregue: quantos dos que precisam vir já vieram. Só para a tela; nada depende disto. */
+  aoProgresso?: (feitos: number, total: number) => void;
   /** Diz ao cartório que este PC tem a versão M (cliente.informarCopia). */
   avisarCopia: (versao: number) => Promise<void>;
   /** Pasta do servidor, onde `podeSubir` procura o marcador da troca: o mundo tem de ser filho direto dela. */
@@ -180,6 +182,7 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
         await o.baixar(a, destino);
         arquivosBaixados++;
         bytesBaixados += a.tamanho;
+        o.aoProgresso?.(arquivosBaixados, baixar.size);
       } else {
         await trazerIgual(mundoReal, a.caminho, dentro(mundo, a.caminho), destino, ligar);
       }
