@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 23** (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
+**Próxima onda: 23** — entra o appmel-1.11 (destravado 31/10: rotação 10 + 7 dias, DECISOES) (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
 
 Onda 22 (31/10) — appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 — sessão https://claude.ai/code/session_012qrjnuAzcormV8bzqcTQff
 
@@ -45,7 +45,6 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 ## Pendente do Eliel
 
-- **appmel-1.11** — ligar a rotação de backups e o campo "Quantos guardar" (apaga backup antigo; padrão hoje 10 + 7 dias).
 - **redemel-1.3** — tirar o PC revogado da rede privada: precisa do WireGuard instalado de verdade na máquina da nuvem.
 
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
