@@ -22,3 +22,12 @@ código de launcher GPL.
    (lanc-3.x / PC).
 5. Fora: login Microsoft, argumentos de lançamento, natives por classificador antigo, versão real no PC (P).
 6. Prova: `npm run vistoria` APROVADA.
+
+## Revisão do qa (devolução única) — o que mudou
+- Java: `hostsPermitidos` = github.com e CDN do GitHub (vale nos redirecionamentos).
+- Downloads vão para temporário único (pid + aleatório) e só então renomeiam; peças repetidas são deduplicadas por
+  destino; mesmo caminho com sha1 diferente é erro. Marcador também com temporário único.
+- `.montada.json` antigo é apagado no início da montagem.
+- **Premissa de confiança:** o manifesto da Mojang e a API da Adoptium são a raiz de confiança, lidos por https sem
+  hash próprio (o sha1 do JSON da versão vem do manifesto). `TETO_JSON` só confere depois de ler; o limite durante a
+  leitura é o do `buscarPadrao` (8 MiB) — um `buscar` injetado precisa impor o seu.

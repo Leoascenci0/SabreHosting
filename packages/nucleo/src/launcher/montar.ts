@@ -1,7 +1,8 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { dirname, join, resolve, sep } from "node:path";
 import { baixarConferido, type OpcoesDownload } from "../servidor/baixar.js";
+import { hashDoArquivo } from "../integridade/hash.js";
 import { resolverAdoptium } from "../servidor/resolvedores.js";
 import { URL_MANIFESTO, urlAdoptium, buscarPadrao, type Buscar } from "../servidor/versoes.js";
 
@@ -50,6 +51,38 @@ const SHA1 = /^[0-9a-f]{40}$/i;
 const PARALELO = 8;
 const TETO_PECA = 512 * 1024 ** 2;
 const TETO_JSON = 64 * 1024 ** 2;
+
+/** Hosts reais do pacote do Java (Adoptium publica no GitHub Releases; o link redireciona para o CDN dele). */
+const HOSTS_JAVA = [
+  "github.com",
+  "objects.githubusercontent.com",
+  "release-assets.githubusercontent.com",
+];
+
+/**
+ * Baixa para um nome temporário único (pid + aleatório) e só então renomeia para o destino: duas montagens ao mesmo
+ * tempo, ou duas peças com o mesmo caminho, nunca disputam o mesmo `.parcial`. Já conferido no cache: nada baixa.
+ */
+async function baixarSemColisao(baixar: Baixar, o: OpcoesDownload): Promise<void> {
+  try {
+    if (
+      (await hashDoArquivo(o.destino, o.hashEsperado.algoritmo)) ===
+      o.hashEsperado.valor.toLowerCase()
+    )
+      return;
+  } catch {
+    // não existe ainda
+  }
+  const temporario = `${o.destino}.${process.pid}.${randomBytes(6).toString("hex")}.baixando`;
+  try {
+    await baixar({ ...o, destino: temporario });
+    await rename(temporario, o.destino);
+  } finally {
+    await rm(temporario, { force: true });
+    await rm(`${temporario}.parcial`, { force: true });
+    await rm(`${temporario}.parcial.meta`, { force: true });
+  }
+}
 
 const sha1De = (texto: string) => createHash("sha1").update(texto).digest("hex");
 
@@ -112,7 +145,7 @@ async function lerJson(
 
 async function gravarAtomico(destino: string, conteudo: string): Promise<void> {
   await mkdir(dirname(destino), { recursive: true });
-  const tmp = `${destino}.${process.pid}.tmp`;
+  const tmp = `${destino}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
   try {
     await writeFile(tmp, conteudo);
     await rename(tmp, destino);
@@ -127,6 +160,8 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
   const buscar = opcoes.buscar ?? buscarPadrao;
   const baixar = opcoes.baixar ?? baixarConferido;
   if (!ID_VERSAO.test(versao)) throw new Error(`Versão do Minecraft inválida: ${versao}.`);
+  // Marcador antigo não vale numa remontagem: se esta falhar no meio, a versão fica sem marcador.
+  await rm(join(cache, "versions", versao, ".montada.json"), { force: true });
 
   const manifesto = JSON.parse(await buscar(URL_MANIFESTO)) as {
     versions?: Record<string, unknown>[];
@@ -178,16 +213,29 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     },
   ];
   const bibliotecas: string[] = [];
+  const vistos = new Map<string, string>(pecas.map((p) => [p.destino, p.sha1]));
+  /** Mesmo caminho: mesma peça (ignora a repetida) ou conflito (recusa). */
+  const nova = (p: Peca): boolean => {
+    const antigo = vistos.get(p.destino);
+    if (antigo === undefined) {
+      vistos.set(p.destino, p.sha1);
+      pecas.push(p);
+      return true;
+    }
+    if (antigo !== p.sha1)
+      throw new Error("O manifesto trouxe dois arquivos diferentes para o mesmo caminho; recusei.");
+    return false;
+  };
   for (const lib of v.libraries ?? []) {
     const a = lib.downloads?.artifact;
     if (!a || !vale(lib.rules)) continue;
     const destino = caminhoNoCache(join(cache, "libraries"), a.path);
-    pecas.push({
+    const peca = {
       url: exigirUrl(a.url, "uma biblioteca"),
       sha1: exigirSha1(a.sha1, "uma biblioteca"),
       destino,
-    });
-    bibliotecas.push(destino);
+    };
+    if (nova(peca)) bibliotecas.push(destino);
   }
 
   // Índice de assets: JSON conferido pelo sha1; cada objeto fica em objects/<2 primeiros>/<hash>.
@@ -209,7 +257,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     )
       throw new Error("A Mojang apontou um arquivo para fora dos servidores oficiais; recusei.");
     await mkdir(dirname(p.destino), { recursive: true });
-    await baixar({
+    await baixarSemColisao(baixar, {
       url: p.url,
       hashEsperado: { algoritmo: "sha1", valor: p.sha1 },
       destino: p.destino,
@@ -248,7 +296,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     const origem = new URL(indicePeca.url).origin;
     for (const a of assets) a.url = `${origem}/obj/${a.sha1.slice(0, 2)}/${a.sha1}`;
   }
-  pecas.push(...assets);
+  assets.forEach(nova);
   await emParalelo(pecas);
 
   let pacoteJava: string | undefined;
@@ -256,11 +304,12 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     const alvo = resolverAdoptium(JSON.parse(await buscar(urlAdoptium(javaMajor))));
     pacoteJava = join(cache, "java", `jre-${javaMajor}-${alvo.hashEsperado.valor}.zip`);
     await mkdir(dirname(pacoteJava), { recursive: true });
-    await baixar({
+    await baixarSemColisao(baixar, {
       url: alvo.url,
       hashEsperado: alvo.hashEsperado,
       destino: pacoteJava,
       tamanhoMaximo: 512 * 1024 ** 2,
+      hostsPermitidos: HOSTS_JAVA, // vale também nos redirecionamentos (baixarConferido confere cada salto)
     });
   }
 

@@ -22,7 +22,12 @@ let pedidos: string[];
 let corpos: Map<string, Buffer>;
 
 function montarMundoFalso(
-  opcoes: { jsonSha1Errado?: boolean; caminhoLib?: string; hostLib?: string } = {},
+  opcoes: {
+    jsonSha1Errado?: boolean;
+    caminhoLib?: string;
+    hostLib?: string;
+    libsExtras?: unknown[];
+  } = {},
 ) {
   const indice = JSON.stringify({
     objects: {
@@ -44,6 +49,7 @@ function montarMundoFalso(
     javaVersion: { majorVersion: 21 },
     assetIndex: { id: "17", url: `${base}/indice.json`, sha1: sha1(indice), size: indice.length },
     libraries: [
+      ...(opcoes.libsExtras ?? []),
       {
         name: "a:b:1",
         downloads: {
@@ -179,6 +185,7 @@ describe("montarVersao", () => {
     const buscar = montarMundoFalso();
     const java = Buffer.from("zip-do-java");
     const chamadas: string[] = [];
+    let hostsJava: string[] | undefined;
     const comJava = async (url: string): Promise<string> =>
       url.includes("adoptium")
         ? JSON.stringify([
@@ -201,6 +208,7 @@ describe("montarVersao", () => {
       baixar: async (o) => {
         if (o.url.startsWith("https://github.com/")) {
           chamadas.push(o.url);
+          hostsJava = o.hostsPermitidos;
           await mkdir(join(o.destino, ".."), { recursive: true });
           await writeFile(o.destino, java);
           return { caminho: o.destino, doCache: false };
@@ -210,6 +218,62 @@ describe("montarVersao", () => {
       },
     });
     expect(chamadas).toHaveLength(1);
+    expect(hostsJava).toEqual([
+      "github.com",
+      "objects.githubusercontent.com",
+      "release-assets.githubusercontent.com",
+    ]);
     expect(r.pacoteJava && (await readFile(r.pacoteJava))).toEqual(java);
+  });
+
+  const libComo = (sha: string, url = "/lib.jar") => ({
+    name: "a:b:1",
+    downloads: { artifact: { path: "a/b/1/b-1.jar", url: `${base}${url}`, sha1: sha, size: 1 } },
+  });
+
+  it("duas bibliotecas com o mesmo caminho e hash: baixa uma vez só", async () => {
+    const buscar = montarMundoFalso({
+      libsExtras: [libComo(sha1(biblioteca)), libComo(sha1(biblioteca))],
+    });
+    const r = await montarVersao({ versao: "1.21.1", cache, buscar, permitirHttpLocal: true });
+    expect(r.bibliotecas).toHaveLength(1);
+    expect(pedidos.filter((p) => p === "/lib.jar")).toHaveLength(1);
+  });
+
+  it("duas bibliotecas com o mesmo caminho e hash diferente: recusa", async () => {
+    const buscar = montarMundoFalso({ libsExtras: [libComo("1".repeat(40))] });
+    await expect(
+      montarVersao({ versao: "1.21.1", cache, buscar, permitirHttpLocal: true }),
+    ).rejects.toThrow(/mesmo caminho/);
+    expect(await existe(join(cache, "versions/1.21.1/.montada.json"))).toBe(false);
+  });
+
+  it("duas montagens ao mesmo tempo no mesmo cache terminam sem colidir", async () => {
+    const buscar = montarMundoFalso();
+    const baixados: string[] = [];
+    const { baixarConferido } = await import("../servidor/baixar.js");
+    const baixar = (o: Parameters<typeof baixarConferido>[0]) => {
+      baixados.push(o.destino);
+      return baixarConferido(o);
+    };
+    await Promise.all([
+      montarVersao({ versao: "1.21.1", cache, buscar, permitirHttpLocal: true, baixar }),
+      montarVersao({ versao: "1.21.1", cache, buscar, permitirHttpLocal: true, baixar }),
+    ]);
+    expect(new Set(baixados).size).toBe(baixados.length); // cada download com seu próprio temporário
+    expect(baixados.every((d) => d.endsWith(".baixando"))).toBe(true);
+    expect(await readFile(join(cache, "libraries/a/b/1/b-1.jar"))).toEqual(biblioteca);
+    expect(await existe(join(cache, "versions/1.21.1/.montada.json"))).toBe(true);
+  });
+
+  it("remontagem que falha no meio não deixa o marcador antigo valendo", async () => {
+    const buscar = montarMundoFalso();
+    await montarVersao({ versao: "1.21.1", cache, buscar, permitirHttpLocal: true });
+    await writeFile(join(cache, "libraries/a/b/1/b-1.jar"), "corrompido");
+    corpos.set("/lib.jar", Buffer.from("tambem-errado!!"));
+    await expect(
+      montarVersao({ versao: "1.21.1", cache, buscar, permitirHttpLocal: true }),
+    ).rejects.toThrow();
+    expect(await existe(join(cache, "versions/1.21.1/.montada.json"))).toBe(false);
   });
 });
