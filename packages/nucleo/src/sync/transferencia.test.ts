@@ -165,18 +165,44 @@ describe("limites do servidor (cabeçalho lento e conexões)", () => {
       s.once("close", () => ok());
     });
 
-  it("cabeçalho que nunca termina: o servidor derruba o socket antes do tempo ocioso de 60 s (headersTimeout)", async () => {
-    await subir();
+  // Prazos curtos e diferentes só no teste: cada um tem prova própria (syncmel-1.7).
+  // O ocioso fica em 60 s para não ser ele a cortar; conferência a cada 100 ms (padrão do Node: 30 s).
+  const subirComPrazos = async (tempoCabecalhoMs: number, tempoRequisicaoMs: number) =>
+    (servidor = await servirArquivos({
+      endereco: "127.0.0.1",
+      porta: 0,
+      permitirLoopbackParaTeste: true,
+      conferirToken: async (t) => (t === CREDENCIAL ? "pc-do-lucas" : null),
+      arquivos: (h) => (h === HASH ? { caminho: arquivo } : undefined),
+      tempoOciosoMs: 60_000,
+      tempoCabecalhoMs,
+      tempoRequisicaoMs,
+      intervaloConferenciaMs: 100,
+    }));
+
+  it("cabeçalho que nunca termina: cai no prazo do cabeçalho (1 s), não no da requisição (4 s)", async () => {
+    await subirComPrazos(1_000, 4_000);
     const s = await abrir(portaDoServidor());
     s.write(`GET /arquivos/${HASH} HTTP/1.1\r\nHost: teste\r\n`);
     const t0 = Date.now();
     await fechado(s);
     const decorrido = Date.now() - t0;
-    // O Node confere prazos de cabeçalho a cada ~30 s, então o corte real sai perto de 30 s.
-    // Abaixo de 9 s seria outra causa; acima de 45 s o corte veio do tempo ocioso (60 s), não deste prazo.
-    expect(decorrido).toBeGreaterThanOrEqual(9_000);
-    expect(decorrido).toBeLessThan(45_000);
-  }, 60_000);
+    // Sem o prazo do cabeçalho, o corte viria só aos 4 s (requisição) ou aos 60 s (ocioso).
+    expect(decorrido).toBeGreaterThanOrEqual(900);
+    expect(decorrido).toBeLessThan(3_000);
+  }, 20_000);
+
+  it("cabeçalho completo e corpo que nunca chega: cai no prazo da requisição (2,5 s), não no do cabeçalho (1 s)", async () => {
+    await subirComPrazos(1_000, 2_500);
+    const s = await abrir(portaDoServidor());
+    s.write(`POST /arquivos/${HASH} HTTP/1.1\r\nHost: teste\r\nContent-Length: 10\r\n\r\n`);
+    const t0 = Date.now();
+    await fechado(s);
+    const decorrido = Date.now() - t0;
+    // O cabeçalho já chegou, então o prazo de 1 s não vale mais; sem o da requisição, só o ocioso (60 s) cortaria.
+    expect(decorrido).toBeGreaterThanOrEqual(2_000);
+    expect(decorrido).toBeLessThan(5_000);
+  }, 20_000);
 
   it("17ª conexão não é atendida enquanto 16 estão abertas; liberar uma vaga volta a atender", async () => {
     await subir();
