@@ -4,11 +4,12 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { baixarConferido } from "./baixar.js";
 import { resolverAdoptium } from "./resolvedores.js";
 import {
   URL_MANIFESTO,
+  buscarPadrao,
   listarVersoes,
   opcoesDaVersao,
   planoDaVersao,
@@ -173,5 +174,67 @@ describe("hash errado do server.jar", () => {
       await new Promise((ok) => srv.close(ok));
       await rm(pasta, { recursive: true, force: true });
     }
+  });
+});
+
+describe("buscarPadrao (rede real trocada por fetch falso)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const teto = 8 * 1024 * 1024;
+  const falsoFetch = (r: Response | Error) => {
+    const f = vi.fn(async (...args: [string, RequestInit?]) => {
+      void args;
+      if (r instanceof Error) throw r;
+      return r;
+    });
+    vi.stubGlobal("fetch", f);
+    return f;
+  };
+  it("pede com redirect:'error' e devolve o texto", async () => {
+    const f = falsoFetch(new Response('{"ok":1}'));
+    expect(await buscarPadrao("https://piston-meta.mojang.com/x.json")).toBe('{"ok":1}');
+    expect(f.mock.calls[0]?.[1]).toMatchObject({ redirect: "error" });
+  });
+  it("redirect vira erro", async () => {
+    falsoFetch(new TypeError("fetch failed: redirect mode is set to error"));
+    await expect(buscarPadrao("https://piston-meta.mojang.com/x.json")).rejects.toThrow(/redirect/);
+  });
+  it("content-length acima do teto: recusa sem ler o corpo", async () => {
+    const lido = vi.fn();
+    const corpo = new ReadableStream(
+      {
+        pull(c) {
+          lido();
+          c.close();
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    falsoFetch(new Response(corpo, { headers: { "content-length": String(teto + 1) } }));
+    await expect(buscarPadrao("https://piston-meta.mojang.com/x.json")).rejects.toThrow(
+      /grande demais/,
+    );
+    expect(lido).not.toHaveBeenCalled();
+  });
+  it("sem content-length: corta no teto e cancela o resto", async () => {
+    let enviados = 0;
+    let cancelado = false;
+    const corpo = new ReadableStream({
+      pull(c) {
+        enviados++;
+        c.enqueue(new Uint8Array(1024 * 1024));
+      },
+      cancel() {
+        cancelado = true;
+      },
+    });
+    falsoFetch(new Response(corpo));
+    await expect(buscarPadrao("https://piston-meta.mojang.com/x.json")).rejects.toThrow(
+      /grande demais/,
+    );
+    expect(cancelado).toBe(true);
+    expect(enviados).toBeLessThan(20);
+  });
+  it("só https", async () => {
+    await expect(buscarPadrao("http://piston-meta.mojang.com/x.json")).rejects.toThrow(/https/);
   });
 });

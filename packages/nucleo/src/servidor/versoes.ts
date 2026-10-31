@@ -32,11 +32,26 @@ export interface OpcoesDaVersao {
 
 export const buscarPadrao: Buscar = async (url) => {
   if (new URL(url).protocol !== "https:") throw new Error("Só https.");
-  const r = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  const r = await fetch(url, { signal: AbortSignal.timeout(15_000), redirect: "error" });
   if (!r.ok) throw new Error(`Resposta ${r.status} de ${new URL(url).hostname}.`);
-  const texto = await r.text();
-  if (texto.length > TETO_CORPO) throw new Error("Resposta grande demais.");
-  return texto;
+  if (Number(r.headers.get("content-length") ?? 0) > TETO_CORPO) {
+    await r.body?.cancel();
+    throw new Error("Resposta grande demais.");
+  }
+  const partes: Uint8Array[] = [];
+  let total = 0;
+  const leitor = r.body?.getReader();
+  for (;;) {
+    const trecho = await leitor?.read();
+    if (!trecho || trecho.done) break;
+    total += trecho.value.byteLength;
+    if (total > TETO_CORPO) {
+      await leitor?.cancel();
+      throw new Error("Resposta grande demais.");
+    }
+    partes.push(trecho.value);
+  }
+  return Buffer.concat(partes).toString("utf8");
 };
 
 const lerJson = async (buscar: Buscar, url: string): Promise<unknown> =>
