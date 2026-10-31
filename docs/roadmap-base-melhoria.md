@@ -34,7 +34,7 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   *Confirmação:* 4 `npx vitest run` em paralelo, 3 vezes seguidas, sem falha.
   *Origem:* onda 6 · revisão da orquestradora
 
-- [ ] **1.4 — Verificador barra marcador de conflito de merge**
+- [x] **1.4 — Verificador barra marcador de conflito de merge** (PR #65, 31/10/2026)
   *O que fazer:* `scripts/verificar.py` recusa arquivo com linha que começa com `<<<<<<< `, `=======` sozinho ou
   `>>>>>>> ` (em `--staged` e `--base`). Aconteceu na Onda 6: um commit de controle levou um conflito do
   `docs/ops/DECISOES.md` e o verificador aprovou.
