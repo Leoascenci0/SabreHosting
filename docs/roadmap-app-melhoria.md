@@ -98,7 +98,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Depende de:* appmel-1.8 e decisão do Eliel.
   *Origem:* appmel-1.8 · triagem · Máxima
 
-- [ ] **1.12 — Cofre: distinguir "não existe" de "corrompido"**
+- [x] **1.12 — Cofre: distinguir "não existe" de "corrompido"** (PR #223, 31/10/2026)
   *O que fazer:* `ler()` do cofre devolve `undefined` também quando o decrypt falha; devolver estado distinto para o assistente pedir novo convite em vez de achar que é a primeira vez.
   *Arquivo:* `apps/desktop/src/main/cofre.ts`
   **Tela no app:** não se aplica (mensagem no assistente do app-1.3b).
