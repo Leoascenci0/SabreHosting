@@ -69,6 +69,7 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
   const vitrine: Vitrine = criarVitrine(o.pastaVitrine);
   let servidor: Servidor | undefined;
   let ligando = false;
+  let fechado = false; // depois de `fechar()` nada mais liga (um `ligar` em voo não pode deixar servidor escutando)
   let avisouSemRede = false;
 
   return {
@@ -76,7 +77,7 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
     /** `true` se está servindo (agora ou já antes). */
     async ligar(): Promise<boolean> {
       if (servidor) return true;
-      if (ligando) return false;
+      if (fechado || ligando) return false;
       ligando = true; // antes de qualquer await (S-06)
       try {
         const endereco = o.endereco();
@@ -89,13 +90,18 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
           }
           return false;
         }
-        servidor = await servirArquivos({
+        const aberto = await servirArquivos({
           endereco,
           porta: o.porta ?? PORTA_ESPALHAR,
           conferirToken: o.conferirToken,
           arquivos: (h) => vitrine.arquivos(h),
           ...(o.permitirLoopbackParaTeste ? { permitirLoopbackParaTeste: true } : {}),
         });
+        if (fechado) {
+          await aberto.fechar(); // o app saiu enquanto abria: fecha o que acabou de abrir
+          return false;
+        }
+        servidor = aberto;
         return true;
       } catch (erro) {
         o.aoAvisar(
@@ -127,7 +133,7 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
     /** Relê o IP da rede privada (o túnel pode subir depois do arranque); ao ligar, já põe o último bom na vitrine. */
     async tentarLigar(): Promise<boolean> {
       if (servidor) return true;
-      if (!(await this.ligar())) return false;
+      if (!(await this.ligar()) || fechado) return false;
       await this.publicarUltimoBom();
       return true;
     },
@@ -135,6 +141,7 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
     porta: () => servidor?.porta,
 
     async fechar(): Promise<void> {
+      fechado = true; // antes de qualquer await (S-06)
       const s = servidor;
       servidor = undefined;
       await s?.fechar();

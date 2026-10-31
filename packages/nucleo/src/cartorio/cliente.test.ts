@@ -722,6 +722,22 @@ describe("baixarPacote (sync-2.2)", () => {
     }
   });
 
+  it("syncmel-1.14: reporta os bytes recebidos até o total", async () => {
+    const pasta = mkdtempSync(join(tmpdir(), "sabre-bp-"));
+    try {
+      const { cliente } = montar([pacote("conteúdo do pacote")]);
+      const vistos: [number, number][] = [];
+      await cliente.baixarPacote(9, join(pasta, "p.tar.gz"), 1000, undefined, (f, t) =>
+        vistos.push([f, t]),
+      );
+      const total = Buffer.byteLength("conteúdo do pacote");
+      expect(vistos.length).toBeGreaterThan(0);
+      expect(vistos.at(-1)).toEqual([total, "conteúdo do pacote".length]);
+    } finally {
+      rmSync(pasta, { recursive: true, force: true });
+    }
+  });
+
   it("recusa 404, hash torto e pacote maior que o teto, sem deixar arquivo", async () => {
     const pasta = mkdtempSync(join(tmpdir(), "sabre-bp-"));
     try {

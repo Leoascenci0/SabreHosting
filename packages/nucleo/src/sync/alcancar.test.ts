@@ -7,6 +7,7 @@ import { type Manifesto } from "../backup/manifesto.js";
 import { abrirPacote, criarPacote } from "../backup/pacote.js";
 import type { Copias, RespostaAtualizacao } from "../cartorio/tipos.js";
 import { alcancar, MAX_PASSOS, type OpcoesAlcancar } from "./alcancar.js";
+import { ErroLocal } from "./aplicar.js";
 import { espalhar, type Fonte, type OpcoesEspalhar } from "./espalhar.js";
 import { servirArquivos, type Servidor } from "./transferencia.js";
 
@@ -67,10 +68,19 @@ async function grupo(opcoes: { pcOnline: boolean; nuvem: boolean }) {
     pcs: opcoes.pcOnline ? [{ id: 2, nome: "PC do Lucas", ip: "10.66.0.3" }] : [],
   } as Copias;
   const pegou: string[] = [];
-  const baixarPacote = vi.fn(async (_n: number, destino: string) => {
-    copyFileSync(pacote.caminho, destino);
-    return { sha256: pacote.sha256 };
-  });
+  const baixarPacote = vi.fn(
+    async (
+      _n: number,
+      destino: string,
+      _maximo?: number,
+      _sinal?: AbortSignal,
+      aoBytes?: (feitos: number, total: number) => void,
+    ) => {
+      void aoBytes;
+      copyFileSync(pacote.caminho, destino);
+      return { sha256: pacote.sha256 };
+    },
+  );
   const cliente = {
     maisNova: vi.fn(async () => ({
       ...versaoMaisNova,
@@ -226,5 +236,51 @@ describe("alcancar", () => {
     });
     expect(chamadas).toEqual([300, 301, 302, 303, 304]);
     expect(r.passos).toBe(MAX_PASSOS);
+  });
+
+  it("syncmel-1.14: o download do pacote da nuvem reporta bytes e a barra só sobe", async () => {
+    const g = await grupo({ pcOnline: false, nuvem: true });
+    g.cliente.baixarPacote.mockImplementation(
+      async (
+        _n: number,
+        destino: string,
+        _m?: number,
+        _s?: AbortSignal,
+        aoBytes?: (f: number, t: number) => void,
+      ) => {
+        copyFileSync(g.pacote.caminho, destino);
+        aoBytes?.(250, 1000);
+        aoBytes?.(1000, 1000);
+        return { sha256: g.pacote.sha256 };
+      },
+    );
+    const vistos: (number | undefined)[] = [];
+    await alcancar({
+      cliente: g.cliente,
+      espalhar: g.executar,
+      versaoLocal: async () => 10,
+      aoProgresso: (p) => vistos.push(p),
+    });
+    const numeros = vistos.filter((p): p is number => p !== undefined);
+    expect(numeros).toContain(12); // 25% do download = metade da faixa 0–50
+    expect(numeros).toContain(50);
+    expect(numeros).toEqual([...numeros].sort((a, b) => a - b)); // nunca volta atrás
+    expect(numeros.at(-1)).toBe(100);
+  });
+
+  it("syncmel-1.14: falha local (servidor rodando / trava perdida) não tenta a nuvem", async () => {
+    const g = await grupo({ pcOnline: true, nuvem: true });
+    await expect(
+      alcancar({
+        cliente: g.cliente,
+        espalhar: async () => {
+          throw new ErroLocal(
+            "O servidor está rodando; pare o servidor antes de atualizar o mundo.",
+          );
+        },
+        versaoLocal: async () => 10,
+      }),
+    ).rejects.toThrow(/servidor está rodando/);
+    expect(g.cliente.baixarPacote).not.toHaveBeenCalled();
   });
 });

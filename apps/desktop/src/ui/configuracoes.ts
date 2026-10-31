@@ -1,4 +1,4 @@
-import type { CampoComErro, PcDaTela, PonteSabre } from "./ponte.js";
+import type { CampoComErro, ModDaTela, PcDaTela, PonteSabre } from "./ponte.js";
 import { rotuloConfirmarVersao } from "./rotulo-versao.js";
 
 declare global {
@@ -31,14 +31,35 @@ const salvar = $<HTMLButtonElement>("config-salvar");
 const voltar = $<HTMLButtonElement>("config-voltar");
 const abrir = $<HTMLButtonElement>("ver-config");
 
+const areaEndereco = $("cfg-endereco");
+const campoEndereco = $<HTMLInputElement>("grupo-endereco");
 const areaGrupo = $("cfg-grupo");
 const listaGrupo = $("grupo-lista");
 const confGrupo = $("grupo-confirmacao");
 const perguntaGrupo = $("grupo-pergunta");
 const confirmarGrupo = $<HTMLButtonElement>("grupo-confirmar");
 const cancelarGrupo = $<HTMLButtonElement>("grupo-cancelar");
+const conviteNome = $<HTMLInputElement>("convite-nome");
+const conviteNomeFicou = $("convite-nome-ficou");
+const conviteValidade = $<HTMLSelectElement>("convite-validade");
+const conviteCriar = $<HTMLButtonElement>("convite-criar");
+const conviteResultado = $("convite-resultado");
+const conviteTexto = $<HTMLInputElement>("convite-texto");
+const convitePrazo = $("convite-prazo");
+const conviteCopiar = $<HTMLButtonElement>("convite-copiar");
+const conviteErro = $("convite-erro");
 const avisoGrupo = $("grupo-aviso");
 const erroGrupo = $("grupo-erro");
+
+const areaPasta = $("cfg-pasta-area");
+const campoPasta = $<HTMLInputElement>("cfg-pasta");
+const trocarPasta = $<HTMLButtonElement>("cfg-pasta-trocar");
+const confPasta = $("cfg-pasta-confirmacao");
+const perguntaPasta = $("cfg-pasta-pergunta");
+const confirmarPasta = $<HTMLButtonElement>("cfg-pasta-confirmar");
+const cancelarPasta = $<HTMLButtonElement>("cfg-pasta-cancelar");
+const erroPasta = $("cfg-pasta-erro");
+const avisoPasta = $("cfg-pasta-aviso");
 
 const areaVersao = $("cfg-versao-area");
 const seletorVersao = $<HTMLSelectElement>("cfg-versao");
@@ -50,6 +71,31 @@ const confirmarVersao = $<HTMLButtonElement>("cfg-versao-confirmar");
 const cancelarVersao = $<HTMLButtonElement>("cfg-versao-cancelar");
 const erroVersao = $("cfg-versao-erro");
 const avisoVersao = $("cfg-versao-aviso");
+
+const listaMods = $("mods-lista");
+const atualizandoMods = $("mods-atualizando");
+const dicaMods = $("mods-dica");
+const confMods = $("mods-confirmacao");
+const perguntaMods = $("mods-pergunta");
+const confirmarMods = $<HTMLButtonElement>("mods-confirmar");
+const cancelarMods = $<HTMLButtonElement>("mods-cancelar");
+const formMods = $("mods-adicionar");
+const adicionarMods = $<HTMLButtonElement>("mods-adicionar-botao");
+const avisoMods = $("mods-aviso");
+const erroMods = $("mods-erro");
+const camposMod = {
+  nome: $<HTMLInputElement>("mods-nome"),
+  versao: $<HTMLInputElement>("mods-versao"),
+  arquivo: $<HTMLInputElement>("mods-arquivo"),
+  url: $<HTMLInputElement>("mods-url"),
+  sha512: $<HTMLInputElement>("mods-hash"),
+  lado: $<HTMLSelectElement>("mods-lado"),
+};
+const LADO_MOD = { ambos: "jogo e servidor", cliente: "só o jogo", servidor: "só o servidor" };
+let tirandoMod: ModDaTela | undefined;
+let botaoDoMod: HTMLElement | undefined;
+let consultaMods = 0;
+let aguardaMods: ReturnType<typeof setTimeout> | undefined;
 
 let versaoAtual = "";
 /** Cada seleção ganha um número: resposta atrasada de uma versão já trocada é descartada. */
@@ -142,18 +188,97 @@ function desenharGrupo(pcs: PcDaTela[]): void {
   );
 }
 
+/** O texto do convite é credencial: só vive nesta tela e some ao sair, recarregar ou criar outro. */
+function limparConvite(): void {
+  conviteTexto.value = "";
+  convitePrazo.textContent = "";
+  conviteResultado.hidden = true;
+  conviteCopiar.textContent = "Copiar";
+}
+
+function mostrarErroConvite(texto: string): void {
+  conviteErro.textContent = texto;
+  conviteErro.hidden = texto === "";
+}
+
+/** Mesmo jeito do main (`nomeNaRede`): só para mostrar como o nome vai ficar; quem manda é o main. */
+function nomeComoFica(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+/, "")
+    .slice(0, 32)
+    .replace(/-+$/, "");
+}
+
+conviteNome.addEventListener("input", () => {
+  const ficou = nomeComoFica(conviteNome.value);
+  conviteNomeFicou.textContent = ficou ? `Vai ficar como: ${ficou}` : "";
+});
+
+const FORMATO_PRAZO = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+conviteCriar.addEventListener("click", () => {
+  if (conviteCriar.disabled) return;
+  limparConvite();
+  mostrarErroConvite("");
+  if (!nomeComoFica(conviteNome.value)) {
+    mostrarErroConvite("Digite o nome do PC convidado (letras ou números).");
+    conviteNome.focus();
+    return;
+  }
+  conviteCriar.disabled = true;
+  conviteCriar.textContent = "Criando…";
+  window.sabre.grupo
+    .criarConvite(conviteNome.value, Number(conviteValidade.value))
+    .then((r) => {
+      if (!r.ok) return mostrarErroConvite(r.mensagem);
+      conviteTexto.value = r.convite;
+      convitePrazo.textContent = `Para o PC "${r.nomeNaRede}". Vale até ${FORMATO_PRAZO.format(r.venceEm)}.`;
+      conviteResultado.hidden = false;
+      conviteNome.value = "";
+      conviteNomeFicou.textContent = "";
+      conviteTexto.focus();
+      conviteTexto.select();
+    })
+    .catch(() =>
+      mostrarErroConvite("Não consegui criar o convite agora. Nenhum convite foi criado."),
+    )
+    .finally(() => {
+      conviteCriar.disabled = false;
+      conviteCriar.textContent = "Criar convite";
+    });
+});
+
+conviteCopiar.addEventListener("click", () => {
+  navigator.clipboard
+    .writeText(conviteTexto.value)
+    .then(() => {
+      conviteCopiar.textContent = "Copiado";
+    })
+    .catch(() => {
+      conviteTexto.select(); // sem permissão para copiar: o texto fica selecionado para Ctrl+C
+      mostrarErroConvite("Não consegui copiar sozinho. O texto está selecionado: use Ctrl+C.");
+    });
+});
+
 async function carregarGrupo(): Promise<void> {
   confGrupo.hidden = true;
   tirando = undefined;
   mostrarErroGrupo("");
   try {
     const g = await window.sabre.grupo.estado();
+    campoEndereco.value = g.endereco ?? "";
+    areaEndereco.hidden = !g.endereco; // sem resposta do cartório, some em vez de mostrar campo vazio
     areaGrupo.hidden = !g.dono;
     if (g.dono) {
       desenharGrupo(g.pcs);
       if (g.erro) mostrarErroGrupo(g.erro);
     }
   } catch {
+    areaEndereco.hidden = true;
     areaGrupo.hidden = true; // sem resposta do app: não mostra uma área que talvez não valha
   }
 }
@@ -184,6 +309,122 @@ confirmarGrupo.addEventListener("click", () => {
     })
     .catch(() => mostrarErroGrupo("Não consegui tirar o PC agora. Atualize a lista para conferir."))
     .finally(() => ocuparGrupo(false));
+});
+
+function mostrarErroMods(texto: string): void {
+  erroMods.textContent = texto;
+  erroMods.hidden = texto === "";
+}
+
+function ocuparMods(ocupado: boolean): void {
+  for (const b of [adicionarMods, confirmarMods, cancelarMods]) b.disabled = ocupado;
+  for (const b of listaMods.querySelectorAll("button")) b.disabled = ocupado;
+  adicionarMods.textContent = ocupado ? "Adicionando…" : "Adicionar à lista";
+  confirmarMods.textContent = ocupado ? "Tirando…" : "Tirar da lista";
+}
+
+function desenharMods(mods: ModDaTela[], dono: boolean): void {
+  if (mods.length === 0) {
+    const vazio = document.createElement("li");
+    vazio.textContent = "Nenhum mod na lista ainda.";
+    listaMods.replaceChildren(vazio);
+    return;
+  }
+  listaMods.replaceChildren(
+    ...mods.map((m) => {
+      const li = document.createElement("li");
+      const nome = document.createElement("span");
+      nome.textContent = `${m.nome} ${m.versao} (${LADO_MOD[m.lado]})`;
+      li.append(nome);
+      if (dono) {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "secundario";
+        botao.textContent = "Tirar da lista";
+        botao.addEventListener("click", () => {
+          tirandoMod = m;
+          botaoDoMod = botao;
+          perguntaMods.textContent = `Tirar "${m.nome}" da lista de mods do grupo?`;
+          confMods.hidden = false;
+          cancelarMods.focus();
+        });
+        li.append(botao);
+      }
+      return li;
+    }),
+  );
+}
+
+async function carregarMods(): Promise<void> {
+  const minha = ++consultaMods;
+  clearTimeout(aguardaMods);
+  try {
+    const e = await window.sabre.mods.estado();
+    if (minha !== consultaMods) return; // resposta de uma consulta já substituída
+    formMods.hidden = !e.dono;
+    dicaMods.hidden = false;
+    atualizandoMods.hidden = !e.atualizando;
+    desenharMods(e.mods, e.dono);
+    if (e.erro) mostrarErroMods(e.erro);
+    else if (e.aviso) avisoMods.textContent = e.aviso;
+    // Atualizando no arranque: olha de novo até acabar, para o amigo ver o resultado.
+    if (e.atualizando) aguardaMods = setTimeout(() => void carregarMods(), 1500);
+  } catch {
+    mostrarErroMods("Não consegui ler a lista de mods agora.");
+  }
+}
+
+cancelarMods.addEventListener("click", () => {
+  confMods.hidden = true;
+  tirandoMod = undefined;
+  botaoDoMod?.focus();
+});
+confirmarMods.addEventListener("click", () => {
+  const alvo = tirandoMod;
+  if (!alvo) return;
+  ocuparMods(true);
+  mostrarErroMods("");
+  avisoMods.textContent = "";
+  atualizandoMods.hidden = false;
+  window.sabre.mods
+    .tirar(alvo.arquivo)
+    .then(async (r) => {
+      confMods.hidden = true;
+      tirandoMod = undefined;
+      if (r.ok) avisoMods.textContent = r.aviso ?? `${alvo.nome} saiu da lista de mods.`;
+      else mostrarErroMods(r.mensagem);
+    })
+    .catch(() => mostrarErroMods("Não consegui tirar o mod agora. Atualize a lista para conferir."))
+    .finally(() => {
+      ocuparMods(false);
+      void carregarMods();
+    });
+});
+adicionarMods.addEventListener("click", () => {
+  ocuparMods(true);
+  mostrarErroMods("");
+  avisoMods.textContent = "";
+  atualizandoMods.hidden = false;
+  window.sabre.mods
+    .adicionar({
+      nome: camposMod.nome.value,
+      versao: camposMod.versao.value,
+      arquivo: camposMod.arquivo.value,
+      url: camposMod.url.value,
+      sha512: camposMod.sha512.value,
+      lado: camposMod.lado.value as ModDaTela["lado"],
+    })
+    .then((r) => {
+      if (r.ok) {
+        for (const c of Object.values(camposMod)) if (c !== camposMod.lado) c.value = "";
+        avisoMods.textContent = r.aviso ?? "Mod adicionado e atualizado neste PC.";
+      } else mostrarErroMods(r.mensagem);
+    })
+    .catch(() => mostrarErroMods("Não consegui adicionar o mod agora. Nada foi alterado."))
+    .finally(() => {
+      ocuparMods(false);
+      void carregarMods();
+    });
 });
 
 function mostrarErroVersao(texto: string): void {
@@ -269,8 +510,10 @@ confirmarVersao.addEventListener("click", () => {
 });
 
 async function carregar(): Promise<void> {
+  limparConvite();
   void carregarGrupo();
   void carregarVersao();
+  void carregarMods();
   aviso.textContent = "Carregando…";
   try {
     const c = await window.sabre.configuracoes.ler();
@@ -309,14 +552,83 @@ historicoEscolher.addEventListener("click", () => {
     });
 });
 
+// Pasta do SabreHosting: escolher → confirmar → o main revalida, grava e reinicia o app.
+let pastaEscolhida = "";
+function mostrarErroPasta(t: string): void {
+  erroPasta.textContent = t;
+  erroPasta.hidden = t === "";
+}
+function fecharConfirmacaoPasta(): void {
+  confPasta.hidden = true;
+  trocarPasta.disabled = false;
+}
+async function carregarPasta(): Promise<void> {
+  fecharConfirmacaoPasta();
+  mostrarErroPasta("");
+  avisoPasta.hidden = true;
+  try {
+    const { pasta } = await window.sabre.pasta.estado();
+    areaPasta.hidden = pasta === undefined;
+    campoPasta.value = pasta ?? "";
+  } catch {
+    areaPasta.hidden = true;
+  }
+}
+trocarPasta.addEventListener("click", () => {
+  trocarPasta.disabled = true;
+  mostrarErroPasta("");
+  window.sabre.configuracoes
+    .escolherPasta()
+    .then((pasta) => {
+      if (pasta === undefined) return fecharConfirmacaoPasta();
+      pastaEscolhida = pasta;
+      perguntaPasta.textContent = `Usar a pasta ${pasta}?`;
+      confPasta.hidden = false;
+      confirmarPasta.focus();
+    })
+    .catch(() => {
+      fecharConfirmacaoPasta();
+      mostrarErroPasta("Não consegui abrir o seletor de pasta agora.");
+    });
+});
+cancelarPasta.addEventListener("click", () => {
+  fecharConfirmacaoPasta();
+  trocarPasta.focus();
+});
+confirmarPasta.addEventListener("click", () => {
+  confirmarPasta.disabled = cancelarPasta.disabled = true;
+  window.sabre.pasta
+    .trocar(pastaEscolhida)
+    .then((r) => {
+      if (r.ok) {
+        campoPasta.value = pastaEscolhida;
+        confPasta.hidden = true;
+        avisoPasta.textContent = `Pasta trocada. O mundo antigo continua em ${r.anterior}. O SabreHosting vai reiniciar.`;
+        avisoPasta.hidden = false;
+      } else {
+        fecharConfirmacaoPasta();
+        mostrarErroPasta(r.mensagem);
+      }
+    })
+    .catch(() => {
+      fecharConfirmacaoPasta();
+      mostrarErroPasta("Não consegui trocar a pasta agora. Nada foi alterado.");
+    })
+    .finally(() => {
+      confirmarPasta.disabled = cancelarPasta.disabled = false;
+    });
+});
+
 abrir.addEventListener("click", () => {
   inicio.hidden = true;
   tela.hidden = false;
   mostrarErro("");
   void carregar();
+  void carregarPasta();
   windows.focus();
 });
 voltar.addEventListener("click", () => {
+  limparConvite();
   tela.hidden = true;
   inicio.hidden = false;
   abrir.focus();

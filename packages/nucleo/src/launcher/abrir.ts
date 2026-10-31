@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { join } from "node:path";
 import type { ExecArquivo } from "./prism.js";
 import { temMarcadorSabre } from "./instancia.js";
 
@@ -9,8 +10,8 @@ export interface OpcoesAbrirJogo {
   idInstancia: string;
   /** `host:porta` do proxy. */
   endereco: string;
-  /** Pasta `SabreHosting` com o marcador gravado pela instância. */
-  pastaMarcador: string;
+  /** Pasta de instâncias do Prism (de `detectarPrism`). O marcador é `<pastaInstancias>/<idInstancia>/SabreHosting`. */
+  pastaInstancias: string;
   exec?: ExecArquivo;
   temMarcador?: (pasta: string) => Promise<boolean>;
 }
@@ -53,7 +54,9 @@ export async function abrirJogo(op: OpcoesAbrirJogo): Promise<ResultadoAbrir> {
   if (!ID_OK.test(op.idInstancia) || op.idInstancia === "." || op.idInstancia === "..") {
     return { ok: false, mensagem: "O nome da instância do grupo não é válido." };
   }
-  if (!(await (op.temMarcador ?? temMarcadorSabre)(op.pastaMarcador))) {
+  // Marcador derivado do MESMO id que vai para o Prism: id de outra instância não tem marcador e é recusado.
+  const pastaMarcador = join(op.pastaInstancias, op.idInstancia, "SabreHosting");
+  if (!(await (op.temMarcador ?? temMarcadorSabre)(pastaMarcador))) {
     return {
       ok: false,
       mensagem: "A instância do grupo ainda não foi criada pelo SabreHosting. Crie-a primeiro.",

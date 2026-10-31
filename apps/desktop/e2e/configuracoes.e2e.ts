@@ -1,6 +1,6 @@
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -141,11 +141,22 @@ describe("tela de configurações", () => {
 
   it("não mostra a área Grupo a quem não é dono", async () => {
     const p = await abrir();
+    await p.locator("#cfg-endereco").waitFor(); // o endereço chega junto com o estado do grupo
     expect(await p.locator("legend:visible").allTextContents()).toEqual([
       "Geral",
       "Servidor",
       "Backups",
+      "Endereço do servidor",
+      "Mods do grupo",
     ]);
+  });
+
+  it("Endereço do servidor: aparece para todos, só leitura, com o endereço do cartório", async () => {
+    const p = await abrir();
+    await p.locator("#cfg-endereco").waitFor();
+    const campo = p.locator("#grupo-endereco");
+    expect(await campo.inputValue()).toBe("mundo.exemplo.net");
+    expect(await campo.isEditable()).toBe(false);
   });
 
   const revogados = (): Promise<number[]> =>
@@ -154,6 +165,54 @@ describe("tela de configurações", () => {
         (globalThis as unknown as { __sabreE2EGrupo: { revogados: number[] } }).__sabreE2EGrupo
           .revogados,
     ) as Promise<number[]>;
+
+  it("convite: dono cria com nome e validade, vê o prazo e copia; nada fica em disco", async () => {
+    const p = await abrir(true);
+    await p.locator("#grupo-lista li").first().waitFor();
+    expect(await p.locator("#convite-resultado").isHidden()).toBe(true);
+
+    await p.locator("#convite-criar").click(); // sem nome: não chama o cartório
+    await esperarTexto(p, "#convite-erro", "Digite o nome");
+    await p.locator("#convite-nome").fill("PC do João");
+    await esperarTexto(p, "#convite-nome-ficou", "pc-do-joao");
+    await p.locator("#convite-validade").selectOption("24");
+    await p.locator("#convite-criar").click();
+    await p.locator("#convite-resultado:not([hidden])").waitFor();
+    const texto = await p.locator("#convite-texto").inputValue();
+    expect(texto).toBe("sabre://convite/1.FALSO-pc-do-joao");
+    expect(await p.locator("#convite-prazo").textContent()).toContain("Vale até");
+    expect(
+      await aberto?.evaluate(
+        () =>
+          (globalThis as unknown as { __sabreE2EGrupo: { convites: unknown[] } }).__sabreE2EGrupo
+            .convites,
+      ),
+    ).toEqual([{ nomePc: "pc-do-joao", horas: 24 }]);
+
+    await p.locator("#convite-copiar").click();
+    await esperarTexto(p, "#convite-copiar", "Copiado");
+    expect(await aberto?.evaluate(({ clipboard }) => clipboard.readText())).toBe(texto);
+
+    // Sair e voltar: o texto some da tela, e nada do convite foi gravado nas preferências.
+    await p.locator("#config-voltar").click();
+    await p.locator("#ver-config").click();
+    await p.locator("#grupo-lista li").first().waitFor();
+    expect(await p.locator("#convite-resultado").isHidden()).toBe(true);
+    expect(await p.locator("#convite-texto").inputValue()).toBe("");
+    const gravados = readdirSync(dados ?? "", { recursive: true, withFileTypes: true })
+      .filter((e) => e.isFile())
+      .map((e) => readFileSync(join(e.parentPath, e.name)).toString("latin1"));
+    expect(
+      gravados.some((c) => c.includes("sabre://convite") || c.includes("FALSO-pc-do-joao")),
+    ).toBe(false);
+  });
+
+  it("convite: amigo (não-dono) não vê o formulário", async () => {
+    const p = await abrir(false);
+    await p.locator("#cfg-endereco").waitFor();
+    expect(await p.locator("#cfg-grupo").isHidden()).toBe(true);
+    expect(await p.locator("#convite-criar").isVisible()).toBe(false);
+  });
 
   it("grupo: não-dono não vê a área nem o botão", async () => {
     const p = await abrir();
@@ -194,6 +253,46 @@ describe("tela de configurações", () => {
     expect(await p.evaluate(() => document.activeElement?.id)).toBe("grupo-aviso");
     expect(await p.locator("#grupo-lista button[aria-label]").count()).toBe(0);
   });
+  const listasDeMods = (): Promise<Array<Array<{ arquivo: string }>>> =>
+    aberto?.evaluate(
+      () =>
+        (globalThis as unknown as { __sabreE2EMods: { listas: unknown[] } }).__sabreE2EMods.listas,
+    ) as Promise<Array<Array<{ arquivo: string }>>>;
+
+  it("mods: amigo vê a lista, mas não tem como editar", async () => {
+    const p = await abrir();
+    await p.locator("#mods-lista li").first().waitFor();
+    expect(await p.locator("#mods-lista").textContent()).toContain("Sodium");
+    expect(await p.locator("#mods-adicionar").isHidden()).toBe(true);
+    expect(await p.locator("#mods-lista button").count()).toBe(0);
+  });
+
+  it("mods: dono adiciona (confirma só ao tirar) e a lista segue o cartório", async () => {
+    const p = await abrir(true);
+    await p.locator("#mods-adicionar:not([hidden])").waitFor();
+    await p.locator("#mods-nome").fill("Lithium");
+    await p.locator("#mods-versao").fill("0.13.0");
+    await p.locator("#mods-arquivo").fill("lithium.jar");
+    await p.locator("#mods-url").fill("https://evil.example/lithium.jar");
+    await p.locator("#mods-hash").fill("b".repeat(128));
+    await p.locator("#mods-adicionar-botao").click();
+    await esperarTexto(p, "#mods-erro", "cdn.modrinth.com");
+    expect(await listasDeMods()).toEqual([]); // link de outro site: nada gravado
+    await p.locator("#mods-url").fill("https://cdn.modrinth.com/data/x/versions/y/lithium.jar");
+    await p.locator("#mods-adicionar-botao").click();
+    await p.waitForFunction(() => document.querySelectorAll("#mods-lista li").length === 2);
+    expect((await listasDeMods())[0]?.map((m) => m.arquivo)).toEqual(["sodium.jar", "lithium.jar"]);
+
+    await p.locator("#mods-lista li", { hasText: "Sodium" }).getByRole("button").click();
+    await esperarTexto(p, "#mods-pergunta", "Sodium");
+    await p.locator("#mods-cancelar").click();
+    expect((await listasDeMods()).length).toBe(1); // cancelar não grava
+    await p.locator("#mods-lista li", { hasText: "Sodium" }).getByRole("button").click();
+    await p.locator("#mods-confirmar").click();
+    await p.waitForFunction(() => document.querySelectorAll("#mods-lista li").length === 1);
+    expect((await listasDeMods())[1]?.map((m) => m.arquivo)).toEqual(["lithium.jar"]);
+  });
+
   it("versão: não-dono não vê a área", async () => {
     const p = await abrir();
     await p.locator("#cfg-visao").waitFor();

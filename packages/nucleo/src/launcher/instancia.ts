@@ -78,6 +78,11 @@ export function nomeSeguroDoGrupo(grupo: string): string {
   return RESERVADO_WINDOWS.test(nome.split(".")[0]?.trimEnd() ?? "") ? `${nome}_` : nome;
 }
 
+/** Id (nome da pasta) da instância do grupo no Prism: "SabreHosting — <grupo>", como nome seguro do Windows. */
+export function idDaInstancia(grupo: string): string {
+  return nomeSeguroDoGrupo(`SabreHosting — ${grupo}`);
+}
+
 function conferirVersao(rotulo: string, valor: string): void {
   if (!VERSAO_OK.test(valor)) {
     throw new Error(

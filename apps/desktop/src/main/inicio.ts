@@ -24,6 +24,8 @@ export interface DepsInicio {
   servidorOrfao(): Promise<boolean>;
   /** Endereço para os amigos entrarem. Vazio: ainda não configurado. */
   endereco: string;
+  /** Pergunta o endereço de novo ao cartório (`GET /grupo`) antes do Jogar; falha silenciosa mantém o último. */
+  atualizarEndereco?(): Promise<void>;
   copiar(texto: string): void;
   /** Abre o jogo já no servidor (Prism, lanc-1.3). Ausente: o botão Jogar só copia o endereço. */
   abrirJogo?(endereco: string): Promise<{ ok: true } | { ok: false; mensagem: string }>;
@@ -33,6 +35,8 @@ export interface DepsInicio {
   trocandoVersao?(): boolean;
   /** Percentual do mundo sendo atualizado neste PC (sync-2.2); `undefined` = não está atualizando. */
   atualizando?(): number | undefined;
+  /** Último aviso de falha da atualização do mundo (syncmel-1.14); `undefined` = nenhum. */
+  avisoAtualizacao?(): string | undefined;
   /** Servidor deste PC criado (ainda pode estar subindo): quem agenda o backup passa a ouvir o estado dele. */
   aoServidor?(servidor: ServidorAtivo): void;
 }
@@ -214,10 +218,14 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
 
     async estado(): Promise<EstadoInicio> {
       const e = await estadoBase();
+      if (e.tipo !== "ninguem" && e.tipo !== "outro") return e;
       const pct = deps.atualizando?.();
-      return pct !== undefined && (e.tipo === "ninguem" || e.tipo === "outro")
-        ? { ...e, atualizando: pct }
-        : e;
+      const aviso = deps.avisoAtualizacao?.();
+      return {
+        ...e,
+        ...(pct !== undefined ? { atualizando: pct } : {}),
+        ...(aviso !== undefined && pct === undefined ? { aviso } : {}),
+      };
     },
 
     /** O app avisa a tela quando o percentual da atualização muda (o estado não tem relógio próprio). */
@@ -229,6 +237,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       aberto?: boolean;
       aviso?: string;
     }> {
+      await deps.atualizarEndereco?.().catch(() => undefined);
       if (!deps.endereco) throw new Error("O endereço do servidor ainda não foi configurado.");
       deps.copiar(deps.endereco); // sempre copia: serve de reserva se o Prism não abrir
       if (!deps.abrirJogo) return { copiado: true, endereco: deps.endereco };

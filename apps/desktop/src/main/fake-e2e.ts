@@ -9,7 +9,7 @@ import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { criarPacote } from "@sabrehosting/nucleo/backup/pacote";
 import { nomeDoBackup } from "@sabrehosting/nucleo/backup/agendador";
 import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
-import type { RespostaTrava } from "@sabrehosting/nucleo/cartorio/tipos";
+import type { ModGrupo, RespostaTrava } from "@sabrehosting/nucleo/cartorio/tipos";
 import { depsBackups } from "./deps-backups.js";
 import type { DepsBackups } from "./backups.js";
 import type { DepsBoasVindas } from "./boas-vindas.js";
@@ -17,6 +17,7 @@ import type { DepsGrupo } from "./grupo.js";
 import { gerarChavesDoPc } from "@sabrehosting/nucleo/rede/wireguard";
 import type { DepsImportacao } from "./importar.js";
 import type { DepsVersao } from "./versao.js";
+import type { DepsModsGrupo } from "./mods-grupo.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 // "dono-eu*": app reaberto com a trava ainda em nome deste PC, sem servidor desta sessão (com ou sem órfão vivo).
@@ -184,10 +185,20 @@ export function depsGrupoE2E(): DepsGrupo {
     { id: 3, nome: "PC da Ana", dono: false },
   ];
   const revogados: number[] = [];
-  (globalThis as Record<string, unknown>)["__sabreE2EGrupo"] = { revogados };
+  // Só nome e horas: o texto do convite nunca é guardado, nem no cartório falso.
+  const convites: Array<{ nomePc: string; horas: number }> = [];
+  (globalThis as Record<string, unknown>)["__sabreE2EGrupo"] = { revogados, convites };
   return {
     eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
     listarPcs: async () => pcs,
+    lerEndereco: async () => ENDERECO,
+    criarConvite: async (nomePc, horas) => {
+      convites.push({ nomePc, horas });
+      return {
+        convite: `sabre://convite/1.FALSO-${nomePc}`,
+        expiraEm: Date.now() + horas * 3_600_000,
+      };
+    },
     revogarPc: async (id) => {
       revogados.push(id);
       pcs = pcs.filter((p) => p.id !== id);
@@ -244,6 +255,32 @@ export function depsVersaoE2E(servidorRodando: () => boolean): DepsVersao {
     backupAntes: async () => undefined,
     gravar: async (v) => void (gravados.push(v), (atual = v)),
     servidorRodando,
+  };
+}
+
+/** Mods do grupo falsos para o E2E: dono com `SABRE_E2E_DONO=1`; as gravações ficam em `__sabreE2EMods.listas`. */
+export function depsModsE2E(servidorRodando: () => boolean): DepsModsGrupo {
+  const souDono = process.env["SABRE_E2E_DONO"] === "1";
+  let lista: ModGrupo[] = [
+    {
+      nome: "Sodium",
+      versao: "0.6.0",
+      arquivo: "sodium.jar",
+      url: "https://cdn.modrinth.com/data/AANobbMI/versions/x/sodium.jar",
+      sha512: "a".repeat(128),
+      lado: "cliente",
+    },
+  ];
+  const listas: ModGrupo[][] = [];
+  (globalThis as Record<string, unknown>)["__sabreE2EMods"] = { listas };
+  return {
+    eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
+    lerLista: async () => lista,
+    gravarLista: async (nova) => void (listas.push(nova), (lista = nova)),
+    pastaDoServidor: () => undefined,
+    pastaDaInstancia: () => undefined,
+    servidorRodando,
+    sincronizar: async () => ({ baixados: [], mantidos: [], removidos: [], falhas: [] }),
   };
 }
 

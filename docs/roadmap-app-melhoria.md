@@ -30,7 +30,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* `npm run vistoria` seguido de `git status` limpo.
   *Origem:* app-1.2 · PR #74 · orquestradora
 
-- [ ] **1.4 — Endereço vindo da configuração do grupo** (absorvido pelo app-1.3, desenho de 31/10/2026: `GET /grupo`)
+- [x] **1.4 — Endereço vindo da configuração do grupo** (PR #217, 31/10/2026) (absorvido pelo app-1.3, desenho de 31/10/2026: `GET /grupo`)
   *O que fazer:* hoje o endereço do Jogar só vem de `SABRE_ENDERECO` (variável de ambiente); deve vir da configuração do
   grupo (cartório / tela de primeira vez do app-1.3). Juntar ao app-1.3 se couber.
   *Arquivo:* `services/cartorio`, `apps/desktop/src/main/deps-reais.ts`
@@ -105,7 +105,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste com arquivo adulterado.
   *Origem:* app-1.3a · PR #207 · qa
 
-- [ ] **1.13 — Campo "Pasta do SabreHosting" e fundir os pedidos de administrador**
+- [x] **1.13 — Campo "Pasta do SabreHosting" e fundir os pedidos de administrador** (PR #219, 31/10/2026; **[P: UAC e script no Windows]**)
   *O que fazer:* campo em Configurações › Geral para ver/trocar a pasta-base gravada pelo assistente (hoje `pastaBase` fica só em `boas-vindas.json` e não alimenta `SABRE_PASTA_*`; ligar no app-1.3c); fundir os 3 pedidos de administrador (instala provisório, desinstala, instala definitiva) em um.
   *Arquivo:* `apps/desktop/src/main/boas-vindas.ts`, `entrada-no-grupo.ts`, `apps/desktop/src/ui/`
   **Tela no app:** Configurações › Geral › "Pasta do SabreHosting".
@@ -118,3 +118,24 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** botão "Tentar de novo" no assistente.
   *Confirmação:* teste: falha na instalação definitiva, depois sucesso sem novo convite.
   *Origem:* app-1.3b · PR #211 · filha
+
+- [ ] **1.14 — Respeitar `level-name` e validar `SABRE_JAVA`/`SABRE_NEOFORGE`**
+  *O que fazer:* `pastaMundo` em `config-pc.ts` é fixa `servidor/world`, mas `deps-reais.ts` lê `level-name` do `server.properties`: se não for "world", backup e espalhar apontam para a pasta errada (não apaga nada). `SABRE_JAVA`/`SABRE_NEOFORGE` do ambiente viram executável do servidor sem validação em modo normal: validar ou limitar a modo teste.
+  *Arquivo:* `apps/desktop/src/main/config-pc.ts`, `deps-reais.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: level-name diferente aponta o mundo certo; env de executável fora do modo teste é ignorado.
+  *Origem:* app-1.3c-i · PR #217 · qa
+
+- [ ] **1.15 — Criar convite: anúncio para leitor de tela e nome duplicado**
+  *O que fazer:* o "Copiado" não está numa região `aria-live`; `nomeNaRede` (main) e `nomeComoFica` (UI) são duplicados e podem divergir; conferir que "vale uma vez" bate com o cartório (uso único).
+  *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`, `index.html`, `main/grupo.ts`
+  **Tela no app:** Configurações › Grupo › "Criar convite".
+  *Confirmação:* teste/e2e: região anuncia a cópia; um só normalizador de nome.
+  *Origem:* app-1.3c-ii · PR #218 · qa
+
+- [ ] **1.16 — Entrada no grupo: esperar a sessão elevada antes de limpar; bloquear Jogar após trocar a pasta**
+  *O que fazer:* (a) em `entrada-no-grupo.ts` (~172-196) no caminho de falha, `await sessao.catch(() => undefined)` antes de `limpar()`, para o script ver o `cancelar.flag` e desinstalar o túnel provisório na hora (hoje pode ficar até 150 s); (b) em `principal.ts` (~543-547), depois do sucesso da troca de pasta e antes do `app.exit(0)` (1,5 s), bloquear o botão Jogar.
+  *Arquivo:* `apps/desktop/src/main/entrada-no-grupo.ts`, `principal.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: falha de `esperarPronta` espera a sessão; Jogar recusado após a troca.
+  *Origem:* appmel-1.13 · PR #219 · qa

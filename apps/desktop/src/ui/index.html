@@ -98,6 +98,39 @@
             <input type="checkbox" id="cfg-windows" />
             Abrir o SabreHosting quando o Windows ligar
           </label>
+          <div id="cfg-pasta-area" hidden>
+            <label for="cfg-pasta">Pasta do SabreHosting</label>
+            <input
+              type="text"
+              id="cfg-pasta"
+              readonly
+              aria-describedby="cfg-pasta-dica cfg-pasta-erro"
+            />
+            <p class="dica" id="cfg-pasta-dica">
+              Onde ficam o servidor, o mundo e os backups. Só dá para trocar com o servidor parado.
+            </p>
+            <button type="button" class="secundario" id="cfg-pasta-trocar">Trocar pasta…</button>
+            <div
+              id="cfg-pasta-confirmacao"
+              role="alertdialog"
+              aria-labelledby="cfg-pasta-pergunta"
+              hidden
+            >
+              <p id="cfg-pasta-pergunta"></p>
+              <p class="detalhe">
+                O mundo e os backups atuais NÃO são movidos: continuam na pasta de hoje. O
+                SabreHosting reinicia para usar a nova.
+              </p>
+              <div class="acoes">
+                <button type="button" class="principal" id="cfg-pasta-confirmar">
+                  Usar esta pasta
+                </button>
+                <button type="button" class="secundario" id="cfg-pasta-cancelar">Cancelar</button>
+              </div>
+            </div>
+            <p class="erro" id="cfg-pasta-erro" role="alert" hidden></p>
+            <p class="dica" id="cfg-pasta-aviso" aria-live="polite" hidden></p>
+          </div>
         </fieldset>
         <fieldset>
           <legend>Servidor</legend>
@@ -218,6 +251,20 @@
             pasta sozinhos, e apagar na pasta também apaga na nuvem do serviço sincronizado.
           </p>
         </fieldset>
+        <fieldset id="cfg-endereco" hidden>
+          <legend>Endereço do servidor</legend>
+          <label for="grupo-endereco">Endereço do servidor</label>
+          <input
+            type="text"
+            id="grupo-endereco"
+            readonly
+            autocomplete="off"
+            aria-describedby="grupo-endereco-dica"
+          />
+          <p class="dica" id="grupo-endereco-dica">
+            É o endereço que os amigos usam no Minecraft. Vem do grupo e não se muda aqui.
+          </p>
+        </fieldset>
         <fieldset id="cfg-grupo" hidden>
           <legend>Grupo</legend>
           <p class="dica">PCs com acesso ao grupo. Só o dono do grupo vê esta área.</p>
@@ -238,8 +285,103 @@
               <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
             </div>
           </div>
+          <div class="campo-convite" id="grupo-convite">
+            <p class="dica">
+              Para um PC novo entrar no grupo, crie um convite e envie o texto a quem vai usar.
+            </p>
+            <label for="convite-nome">Nome do PC convidado</label>
+            <input
+              id="convite-nome"
+              type="text"
+              maxlength="40"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
+            <label for="convite-validade">Vale por</label>
+            <select id="convite-validade">
+              <option value="1" selected>1 hora</option>
+              <option value="24">1 dia</option>
+              <option value="72">3 dias</option>
+            </select>
+            <div class="acoes">
+              <button type="button" id="convite-criar">Criar convite</button>
+            </div>
+            <div id="convite-resultado" hidden>
+              <label for="convite-texto">Texto do convite</label>
+              <input
+                id="convite-texto"
+                type="text"
+                readonly
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="detalhe" id="convite-prazo"></p>
+              <p class="detalhe">
+                Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se fechar
+                esta tela, crie outro.
+              </p>
+              <div class="acoes">
+                <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+              </div>
+            </div>
+            <p class="erro" id="convite-erro" role="alert" hidden></p>
+          </div>
           <p class="detalhe" id="grupo-aviso" role="status"></p>
           <p class="erro" id="grupo-erro" role="alert" hidden></p>
+        </fieldset>
+        <fieldset id="cfg-mods">
+          <legend>Mods do grupo</legend>
+          <p class="dica" id="mods-dica">
+            Todos os PCs do grupo usam estes mods. Só o dono do grupo muda a lista.
+          </p>
+          <p class="dica" id="mods-atualizando" role="status" hidden>Atualizando mods…</p>
+          <ul class="lista-backups" id="mods-lista"></ul>
+          <div
+            class="confirmacao"
+            id="mods-confirmacao"
+            role="alertdialog"
+            aria-labelledby="mods-pergunta"
+            hidden
+          >
+            <p id="mods-pergunta"></p>
+            <p class="detalhe">
+              O mod sai da lista e é apagado dos PCs do grupo na próxima atualização. Mods que são
+              seus, fora da lista, não são mexidos.
+            </p>
+            <div class="acoes">
+              <button type="button" class="perigo" id="mods-confirmar">Tirar da lista</button>
+              <button type="button" class="secundario" id="mods-cancelar">Cancelar</button>
+            </div>
+          </div>
+          <div id="mods-adicionar" hidden>
+            <label for="mods-nome">Nome do mod</label>
+            <input type="text" id="mods-nome" maxlength="100" />
+            <label for="mods-versao">Versão do mod</label>
+            <input type="text" id="mods-versao" maxlength="100" />
+            <label for="mods-arquivo">Nome do arquivo (termina em .jar)</label>
+            <input type="text" id="mods-arquivo" maxlength="128" />
+            <label for="mods-url">Link de download (cdn.modrinth.com)</label>
+            <input type="url" id="mods-url" />
+            <label for="mods-hash">Hash SHA-512 do arquivo</label>
+            <input
+              type="text"
+              id="mods-hash"
+              maxlength="128"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <label for="mods-lado">Onde usar</label>
+            <select id="mods-lado">
+              <option value="ambos">No jogo e no servidor</option>
+              <option value="cliente">Só no jogo (cada amigo)</option>
+              <option value="servidor">Só no servidor</option>
+            </select>
+            <p class="dica">O link e o hash aparecem na página do arquivo, no Modrinth.</p>
+            <button type="button" id="mods-adicionar-botao">Adicionar à lista</button>
+          </div>
+          <p class="detalhe" id="mods-aviso" role="status"></p>
+          <p class="erro" id="mods-erro" role="alert" hidden></p>
         </fieldset>
         <p class="detalhe" id="config-aviso" role="status"></p>
         <p class="erro" id="config-erro" role="alert" hidden></p>

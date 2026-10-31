@@ -4,11 +4,12 @@ export type MotivoSemCartorio = "rede" | "servidor" | "acesso";
 export type EstadoInicio =
   | { tipo: "carregando" }
   | { tipo: "sem-cartorio"; motivo: MotivoSemCartorio }
-  /** `atualizando`: percentual (0–100) do mundo sendo atualizado neste PC; Hospedar fica fechado, Jogar não. */
-  | { tipo: "ninguem"; atualizando?: number }
+  /** `atualizando`: percentual (0–100) do mundo sendo atualizado neste PC; Hospedar fica fechado, Jogar não.
+   *  `aviso`: por que a última atualização falhou (some quando uma nova rodada começa). */
+  | { tipo: "ninguem"; atualizando?: number; aviso?: string }
   /** Servidor de uma sessão anterior do app ainda vivo neste PC, sem sair sozinho. */
   | { tipo: "orfao" }
-  | { tipo: "outro"; nomePc: string; endereco: string; atualizando?: number }
+  | { tipo: "outro"; nomePc: string; endereco: string; atualizando?: number; aviso?: string }
   | { tipo: "eu"; endereco: string; parando?: boolean };
 
 export type CampoComErro =
@@ -66,10 +67,34 @@ export interface PcDaTela {
   dono: boolean;
 }
 
-export type EstadoGrupo = { dono: false } | { dono: true; pcs: PcDaTela[]; erro?: string };
+export type EstadoGrupo = ({ dono: false } | { dono: true; pcs: PcDaTela[]; erro?: string }) & {
+  /** "Endereço do servidor" (só leitura, vindo do cartório); ausente quando o cartório não respondeu. */
+  endereco?: string;
+};
+
+export type ResultadoConvite =
+  | { ok: true; convite: string; venceEm: number; nomeNaRede: string }
+  | { ok: false; mensagem: string };
 
 export type EstadoVersao =
   { dono: false } | { dono: true; atual: string; versoes: string[]; erro?: string };
+
+export interface ModDaTela {
+  nome: string;
+  versao: string;
+  arquivo: string;
+  url: string;
+  sha512: string;
+  lado: "cliente" | "servidor" | "ambos";
+}
+export interface EstadoMods {
+  dono: boolean;
+  mods: ModDaTela[];
+  atualizando: boolean;
+  aviso?: string;
+  erro?: string;
+}
+export type ResultadoMods = { ok: true; aviso?: string } | { ok: false; mensagem: string };
 
 export type OpcoesDaVersao =
   | { ok: true; neoforge: boolean; fabricForge: boolean; texto: string }
@@ -88,7 +113,14 @@ export type ConviteConferido =
 export type EntradaNoGrupo =
   { ok: true; grupo: string; endereco?: string } | { ok: false; mensagem: string };
 
+export type TrocaDePasta = { ok: true; anterior: string } | { ok: false; mensagem: string };
+
 export interface PonteSabre {
+  pasta: {
+    estado(): Promise<{ pasta?: string }>;
+    /** Revalidada no main; recusa com o servidor rodando. O mundo da pasta antiga NÃO é movido. */
+    trocar(pasta: string): Promise<TrocaDePasta>;
+  };
   boasVindas: {
     estado(): Promise<EstadoBoasVindas>;
     conferirConvite(texto: string): Promise<ConviteConferido>;
@@ -124,6 +156,13 @@ export interface PonteSabre {
   grupo: {
     estado(): Promise<EstadoGrupo>;
     tirar(id: number): Promise<Resultado>;
+    /** Só o dono. O texto do convite é credencial: mostrar e esquecer (nunca guardar). */
+    criarConvite(nome: string, horas: number): Promise<ResultadoConvite>;
+  };
+  mods: {
+    estado(): Promise<EstadoMods>;
+    adicionar(mod: ModDaTela): Promise<ResultadoMods>;
+    tirar(arquivo: string): Promise<ResultadoMods>;
   };
   versoes: {
     estado(): Promise<EstadoVersao>;

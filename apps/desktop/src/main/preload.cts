@@ -17,6 +17,11 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     escolherPasta: (): Promise<unknown> =>
       electron.ipcRenderer.invoke("sabre:config:escolher-pasta"),
   },
+  pasta: {
+    estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:pasta:estado"),
+    trocar: (pasta: string): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:pasta:trocar", pasta),
+  },
   boasVindas: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:bv:estado"),
     conferirConvite: (texto: string): Promise<unknown> =>
@@ -43,6 +48,15 @@ electron.contextBridge.exposeInMainWorld("sabre", {
   grupo: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:estado"),
     tirar: (id: number): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:tirar", id),
+    criarConvite: (nome: string, horas: number): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:grupo:criar-convite", { nome, horas }),
+  },
+  mods: {
+    estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:mods:estado"),
+    adicionar: (mod: unknown): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mods:adicionar", mod),
+    tirar: (arquivo: string): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mods:tirar", arquivo),
   },
   versoes: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:versoes:estado"),

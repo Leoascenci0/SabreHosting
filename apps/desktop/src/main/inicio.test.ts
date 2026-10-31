@@ -54,6 +54,19 @@ describe("hospedar durante uma restauração de backup", () => {
   });
 });
 
+describe("aviso da atualização do mundo (syncmel-1.14)", () => {
+  it("mostra o aviso no estado enquanto existir e some quando o app o limpa", async () => {
+    let aviso: string | undefined = "Não consegui atualizar o mundo: sem resposta da nuvem.";
+    const inicio = criarInicio(deps({ avisoAtualizacao: () => aviso }));
+    expect(await inicio.estado()).toEqual({
+      tipo: "ninguem",
+      aviso: "Não consegui atualizar o mundo: sem resposta da nuvem.",
+    });
+    aviso = undefined;
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+  });
+});
+
 describe("hospedar durante a atualização do mundo (sync-2.2)", () => {
   it("Hospedar é recusado com o percentual no estado; Jogar segue liberado; volta ao acabar", async () => {
     let pct: number | undefined = 40;
@@ -283,6 +296,22 @@ describe("jogar", () => {
       aberto: false,
       aviso: "Prism ausente.",
     });
+  });
+
+  it("pergunta o endereço ao cartório antes de copiar e abrir (o do cartório vale)", async () => {
+    const d = deps({
+      endereco: "velho.exemplo.org:25565",
+      atualizarEndereco: async () => void (d.endereco = "novo.exemplo.org:25565"),
+      abrirJogo: vi.fn(async () => ({ ok: true as const })),
+    });
+    expect(await criarInicio(d).jogar()).toMatchObject({ endereco: "novo.exemplo.org:25565" });
+    expect(d.copiar).toHaveBeenCalledWith("novo.exemplo.org:25565");
+    expect(d.abrirJogo).toHaveBeenCalledWith("novo.exemplo.org:25565");
+  });
+
+  it("falha ao perguntar o endereço não impede o Jogar com o último conhecido", async () => {
+    const d = deps({ atualizarEndereco: async () => Promise.reject(new Error("rede")) });
+    expect(await criarInicio(d).jogar()).toMatchObject({ endereco: "10.0.0.5:25565" });
   });
 
   it("sem endereço configurado, recusa sem copiar nada", async () => {

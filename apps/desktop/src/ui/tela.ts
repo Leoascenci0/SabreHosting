@@ -80,7 +80,7 @@ function desenhar(): void {
         break;
       }
       status.textContent = "Ninguém está hospedando";
-      detalhe.textContent = "Você pode ligar o servidor neste PC.";
+      detalhe.textContent = e.aviso ?? "Você pode ligar o servidor neste PC.";
       principal.textContent = "Hospedar";
       principal.dataset["acao"] = "hospedar";
       principal.hidden = false;
@@ -94,7 +94,8 @@ function desenhar(): void {
       status.textContent = `Servidor no PC do ${e.nomePc}`;
       detalhe.textContent =
         (e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO) +
-        (e.atualizando !== undefined ? ` · Atualizando seu mundo… ${e.atualizando}%` : "");
+        (e.atualizando !== undefined ? ` · Atualizando seu mundo… ${e.atualizando}%` : "") +
+        (e.aviso !== undefined ? ` · ${e.aviso}` : "");
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
       principal.hidden = e.endereco === "";

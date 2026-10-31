@@ -7,6 +7,7 @@ import {
   Menu,
   nativeImage,
   nativeTheme,
+  safeStorage,
   Tray,
 } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
@@ -36,11 +37,16 @@ import {
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { backupParado, depsBackupsReais } from "./deps-backups.js";
-import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
+import { ambienteLegado, lerConfigPc, type ConfigPc } from "./config-pc.js";
+import { criarCofreSeguro, ARQUIVO_COFRE } from "./cofre.js";
+import { clienteDoPc, depsReais, pastaModsDaInstancia } from "./deps-reais.js";
 import { registrarBoasVindas } from "./boas-vindas-app.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
+import { criarModsGrupo, type ModsGrupo } from "./mods-grupo.js";
+import { sincronizarMods } from "@sabrehosting/nucleo/launcher/mods";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
+import { criarPastaBase } from "./pasta-base.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { bytesPorSegundo, lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
@@ -50,6 +56,14 @@ const PAGINA = pathToFileURL(aqui("../ui/index.html")).href;
 const ICONE = aqui("../../recursos/icone/icone-256.png");
 const PASTA_ICONE = aqui("../../recursos/icone/");
 const INICIO_OCULTO = "--oculto";
+
+/**
+ * Configuração deste PC: o que o assistente gravou + o token do cofre (lida no arranque, ver `whenReady`). O ambiente
+ * do Windows não entra aqui; depois de concluir o assistente o app reinicia para relê-la.
+ */
+let pc: ConfigPc = {};
+/** Mesma configuração no formato `SABRE_*`, só para os pedaços que ainda o leem (backups, atualizar mundo). */
+let ambientePc: NodeJS.ProcessEnv = {};
 
 let janela: BrowserWindow | null = null;
 let bandeja: Tray | null = null;
@@ -243,15 +257,15 @@ function criarRotacaoDoHistorico(): RotacaoBackups {
 async function criarAgendaDoApp(): Promise<AgendaBackups> {
   const aoAvisar = (texto: string): void => console.warn(`[backup] ${texto}`);
   if (process.env["SABRE_E2E"] !== "1") {
-    const exigir = clienteDoAmbiente(process.env);
-    const rotacao = criarRotacaoDoApp(() => process.env["SABRE_PASTA_BACKUPS"]);
+    const exigir = clienteDoPc(pc);
+    const rotacao = criarRotacaoDoApp(() => pc.pastaBackups);
     void rotacao.rodar(); // no arranque: limpa o que passou do limite desde a última vez
     const rotacaoHistorico = criarRotacaoDoHistorico();
     return criarAgendaBackups({
       intervaloMin: intervaloBackupMin,
       iniciar: iniciarAgendaReal({
-        pastaBackups: process.env["SABRE_PASTA_BACKUPS"],
-        pastaDoMundo: process.env["SABRE_PASTA_MUNDO"],
+        pastaBackups: pc.pastaBackups,
+        pastaDoMundo: pc.pastaMundo,
         epoca: async () => (await exigir().estadoTrava()).epoca,
         historicoLongo,
         avisoHistorico,
@@ -305,16 +319,27 @@ const trocandoVersao = (): boolean => versaoApp?.trocando() ?? false;
 /** Percentual da atualização do mundo em curso (sync-2.2); `undefined` = nenhuma. */
 let atualizandoMundo: number | undefined;
 const atualizando = (): number | undefined => atualizandoMundo;
+/** Por que a última atualização do mundo falhou (syncmel-1.14); some quando a próxima rodada começa. */
+let avisoAtualizacaoMundo: string | undefined;
+const avisoAtualizacao = (): string | undefined => avisoAtualizacaoMundo;
 
 async function criarInicioDoApp(): Promise<Inicio> {
-  if (process.env["SABRE_E2E"] !== "1")
+  if (process.env["SABRE_E2E"] !== "1") {
+    const reais = depsReais(pc, (t) => clipboard.writeText(t));
+    void reais.atualizarEndereco?.(); // o endereço do Jogar é o que o cartório diz (GET /grupo)
     return criarInicio({
-      ...depsReais(process.env, (t) => clipboard.writeText(t)),
+      ...reais,
+      // O espalhamento `...` copiaria o valor do getter; religa o endereço vivo.
+      get endereco() {
+        return reais.endereco;
+      },
       restaurando,
       trocandoVersao,
       atualizando,
+      avisoAtualizacao,
       aoServidor: (s) => agendaApp?.observar(s),
     });
+  }
   const { criarDepsE2E } = await import("./fake-e2e.js");
   const espiao = { spawns: [] };
   (globalThis as Record<string, unknown>)["__sabreE2EEspiao"] = espiao;
@@ -333,7 +358,7 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
   const servidorRodando = (): boolean => inicio.ativo();
   if (process.env["SABRE_E2E"] !== "1") {
     return criarBackups({
-      ...depsBackupsReais(process.env, servidorRodando, () => inicio.temOrfao()),
+      ...depsBackupsReais(ambientePc, servidorRodando, () => inicio.temOrfao()),
       avisoHistorico: avisoHistorico.ler,
     });
   }
@@ -353,7 +378,7 @@ let disparoEspalhar: (() => Promise<void>) | undefined;
  */
 async function ligarServidorDeArquivosDoApp(): Promise<void> {
   if (process.env["SABRE_E2E"] === "1") return;
-  const { SABRE_CARTORIO_URL: url, SABRE_PASTA_BACKUPS: pastaBackups } = process.env;
+  const { urlCartorio: url, pastaBackups } = pc;
   if (!url || !pastaBackups) return;
   const aoAvisar = (texto: string): void => console.warn(`[servir] ${texto}`);
   try {
@@ -381,7 +406,7 @@ async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
     const { depsImportacaoE2E } = await import("./fake-e2e.js");
     return criarImportacao(depsImportacaoE2E(servidorRodando, restaurando));
   }
-  const exigir = clienteDoAmbiente(process.env);
+  const exigir = clienteDoPc(pc);
   return criarImportacao({
     escolherArquivo: async () => {
       const opcoes = {
@@ -418,11 +443,13 @@ const aplicarAbrirComWindows = (ligado: boolean): void => {
 
 async function criarGrupoDoApp(): Promise<Grupo> {
   if (process.env["SABRE_E2E"] !== "1") {
-    const exigir = clienteDoAmbiente(process.env);
+    const exigir = clienteDoPc(pc);
     return criarGrupo({
+      lerEndereco: async () => (await exigir().grupo()).endereco_jogar,
       eu: async () => exigir().eu(),
       listarPcs: async () => exigir().listarPcs(),
       revogarPc: async (id) => exigir().revogarPc(id),
+      criarConvite: async (nomePc, horas) => exigir().criarConvite(nomePc, horas),
     });
   }
   const { depsGrupoE2E } = await import("./fake-e2e.js");
@@ -434,13 +461,13 @@ async function criarVersaoDoApp(
   temOrfao: () => Promise<boolean>,
 ): Promise<Versao> {
   if (process.env["SABRE_E2E"] !== "1") {
-    const exigir = clienteDoAmbiente(process.env);
-    const rotacao = criarRotacaoDoApp(() => process.env["SABRE_PASTA_BACKUPS"]);
+    const exigir = clienteDoPc(pc);
+    const rotacao = criarRotacaoDoApp(() => pc.pastaBackups);
     return criarVersao({
       backupAntes: () =>
         backupParado({
-          pastaBackups: process.env["SABRE_PASTA_BACKUPS"],
-          pastaDoMundo: process.env["SABRE_PASTA_MUNDO"],
+          pastaBackups: pc.pastaBackups,
+          pastaDoMundo: pc.pastaMundo,
           cliente: exigir(),
           servidorRodando,
           servidorOrfao: temOrfao,
@@ -459,11 +486,31 @@ async function criarVersaoDoApp(
   return criarVersao(depsVersaoE2E(servidorRodando));
 }
 
+async function criarModsDoApp(servidorRodando: () => boolean): Promise<ModsGrupo> {
+  if (process.env["SABRE_E2E"] !== "1") {
+    const exigir = clienteDoPc(pc);
+    const servidor = pc.pastaServidor;
+    const instancia = await pastaModsDaInstancia(pc.grupo); // a instância do grupo no Prism, se já existir
+    return criarModsGrupo({
+      eu: async () => exigir().eu(),
+      lerLista: async () => exigir().lerModsGrupo(),
+      gravarLista: async (mods) => void (await exigir().gravarModsGrupo(mods)),
+      pastaDoServidor: () => (servidor ? join(servidor, "mods") : undefined),
+      pastaDaInstancia: () => instancia,
+      servidorRodando,
+      sincronizar: sincronizarMods,
+    });
+  }
+  const { depsModsE2E } = await import("./fake-e2e.js");
+  return criarModsGrupo(depsModsE2E(servidorRodando));
+}
+
 function registrarPonte(
   inicio: Inicio,
   backups: Backups,
   grupo: Grupo,
   versao: Versao,
+  mods: ModsGrupo,
   importacao: Importacao,
 ): void {
   const configuracoes = criarConfiguracoes({
@@ -484,6 +531,23 @@ function registrarPonte(
   const permitir = (evento: IpcMainInvokeEvent): void => {
     if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
   };
+  const pastaBase = criarPastaBase({
+    dados: app.getPath("userData"),
+    servidorRodando: () => inicio.ativo() || inicio.temOrfao(),
+  });
+  ipcMain.handle("sabre:pasta:estado", (evento) => (permitir(evento), pastaBase.estado()));
+  ipcMain.handle("sabre:pasta:trocar", async (evento, pasta: unknown) => {
+    permitir(evento);
+    const r = await pastaBase.trocar(pasta); // o main revalida a pasta e o servidor parado
+    // A configuração é lida no arranque: o app reinicia para já usar a pasta nova (no E2E, não).
+    if (r.ok && process.env["SABRE_E2E"] !== "1") {
+      setTimeout(() => {
+        app.relaunch({ args: process.argv.slice(1) });
+        app.exit(0);
+      }, 1500);
+    }
+    return r;
+  });
   inicio.aoMudar(() => janela?.webContents.send("sabre:inicio:mudou"));
   ipcMain.handle("sabre:inicio:estado", (evento) => (permitir(evento), inicio.estado()));
   ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), inicio.jogar()));
@@ -510,6 +574,19 @@ function registrarPonte(
   ipcMain.handle("sabre:grupo:tirar", (evento, id: unknown) => {
     permitir(evento);
     return grupo.tirar(id); // o main revalida dono, lista e "não é o dono" antes de revogar
+  });
+  ipcMain.handle("sabre:grupo:criar-convite", (evento, entrada: unknown) => {
+    permitir(evento);
+    return grupo.criarConvite(entrada); // o main revalida o dono, o nome e a validade; o texto não é gravado nem logado
+  });
+  ipcMain.handle("sabre:mods:estado", (evento) => (permitir(evento), mods.estado()));
+  ipcMain.handle("sabre:mods:adicionar", (evento, mod: unknown) => {
+    permitir(evento);
+    return mods.adicionar(mod); // o main confere dono, repetido e os campos (host, .jar, hash) antes de gravar
+  });
+  ipcMain.handle("sabre:mods:tirar", (evento, arquivo: unknown) => {
+    permitir(evento);
+    return mods.tirar(arquivo);
   });
   ipcMain.handle("sabre:versoes:estado", (evento) => (permitir(evento), versao.estado()));
   ipcMain.handle("sabre:versoes:opcoes", (evento, v: unknown) => {
@@ -569,7 +646,16 @@ if (!app.requestSingleInstanceLock()) {
     nativeTheme.themeSource = "system";
     // App morto entre os dois rename da troca do mundo: devolve o mundo antes de qualquer coisa. Falha não derruba
     // o app (o marcador fica e o servidor não sobe), mas o amigo é avisado.
-    const pastaDoServidor = process.env["SABRE_PASTA_SERVIDOR"];
+    if (process.env["SABRE_E2E"] !== "1") {
+      const dados = app.getPath("userData");
+      pc = await lerConfigPc(
+        dados,
+        criarCofreSeguro(safeStorage, join(dados, ARQUIVO_COFRE)),
+        process.env,
+      );
+      ambientePc = ambienteLegado(pc);
+    }
+    const pastaDoServidor = pc.pastaServidor;
     const falhaDaTroca = pastaDoServidor
       ? await recuperarTroca(pastaDoServidor).then(
           () => undefined,
@@ -585,10 +671,15 @@ if (!app.requestSingleInstanceLock()) {
     backupsApp = await criarBackupsDoApp(inicioApp);
     if (process.env["SABRE_E2E"] !== "1") {
       disparoEspalhar = ligarEspalhar({
-        env: process.env,
+        env: ambientePc,
         inicio: inicioApp,
-        aoAvisar: (texto) => console.warn(texto),
+        aoAvisar: (texto, paraTela) => {
+          console.warn(texto); // detalhe bruto só no console
+          avisoAtualizacaoMundo = `Não consegui atualizar o mundo: ${paraTela}`;
+          inicioApp?.mudou();
+        },
         aoProgresso: (p) => {
+          if (p === 0) avisoAtualizacaoMundo = undefined;
           atualizandoMundo = p;
           inicioApp?.mudou();
         },
@@ -602,18 +693,29 @@ if (!app.requestSingleInstanceLock()) {
       () => inicioPronto.ativo(),
       () => inicioPronto.temOrfao(),
     );
+    const modsApp = await criarModsDoApp(() => inicioPronto.ativo());
     registrarPonte(
       inicioApp,
       backupsApp,
       await criarGrupoDoApp(),
       versaoApp,
+      modsApp,
       await criarImportacaoDoApp(inicioApp),
     );
+    void modsApp.sincronizar(); // não segura a janela; o estado "Atualizando mods…" aparece em Configurações
     await registrarBoasVindas({
       dados: app.getPath("userData"),
       janela: () => janela,
       permitir: (evento) => {
         if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
+      },
+      // A configuração é lida no arranque: ao concluir o assistente o app reinicia para já usá-la (no E2E, não).
+      aoConcluir: () => {
+        if (process.env["SABRE_E2E"] === "1") return;
+        setTimeout(() => {
+          app.relaunch({ args: process.argv.slice(1) });
+          app.exit(0);
+        }, 1500);
       },
     });
     bandeja = criarBandeja();
