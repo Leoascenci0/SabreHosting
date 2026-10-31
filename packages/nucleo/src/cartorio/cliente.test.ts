@@ -451,3 +451,70 @@ describe("informarCopia", () => {
     expect(e.tipo).toBe("resposta");
   });
 });
+
+describe("trava de atualização (syncmel-1.8b)", () => {
+  it("pegar, renovar e soltar vão às rotas de /atualizacao com a época no corpo", async () => {
+    const { cliente, chamadas } = montar([
+      json(200, OK_TRAVA),
+      json(200, OK_TRAVA),
+      json(200, OK_TRAVA),
+    ]);
+    expect(await cliente.pegarAtualizacao()).toEqual(OK_TRAVA);
+    expect(await cliente.renovarAtualizacao(7)).toEqual(OK_TRAVA);
+    expect(await cliente.soltarAtualizacao(7)).toEqual(OK_TRAVA);
+    expect(chamadas.map((c) => c.url.replace(URL_CARTORIO, ""))).toEqual([
+      "/atualizacao/pegar",
+      "/atualizacao/renovar",
+      "/atualizacao/soltar",
+    ]);
+    expect(chamadas.map((c) => c.init.body)).toEqual([
+      undefined,
+      JSON.stringify({ epoca: 7 }),
+      JSON.stringify({ epoca: 7 }),
+    ]);
+  });
+
+  it("409 devolve a recusa com o motivo (hospedando), sem donoPcId", async () => {
+    const recusa = {
+      ok: false,
+      erro: "Este PC está hospedando o servidor.",
+      motivo: "hospedando",
+      epoca: 0,
+      expiraEm: 0,
+    };
+    const { cliente } = montar([json(409, recusa)]);
+    expect(await cliente.pegarAtualizacao()).toEqual(recusa);
+  });
+
+  it("resposta torta é erro: motivo desconhecido, 200 com ok:false ou 409 com ok:true", async () => {
+    const torta = { ok: false, erro: "x", motivo: "ocupada", epoca: 1, expiraEm: 0 };
+    for (const r of [
+      json(409, torta),
+      json(200, { ...torta, motivo: "vencida" }),
+      json(409, OK_TRAVA),
+    ]) {
+      const { cliente } = montar([r]);
+      expect((await erroDe(cliente.pegarAtualizacao())).tipo).toBe("resposta");
+    }
+  });
+
+  it("só renovar repete; pegar e soltar mudam a época e vão uma vez só", async () => {
+    const a = montar([json(503, {}), json(200, OK_TRAVA)]);
+    expect(await a.cliente.renovarAtualizacao(7)).toEqual(OK_TRAVA);
+    expect(a.chamadas).toHaveLength(2);
+    const b = montar([json(503, {}), json(200, OK_TRAVA)]);
+    await erroDe(b.cliente.pegarAtualizacao());
+    expect(b.chamadas).toHaveLength(1);
+    const c = montar([semRede(), json(200, OK_TRAVA)]);
+    await erroDe(c.cliente.soltarAtualizacao(7));
+    expect(c.chamadas).toHaveLength(1);
+  });
+
+  it("renovar cancelado pelo sinal não tenta de novo", async () => {
+    const parar = new AbortController();
+    parar.abort();
+    const { cliente, chamadas } = montar([json(200, OK_TRAVA)]);
+    expect((await erroDe(cliente.renovarAtualizacao(7, parar.signal))).tipo).toBe("cancelado");
+    expect(chamadas).toHaveLength(0);
+  });
+});

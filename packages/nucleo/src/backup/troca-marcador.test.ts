@@ -58,7 +58,8 @@ describe("falha ao apagar o marcador depois do 2º rename", () => {
         await mkdir(dirname(destino), { recursive: true });
         await copyFile(join(remoto, a.caminho), destino);
       },
-      temTrava: async () => true,
+      temAtualizacao: async () => true,
+      hospedaAgora: async () => false,
       servidorParado: () => true,
       avisarCopia: async () => undefined,
     });
@@ -137,7 +138,8 @@ describe("marcador que não grava antes do 1º rename (syncmel-1.5 d)", () => {
           await mkdir(dirname(destino), { recursive: true });
           await copyFile(join(remoto, a.caminho), destino);
         },
-        temTrava: async () => true,
+        temAtualizacao: async () => true,
+        hospedaAgora: async () => false,
         servidorParado: () => true,
         avisarCopia: async () => undefined,
       }),

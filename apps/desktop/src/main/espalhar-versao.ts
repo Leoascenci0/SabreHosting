@@ -1,4 +1,4 @@
-import { Renovador, type OpcoesRenovador } from "@sabrehosting/nucleo/cartorio/renovador";
+import type { ClienteCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
 import {
   espalhar,
   type Espalhado,
@@ -15,7 +15,15 @@ export interface OpcoesEspalhador {
   pastaTemporaria: string;
   /** Token deste PC para pedir arquivos aos outros PCs (o mesmo do cartório). */
   token: string;
-  cliente: OpcoesRenovador["cliente"] & { informarCopia(versao: number): Promise<void> };
+  cliente: Pick<
+    ClienteCartorio,
+    | "pegarAtualizacao"
+    | "renovarAtualizacao"
+    | "soltarAtualizacao"
+    | "informarCopia"
+    | "eu"
+    | "estadoTrava"
+  >;
   servidorRodando: () => boolean;
   /** Versão do pacote que este PC tem agora (maior `versao` dos backups). */
   versaoLocal: () => Promise<number>;
@@ -24,27 +32,30 @@ export interface OpcoesEspalhador {
 }
 
 const SEM_PASTA = "Este PC ainda não tem as pastas do mundo e do servidor configuradas.";
+const JA_ATUALIZANDO = "Este PC já está atualizando o mundo; espere essa atualização terminar.";
 
 /**
  * Liga o núcleo ao app: puxa a versão nova de quem já tem, em segundo plano. Quem chama (a agenda/aviso do
- * cartório, item do cartório) diz a versão e as fontes; aqui não há relógio. A troca exige a trava de host
- * (regra de ouro 1): se ela está com outro PC, o espalhar espera a próxima chamada em vez de contornar.
+ * cartório, item do cartório) diz a versão e as fontes; aqui não há relógio. A troca usa a trava de ATUALIZAÇÃO
+ * (syncmel-1.8b), não a de host: outro PC pode estar hospedando. Este PC, se hospeda, não atualiza (o mundo vivo não
+ * se toca). Uma atualização por vez: duas disputariam a mesma pasta temporária e a mesma trava.
  */
 export function criarEspalhador(o: OpcoesEspalhador) {
+  const c = o.cliente;
+  let emCurso = false;
+  /** O cartório diz que a trava de host é deste PC (o dono só aparece com o prazo valendo). */
+  const hospedaAgora = async () => {
+    const [eu, trava] = await Promise.all([c.eu(), c.estadoTrava()]);
+    return trava.dono?.id === eu.id;
+  };
   return async (versao: VersaoNova, fontes: readonly Fonte[]): Promise<Espalhado> => {
     const { pastaDoMundo, pastaDoServidor } = o;
     if (!pastaDoMundo || !pastaDoServidor) throw new Error(SEM_PASTA);
     if (o.servidorRodando()) {
       throw new Error("O servidor deste PC está no ar; a atualização do mundo fica para depois.");
     }
-    const renovador = new Renovador({ cliente: o.cliente, aoPerder: () => undefined });
-    // Só solta a vez que ESTA atualização pegou: se o `pegar` falhar, nada foi pego e nada é solto.
-    await renovador.pegar().catch((erro: unknown) => {
-      throw new Error(
-        "Não consegui pegar a vez para atualizar o mundo (talvez outro PC esteja hospedando). Tento de novo depois.",
-        { cause: erro },
-      );
-    });
+    if (emCurso) throw new Error(JA_ATUALIZANDO);
+    emCurso = true; // antes de qualquer await (S-06)
     try {
       return await espalhar({
         pastaDoMundo,
@@ -54,13 +65,18 @@ export function criarEspalhador(o: OpcoesEspalhador) {
         versaoLocal: await o.versaoLocal(),
         fontes,
         token: o.token,
-        temTrava: () => renovador.temTrava(),
+        atualizacao: {
+          pegar: () => c.pegarAtualizacao(),
+          renovar: (epoca, sinal) => c.renovarAtualizacao(epoca, sinal),
+          soltar: (epoca) => c.soltarAtualizacao(epoca),
+        },
+        hospedaAgora,
         servidorParado: () => !o.servidorRodando(),
-        avisarCopia: (n) => o.cliente.informarCopia(n),
+        avisarCopia: (n) => c.informarCopia(n),
         ...(o.permitirLoopbackParaTeste ? { permitirLoopbackParaTeste: true } : {}),
       });
     } finally {
-      await renovador.soltar().catch(() => undefined);
+      emCurso = false;
     }
   };
 }

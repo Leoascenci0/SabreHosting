@@ -1,8 +1,9 @@
 /**
  * Aplicar o delta: leva o mundo local da versão N para a versão M baixando só o que mudou, com troca atômica.
  *
- * Regras de ouro 1, 2, 3 e 5: só com a trava e com o servidor parado; o mundo atual nunca é escrito: monta-se uma
- * pasta temporária irmã (arquivos iguais por hard link, com cópia de fallback; novos e mudados baixados com o hash de
+ * Regras de ouro 1, 2, 3 e 5: só com a trava de ATUALIZAÇÃO confirmada antes de cada rename (syncmel-1.8b: outro
+ * PC pode hospedar enquanto este atualiza a própria cópia), com este PC fora do host e o servidor dele parado; o
+ * mundo atual nunca é escrito: monta-se uma pasta temporária irmã (arquivos iguais por hard link, com cópia de fallback; novos e mudados baixados com o hash de
  * M para um caminho NOVO), confere-se o manifesto de M INTEIRO e só então se troca por `rename`, no mesmo padrão de
  * `restaurar.ts`. Arquivo ligado a N nunca é aberto para escrita: "mudado" é arquivo novo, não edição. Falha em
  * qualquer ponto antes da troca deixa N intacto. Falha ao avisar o cartório NÃO desfaz a troca (a cópia é válida).
@@ -38,7 +39,10 @@ export interface OpcoesAplicar {
   local?: Manifesto;
   /** Entrega o arquivo de M (já conferido pelo hash) em `destino`, que não existe ainda. */
   baixar: (arquivo: ArquivoDoManifesto, destino: string) => Promise<unknown>;
-  temTrava: () => Promise<boolean>;
+  /** A trava de atualização deste PC vale agora (renovada na hora). Pedida antes de cada passo da troca. */
+  temAtualizacao: () => Promise<boolean>;
+  /** Este PC tem a trava de host? Erro ou demora contam como "sim": o mundo vivo nunca é tocado. */
+  hospedaAgora: () => Promise<boolean>;
   servidorParado: () => boolean;
   /** Diz ao cartório que este PC tem a versão M (cliente.informarCopia). */
   avisarCopia: (versao: number) => Promise<void>;
@@ -70,14 +74,28 @@ export const baixarDoHost =
   (arquivo: ArquivoDoManifesto, destino: string) =>
     pedirArquivo({ ...origem, sha256: arquivo.sha256, destino, tamanhoMaximo: arquivo.tamanho });
 
-async function exigirPodeTrocar(o: OpcoesAplicar): Promise<void> {
+/** Este PC não hospeda agora: servidor dele parado e sem a trava de host (confirmado "não" dentro do prazo). */
+export async function exigirForaDoHost(
+  o: Pick<OpcoesAplicar, "servidorParado" | "hospedaAgora" | "prazoTravaMs">,
+): Promise<void> {
   if (!o.servidorParado()) {
     throw new Error("O servidor está rodando; pare o servidor antes de atualizar o mundo.");
   }
-  const trava = await travaConfirmada(o.temTrava, o.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS);
+  const naoHospeda = async () => (await o.hospedaAgora()) === false;
+  if ((await travaConfirmada(naoHospeda, o.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS)) !== "sim") {
+    throw new Error(
+      "Este PC está hospedando (ou o cartório não confirmou que não está); o mundo dele não é atualizado agora.",
+    );
+  }
+}
+
+/** Antes de cada passo da troca: fora do host E trava de atualização confirmada (renovada) no prazo. */
+async function exigirPodeTrocar(o: OpcoesAplicar): Promise<void> {
+  await exigirForaDoHost(o);
+  const trava = await travaConfirmada(o.temAtualizacao, o.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS);
   if (trava !== "sim") {
     throw new Error(
-      "Este PC não tem a trava de host confirmada pelo cartório; não dá para atualizar o mundo.",
+      "Este PC perdeu (ou não tem) a trava de atualização do cartório; o mundo continua como estava. Tento de novo depois.",
     );
   }
 }
@@ -168,7 +186,9 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
         "O mundo atualizado não confere com a versão do cartório (arquivo faltando, a mais ou diferente); nada foi trocado. Tente de novo; se repetir, avise o grupo.",
       );
     }
-    await exigirPodeTrocar(o); // a trava pode ter se perdido durante o download
+    // Renovada depois do download, logo antes do marcador e do 1º rename (1.8b a): a trava pode ter se perdido no
+    // download, e o prazo do cartório vencido deixaria este PC pegar o host no meio da troca.
+    await exigirPodeTrocar(o);
   } catch (erro) {
     await apagar(temp);
     throw erro;
@@ -187,12 +207,20 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
     });
   });
   await o.aposPrimeiroRename?.();
-  try {
-    await renomear(temp, mundo);
-  } catch (erro) {
+  const voltarN = async (erro: unknown) => {
     await desfazer(renomear, { mundo, antigo, temp, backup: undefined }, erro);
     await apagarMarcadorTroca(mundo);
     await apagar(temp);
+  };
+  // E antes do 2º: sem a trava (ou com o servidor de pé), M não entra e N volta ao lugar.
+  await exigirPodeTrocar(o).catch(async (erro: unknown) => {
+    await voltarN(erro);
+    throw erro;
+  });
+  try {
+    await renomear(temp, mundo);
+  } catch (erro) {
+    await voltarN(erro);
     throw new Error(
       "Não consegui colocar o mundo atualizado no lugar; o mundo continua como estava.",
       {

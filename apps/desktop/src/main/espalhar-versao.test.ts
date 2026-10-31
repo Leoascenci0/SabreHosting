@@ -41,11 +41,21 @@ async function cenario() {
   servidores.push(servidor);
   const eventos: string[] = [];
   const ok = { ok: true as const, epoca: 3, expiraEm: 0, renovarMs: 20_000 };
+  // O host (PC 2) está com a trava de host; este PC (1) só atualiza a própria cópia.
+  const estado = { dono: { id: 2, nome: "PC do host" } as { id: number; nome: string } | null };
   const cliente = {
-    pegar: async () => (eventos.push("pegar"), ok),
-    renovar: async () => ok,
-    soltar: async () => (eventos.push("soltar"), ok),
+    pegarAtualizacao: async () => (eventos.push("pegar"), ok),
+    renovarAtualizacao: async () => ok,
+    soltarAtualizacao: async () => (eventos.push("soltar"), ok),
     informarCopia: async (v: number) => void eventos.push(`copia ${v}`),
+    eu: async () => ({ id: 1, nome: "Este PC", dono: false }),
+    estadoTrava: async () => ({
+      ...estado,
+      epoca: 9,
+      expiraEm: 0,
+      prazoMs: 60_000,
+      renovarMs: 20_000,
+    }),
   };
   const montar = (extra: Partial<Parameters<typeof criarEspalhador>[0]> = {}) =>
     criarEspalhador({
@@ -63,11 +73,11 @@ async function cenario() {
     { numero: 4, manifestoSha256 },
     [{ tipo: "pc" as const, endereco: "127.0.0.1", porta: servidor.porta }],
   ] as const;
-  return { base, host, mundo, servidorLocal, eventos, cliente, montar, args };
+  return { base, host, mundo, servidorLocal, eventos, cliente, montar, args, estado };
 }
 
 describe("criarEspalhador", () => {
-  it("pega a vez, atualiza o mundo, avisa o cartório e solta a vez", async () => {
+  it("com outro PC hospedando: pega a vez de ATUALIZAR, atualiza, avisa o cartório e solta (1.8b)", async () => {
     const c = await cenario();
     const r = await c.montar()(...c.args);
     expect(r.estado).toBe("atualizado");
@@ -83,17 +93,25 @@ describe("criarEspalhador", () => {
     expect(hashesDoMundo(c.mundo)).toEqual(antes);
   });
 
-  it("se outro PC tem a vez, nada é solto nem trocado e a mensagem é em pt-BR", async () => {
+  it("este PC tem a trava de host: recusa sem pedir a vez de atualizar (o mundo vivo não se toca)", async () => {
+    const c = await cenario();
+    const antes = hashesDoMundo(c.mundo);
+    c.estado.dono = { id: 1, nome: "Este PC" };
+    await expect(c.montar()(...c.args)).rejects.toThrow(/hospedando/i);
+    expect(c.eventos).toEqual([]);
+    expect(hashesDoMundo(c.mundo)).toEqual(antes);
+  });
+
+  it("cartório recusa a vez de atualizar: nada é solto nem trocado e a mensagem é em pt-BR", async () => {
     const c = await cenario();
     const antes = hashesDoMundo(c.mundo);
     const cliente = {
       ...c.cliente,
-      pegar: async () => ({
+      pegarAtualizacao: async () => ({
         ok: false as const,
-        erro: "ocupada",
-        motivo: "ocupada" as const,
-        donoPcId: 2,
-        epoca: 5,
+        erro: "Este PC está hospedando o servidor.",
+        motivo: "hospedando" as const,
+        epoca: 0,
         expiraEm: 0,
       }),
     };
@@ -102,7 +120,18 @@ describe("criarEspalhador", () => {
     expect(hashesDoMundo(c.mundo)).toEqual(antes);
   });
 
-  it("passa a pasta do servidor: mundo fora dela é recusado e a vez é solta (1.5b)", async () => {
+  it("uma atualização por vez: a 2ª chamada simultânea é recusada sem tocar o cartório", async () => {
+    const c = await cenario();
+    const espalhar = c.montar();
+    const [a, b] = await Promise.allSettled([espalhar(...c.args), espalhar(...c.args)]);
+    expect(a.status).toBe("fulfilled");
+    expect(b.status === "rejected" && String(b.reason)).toMatch(/já está atualizando/);
+    expect(c.eventos.filter((e) => e === "pegar")).toHaveLength(1);
+    // terminada a 1ª, uma nova pode começar
+    await expect(espalhar(...c.args)).resolves.toMatchObject({ estado: "atualizado" });
+  });
+
+  it("passa a pasta do servidor: mundo fora dela é recusado antes de pedir a vez (1.5b)", async () => {
     const c = await cenario();
     const fora = gerarMundo({
       tamanho: "1MB",
@@ -113,7 +142,7 @@ describe("criarEspalhador", () => {
     await expect(c.montar({ pastaDoMundo: fora })(...c.args)).rejects.toThrow(
       /dentro da pasta do servidor/,
     );
-    expect(c.eventos).toEqual(["pegar", "soltar"]);
+    expect(c.eventos).toEqual([]);
     expect(hashesDoMundo(fora)).toEqual(antes);
   });
 

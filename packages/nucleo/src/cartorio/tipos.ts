@@ -47,6 +47,20 @@ export interface TravaRecusada {
 
 export type RespostaTrava = TravaAceita | TravaRecusada;
 
+const MOTIVOS_ATUALIZACAO = ["hospedando", "epoca_velha", "nao_e_dono", "vencida"] as const;
+
+/** 409 de `POST /atualizacao/{pegar,renovar,soltar}` (syncmel-1.8a). Sem `donoPcId`: é sempre a trava do próprio PC. */
+export interface AtualizacaoRecusada {
+  ok: false;
+  erro: string;
+  motivo: (typeof MOTIVOS_ATUALIZACAO)[number];
+  epoca: number;
+  expiraEm: number;
+}
+
+/** O 200 tem o mesmo formato do da trava de host (o `Renovador` serve às duas). */
+export type RespostaAtualizacao = TravaAceita | AtualizacaoRecusada;
+
 /** `GET /trava`. */
 export interface EstadoTrava {
   dono: Pc | null;
@@ -141,6 +155,29 @@ export function validarRespostaTrava(v: unknown): RespostaTrava {
     erro: cortarErro(texto(o, "erro")),
     motivo,
     donoPcId: o.donoPcId === null ? null : inteiro(o, "donoPcId", 1),
+    epoca: inteiro(o, "epoca"),
+    expiraEm: inteiro(o, "expiraEm"),
+  };
+}
+
+export function validarRespostaAtualizacao(v: unknown): RespostaAtualizacao {
+  const o = objeto(v, "trava de atualização");
+  if (o.ok === true) {
+    return {
+      ok: true,
+      epoca: inteiro(o, "epoca", 1),
+      expiraEm: inteiro(o, "expiraEm"),
+      renovarMs: inteiro(o, "renovarMs", 1),
+    };
+  }
+  const motivo = MOTIVOS_ATUALIZACAO.find((m) => m === o.motivo);
+  if (o.ok !== false || !motivo) {
+    throw new Error("Resposta inválida do cartório: recusa da trava de atualização.");
+  }
+  return {
+    ok: false,
+    erro: cortarErro(texto(o, "erro")),
+    motivo,
     epoca: inteiro(o, "epoca"),
     expiraEm: inteiro(o, "expiraEm"),
   };

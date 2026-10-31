@@ -13,8 +13,9 @@ o mundo que está rodando nunca é tocado; regra de ouro 1 intacta.
    de host não muda.
 3. `sync/aplicar.ts`: `temTrava` (host) sai; entram `temAtualizacao` (trava de atualização confirmada no prazo) e
    `hospedaAgora` (este PC tem a trava de host? erro ou demora = "sim", fecha para o lado seguro). `exigirPodeTrocar`
-   = servidor parado + não hospeda + atualização confirmada. Chamado: antes de tudo, depois do download, **antes do
-   1º rename** (aborta: apaga temporária, nada renomeado) e **antes do 2º rename** (aborta: `desfazer`, N volta).
+   = servidor parado + não hospeda + atualização confirmada. Chamado: antes de tudo, depois do download = **antes do
+   marcador e do 1º rename** (aborta: apaga temporária, nada renomeado) e **antes do 2º rename** (aborta: `desfazer`,
+   N volta).
    Troca atômica, marcador e `.antigo` não mudam.
 4. `sync/espalhar.ts`: confere servidor parado e "não hospeda" **antes** de `/atualizacao/pegar` (requisito b);
    um `Renovador` próprio da trava de atualização (um só relógio por chamada, S-06); `temAtualizacao` =
@@ -28,7 +29,7 @@ o mundo que está rodando nunca é tocado; regra de ouro 1 intacta.
 
 - O `Renovador` conta o prazo local a partir do ENVIO do último pedido aceito: 3 × 20 − 25 = **35 s**. O cartório só
   libera 60 s depois de RECEBER esse pedido: com `temAtualizacao` verdadeiro sobram **≥ 25 s** no cartório.
-- Download: renovação a cada 20 s em segundo plano; cada checagem (4 por troca) faz `renovarAgora` (um pedido; até 3
+- Download: renovação a cada 20 s em segundo plano; cada checagem (3 por troca) faz `renovarAgora` (um pedido; até 3
   tentativas de 5 s). `travaConfirmada` dá 10 s por checagem: sem resposta = sem trava (recusa).
 - Cada `rename` leva milissegundos; a checagem logo antes dele deixa ≥ 25 s de folga. Requisito (a) coberto: o PC não
   consegue pegar o host (o cartório recusa enquanto a atualização vale) entre a checagem e o rename.
