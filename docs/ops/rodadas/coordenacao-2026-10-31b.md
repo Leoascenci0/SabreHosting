@@ -11,8 +11,10 @@
 |---|---|---|---|---|
 | 26 | syncmel-1.9 (b) · syncmel-1.3 · syncmel-1.11 · hostmel-3.3 · lancmel-1.1 | session_012qrjnudcWCDkN5r4UejEYE | be029a5 | fechada 15:48 → main 2b3560a |
 | 27 | syncmel-1.12 · lanc-1.3 · app-1.3a/b · lanc-1.4 · sync-2.2 | session_012qrjnsYkWJ95sHBXr89de8 | 2b3560a | fechada 16:37 → main c734988 |
+| 28 | app-1.3c · lancmel-2.1 · syncmel-1.13 · syncmel-1.14 · appmel-1.13 | session_012qrjnu4Sy5GTmvMBgcHhXA | c734988 | fechada 17:39 → main f6d674d |
 
 ## Relatórios
 
 - **Onda 26** (15:48): ✅ syncmel-1.9b #202 · hostmel-3.3 #201 · lancmel-1.1 #200 · syncmel-1.3 #203 · syncmel-1.11 #204 (f → syncmel-1.12) · controle #205. P: nenhum. Decidi por você: 1.11f e sobras viraram syncmel-1.12; roadmap-lanc-melhoria → concluidos. Ficha S-13 (servir arquivo por hash: lstat+realpath) a promover ao CLAUDE.md. Custo n/d. main 2b3560a APROVADA.
 - **Onda 27** (16:37): ✅ syncmel-1.12 #209 · lanc-1.3 #206 · app-1.3a #207 · lanc-1.4 #210 · app-1.3b #211 · sync-2.2 #212 · controle #213; sync-2.1 e roadmap-sync → concluidos. ⏸️ app-1.3c (+appmel-1.4), lanc-2.x (limite de 6). P (provas no PC): Prism real, UAC/túnel Windows, safeStorage real. Decidi por você: app-1.3 cortado em a/b/c; "Pasta do SabreHosting" = appmel-1.13; tela de mods = lancmel-2.1. Custo n/d. main c734988 APROVADA.
+- **Onda 28** (17:39): ✅ app-1.3c #217 e #218 (+appmel-1.4, lancmel-2.2) · lancmel-2.1 #215 · syncmel-1.13 #216 · syncmel-1.14 #214 · appmel-1.13 #219 · controle #220. P (provas no PC): Prism real abre o jogo; assistente/UAC/túnel/PowerShell no Windows; Criar convite com cartório real. Decidi por você: app-1.3c dividido em 1.3c-i/ii; trocar a pasta só avisa onde o mundo antigo ficou, não move. Ficha S-14. Custo n/d. main f6d674d APROVADA.
