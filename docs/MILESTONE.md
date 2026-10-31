@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 23** — entra o appmel-1.11 (destravado 31/10: rotação 10 + 7 dias, DECISOES) e o hostmel-3.1 (versão escolhida pelo dono) (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
+**Próxima onda: 23** — entra o appmel-1.11 (destravado 31/10: rotação 10 + 7 dias, DECISOES) e o hostmel-3.1 (versão escolhida pelo dono); Dependabot #95 e #96 (merge autônomo, DECISOES 31/10) (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
 
 Onda 22 (31/10) — appmel-1.10 · syncmel-1.5 · piloto-1.1 · syncmel-1.6 · sync-2.1 · drive-1.1 — sessão https://claude.ai/code/session_012qrjntw8ggfpCSw7mg4UfD (a 1ª tentativa falhou: S-08)
 
@@ -49,8 +49,7 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
 
-- **Liberar `repo.papermc.io`** na rede do ambiente da nuvem (Allowed domains). *Trava:* rede-2.2.
-- **Dependabot #95 e #96** (actions do CI 4→7): PR de autor externo, merge é do Eliel.
+- **Liberar `repo.papermc.io`** na rede do ambiente da nuvem (Allowed domains). *Trava:* rede-2.2. Eliel disse 31/10 que libera; a próxima onda confere com `curl` antes de despachar.
 - **Provas no PC Windows:** appmel-1.5, hostmel-2.5, appmel-1.1 (passo a passo nos PRs #101, #114, #144).
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
   assinatura (pago, ~US$ 100+/ano). *Trava:* app-3.2.
