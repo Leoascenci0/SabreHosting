@@ -30,3 +30,4 @@
 | 2026-10-30 | **D3:** máquina na nuvem na **Oracle Cloud Always Free em São Paulo** (ARM). O cadastro é do Eliel, no item que cria a máquina | rede-1.1, rede-1.2 |
 | 2026-10-30 | **D4:** ícone enviado pelo Eliel (tigre-dente-de-sabre + blocos de grama), em `apps/desktop/recursos/icone/` | app-1.1 |
 | 2026-10-31 | **Testar daqui, nunca esperar o CI:** o merge é decidido pela vistoria rodada na própria sessão (worktree do ramo com a main mesclada); não se espera o check do GitHub nem se agenda aviso para isso | Regra do Eliel (CLAUDE.md › Visão técnica) |
+| 2026-10-31 | **Dependências do app-1.1:** `electron` (MIT) e `playwright` (Apache-2.0, só `_electron` para o E2E), ambas devDependency de `apps/desktop`; autorizadas pela Máxima. Sem instalador (app-3.1) | app-1.1 |
