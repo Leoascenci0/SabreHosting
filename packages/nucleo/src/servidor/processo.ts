@@ -3,7 +3,7 @@ import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { stat } from "node:fs/promises";
 import { totalmem } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, resolve as resolverCaminho } from "node:path";
 import { gravarAtomico, podeSubir } from "./configurar.js";
 
 export type EstadoServidor = "parado" | "subindo" | "pronto" | "parando" | "caiu";
@@ -42,6 +42,10 @@ const INTERVALO_TRAVA_MS = 20_000;
 const PRAZO_PARADA_PADRAO_MS = 60_000;
 const PRAZO_PARADA_SEM_TRAVA_MS = 10_000;
 const PRAZO_TRAVA_PADRAO_MS = 10_000;
+/** Pastas com servidor deste PC em andamento (regra de ouro 1: um servidor por mundo). */
+const pastasEmUso = new Set<string>();
+/** "Pronto" só pela linha do próprio servidor (`...]: Done (`); chat vem como `<Nome> Done (`. */
+const LINHA_PRONTO = /(?:^|\]: )Done \(/;
 
 /** Erro, demora e `false` valem como sem trava; só `true` dentro do prazo confirma. */
 export async function travaConfirmada(
@@ -103,6 +107,7 @@ export class ServidorMinecraft extends EventEmitter {
   private readonly saiu: Promise<void>;
   private cancelarRelogio: () => void = () => {};
   private verificando = false;
+  private falhouAoIniciar = false;
 
   constructor(
     private readonly filho: ChildProcess,
@@ -117,7 +122,7 @@ export class ServidorMinecraft extends EventEmitter {
         this.cancelarRelogio();
         this.codigoSaida = codigo;
         this.mudar(this.estado === "parando" ? "parado" : "caiu");
-        if (this.estado === "caiu") {
+        if (this.estado === "caiu" && !this.falhouAoIniciar) {
           this.registrar("aviso", `O servidor encerrou sozinho (código ${codigo ?? "sinal"}).`);
         }
         resolve();
@@ -125,6 +130,7 @@ export class ServidorMinecraft extends EventEmitter {
     });
     filho.once("error", (erro) => {
       if (filho.pid !== undefined) return; // erro depois de subir: o `close` cuida.
+      this.falhouAoIniciar = true;
       this.registrar("aviso", `Não consegui iniciar o Java: ${erro.message}`);
       this.cancelarRelogio();
       this.mudar("caiu");
@@ -157,7 +163,7 @@ export class ServidorMinecraft extends EventEmitter {
 
   private aoReceberLinha(linha: string): void {
     this.registrar("info", linha);
-    if (this.estado === "subindo" && linha.includes("Done (")) this.mudar("pronto");
+    if (this.estado === "subindo" && LINHA_PRONTO.test(linha)) this.mudar("pronto");
   }
 
   private async conferirTrava(
@@ -251,13 +257,54 @@ function validarRam(ramMb: number | undefined, totalBytes: number): number {
 
 /** Sobe o servidor NeoForge. Recusa (erro em pt-BR) sem EULA, sem NeoForge instalado ou sem a trava. */
 export async function iniciarServidor(opcoes: OpcoesIniciar): Promise<ServidorMinecraft> {
-  const { pasta, versaoNeoForge, temTrava } = opcoes;
+  const { pasta, versaoNeoForge } = opcoes;
   const plataforma = opcoes.plataforma ?? process.platform;
+  if (!isAbsolute(pasta)) {
+    throw new Error("A pasta do servidor precisa ser um caminho completo (começando na raiz).");
+  }
+  if (!isAbsolute(opcoes.javaPath) && /[\\/]/.test(opcoes.javaPath)) {
+    throw new Error(
+      "O Java precisa ser o nome do programa (ex.: java) ou um caminho completo, não um caminho relativo.",
+    );
+  }
   if (!/^\d[\w.+-]*$/.test(versaoNeoForge) || versaoNeoForge.includes("..")) {
     throw new Error("Versão do NeoForge inválida.");
   }
   const totalBytes = opcoes.memoriaTotalBytes ?? totalmem();
   const ramMb = validarRam(opcoes.ramMb, totalBytes);
+
+  // Marcada antes de qualquer `await`, para duas chamadas ao mesmo tempo não passarem juntas.
+  const chave =
+    plataforma === "win32" ? resolverCaminho(pasta).toLowerCase() : resolverCaminho(pasta);
+  if (pastasEmUso.has(chave)) {
+    throw new Error(
+      "Já está rodando um servidor nesta pasta; não dá para subir outro no mesmo mundo.",
+    );
+  }
+  pastasEmUso.add(chave);
+  try {
+    const servidor = await subirServidor(opcoes, ramMb, plataforma);
+    const liberar = () => {
+      if (servidor.estado === "parado" || servidor.estado === "caiu") {
+        pastasEmUso.delete(chave);
+        servidor.off("estado", liberar);
+      }
+    };
+    servidor.on("estado", liberar);
+    liberar();
+    return servidor;
+  } catch (erro) {
+    pastasEmUso.delete(chave);
+    throw erro;
+  }
+}
+
+async function subirServidor(
+  opcoes: OpcoesIniciar,
+  ramMb: number,
+  plataforma: NodeJS.Platform,
+): Promise<ServidorMinecraft> {
+  const { pasta, versaoNeoForge, temTrava } = opcoes;
 
   const eula = await podeSubir(pasta);
   if (!eula.pode) throw new Error(eula.motivo);
