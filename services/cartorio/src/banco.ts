@@ -6,6 +6,22 @@ export interface Pc {
   id: number;
   nome: string;
 }
+/** Dados da sala de entrada que o convite novo guarda (a chave privada provisória nunca entra aqui). */
+export interface EntradaProvisoria {
+  ipProv: string;
+  chavePubProv: string;
+  paraDono?: boolean;
+}
+export interface LinhaConvite {
+  nome_pc: string;
+  expira_em: number;
+  usado_em: number | null;
+  pc_id: number | null;
+  para_dono: number;
+  ip_prov: string | null;
+  ip_def: string | null;
+  prov_removido_em: number | null;
+}
 
 /** Migrações em ordem; a posição + 1 é a versão do esquema. Nunca editar uma que já saiu: acrescentar outra. */
 export const MIGRACOES = [
@@ -76,6 +92,17 @@ export const MIGRACOES = [
    );
    CREATE TRIGGER copias_nuvem_nao_muda BEFORE UPDATE ON copias_nuvem
    BEGIN SELECT RAISE(ABORT, 'Cópia guardada não muda.'); END;`,
+  // Convite do grupo (cart-1.5): um dono só; o convite guarda o IP e a chave PÚBLICA provisórios (a privada, nunca),
+  // a chave definitiva do 1º uso (repetição em duas fases) e quando o peer provisório saiu.
+  `ALTER TABLE pcs ADD COLUMN dono INTEGER NOT NULL DEFAULT 0 CHECK (dono IN (0, 1));
+   CREATE UNIQUE INDEX pcs_um_dono ON pcs (dono) WHERE dono = 1;
+   ALTER TABLE convites ADD COLUMN para_dono INTEGER NOT NULL DEFAULT 0 CHECK (para_dono IN (0, 1));
+   ALTER TABLE convites ADD COLUMN ip_prov TEXT;
+   ALTER TABLE convites ADD COLUMN chave_pub_prov TEXT;
+   ALTER TABLE convites ADD COLUMN chave_pub_def TEXT;
+   ALTER TABLE convites ADD COLUMN ip_def TEXT;
+   ALTER TABLE convites ADD COLUMN confirmado_em INTEGER;
+   ALTER TABLE convites ADD COLUMN prov_removido_em INTEGER;`,
 ];
 
 /** Abre o banco e aplica as migrações que faltam, tudo numa transação (versão lida dentro dela). */
@@ -120,12 +147,45 @@ export function criarConvite(
   nomePc: string,
   agora: number,
   validadeMs: number,
+  entrada?: EntradaProvisoria,
 ): string {
   const convite = gerarSegredo();
   banco
-    .prepare("INSERT INTO convites (hash, nome_pc, criado_em, expira_em) VALUES (?, ?, ?, ?)")
-    .run(hashSegredo(convite), nomePc, agora, agora + validadeMs);
+    .prepare(
+      `INSERT INTO convites (hash, nome_pc, criado_em, expira_em, ip_prov, chave_pub_prov, para_dono)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      hashSegredo(convite),
+      nomePc,
+      agora,
+      agora + validadeMs,
+      entrada?.ipProv ?? null,
+      entrada?.chavePubProv ?? null,
+      entrada?.paraDono ? 1 : 0,
+    );
   return convite;
+}
+
+function novoToken(banco: Banco, pcId: number | bigint, agora: number): string {
+  const token = gerarSegredo();
+  banco
+    .prepare("INSERT INTO tokens (hash, pc_id, criado_em) VALUES (?, ?, ?)")
+    .run(hashSegredo(token), pcId, agora);
+  return token;
+}
+
+/** Cria o PC do convite; convite de dono passa a marca (o dono anterior, se houver, deixa de ser). */
+function registrarPc(banco: Banco, hash: string, agora: number): number {
+  const { nome_pc, para_dono } = banco
+    .prepare("SELECT nome_pc, para_dono FROM convites WHERE hash = ?")
+    .get(hash) as { nome_pc: string; para_dono: number };
+  if (para_dono) banco.prepare("UPDATE pcs SET dono = 0 WHERE dono = 1").run();
+  const pc = banco
+    .prepare("INSERT INTO pcs (nome, criado_em, dono) VALUES (?, ?, ?)")
+    .run(nome_pc, agora, para_dono);
+  banco.prepare("UPDATE convites SET pc_id = ? WHERE hash = ?").run(pc.lastInsertRowid, hash);
+  return Number(pc.lastInsertRowid);
 }
 
 /** Troca o convite pelo token do PC, uma única vez. `undefined` se o convite não vale (inventado, usado ou vencido). */
@@ -138,17 +198,81 @@ export function usarConvite(banco: Banco, convite: string, agora: number): strin
       )
       .run(agora, hash, agora);
     if (marcado.changes !== 1) return undefined;
-    const { nome_pc } = banco.prepare("SELECT nome_pc FROM convites WHERE hash = ?").get(hash) as {
-      nome_pc: string;
-    };
-    const pc = banco.prepare("INSERT INTO pcs (nome, criado_em) VALUES (?, ?)").run(nome_pc, agora);
-    banco.prepare("UPDATE convites SET pc_id = ? WHERE hash = ?").run(pc.lastInsertRowid, hash);
-    const token = gerarSegredo();
-    banco
-      .prepare("INSERT INTO tokens (hash, pc_id, criado_em) VALUES (?, ?, ?)")
-      .run(hashSegredo(token), pc.lastInsertRowid, agora);
-    return token;
+    return novoToken(banco, registrarPc(banco, hash, agora), agora);
   });
+}
+
+export function lerConvite(banco: Banco, convite: string): LinhaConvite | undefined {
+  return banco
+    .prepare(
+      `SELECT nome_pc, expira_em, usado_em, pc_id, para_dono, ip_prov, ip_def, prov_removido_em
+       FROM convites WHERE hash = ?`,
+    )
+    .get(hashSegredo(convite)) as LinhaConvite | undefined;
+}
+
+/**
+ * Entrada pela sala provisória, em duas fases. 1º uso: marca o convite, cria o PC e o token. Repetição (resposta
+ * perdida) com a MESMA chave definitiva, antes do prazo e da confirmação: revoga o token anterior e devolve outro.
+ * Chave diferente, convite vencido, confirmado ou sem sala → `undefined`.
+ */
+export function entrarPeloConvite(
+  banco: Banco,
+  convite: string,
+  chavePub: string,
+  agora: number,
+): { token: string; pcId: number; nome: string; ipProv: string } | undefined {
+  const hash = hashSegredo(convite);
+  return emTransacao(banco, () => {
+    const c = banco
+      .prepare(
+        `SELECT nome_pc, usado_em, pc_id, ip_prov, chave_pub_def FROM convites
+         WHERE hash = ? AND ip_prov IS NOT NULL AND expira_em > ?
+           AND confirmado_em IS NULL AND prov_removido_em IS NULL`,
+      )
+      .get(hash, agora) as
+      | {
+          nome_pc: string;
+          usado_em: number | null;
+          pc_id: number | null;
+          ip_prov: string;
+          chave_pub_def: string | null;
+        }
+      | undefined;
+    if (!c) return undefined;
+    let pcId: number;
+    if (c.usado_em === null) {
+      banco
+        .prepare("UPDATE convites SET usado_em = ?, chave_pub_def = ? WHERE hash = ?")
+        .run(agora, chavePub, hash);
+      pcId = registrarPc(banco, hash, agora);
+    } else {
+      if (c.pc_id === null || c.chave_pub_def !== chavePub) return undefined;
+      pcId = c.pc_id;
+      banco
+        .prepare("UPDATE tokens SET revogado_em = ? WHERE pc_id = ? AND revogado_em IS NULL")
+        .run(agora, pcId);
+    }
+    return { token: novoToken(banco, pcId, agora), pcId, nome: c.nome_pc, ipProv: c.ip_prov };
+  });
+}
+
+/** Nome já usado por PC com token ativo ou por convite ainda pendente. */
+export function nomeOcupado(banco: Banco, nome: string, agora: number): boolean {
+  return (
+    banco
+      .prepare(
+        `SELECT 1 FROM pcs WHERE nome = ?
+           AND EXISTS (SELECT 1 FROM tokens WHERE pc_id = pcs.id AND revogado_em IS NULL)
+         UNION ALL
+         SELECT 1 FROM convites WHERE nome_pc = ? AND usado_em IS NULL AND expira_em > ?`,
+      )
+      .get(nome, nome, agora) !== undefined
+  );
+}
+
+export function donoAtual(banco: Banco): Pc | undefined {
+  return banco.prepare("SELECT id, nome FROM pcs WHERE dono = 1").get() as Pc | undefined;
 }
 
 export function pcDoToken(banco: Banco, token: string): Pc | undefined {
@@ -160,11 +284,18 @@ export function pcDoToken(banco: Banco, token: string): Pc | undefined {
     .get(hashSegredo(token)) as Pc | undefined;
 }
 
-/** Apaga convites nunca usados vencidos há mais de `dias`; o usado fica (o `pc_id` dele é o registro de quem entrou). */
+/**
+ * Apaga convites nunca usados vencidos há mais de `dias`; o usado fica (o `pc_id` dele é o registro de quem entrou).
+ * Linha cujo peer provisório ainda não saiu fica: é ela que diz à limpeza o que remover.
+ */
 export function apagarConvitesVencidos(banco: Banco, agora: number, dias = 7): number {
   const limite = agora - dias * 86_400_000;
   return Number(
-    banco.prepare("DELETE FROM convites WHERE usado_em IS NULL AND expira_em < ?").run(limite)
-      .changes,
+    banco
+      .prepare(
+        `DELETE FROM convites WHERE usado_em IS NULL AND expira_em < ?
+           AND (ip_prov IS NULL OR prov_removido_em IS NOT NULL)`,
+      )
+      .run(limite).changes,
   );
 }

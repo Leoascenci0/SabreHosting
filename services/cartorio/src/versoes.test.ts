@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { type Banco, MIGRACOES, abrirBanco, criarConvite } from "./banco.js";
-import { gerarSegredo } from "./segredo.js";
 import { criarCartorio } from "./servidor.js";
 import { pegar, renovar } from "./trava.js";
 import { informarCopia, maisNova, quemTem, registrarVersao } from "./versoes.js";
@@ -227,7 +226,7 @@ describe("versões: migração v3 → v4", () => {
     v3.close();
     const banco = abrirBanco(caminho);
     fechar.push(() => banco.close());
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 5 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 6 }]);
     expect(banco.prepare("SELECT id, nome FROM pcs ORDER BY id").all()).toEqual([
       { id: 1, nome: "Ana" },
       { id: 2, nome: "Bia" },
@@ -251,7 +250,6 @@ describe("versões: rotas do cartório", () => {
     const banco = abrirBanco(caminhoNovo());
     const app = criarCartorio({
       banco,
-      segredoAdmin: gerarSegredo(),
       logger: { level: "silent" },
       agora: () => relogio.agora,
     });

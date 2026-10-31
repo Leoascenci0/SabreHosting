@@ -9,8 +9,27 @@ import {
   pacoteGuardado,
   receberPacote,
 } from "./armazem.js";
-import { type Banco, type Pc, criarConvite, pcDoToken, usarConvite } from "./banco.js";
-import { iguais } from "./segredo.js";
+import { type AjudanteEntrada, CHAVE_WG, naSalaDeEntrada } from "./ajudante.js";
+import {
+  type Banco,
+  type Pc,
+  donoAtual,
+  lerConvite,
+  nomeOcupado,
+  pcDoToken,
+  usarConvite,
+} from "./banco.js";
+import {
+  type Grupo,
+  HORA_MS,
+  NOME_PC,
+  VALIDADE_MAXIMA_H,
+  VALIDADE_PADRAO_H,
+  confirmarEntrada,
+  emitirConvite,
+  entrarNoGrupo,
+  limparProvisorios,
+} from "./convite.js";
 import {
   type MotivoRecusa,
   type ResultadoTrava,
@@ -26,12 +45,16 @@ import { type DadosVersao, informarCopia, maisNova, quemTem, registrarVersao } f
 
 export interface OpcoesCartorio {
   banco: Banco;
-  segredoAdmin: string;
   logger?: { level?: string; stream?: Writable };
   agora?: () => number;
   trava?: Partial<TemposTrava>;
   /** Onde guardar a cópia do mundo (sem isto, as rotas do pacote não existem). */
   armazem?: { pasta: string; tetoBytes?: number };
+  /** Quem mexe no WireGuard da nuvem. Sem ele (ou sem `grupo`), o cartório não cria convite (falha fechada). */
+  ajudante?: AjudanteEntrada;
+  grupo?: Grupo;
+  /** De quanto em quanto tempo a limpeza tira os peers provisórios vencidos. Padrão: 60 s. */
+  limpezaMs?: number;
 }
 
 /** Caminhos que o log apaga: cabeçalho de autorização e qualquer token ou convite. */
@@ -42,8 +65,19 @@ const REDACT = [
   "convite",
   "*.token",
   "*.convite",
+  "body.convite",
 ];
 const NAO_AUTORIZADO = { erro: "Acesso negado. Peça um convite novo ao administrador do grupo." };
+const SO_DONO = { erro: "Só o dono do grupo cria convites." };
+const SEM_AJUDANTE = {
+  erro: "O cartório não está pronto para criar convites (rede da nuvem não configurada). Avise o dono do grupo.",
+};
+const AJUDANTE_FALHOU = { erro: "A rede da nuvem não respondeu. Tente de novo em instantes." };
+const NOME_EM_USO = {
+  erro: "Já existe um PC ou um convite pendente com esse nome. Escolha outro.",
+};
+const SALA_DE_ENTRADA = { erro: "Termine a entrada no grupo pelo app antes de usar o cartório." };
+const IP_ERRADO = { erro: "Confirme a entrada pela rede definitiva deste PC." };
 const CONVITE_INVALIDO = {
   erro: "Convite inválido, já usado ou vencido. Peça um novo ao administrador.",
 };
@@ -143,14 +177,14 @@ function bearer(req: FastifyRequest): string | undefined {
 
 export function criarCartorio({
   banco,
-  segredoAdmin,
   logger,
   agora = Date.now,
   trava,
   armazem: opcoesArmazem,
+  ajudante,
+  grupo,
+  limpezaMs = 60_000,
 }: OpcoesCartorio) {
-  if (segredoAdmin.length < 32)
-    throw new Error("Segredo de administrador ausente ou curto (mínimo 32 caracteres).");
   const { prazoMs, renovarMs } = conferirTempos(trava);
   const app = Fastify({
     // JSON pequeno; o PUT do pacote tem o próprio teto (o do armazém).
@@ -158,6 +192,27 @@ export function criarCartorio({
     logger: { level: "info", ...logger, redact: { paths: REDACT, censor: "[oculto]" } },
   });
   app.addHook("onClose", () => banco.close());
+  // A sala de entrada (IP provisório) só alcança o `usar`; o resto espera o PC estar na rede definitiva.
+  app.addHook("onRequest", (req, resp, pronto) => {
+    if (naSalaDeEntrada(req.ip) && req.url.split("?")[0] !== "/convites/usar")
+      return void resp.code(403).send(SALA_DE_ENTRADA);
+    pronto();
+  });
+  if (ajudante) {
+    let limpando = false;
+    const relogio = setInterval(() => {
+      if (limpando) return;
+      limpando = true;
+      limparProvisorios(banco, ajudante, agora())
+        .then(({ falhas }) => {
+          if (falhas) app.log.warn({ falhas }, "peer provisório não removido; tento de novo");
+        })
+        .catch((err: unknown) => app.log.error({ err }, "limpeza dos provisórios falhou"))
+        .finally(() => (limpando = false));
+    }, limpezaMs);
+    relogio.unref();
+    app.addHook("onClose", () => clearInterval(relogio));
+  }
 
   const { barrado, contarFalha } = criarLimitador(agora);
   /** Confere o limite antes de olhar convite, token ou segredo. */
@@ -165,14 +220,6 @@ export function criarCartorio({
     if (barrado(req.ip)) void resp.code(429).send(MUITAS_TENTATIVAS);
     else pronto();
   }
-  function soAdmin(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
-    if (barrado(req.ip)) return void resp.code(429).send(MUITAS_TENTATIVAS);
-    const segredo = bearer(req);
-    if (segredo && iguais(segredo, segredoAdmin)) return pronto();
-    contarFalha(req.ip);
-    void resp.code(401).send(NAO_AUTORIZADO);
-  }
-
   const pcDaChamada = new WeakMap<FastifyRequest, Pc>();
   function soPc(req: FastifyRequest, resp: FastifyReply, pronto: () => void) {
     if (barrado(req.ip)) return void resp.code(429).send(MUITAS_TENTATIVAS);
@@ -216,29 +263,54 @@ export function criarCartorio({
 
   app.get("/saude", () => ({ ok: true }));
 
-  app.post<{ Body: { nomePc: string; validadeMinutos?: number } }>(
+  app.get("/grupo", { onRequest: soPc }, (_req, resp) =>
+    grupo
+      ? { nome: grupo.nome, endereco_jogar: grupo.enderecoJogar }
+      : resp.code(503).send(SEM_AJUDANTE),
+  );
+
+  app.post<{ Body: { nomePc: string; validadeHoras?: number } }>(
     "/convites",
     {
-      onRequest: soAdmin,
+      onRequest: soPc,
       schema: {
         body: {
           type: "object",
           required: ["nomePc"],
           properties: {
-            nomePc: { type: "string", minLength: 1, maxLength: 60 },
-            validadeMinutos: { type: "integer", minimum: 1, maximum: 1440, default: 30 },
+            nomePc: { type: "string", pattern: NOME_PC },
+            validadeHoras: {
+              type: "integer",
+              minimum: 1,
+              maximum: VALIDADE_MAXIMA_H,
+              default: VALIDADE_PADRAO_H,
+            },
           },
         },
       },
     },
-    (req, resp) => {
-      const { nomePc, validadeMinutos = 30 } = req.body;
-      const convite = criarConvite(banco, nomePc, agora(), validadeMinutos * 60_000);
-      return resp.code(201).send({ convite });
+    async (req, resp) => {
+      if (donoAtual(banco)?.id !== pcDe(req).id) return resp.code(403).send(SO_DONO);
+      if (!ajudante || !grupo) return resp.code(503).send(SEM_AJUDANTE);
+      const { nomePc, validadeHoras = VALIDADE_PADRAO_H } = req.body;
+      if (nomeOcupado(banco, nomePc, agora())) return resp.code(409).send(NOME_EM_USO);
+      try {
+        const r = await emitirConvite(
+          banco,
+          ajudante,
+          grupo,
+          { nomePc, validadeMs: validadeHoras * HORA_MS },
+          agora(),
+        );
+        return await resp.code(201).send(r);
+      } catch (err) {
+        req.log.error({ err }, "convite não criado");
+        return resp.code(503).send(AJUDANTE_FALHOU);
+      }
     },
   );
 
-  app.post<{ Body: { convite: string } }>(
+  app.post<{ Body: { convite: string; chave_publica?: string } }>(
     "/convites/usar",
     {
       onRequest: limiteFalhas,
@@ -246,19 +318,44 @@ export function criarCartorio({
         body: {
           type: "object",
           required: ["convite"],
-          properties: { convite: { type: "string", minLength: 1, maxLength: 100 } },
+          properties: {
+            convite: { type: "string", minLength: 1, maxLength: 100 },
+            chave_publica: { type: "string", pattern: CHAVE_WG.source },
+          },
         },
       },
     },
-    (req, resp) => {
-      const token = usarConvite(banco, req.body.convite, agora());
-      if (!token) {
-        contarFalha(req.ip);
-        return resp.code(401).send(CONVITE_INVALIDO);
+    async (req, resp) => {
+      const { convite, chave_publica } = req.body;
+      // Convite antigo (sem sala de entrada, de antes do cart-1.5): o PC já estava na rede; segue como era.
+      if (lerConvite(banco, convite)?.ip_prov === null) {
+        const token = usarConvite(banco, convite, agora());
+        if (token) return { token };
+      } else if (chave_publica && ajudante) {
+        const r = await entrarNoGrupo(
+          banco,
+          ajudante,
+          { convite, chavePub: chave_publica, ip: req.ip },
+          agora(),
+        );
+        if (r.ok) return { token: r.token, pacote: r.pacote };
+        if (r.motivo === "ajudante") return resp.code(503).send(AJUDANTE_FALHOU);
       }
-      return { token };
+      contarFalha(req.ip);
+      return resp.code(401).send(CONVITE_INVALIDO);
     },
   );
+
+  app.post("/convites/confirmar", { onRequest: soPc }, async (req, resp) => {
+    if (!ajudante) return resp.code(503).send(SEM_AJUDANTE);
+    try {
+      const r = await confirmarEntrada(banco, ajudante, pcDe(req).id, req.ip, agora());
+      return r === "ok" ? resp.code(204).send() : resp.code(403).send(IP_ERRADO);
+    } catch (err) {
+      req.log.error({ err }, "peer provisório não removido na confirmação");
+      return resp.code(503).send(AJUDANTE_FALHOU);
+    }
+  });
 
   app.get("/eu", { onRequest: soPc }, (req) => pcDe(req));
 
