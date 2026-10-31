@@ -113,6 +113,17 @@ describe("tela de configurações", () => {
     await p.locator("#config-voltar").click();
     await p.locator("#ver-config").click();
     expect(await p.locator("#cfg-intervalo").inputValue()).toBe("30");
+
+    // Quantos guardar: padrão 10; 0 é recusado e o foco vai para o campo; 4 grava.
+    expect(await p.locator("#cfg-quantos").inputValue()).toBe("10");
+    await p.locator("#cfg-quantos").fill("0");
+    await p.locator("#config-salvar").click();
+    await esperarTexto(p, "#config-erro", "Quantos guardar");
+    expect(await p.locator("#cfg-quantos").getAttribute("aria-invalid")).toBe("true");
+    await p.locator("#cfg-quantos").fill("4");
+    await p.locator("#config-salvar").click();
+    await esperarTexto(p, "#config-aviso", "Salvo.");
+    expect(JSON.parse(readFileSync(arquivo(), "utf8"))).toMatchObject({ quantosGuardar: 4 });
   });
 
   it("histórico longo: pasta e botão só ficam ativos com a opção ligada; erro leva ao campo certo", async () => {

@@ -66,41 +66,46 @@ describe("planejarRotacao", () => {
     expect(nomes(plano.manter)).toEqual(nomes(l));
   });
 
-  it("mantém os N mais recentes e 1 por dia dos últimos 7; apaga o resto", () => {
+  it("mantém os N mais recentes e TUDO dos últimos 7 dias; apaga o resto", () => {
     // 3 backups por dia, de hoje até 13 dias atrás, sempre às 15h, 11h e 7h.
     const l: BackupDaRotacao[] = [];
     for (let d = 0; d < 14; d++) {
       for (const h of [15, 11, 7]) l.push(backup(new Date(2026, 9, 30 - d, h, 0, 0)));
     }
-    const plano = planejarRotacao(l, { agora: AGORA, recentes: 10, diarios: 7 });
+    const plano = planejarRotacao(l, { agora: AGORA, recentes: 3, dias: 7 });
     const mantidos = new Set(plano.manter.map((b) => b.nome));
-    // os 10 mais recentes (3 por dia: 3 dias + 1)
-    for (const b of l.slice(0, 10)) expect(mantidos.has(b.nome)).toBe(true);
-    // o mais recente (15h) de cada um dos últimos 7 dias
+    // todos os 21 dos últimos 7 dias ficam (os 3 mais recentes já estão entre eles)
     for (let d = 0; d < 7; d++) {
-      expect(mantidos.has(nomeDe(new Date(2026, 9, 30 - d, 15, 0, 0)))).toBe(true);
+      for (const h of [15, 11, 7]) {
+        expect(mantidos.has(nomeDe(new Date(2026, 9, 30 - d, h, 0, 0)))).toBe(true);
+      }
     }
-    // 8 dias atrás já está fora das janelas
+    // 7 dias atrás e além só ficariam pelos N recentes: com N = 3 saem todos
     for (const h of [15, 11, 7]) {
-      expect(mantidos.has(nomeDe(new Date(2026, 9, 30 - 8, h, 0, 0)))).toBe(false);
+      expect(mantidos.has(nomeDe(new Date(2026, 9, 30 - 7, h, 0, 0)))).toBe(false);
     }
-    // 10 recentes + 4 diários extras (dias 4 a 6 + o dia 3 não repete...) = conta exata
     expect(plano.manter.length + plano.apagar.length).toBe(l.length);
-    expect(plano.manter.length).toBe(10 + 3);
+    expect(plano.manter.length).toBe(21);
+  });
+
+  it("com N maior que a janela, guarda os N mais novos mesmo fora dos 7 dias", () => {
+    const l = Array.from({ length: 20 }, (_, i) => backup(new Date(2026, 9, 30 - i * 2, 12, 0, 0)));
+    const plano = planejarRotacao(l, { agora: AGORA, recentes: 10 });
+    expect(nomes(plano.manter)).toEqual(nomes(l.slice(0, 10)));
   });
 
   it("o dia é o dia local, não o UTC", () => {
     // 23h50 e 00h10 locais, dias diferentes mesmo a 20 minutos um do outro.
     const antes = backup(new Date(2026, 9, 28, 23, 50, 0));
     const depois = backup(new Date(2026, 9, 29, 0, 10, 0));
-    const plano = planejarRotacao([antes, depois], { agora: AGORA, recentes: 1, diarios: 7 });
+    const plano = planejarRotacao([antes, depois], { agora: AGORA, recentes: 1, dias: 7 });
     expect(plano.apagar).toEqual([]);
   });
 
   it("sempre mantém o conferido mais recente, mesmo fora das janelas", () => {
     const velho = backup(new Date(2026, 8, 1, 10, 0, 0), "bom");
     const recentes = Array.from({ length: 12 }, (_, i) => backup(horas(i + 1), "ruim"));
-    const plano = planejarRotacao([velho, ...recentes], { agora: AGORA, recentes: 10, diarios: 7 });
+    const plano = planejarRotacao([velho, ...recentes], { agora: AGORA, recentes: 10, dias: 7 });
     expect(plano.manter.map((b) => b.nome)).toContain(velho.nome);
   });
 
@@ -108,7 +113,7 @@ describe("planejarRotacao", () => {
     const l = Array.from({ length: 30 }, (_, i) =>
       backup(horas(i * 24 + 1), i % 2 ? "nao-conferido" : "bom"),
     );
-    const plano = planejarRotacao(l, { agora: AGORA, recentes: 2, diarios: 1 });
+    const plano = planejarRotacao(l, { agora: AGORA, recentes: 2, dias: 1 });
     expect(plano.apagar.filter((b) => b.estado === "nao-conferido")).toEqual([]);
   });
 
@@ -120,7 +125,7 @@ describe("planejarRotacao", () => {
   it("recusa configuração perigosa", () => {
     expect(() => planejarRotacao([], { agora: AGORA, recentes: 0 })).toThrow(/pelo menos 1/);
     expect(() => planejarRotacao([], { agora: AGORA, recentes: 1.5 })).toThrow(/pelo menos 1/);
-    expect(() => planejarRotacao([], { agora: AGORA, diarios: -1 })).toThrow(/dias/);
+    expect(() => planejarRotacao([], { agora: AGORA, dias: -1 })).toThrow(/dias/);
   });
 
   it("recusa nomes repetidos (não dá para saber qual é qual)", () => {
@@ -162,7 +167,7 @@ describe("planejarRotacao", () => {
         }
       }
       const recentes = 1 + Math.floor(r() * 12);
-      const diarios = Math.floor(r() * 9);
+      const dias = Math.floor(r() * 9);
       // Em ~1 de cada 8 sequências entra um backup de data inválida: o plano tem de recusar a lista inteira.
       if (r() < 0.125) {
         const invalido: BackupDaRotacao = {
@@ -171,11 +176,11 @@ describe("planejarRotacao", () => {
           estado: "bom",
         };
         expect(
-          () => planejarRotacao([...l, invalido], { agora: AGORA, recentes, diarios }),
+          () => planejarRotacao([...l, invalido], { agora: AGORA, recentes, dias }),
           `semente ${semente} (data inválida)`,
         ).toThrow(/data inválida/);
       }
-      const plano = planejarRotacao(l, { agora: AGORA, recentes, diarios });
+      const plano = planejarRotacao(l, { agora: AGORA, recentes, dias });
       const ctx = `semente ${semente}`;
 
       // partição exata: nada some nem se repete
@@ -214,13 +219,12 @@ describe("planejarRotacao", () => {
       const mantidos = new Set(plano.manter.map((b) => b.nome));
       if (bons.length > 0)
         for (const b of porData.slice(0, recentes)) expect(mantidos.has(b.nome), ctx).toBe(true);
-      // o mais recente de cada um dos últimos `diarios` dias fica
-      for (let d = 0; d < diarios; d++) {
+      // todo backup dos últimos `dias` dias fica
+      for (let d = 0; d < dias; d++) {
         const ini = new Date(2026, 9, 30 - d).getTime();
         const fim = new Date(2026, 9, 31 - d).getTime();
         const doDia = porData.filter((b) => b.data.getTime() >= ini && b.data.getTime() < fim);
-        if (bons.length > 0 && doDia.length > 0)
-          expect(mantidos.has(primeiro(doDia).nome), ctx).toBe(true);
+        if (bons.length > 0) for (const b of doDia) expect(mantidos.has(b.nome), ctx).toBe(true);
       }
     }
   }, 60_000);
@@ -245,7 +249,7 @@ describe("aplicarRotacao", () => {
 
   it("simular devolve o resultado sem apagar nada", async () => {
     const { dir, lista } = cenario();
-    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 3, diarios: 1 });
+    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 3, dias: 1 });
     expect(plano.apagar.length).toBeGreaterThan(0);
     const r = await aplicarRotacao(dir, plano, { simular: true, conferir: sempreBom });
     expect(nomes(r.apagados)).toEqual(nomes(plano.apagar));
@@ -254,7 +258,7 @@ describe("aplicarRotacao", () => {
 
   it("apaga só o que o plano manda, um a um", async () => {
     const { dir, lista } = cenario();
-    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 3, diarios: 1 });
+    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 3, dias: 1 });
     const r = await aplicarRotacao(dir, plano, { conferir: sempreBom });
     expect(r.falhas).toEqual([]);
     expect(readdirSync(dir).sort()).toEqual(nomes(plano.manter));
@@ -262,7 +266,7 @@ describe("aplicarRotacao", () => {
 
   it("não apaga nada se o único bom que sobra não passa na conferência de agora", async () => {
     const { dir, lista } = cenario();
-    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 1, diarios: 0 });
+    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 1, dias: 0 });
     await expect(aplicarRotacao(dir, plano, { conferir: async () => false })).rejects.toThrow(
       /nenhum backup bom/i,
     );
@@ -271,7 +275,7 @@ describe("aplicarRotacao", () => {
 
   it("aceita se um bom mais velho ainda confere", async () => {
     const { dir, lista } = cenario();
-    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 2, diarios: 0 });
+    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 2, dias: 0 });
     const segundo = plano.manter
       .map((b) => b.nome)
       .sort()
@@ -292,7 +296,7 @@ describe("aplicarRotacao", () => {
     );
     criarArquivos(dir, ruins);
     const lista = [{ ...bom, sha256: criado.sha256 }, ...ruins];
-    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 1, diarios: 0 });
+    const plano = planejarRotacao(lista, { agora: AGORA, recentes: 1, dias: 0 });
     expect(plano.manter.map((b) => b.nome)).toContain(bom.nome);
     expect(plano.apagar.length).toBe(4);
 
