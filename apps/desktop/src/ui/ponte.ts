@@ -66,6 +66,13 @@ export interface PcDaTela {
 
 export type EstadoGrupo = { dono: false } | { dono: true; pcs: PcDaTela[]; erro?: string };
 
+export type EstadoVersao =
+  { dono: false } | { dono: true; atual: string; versoes: string[]; erro?: string };
+
+export type OpcoesDaVersao =
+  | { ok: true; neoforge: boolean; fabricForge: boolean; texto: string }
+  | { ok: false; mensagem: string };
+
 export interface PonteSabre {
   versao(): Promise<string>;
   abrirComWindows: {
@@ -91,6 +98,12 @@ export interface PonteSabre {
   grupo: {
     estado(): Promise<EstadoGrupo>;
     tirar(id: number): Promise<Resultado>;
+  };
+  versoes: {
+    estado(): Promise<EstadoVersao>;
+    /** Só ao selecionar uma versão: cada consulta vai à internet. */
+    opcoes(versao: string): Promise<OpcoesDaVersao>;
+    gravar(versao: string): Promise<Resultado>;
   };
   inicio: {
     estado(): Promise<EstadoInicio>;

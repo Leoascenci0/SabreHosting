@@ -110,6 +110,30 @@
             De 5 a 32, e menor que a distância de visão. Padrão: 8.
           </p>
           <p class="dica">Vale na próxima vez que o servidor for ligado.</p>
+          <div id="cfg-versao-area" hidden>
+            <label for="cfg-versao">Versão do Minecraft (todos os PCs do grupo usam a mesma)</label>
+            <select id="cfg-versao" aria-describedby="cfg-versao-dica cfg-versao-erro"></select>
+            <p class="dica" id="cfg-versao-dica" aria-live="polite"></p>
+            <p class="dica">
+              Só dá para trocar com o servidor parado. Convém ter um backup recente antes de trocar.
+            </p>
+            <button type="button" id="cfg-versao-trocar" disabled>Trocar a versão</button>
+            <div
+              id="cfg-versao-confirmacao"
+              role="alertdialog"
+              aria-labelledby="cfg-versao-pergunta"
+              hidden
+            >
+              <p id="cfg-versao-pergunta"></p>
+              <p class="detalhe">Todos os PCs do grupo passam a usar esta versão.</p>
+              <div class="acoes">
+                <button type="button" class="perigo" id="cfg-versao-confirmar">Trocar</button>
+                <button type="button" class="secundario" id="cfg-versao-cancelar">Cancelar</button>
+              </div>
+            </div>
+            <p class="erro" id="cfg-versao-erro" role="alert" hidden></p>
+            <p class="dica" id="cfg-versao-aviso" role="status"></p>
+          </div>
         </fieldset>
         <fieldset>
           <legend>Backups</legend>

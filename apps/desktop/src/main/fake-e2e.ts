@@ -14,6 +14,7 @@ import { depsBackups } from "./deps-backups.js";
 import type { DepsBackups } from "./backups.js";
 import type { DepsGrupo } from "./grupo.js";
 import type { DepsImportacao } from "./importar.js";
+import type { DepsVersao } from "./versao.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 // "dono-eu*": app reaberto com a trava ainda em nome deste PC, sem servidor desta sessão (com ou sem órfão vivo).
@@ -219,5 +220,26 @@ export function depsImportacaoE2E(
     },
     servidorRodando,
     restaurando,
+  };
+}
+
+/** Versão do grupo falsa para o E2E: só o dono (SABRE_E2E_DONO=1) vê a área; gravações ficam em `__sabreE2EVersao`. */
+export function depsVersaoE2E(servidorRodando: () => boolean): DepsVersao {
+  const souDono = process.env["SABRE_E2E_DONO"] === "1";
+  let atual = "1.21.1";
+  const gravados: string[] = [];
+  (globalThis as Record<string, unknown>)["__sabreE2EVersao"] = { gravados };
+  return {
+    eu: async () => ({ id: souDono ? 1 : 2, dono: souDono }),
+    lerAtual: async () => atual,
+    listar: async () => ["1.21.1", "1.20.4", "1.12.2"],
+    opcoes: async (v) => ({
+      neoforge: v !== "1.12.2",
+      fabricForge: v === "1.21.1",
+      consultou: true,
+    }),
+    sha1Do: async () => "b".repeat(40),
+    gravar: async (v) => void (gravados.push(v), (atual = v)),
+    servidorRodando,
   };
 }

@@ -31,6 +31,13 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:estado"),
     tirar: (id: number): Promise<unknown> => electron.ipcRenderer.invoke("sabre:grupo:tirar", id),
   },
+  versoes: {
+    estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:versoes:estado"),
+    opcoes: (versao: string): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:versoes:opcoes", versao),
+    gravar: (versao: string): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:versoes:gravar", versao),
+  },
   inicio: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:estado"),
     jogar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:jogar"),
