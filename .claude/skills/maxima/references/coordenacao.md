@@ -30,6 +30,10 @@ O Eliel se guia pela lista de chats do claude.ai/code; cada sessão tem que dize
     Onda 21 — …
       Item 1 · …
   ```
+- **Limite do app (conferido em 31/10):** a lista lateral só dobra **um nível**: tudo o que nasce do chat da Máxima
+  aparece achatado debaixo dele, inclusive os itens (mesmo sendo filhos da onda). O Eliel decidiu manter assim (sem
+  arquivar e sem tirar a onda de dentro da Máxima); os títulos `Onda N` e `Item k` guiam a leitura. Não tente
+  contornar.
 - **Errado (enche o contexto):** o chat da Máxima se renomear para a onda (ex.: "Máxima — onda 58") e abrir os itens
   direto debaixo dele. A onda é **sempre outra sessão**, criada pelo coordenador; só ela cria os itens.
 - **Bastão:** a coordenadora seguinte é criada pela atual com o título `Máxima continuar — <data> (<n>º bastão)`; as
