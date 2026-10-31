@@ -104,3 +104,10 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* teste: sair durante o primeiro ligar não deixa servidor escutando.
   *Origem:* syncmel-1.12 · PR #209 · qa
+
+- [ ] **1.14 — Alcançar: erro de rede na tela e progresso durante o download do pacote**
+  *O que fazer:* erro de rede no download do pacote da nuvem vira só `console.warn` (a tela volta ao normal, sem mensagem para o amigo): mostrar mensagem em pt-BR; progresso fica em 0% durante o download do pacote: reportar bytes; se a falha com PCs for trava perdida ou servidor rodando, não tentar a nuvem.
+  *Arquivo:* `packages/nucleo/src/sync/alcancar.ts`, `apps/desktop/src/main/espalhar-versao.ts`, `apps/desktop/src/ui/tela.ts`
+  **Tela no app:** status na tela inicial ("Atualizando seu mundo… N%", e aviso se falhar).
+  *Confirmação:* teste: falha de rede mostra aviso; progresso avança durante o download.
+  *Origem:* sync-2.2 · PR #212 · qa

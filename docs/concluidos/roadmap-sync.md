@@ -34,7 +34,7 @@ estava desligado atualiza ao ligar.
   *Confirmação:* teste com 3 PCs simulados: todos chegam à versão M.
   *Depende de:* sync-1.2, bkp-1.3
 
-- [ ] **2.2 — Quem voltou depois de muito tempo**
+- [x] **2.2 — Quem voltou depois de muito tempo** (PR #212, 31/10/2026)
   *O que fazer:* ao iniciar, perguntar a versão mais nova; buscar de PC online ou da nuvem; bloquear "Hospedar" até
   terminar (Jogar continua liberado).
   *Arquivo:* `packages/nucleo/src/sync/alcancar.ts`
