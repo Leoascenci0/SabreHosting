@@ -107,7 +107,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   *Confirmação:* teste: backup que falha → versão não muda; backup ok → versão muda depois dele; servidor rodando continua recusado.
   *Origem:* hostmel-3.1c · PR #188 · relatório da Onda 24
 
-- [ ] **3.3 — Acabamentos do backup antes de trocar a versão (notas do qa do #193)**
+- [x] **3.3 — Acabamentos do backup antes de trocar a versão (notas do qa do #193)** (PR #201, 31/10/2026)
   *O que fazer:* o servidor pode subir enquanto o backup do 3.2 roda (a checagem é só no início: segurar a trava/estado até o fim); testes da colisão de nome do backup, do texto "Fazendo backup antes…" e do aviso "mods pendentes" (`SEM_HASH_MODS`).
   *Arquivo:* `apps/desktop/src/main/deps-backups.ts`, `versao.ts`, `ui/configuracoes.ts`
   **Tela no app:** Configurações › Servidor › Versão.

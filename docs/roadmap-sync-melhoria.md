@@ -22,7 +22,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Confirmação:* testes: conexão ociosa é derrubada; arquivo completo não gera segundo download.
   *Origem:* sync-1.1 · PR #156 · qa integridade
 
-- [ ] **1.3 — Prova de que só pacote fechado sai pelo `arquivos(hash)`**
+- [x] **1.3 — Prova de que só pacote fechado sai pelo `arquivos(hash)`** (PR #203, 31/10/2026; lstat + realpath: link em arquivo ou pasta → 404)
   *O que fazer:* quando o servidor for ligado ao app (sync-2.1), exigir teste de que só arquivos de pacotes registrados
   são servidos e de que `arquivos()` nunca devolve link simbólico nem caminho da pasta do mundo vivo.
   *Arquivo:* `packages/nucleo/src/sync/`
@@ -68,7 +68,7 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Depende de:* decisão do Eliel e sync-2.1a (PR #173).
   *Origem:* sync-2.1a · PR #173 · filha
 
-- [ ] **1.9 — Ligar o espalhar ao app (sync-2.1b)** *(onda 25: **1.9a ✅ PR #192** — núcleo+main: fontes sem ip null, órfão bloqueia, gatilho em segundo plano a cada 10 min, 2º rename local, integração `/atualizacao`; **falta 1.9b**: tela "Limite de banda" (padrão 10 MB/s) e limite real em `pedirArquivo`; nuvem NÃO é fonte, decidido 31/10)*
+- [x] **1.9 — Ligar o espalhar ao app (sync-2.1b)** (1.9a PR #192 + 1.9b PR #202, 31/10/2026) *(onda 25: **1.9a ✅ PR #192** — núcleo+main: fontes sem ip null, órfão bloqueia, gatilho em segundo plano a cada 10 min, 2º rename local, integração `/atualizacao`; **falta 1.9b**: tela "Limite de banda" (padrão 10 MB/s) e limite real em `pedirArquivo`; nuvem NÃO é fonte, decidido 31/10)*
   *O que fazer:* montar as fontes com `quemTem`/`PORTA_ESPALHAR` (filtrando `ip === null`, senão um PC recém-chegado derruba a lista toda no `escolherFontes`), decidir se a nuvem entra como fonte (hoje serve só o pacote fechado, não arquivo por hash), checar `servidorOrfao` além de `servidorRodando` antes de aplicar, disparar após o backup/versão nova e em segundo plano, e a tela Configurações › Backups › "Limite de banda para atualizar o mundo". Notas do qa do #182: janela de ~20 s de rede entre os dois renames no aplicar (prazo menor); textos do renovador falam em "trava de host"; teste de integração de `/atualizacao`.
   *Arquivo:* `packages/nucleo/src/sync/espalhar.ts`, `aplicar.ts`, `apps/desktop/src/main/`, `apps/desktop/src/ui/`
   **Tela no app:** Configurações › Backups › Limite de banda para atualizar o mundo.
@@ -84,9 +84,16 @@ Melhorias achadas durante os itens do `docs/roadmap-sync.md` (skill `maxima` ›
   *Depende de:* syncmel-1.9a ✅ (PR #192). Libera 1.3, 1.9b e migra-2.1.
   *Origem:* syncmel-1.9a · PR #192 · filha + qa
 
-- [ ] **1.11 — Acabamentos do servir/espalhar (notas do qa da onda 25)**
+- [x] **1.11 — Acabamentos do servir/espalhar (notas do qa da onda 25)** (PR #204, 31/10/2026; a–e, g, h feitos, f fica no 1.12)
   *O que fazer:* (a) `vitrine.fechar()` esperar a publicação em curso (hoje deixa pasta `v-*` órfã até o próximo arranque); (b) `before-quit` fechar o servidor de arquivos mesmo sem servidor Minecraft ativo; (c) reler o IP da rede privada quando o túnel sobe depois do arranque; (d) `ipDaRedePrivada` aceitar só a interface do WireGuard; (e) testes: filtro de IP privado, link simbólico na vitrine, `ligarEspalharDoApp`; (f) `hospedaAgora`/`exigirForaDoHost` seguem indo à rede antes do 1º rename (baixa); (g) teste de `ultimoRegistrado` no `cliente.test.ts` do cartório; (h) teste de recusa do ramo "ja-tinha" da pré-cópia com `hospedaAgora` verdadeiro (migra-2.1).
   *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/sync/`, `packages/nucleo/src/cartorio/cliente.test.ts`, `packages/nucleo/src/migracao/precopia.test.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* cada item com teste que falha ao remover a proteção.
   *Origem:* syncmel-1.9a/1.10 · PRs #192, #195, #194, #197 · qa
+
+- [ ] **1.12 — Sobras do servir/espalhar (onda 26)**
+  *O que fazer:* (a) `sairDoApp` limpar o relógio de 60 s que relê o IP da rede privada (hoje, entre `fechar()` e o fim do processo, `tentarLigar` poderia religar o servidor); (b) sub-item f do 1.11: `hospedaAgora`/`exigirForaDoHost` seguem indo à rede antes do 1º rename (baixa); (c) teste do `before-quit`/relógio de 60 s em `principal.ts`; (d) dica da tela de banda diz "vale na próxima atualização" mas o limite é lido a cada arquivo (só texto); (e) `setTimeout` do freio em `baixar.ts` não é cancelado ao abortar o download; (f) `vitrine.fechar()` pode atrasar o desligar do Windows se houver publicação longa.
+  *Arquivo:* `apps/desktop/src/main/principal.ts`, `packages/nucleo/src/servidor/baixar.ts`, `packages/nucleo/src/sync/`
+  **Tela no app:** Configurações › Backups › Limite de banda (só o texto da dica).
+  *Confirmação:* teste de cada item.
+  *Origem:* syncmel-1.11 e 1.9b · PRs #204, #202 · qa

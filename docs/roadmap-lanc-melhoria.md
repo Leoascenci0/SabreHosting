@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
 
 ## Bloco 1 — Integração com o Prism
 
-- [ ] **1.1 — Detecção e instância mais firmes**
+- [x] **1.1 — Detecção e instância mais firmes** (PR #200, 31/10/2026; emoji e ENOENT já estavam prontos)
   *O que fazer:* comparar a versão completa do Prism (major.minor.patch) se o mínimo virar 8.x; marcador próprio da
   instância do SabreHosting (arquivo dentro da pasta) além do nome; cortar o nome do grupo sem partir emoji (par
   substituto); `readFile(...).catch` só para "não existe", repassando outros erros.
