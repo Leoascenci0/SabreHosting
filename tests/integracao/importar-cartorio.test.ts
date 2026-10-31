@@ -177,6 +177,29 @@ describe("importarNoCartorio com cartório de verdade", () => {
     expect((await cliente.estadoTrava()).dono).toBeNull();
   });
 
+  it("regressão cartmel-2.5: envio caiu (órfã) → importar de novo funciona e a versão nova vira a mais nova", async () => {
+    const c = await subirCartorio();
+    const cliente = await c.pc("PC do Lucas");
+    const { zip, trabalho } = await zipDe(mundoInventado());
+    // Só o 1º envio cai (rede); o registro da versão já foi feito.
+    let quedas = 1;
+    const instavel = {
+      ...cliente,
+      enviarPacote: (...a: Parameters<typeof cliente.enviarPacote>) =>
+        quedas-- > 0 ? Promise.reject(new Error("rede caiu")) : cliente.enviarPacote(...a),
+    };
+    await expect(
+      importarNoCartorio(zip, { cliente: instavel, pastaDeTrabalho: trabalho }),
+    ).rejects.toThrow(/registrado como versão 1 do grupo, mas o envio para a nuvem falhou/);
+    expect(await cliente.maisNova()).toBeNull(); // a órfã não manda
+    const r = await importarNoCartorio(zip, { cliente: instavel, pastaDeTrabalho: trabalho });
+    expect(r.versao).toBe(2); // numera depois da órfã, sem buraco nem sobrescrita
+    expect(c.versoes().map((v) => v.numero)).toEqual([1, 2]);
+    expect((await cliente.maisNova())?.numero).toBe(2);
+    expect(await sha256(join(c.armazem, "v2.tar.gz"))).toBe(r.sha256);
+    expect((await cliente.estadoTrava()).dono).toBeNull();
+  });
+
   it("zip hostil: recusa sem versão nova, sem gravar e com a trava solta", async () => {
     const c = await subirCartorio();
     const cliente = await c.pc("PC do Lucas");

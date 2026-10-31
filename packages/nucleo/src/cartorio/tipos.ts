@@ -158,6 +158,11 @@ export interface Copias {
   pcs: PcComCopia[];
 }
 
+/** Maior número de versão registrado no cartório (0 se nenhum), com ou sem pacote guardado. */
+export function validarUltimoRegistrado(v: unknown): number {
+  return inteiro(objeto(v, "versão mais nova"), "ultimoRegistrado");
+}
+
 export function validarMaisNova(v: unknown): VersaoRegistrada | null {
   const o = objeto(v, "versão mais nova");
   if (o.versao === null) return null;
