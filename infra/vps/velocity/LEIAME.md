@@ -23,6 +23,7 @@ configuração nem o jar. `SABRE_SIMULAR=1` só mostra o que faria. Para outro d
 | `force-key-authentication` | `true` | exige chave de chat assinada pela Mojang |
 | `player-info-forwarding-mode` | `modern` | repassa UUID e conta com assinatura (HMAC) do segredo |
 | `forwarding-secret-file` | `forwarding.secret` | segredo fora do toml |
+| `[servers] espera` | `127.0.0.1:25566` | limbo local (rede-2.3); só o plugin do rede-2.2 manda gente para lá |
 | `[servers] host` | `10.66.0.x:25565` | destino na rede privada; provisório até o rede-2.2 |
 
 ## Whitelist: o Velocity NÃO tem nativa
@@ -43,5 +44,5 @@ valem `online-mode=false` e a porta aberta **só** para o IP do proxy na rede pr
 
 ## Não feito aqui
 
-Troca do host da vez (rede-2.2), sala de espera (rede-2.3), plugin de whitelist, mod no host, abrir porta na Oracle.
+Troca do host da vez (rede-2.2), sala de espera (feita no rede-2.3: `infra/vps/limbo/`), plugin de whitelist, mod no host, abrir porta na Oracle.
 **Não rodado:** contêiner com Velocity real + servidor falso (sem internet e sem o jar nesta sessão).

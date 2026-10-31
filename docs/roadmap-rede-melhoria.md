@@ -33,3 +33,13 @@ Melhorias achadas durante os itens do `docs/roadmap-rede.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* simulação: jar truncado nunca fica no lugar final; build fixa no script.
   *Origem:* rede-2.1 · PR #48 · qa segurança
+
+- [ ] **2.3 — Fixar a release do PicoLimbo e endurecer a unidade**
+  *O que fazer:* preencher `infra/vps/limbo/limbo-release.env` com a versão e o SHA-256 da release oficial do PicoLimbo
+  (conferidos na fonte, com internet — o script hoje RECUSA instalar sem isso); conferir as chaves do `server.toml` na
+  documentação; instalar o jar com nome temporário + `mv`; endurecer a unidade (CapabilityBoundingSet=,
+  ProtectKernelModules, RestrictNamespaces, SystemCallFilter). **[P: precisa de internet — sessão com acesso ou o Eliel]**
+  *Arquivo:* `infra/vps/limbo/`
+  **Tela no app:** não se aplica.
+  *Confirmação:* simulação instala com o hash fixado; hash errado recusado.
+  *Origem:* rede-2.3 · PR #62 · filha + qa

@@ -51,7 +51,7 @@ Leitura obrigatória: `qualidade-sabre › references/seguranca.md` §1.
   *Confirmação:* teste de integração em contêiner: troca de destino sem derrubar a conexão do cliente de teste.
   *Depende de:* rede-2.1
 
-- [ ] **2.3 — Sala de espera (limbo)**
+- [x] **2.3 — Sala de espera (limbo)** (PR #62, 31/10/2026; hash da release do PicoLimbo a fixar — redemel-2.3 [P])
   *O que fazer:* instalar e configurar o limbo leve como servidor de espera do Velocity, com mensagem em pt-BR.
   *Arquivo:* `infra/vps/limbo/`
   **Tela no app:** não se aplica.
