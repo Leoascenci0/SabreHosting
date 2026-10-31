@@ -197,8 +197,45 @@ executar ufw allow 22/tcp
 executar ufw allow 25565/tcp
 executar ufw allow "$PORTA_WG"/udp
 # Repasse só dentro da rede privada (PC ↔ PC passando pelo hub); nada de wg0 ↔ internet.
+# A sala de entrada (10.66.0.200–254) fica de fora: as before.rules abaixo a barram antes desta regra.
 executar ufw route allow in on wg0 out on wg0
+
+# Sala de entrada (convite): só alcança o cartório em 10.66.0.1:7710; nada de repasse de/para outro PC. A faixa não é
+# um bloco CIDR, então vai por intervalo (-m iprange) nas before.rules do ufw, que valem antes das regras comuns.
+SALA=10.66.0.200-10.66.0.254
+MARCA_SALA_INICIO="# sabre-sala-de-entrada: início (gravado pelo instalar.sh)"
+MARCA_SALA_FIM="# sabre-sala-de-entrada: fim"
+regras_sala() {
+  cat <<FIM
+$MARCA_SALA_INICIO
+-A ufw-before-input -i wg0 -p tcp -m iprange --src-range $SALA -d 10.66.0.1 -m tcp --dport 7710 -j ACCEPT
+-A ufw-before-input -m iprange --src-range $SALA -j DROP
+-A ufw-before-forward -m iprange --src-range $SALA -j DROP
+-A ufw-before-forward -m iprange --dst-range $SALA -j DROP
+$MARCA_SALA_FIM
+FIM
+}
+if simulando; then
+  BEFORE_RULES=${SABRE_UFW_BEFORE_FALSO:-$ESTADO/before.rules}
+  [ -e "$BEFORE_RULES" ] || printf '*filter\n:ufw-before-input - [0:0]\n:ufw-before-output - [0:0]\n:ufw-before-forward - [0:0]\n# End required lines\nCOMMIT\n' >"$BEFORE_RULES"
+else
+  BEFORE_RULES=/etc/ufw/before.rules
+fi
+# Bloco atual (entre as marcas) igual ao esperado = nada a fazer.
+sala_no_firewall() {
+  [ "$(awk -v i="$MARCA_SALA_INICIO" -v f="$MARCA_SALA_FIM" '$0==i{d=1} d{print} $0==f{d=0}' "$BEFORE_RULES")" = "$(regras_sala)" ]
+}
+if ! ja_feito sala-firewall sala_no_firewall; then
+  [ "$(grep -cxF '# End required lines' "$BEFORE_RULES")" -eq 1 ] ||
+    falhar "não reconheci $BEFORE_RULES (falta a linha '# End required lines'); firewall da sala de entrada não gravado."
+  # Tira o bloco antigo (se houver) e põe o novo logo depois das linhas obrigatórias, antes de qualquer ACCEPT.
+  awk -v i="$MARCA_SALA_INICIO" -v f="$MARCA_SALA_FIM" -v bloco="$(regras_sala)" '
+    $0==i {pular=1} pular {if ($0==f) pular=0; next}
+    {print} $0=="# End required lines" {print bloco}' "$BEFORE_RULES" | gravar 640 "$BEFORE_RULES"
+  marcar sala-firewall
+fi
 executar ufw --force enable
+executar ufw reload
 gravar 644 /etc/sysctl.d/99-sabre.conf <<'FIM'
 net.ipv4.ip_forward = 1
 FIM
@@ -214,6 +251,54 @@ if ! ja_feito segredo-cartorio grep -Eq '^SABRE_CARTORIO_SEGREDO_ADMIN=[0-9a-f]{
   marcar segredo-cartorio
 fi
 
+# ---------- 5c. Ajudante da sala de entrada: único comando que o usuário sabre pode rodar como root ----------
+
+AJUDANTE=/opt/sabre/wg/ajudante-entrada.sh
+executar install -d -m 755 -o root -g root /opt/sabre/wg
+for arq in ajudante-entrada.sh:755 comum.sh:644; do
+  if ! ja_feito "wg-${arq%%:*}" cmp -s "$AQUI/wg/${arq%%:*}" "/opt/sabre/wg/${arq%%:*}"; then
+    executar install -m "${arq##*:}" -o root -g root "$AQUI/wg/${arq%%:*}" "/opt/sabre/wg/${arq%%:*}"
+    marcar "wg-${arq%%:*}"
+  fi
+done
+
+# Registro dos PCs numa pasta só do root (antes ficava em /var/lib/sabre, que é do usuário sabre).
+executar install -d -m 700 -o root -g root /var/lib/sabre-wg
+if ! simulando && [ -f /var/lib/sabre/pcs.tsv ] && [ ! -L /var/lib/sabre/pcs.tsv ] && [ ! -e /var/lib/sabre-wg/pcs.tsv ]; then
+  executar install -m 600 -o root -g root /var/lib/sabre/pcs.tsv /var/lib/sabre-wg/pcs.tsv
+  executar rm -f /var/lib/sabre/pcs.tsv /var/lib/sabre/pcs.tsv.lock
+fi
+
+# Endereço do hub que o ajudante põe no pacote do PC (só quando informado: SABRE_ENDPOINT_HUB=host:porta).
+if [ -n "${SABRE_ENDPOINT_HUB:-}" ]; then
+  [[ $SABRE_ENDPOINT_HUB =~ ^[A-Za-z0-9.-]+:[0-9]{1,5}$ ]] && [ "${SABRE_ENDPOINT_HUB##*:}" -le 65535 ] ||
+    falhar "SABRE_ENDPOINT_HUB precisa ser host:porta (ex.: 203.0.113.5:51820)."
+  executar install -d -m 755 -o root -g root /etc/sabre
+  printf 'SABRE_ENDPOINT_HUB=%s\n' "$SABRE_ENDPOINT_HUB" | gravar 644 /etc/sabre/hub.env
+fi
+
+# sudoers: SÓ o caminho do ajudante, sem curinga; o sudo limpa o ambiente (env_reset). Conferido pelo visudo antes.
+SUDOERS=/etc/sudoers.d/sabre-entrada
+regra_sudo() {
+  cat <<FIM
+# SabreHosting: o cartório (usuário $USUARIO) só pode rodar o ajudante da sala de entrada; a validação mora nele.
+Defaults!$AJUDANTE env_reset
+$USUARIO ALL=(root) NOPASSWD: $AJUDANTE
+FIM
+}
+if ! ja_feito sudoers cmp -s <(regra_sudo) "$SUDOERS"; then
+  if simulando; then
+    regra_sudo | gravar 440 "$SUDOERS"
+  else
+    sudo_tmp=$(mktemp)
+    regra_sudo >"$sudo_tmp"
+    visudo -cf "$sudo_tmp" >/dev/null || { rm -f "$sudo_tmp"; falhar "a regra do sudoers não passou no visudo; nada foi gravado."; }
+    executar install -m 440 -o root -g root "$sudo_tmp" "$SUDOERS"
+    rm -f "$sudo_tmp"
+  fi
+  marcar sudoers
+fi
+
 # ---------- 6. Unidades systemd de exemplo (instaladas, DESLIGADAS) ----------
 
 for unidade in sabre-cartorio.service sabre-proxy.service; do
@@ -225,3 +310,6 @@ done
 executar systemctl daemon-reload
 
 echo "Pronto. Falta: abrir as mesmas portas na 'Security List' da conta Oracle (tutorial rede-1.2)." >&2
+if ! simulando && [ ! -s /etc/sabre/hub.env ]; then
+  echo "Falta também: rodar de novo com SABRE_ENDPOINT_HUB=<ip-ou-nome-da-nuvem>:$PORTA_WG (o convite precisa dele)." >&2
+fi

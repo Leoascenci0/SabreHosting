@@ -5,7 +5,7 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y --no-install-recommends shellcheck && rm -rf /var/lib/apt/lists/*
 COPY infra/vps /vps
 WORKDIR /vps
-RUN bash -n instalar.sh && bash -n instalar-velocity.sh && shellcheck instalar.sh instalar-velocity.sh
+RUN bash -n instalar.sh && bash -n instalar-velocity.sh && shellcheck -x instalar.sh instalar-velocity.sh wg/*.sh
 RUN export SABRE_SIMULAR=1 SABRE_ESTADO=/tmp/estado \
  && bash instalar.sh > /tmp/1.txt \
  && bash instalar.sh > /tmp/2.txt \
