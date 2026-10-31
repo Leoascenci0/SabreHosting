@@ -105,6 +105,25 @@ describe("resolverNeoForge", () => {
   });
 });
 
+describe("resolverNeoForge · artefato legado da 1.20.1 (net.neoforged:forge)", () => {
+  const v = "1.20.1-47.1.106";
+  const tabela = { [v]: sha1 };
+  it("usa o caminho forge/<v>/forge-<v>-installer.jar com hash fixado", () => {
+    expect(resolverNeoForge(v, sha1, tabela, "forge")).toEqual({
+      url: `https://maven.neoforged.net/releases/net/neoforged/forge/${v}/forge-${v}-installer.jar`,
+      hashEsperado: { algoritmo: "sha1", valor: sha1 },
+    });
+  });
+  it("sidecar errado: recusa; sem entrada na tabela: recusa", () => {
+    expect(() => resolverNeoForge(v, "d".repeat(40), tabela, "forge")).toThrow(/não confere/);
+    expect(() => resolverNeoForge(v, sha1, {}, "forge")).toThrow(/ainda não tem o hash/);
+    expect(() => resolverNeoForge(v, sha1, undefined, "forge")).toThrow(/ainda não tem o hash/);
+  });
+  it("sem o parâmetro, continua no artefato neoforge", () => {
+    expect(resolverNeoForge(v, sha1, tabela).url).toContain("/neoforge/" + v + "/neoforge-");
+  });
+});
+
 describe("resolverMojang", () => {
   const json = (url: string, sha: unknown = sha1, java: unknown = 21) => ({
     downloads: { server: { url, sha1: sha } },

@@ -226,7 +226,7 @@ describe("versões: migração v3 → v4", () => {
     v3.close();
     const banco = abrirBanco(caminho);
     fechar.push(() => banco.close());
-    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 8 }]);
+    expect(banco.prepare("SELECT versao FROM esquema").all()).toEqual([{ versao: 9 }]);
     expect(banco.prepare("SELECT id, nome FROM pcs ORDER BY id").all()).toEqual([
       { id: 1, nome: "Ana" },
       { id: 2, nome: "Bia" },
