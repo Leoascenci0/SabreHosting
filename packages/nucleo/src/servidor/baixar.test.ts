@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createServer as createServidorHttps } from "node:https";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { baixarConferido, type OpcoesDownload } from "./baixar.js";
 
 const conteudo = Buffer.from("conteudo-de-teste-".repeat(200));
@@ -297,5 +299,111 @@ describe("baixarConferido", () => {
       /não seguro/,
     );
     expect(await readdir(pasta)).toEqual([]);
+  });
+
+  describe("redirecionamento https e tempo total", () => {
+    let https: Server;
+    let pastaCert: string;
+    let hopsHttps = 0;
+    const tlsAntes = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    const urlHttps = (k: number) =>
+      `https://127.0.0.1:${(https.address() as AddressInfo).port}/h/${k}`;
+
+    /** Certificado autoassinado gerado agora, só para o servidor https local do teste. */
+    beforeAll(async () => {
+      pastaCert = await mkdtemp(join(tmpdir(), "sabre-cert-"));
+      const chave = join(pastaCert, "k.pem");
+      const cert = join(pastaCert, "c.pem");
+      execFileSync(
+        "openssl",
+        ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", chave, "-out", cert].concat([
+          "-days",
+          "1",
+          "-subj",
+          "/CN=127.0.0.1",
+        ]),
+        { stdio: "ignore" },
+      );
+      // O fetch do Node não aceita CA só para uma chamada: a confiança vale só neste bloco.
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+      https = createServidorHttps(
+        { key: await readFile(chave), cert: await readFile(cert) },
+        (req, res) => {
+          hopsHttps++;
+          const k = Number(/\/h\/(\d+)/.exec(req.url ?? "")?.[1]);
+          if (k < saltosHttps) {
+            res.writeHead(302, { location: `/h/${k + 1}` });
+            return void res.end();
+          }
+          responder(res, conteudo);
+        },
+      );
+      await new Promise<void>((ok) => https.listen(0, "127.0.0.1", ok));
+    });
+
+    afterAll(async () => {
+      if (tlsAntes === undefined) delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+      else process.env.NODE_TLS_REJECT_UNAUTHORIZED = tlsAntes;
+      https.closeAllConnections();
+      await new Promise((ok) => https.close(ok));
+      await rm(pastaCert, { recursive: true, force: true });
+    });
+
+    let saltosHttps = 0;
+    beforeEach(() => {
+      hopsHttps = 0;
+    });
+
+    /** O http local dá o 1º salto; o https local dá mais `saltos` antes do 200. */
+    const comSaltos = (saltos: number) => {
+      saltosHttps = saltos;
+      manipulador = (_req, res) => {
+        res.writeHead(301, { location: urlHttps(0) });
+        res.end();
+      };
+    };
+
+    it("5 redirecionamentos https até o 200: baixa, hash confere e só fica o final", async () => {
+      const destino = join(pasta, "a.jar");
+      comSaltos(4); // 1 (http local) + 4 (https) = 5, o limite
+      const r = await baixar({ url: url(), hashEsperado: hashCerto, destino });
+      expect(r).toEqual({ caminho: destino, doCache: false });
+      expect(await readFile(destino)).toEqual(conteudo);
+      expect(await readdir(pasta)).toEqual(["a.jar"]);
+      expect(hopsHttps).toBe(5);
+    });
+
+    it("um salto além do limite (6): recusa, não segue o 6º e não deixa arquivo", async () => {
+      const destino = join(pasta, "a.jar");
+      comSaltos(5);
+      await expect(baixar({ url: url(), hashEsperado: hashCerto, destino })).rejects.toThrow(
+        /redirecionou/,
+      );
+      expect(hopsHttps).toBe(5);
+      expect(await readdir(pasta)).toEqual([]);
+    });
+  });
+
+  it("tempoTotal estourado com o servidor ainda mandando dados: cancela e não cria o arquivo final", async () => {
+    const destino = join(pasta, "a.jar");
+    let gota: NodeJS.Timeout | undefined;
+    manipulador = (_req, res) => {
+      res.writeHead(200, { "transfer-encoding": "chunked" });
+      gota = setInterval(() => res.write("x"), 20); // nunca termina, mas nunca fica parado
+      res.on("close", () => clearInterval(gota));
+    };
+    // tempoSemDados alto: só o tempo total pode cortar este download.
+    await expect(
+      baixar({
+        url: url(),
+        hashEsperado: hashCerto,
+        destino,
+        tempoTotal: 300,
+        tempoSemDados: 60_000,
+      }),
+    ).rejects.toThrow(/demorou demais/);
+    clearInterval(gota);
+    // O parcial fica (a próxima chamada retoma); o que nunca pode existir é o arquivo final.
+    expect(existsSync(destino)).toBe(false);
   });
 });
