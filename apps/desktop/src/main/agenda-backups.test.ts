@@ -153,3 +153,56 @@ describe("agenda de backups", () => {
     expect(aviso).toHaveBeenCalledWith(expect.stringContaining("sem pasta"));
   });
 });
+
+describe("histórico longo no backup agendado (drive-1.1a)", () => {
+  it("copia o backup bom; pasta que some só vira aviso e o backup local fica intacto", async () => {
+    const { mkdirSync, mkdtempSync, writeFileSync, readdirSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { createHash } = await import("node:crypto");
+    const { copiarAoConcluir } = await import("./agenda-backups.js");
+    const { criarAvisoHistorico } = await import("./aviso-historico.js");
+    const { PASTA_NAO_ENCONTRADA } = await import("@sabrehosting/nucleo/backup/destinos/pasta");
+    const local = mkdtempSync(join(tmpdir(), "sabre-ag-local-"));
+    const drive = mkdtempSync(join(tmpdir(), "sabre-ag-drive-"));
+    const nome = "2026-10-31T10-00-00-000Z-v1.tar.gz";
+    const caminho = join(local, nome);
+    writeFileSync(caminho, "pacote de teste");
+    const feito = { caminho, sha256: createHash("sha256").update("pacote de teste").digest("hex") };
+    const avisos: string[] = [];
+    let pasta: string | undefined = drive;
+    const visivel = criarAvisoHistorico();
+    const o = {
+      avisoHistorico: visivel,
+      pastaBackups: local,
+      pastaDoMundo: undefined as string | undefined,
+      historicoLongo: () => pasta,
+      aoAvisar: (t: string) => void avisos.push(t),
+    };
+    await copiarAoConcluir(o, feito);
+    expect(readdirSync(drive)).toEqual([nome]);
+    expect(avisos).toEqual([]);
+    expect(visivel.ler()).toBeUndefined();
+    rmSync(drive, { recursive: true }); // a pasta some entre um backup e o outro
+    await copiarAoConcluir(o, feito); // não lança
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toBe(PASTA_NAO_ENCONTRADA);
+    expect(visivel.ler()).toBe(PASTA_NAO_ENCONTRADA); // a tela de Backups lê daqui (ajuste 4)
+    expect(readdirSync(local)).toEqual([nome]);
+    // Destino que CONTÉM a pasta do mundo é recusado pelo gancho (S-07) e vira aviso, sem copiar nada.
+    const raiz = mkdtempSync(join(tmpdir(), "sabre-ag-raiz-"));
+    const mundo = join(raiz, "mundo");
+    mkdirSync(mundo);
+    pasta = raiz;
+    avisos.length = 0;
+    await copiarAoConcluir({ ...o, pastaDoMundo: mundo }, feito);
+    expect(avisos[0]).toMatch(/nem ficar dentro/i);
+    expect(readdirSync(raiz)).toEqual(["mundo"]);
+    rmSync(raiz, { recursive: true });
+    pasta = undefined; // desligado: nada acontece e o aviso antigo some
+    await copiarAoConcluir(o, feito);
+    expect(avisos).toHaveLength(1);
+    expect(visivel.ler()).toBeUndefined();
+    rmSync(local, { recursive: true });
+  });
+});

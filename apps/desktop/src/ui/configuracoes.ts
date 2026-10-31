@@ -1,4 +1,4 @@
-import type { PcDaTela, PonteSabre } from "./ponte.js";
+import type { CampoComErro, PcDaTela, PonteSabre } from "./ponte.js";
 
 declare global {
   interface Window {
@@ -18,6 +18,9 @@ const windows = $<HTMLInputElement>("cfg-windows");
 const visao = $<HTMLInputElement>("cfg-visao");
 const simulacao = $<HTMLInputElement>("cfg-simulacao");
 const intervalo = $<HTMLInputElement>("cfg-intervalo");
+const historico = $<HTMLInputElement>("cfg-historico");
+const historicoPasta = $<HTMLInputElement>("cfg-historico-pasta");
+const historicoEscolher = $<HTMLButtonElement>("cfg-historico-escolher");
 const aviso = $("config-aviso");
 const erro = $("config-erro");
 const salvar = $<HTMLButtonElement>("config-salvar");
@@ -37,20 +40,41 @@ let emCurso = false;
 let tirando: PcDaTela | undefined;
 let botaoDoTirado: HTMLElement | undefined;
 
-function mostrarErro(texto: string): void {
+let campoComErro: CampoComErro | undefined;
+
+/** O campo marcado vem do `campo` do app, nunca do texto da mensagem. */
+function mostrarErro(texto: string, campo?: CampoComErro): void {
   erro.textContent = texto;
   erro.hidden = texto === "";
-  // Só o campo do erro fica marcado; a mensagem do app cita o intervalo pelo nome ("intervalo do backup").
-  const doBackup = texto.includes("intervalo do backup");
-  visao.setAttribute("aria-invalid", String(texto !== "" && !doBackup));
-  simulacao.setAttribute("aria-invalid", String(texto !== "" && !doBackup));
-  intervalo.setAttribute("aria-invalid", String(doBackup));
+  campoComErro = texto === "" ? undefined : campo;
+  const marca = (c: CampoComErro): string => String(campoComErro === c);
+  visao.setAttribute("aria-invalid", marca("distancias"));
+  simulacao.setAttribute("aria-invalid", marca("distancias"));
+  intervalo.setAttribute("aria-invalid", marca("intervalo"));
+  historicoPasta.setAttribute("aria-invalid", marca("historico"));
+}
+
+/** A pasta e o botão só funcionam com a opção ligada; ocupado desliga tudo. */
+function atualizarHistorico(): void {
+  const livre = historico.checked && !emCurso;
+  historicoPasta.disabled = !livre;
+  historicoEscolher.disabled = !livre;
 }
 
 function ocupar(ocupado: boolean): void {
   emCurso = ocupado;
   tela.setAttribute("aria-busy", String(ocupado));
-  for (const el of [windows, visao, simulacao, intervalo, salvar, voltar]) el.disabled = ocupado;
+  for (const el of [
+    windows,
+    visao,
+    simulacao,
+    intervalo,
+    historico,
+    historicoPasta,
+    salvar,
+    voltar,
+  ])
+    el.disabled = ocupado;
   salvar.textContent = ocupado ? "Salvando…" : "Salvar";
 }
 
@@ -145,12 +169,33 @@ async function carregar(): Promise<void> {
     visao.value = String(c.distanciaVisao);
     simulacao.value = String(c.distanciaSimulacao);
     intervalo.value = String(c.intervaloBackupMin);
+    historico.checked = c.historicoLongoLigado;
+    historicoPasta.value = c.historicoLongoPasta;
+    atualizarHistorico();
     aviso.textContent = "";
   } catch {
     aviso.textContent = "";
     mostrarErro("Não consegui ler as configurações.");
   }
 }
+
+historico.addEventListener("change", atualizarHistorico);
+historicoEscolher.addEventListener("click", () => {
+  historicoEscolher.disabled = true;
+  window.sabre.configuracoes
+    .escolherPasta()
+    .then((pasta) => {
+      if (pasta !== undefined) {
+        historicoPasta.value = pasta;
+        mostrarErro("");
+      }
+    })
+    .catch(() => mostrarErro("Não consegui abrir o seletor de pasta agora.", "historico"))
+    .finally(() => {
+      atualizarHistorico();
+      historicoEscolher.focus();
+    });
+});
 
 abrir.addEventListener("click", () => {
   inicio.hidden = true;
@@ -177,19 +222,21 @@ form.addEventListener("submit", (evento) => {
       distanciaVisao: visao.value === "" ? Number.NaN : Number(visao.value),
       distanciaSimulacao: simulacao.value === "" ? Number.NaN : Number(simulacao.value),
       intervaloBackupMin: intervalo.value === "" ? Number.NaN : Number(intervalo.value),
+      historicoLongoLigado: historico.checked,
+      historicoLongoPasta: historicoPasta.value,
     })
     .then((r) => {
       if (r.ok) aviso.textContent = "Salvo.";
-      else mostrarErro(r.mensagem);
+      else mostrarErro(r.mensagem, r.campo);
     })
     .catch(() => mostrarErro("Não consegui salvar agora. Nada foi alterado."))
     .finally(() => {
       ocupar(false);
-      (erro.hidden
-        ? salvar
-        : erro.textContent?.includes("intervalo do backup")
-          ? intervalo
-          : visao
-      ).focus();
+      const alvo = {
+        distancias: visao,
+        intervalo,
+        historico: historicoPasta.disabled ? historico : historicoPasta,
+      };
+      (campoComErro ? alvo[campoComErro] : erro.hidden ? salvar : visao).focus();
     });
 });

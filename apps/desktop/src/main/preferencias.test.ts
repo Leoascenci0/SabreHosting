@@ -9,6 +9,8 @@ const PADRAO = {
   distanciaVisao: 10,
   distanciaSimulacao: 8,
   intervaloBackupMin: 10,
+  historicoLongoLigado: false,
+  historicoLongoPasta: "",
 };
 let pasta: string;
 beforeEach(() => {
@@ -64,6 +66,8 @@ describe("preferências", () => {
         distanciaVisao: 12,
         distanciaSimulacao: 6,
         intervaloBackupMin: 10,
+        historicoLongoLigado: false,
+        historicoLongoPasta: "",
       });
     },
   );
