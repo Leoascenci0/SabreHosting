@@ -10,3 +10,5 @@
 | 2026-10-31 (madrugada) | Orquestradora (este chat, Opus) | 1 | 43,22 (lido às 04:15, ainda subindo) | — | — |
 | 2026-10-31 (dia) | Ondas 20–25 (três níveis): ~34 itens | 6 sessões de onda + filhas (Opus só em trava/migração/tela grande) + qa (não registrado) | ~48 (20 e 21 não medidas) | ~1,4 | piloto-1.1c (opus, 8,37) |
 | 2026-10-31 (dia) | Coordenadora (este chat, Opus) | 1 | 5,09 (lido às 15:10) | — | — |
+| 2026-10-31 (tarde) | Ondas 26–31 (2º bastão): ~28 itens | 6 sessões de onda + filhas + qa (não registrado; ondas ~0,5–2,3 cada) | n/d (≈ US$ 10–15 estimado) | — | hostmel-3.4 (opus) |
+| 2026-10-31 (tarde) | Coordenadora 2º bastão (este chat) | 1 | n/d | — | — |

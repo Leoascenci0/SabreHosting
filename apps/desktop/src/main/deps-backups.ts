@@ -47,7 +47,8 @@ export function depsBackups(o: OpcoesDepsBackups): DepsBackups {
       })),
     servidorRodando: o.servidorRodando,
     restaurar: async (nome) => {
-      const { pastaBackups, pastaDoMundo } = o;
+      const { pastaBackups } = o;
+      const pastaDoMundo = (await o.mundoAgora?.()) ?? o.pastaDoMundo; // o `level-name` pode ter mudado (appmel-1.21)
       if (!pastaBackups || !pastaDoMundo) throw new Error(SEM_PASTA);
       const lista = await listarBackups(pastaBackups);
       const alvo = lista.find((b) => b.nome === nome);
@@ -118,6 +119,7 @@ export function depsBackupsReais(
   env: NodeJS.ProcessEnv,
   servidorRodando: () => boolean,
   servidorOrfao?: () => Promise<boolean>,
+  mundoAgora?: () => Promise<string | undefined>,
 ): DepsBackups {
   const { SABRE_CARTORIO_URL: url, SABRE_CARTORIO_TOKEN: token } = env;
   const semGrupo = (): never => {
@@ -139,5 +141,6 @@ export function depsBackupsReais(
     },
     servidorRodando,
     ...(servidorOrfao ? { servidorOrfao } : {}),
+    ...(mundoAgora ? { mundoAgora } : {}),
   });
 }
