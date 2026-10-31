@@ -18,7 +18,13 @@ import {
   type Diferenca,
   type Manifesto,
 } from "../backup/manifesto.js";
-import { desfazer, haMundo } from "../backup/restaurar.js";
+import {
+  apagarMarcadorTroca,
+  desfazer,
+  exigirMundoNaPastaDoServidor,
+  gravarMarcadorTroca,
+  haMundo,
+} from "../backup/restaurar.js";
 import { travaConfirmada } from "../servidor/processo.js";
 import { pedirArquivo, type OpcoesPedido } from "./transferencia.js";
 
@@ -36,10 +42,14 @@ export interface OpcoesAplicar {
   servidorParado: () => boolean;
   /** Diz ao cartório que este PC tem a versão M (cliente.informarCopia). */
   avisarCopia: (versao: number) => Promise<void>;
+  /** Pasta do servidor, onde `podeSubir` procura o marcador da troca: o mundo tem de ser filho direto dela. */
+  pastaDoServidor?: string;
   prazoTravaMs?: number;
   /** Só para os testes. */
   renomear?: (de: string, para: string) => Promise<void>;
   ligar?: (de: string, para: string) => Promise<void>;
+  /** Só para os testes: roda entre os dois `rename`; o que lançar simula o app morrendo ali (sem limpeza). */
+  aposPrimeiroRename?: () => void | Promise<void>;
 }
 
 export interface Aplicado {
@@ -111,6 +121,7 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
   const temp = `${mundo}.atualizando-v${alvo.versao}`;
   const antigo = `${mundo}.antigo-v${alvo.versao}`;
 
+  exigirMundoNaPastaDoServidor(mundo, o.pastaDoServidor);
   await exigirPodeTrocar(o);
   if (!(await haMundo(mundo))) {
     throw new Error("Não há mundo neste PC para atualizar; use a cópia completa do mundo.");
@@ -163,16 +174,20 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
     throw erro;
   }
 
+  await gravarMarcadorTroca({ mundo, antigo, temp });
   await renomear(mundo, antigo).catch(async (erro: unknown) => {
     await apagar(temp);
+    await apagarMarcadorTroca(mundo);
     throw new Error("Não consegui tirar o mundo atual do lugar; o mundo continua como estava.", {
       cause: erro,
     });
   });
+  await o.aposPrimeiroRename?.();
   try {
     await renomear(temp, mundo);
   } catch (erro) {
     await desfazer(renomear, { mundo, antigo, temp, backup: undefined }, erro);
+    await apagarMarcadorTroca(mundo);
     await apagar(temp);
     throw new Error(
       "Não consegui colocar o mundo atualizado no lugar; o mundo continua como estava.",
@@ -182,6 +197,9 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
     );
   }
 
+  // O mundo novo já está no lugar: falhar ao apagar o marcador (ex.: antivírus) não pode virar "desfazer". O
+  // marcador sobra e a próxima partida (`recuperarTroca`) só o limpa.
+  await apagarMarcadorTroca(mundo).catch(() => undefined);
   const resultado: Aplicado = { diferenca, arquivosBaixados, bytesBaixados };
   try {
     await o.avisarCopia(alvo.versao);

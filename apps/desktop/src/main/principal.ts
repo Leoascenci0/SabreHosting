@@ -12,6 +12,7 @@ import {
 import type { IpcMainInvokeEvent } from "electron";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
@@ -57,6 +58,17 @@ async function avisarFalhaSair(motivo: string): Promise<void> {
     type: "error" as const,
     title: "SabreHosting",
     message: mensagemFalhaSair(motivo),
+  };
+  if (janela) await dialog.showMessageBox(janela, opcoes);
+  else await dialog.showMessageBox(opcoes);
+}
+
+async function avisarProblemaDoMundo(motivo: string): Promise<void> {
+  if (process.env["SABRE_E2E"] === "1") return; // diálogo nativo não é clicável no E2E
+  const opcoes = {
+    type: "warning" as const,
+    title: "SabreHosting",
+    message: `Atenção com o mundo: ${motivo}`,
   };
   if (janela) await dialog.showMessageBox(janela, opcoes);
   else await dialog.showMessageBox(opcoes);
@@ -320,6 +332,19 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(async () => {
     nativeTheme.themeSource = "system";
+    // App morto entre os dois rename da troca do mundo: devolve o mundo antes de qualquer coisa. Falha não derruba
+    // o app (o marcador fica e o servidor não sobe), mas o amigo é avisado.
+    const pastaDoServidor = process.env["SABRE_PASTA_SERVIDOR"];
+    const falhaDaTroca = pastaDoServidor
+      ? await recuperarTroca(pastaDoServidor).then(
+          () => undefined,
+          (erro: unknown) => (erro instanceof Error ? erro.message : String(erro)),
+        )
+      : "A pasta do servidor não está configurada; não deu para conferir se a última troca do mundo terminou.";
+    if (falhaDaTroca !== undefined) {
+      console.error("Recuperar troca do mundo:", falhaDaTroca);
+      void avisarProblemaDoMundo(falhaDaTroca);
+    }
     agendaApp = await criarAgendaDoApp();
     inicioApp = await criarInicioDoApp();
     backupsApp = await criarBackupsDoApp(inicioApp);
