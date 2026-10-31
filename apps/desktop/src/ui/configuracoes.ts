@@ -1,4 +1,5 @@
 import type { CampoComErro, ModDaTela, PcDaTela, PonteSabre } from "./ponte.js";
+import { nomeNaRede } from "./nome-na-rede.js";
 import { rotuloConfirmarVersao } from "./rotulo-versao.js";
 
 declare global {
@@ -47,6 +48,7 @@ const conviteResultado = $("convite-resultado");
 const conviteTexto = $<HTMLInputElement>("convite-texto");
 const convitePrazo = $("convite-prazo");
 const conviteCopiar = $<HTMLButtonElement>("convite-copiar");
+const conviteCopiado = $("convite-copiado");
 const conviteErro = $("convite-erro");
 const avisoGrupo = $("grupo-aviso");
 const erroGrupo = $("grupo-erro");
@@ -194,6 +196,7 @@ function limparConvite(): void {
   convitePrazo.textContent = "";
   conviteResultado.hidden = true;
   conviteCopiar.textContent = "Copiar";
+  conviteCopiado.textContent = "";
 }
 
 function mostrarErroConvite(texto: string): void {
@@ -201,20 +204,8 @@ function mostrarErroConvite(texto: string): void {
   conviteErro.hidden = texto === "";
 }
 
-/** Mesmo jeito do main (`nomeNaRede`): só para mostrar como o nome vai ficar; quem manda é o main. */
-function nomeComoFica(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+/, "")
-    .slice(0, 32)
-    .replace(/-+$/, "");
-}
-
 conviteNome.addEventListener("input", () => {
-  const ficou = nomeComoFica(conviteNome.value);
+  const ficou = nomeNaRede(conviteNome.value);
   conviteNomeFicou.textContent = ficou ? `Vai ficar como: ${ficou}` : "";
 });
 
@@ -224,7 +215,7 @@ conviteCriar.addEventListener("click", () => {
   if (conviteCriar.disabled) return;
   limparConvite();
   mostrarErroConvite("");
-  if (!nomeComoFica(conviteNome.value)) {
+  if (!nomeNaRede(conviteNome.value)) {
     mostrarErroConvite("Digite o nome do PC convidado (letras ou números).");
     conviteNome.focus();
     return;
@@ -257,6 +248,7 @@ conviteCopiar.addEventListener("click", () => {
     .writeText(conviteTexto.value)
     .then(() => {
       conviteCopiar.textContent = "Copiado";
+      conviteCopiado.textContent = "Convite copiado."; // região role="status": o leitor de tela anuncia
     })
     .catch(() => {
       conviteTexto.select(); // sem permissão para copiar: o texto fica selecionado para Ctrl+C
