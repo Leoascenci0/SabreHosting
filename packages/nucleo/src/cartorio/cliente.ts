@@ -6,6 +6,7 @@ import { pipeline } from "node:stream/promises";
 import { IP_DO_HUB } from "../rede/wireguard.js";
 import type { Cofre } from "./cofre.js";
 import {
+  type ModGrupo,
   type RespostaAtualizacao,
   type RespostaTrava,
   cortarErro,
@@ -14,6 +15,7 @@ import {
   validarEstadoTrava,
   validarGrupo,
   validarConfigGrupo,
+  validarModsGrupo,
   validarEu,
   validarCopias,
   validarListaPcs,
@@ -311,6 +313,17 @@ export function criarCliente(opcoes: OpcoesCliente) {
         corpo: { versaoMinecraft, sha1Manifesto },
         repetir: true,
         validar: validarConfigGrupo,
+      }),
+    /** Lista de mods do grupo (todos os PCs baixam a mesma). */
+    lerModsGrupo: () => ler("/grupo/mods", validarModsGrupo),
+    /** Só o dono (403 com a mensagem em pt-BR para os outros). Troca a lista inteira; repetir dá o mesmo resultado. */
+    gravarModsGrupo: (mods: ModGrupo[]) =>
+      chamar({
+        metodo: "PUT",
+        rota: "/grupo/mods",
+        corpo: { mods },
+        repetir: true,
+        validar: validarModsGrupo,
       }),
     /** Este PC diz que agora tem a versão N inteira (substitui a anterior). Repete: dizer duas vezes não muda nada. */
     informarCopia: (versao: number) =>

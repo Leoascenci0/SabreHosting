@@ -52,6 +52,7 @@ import {
   soltar,
 } from "./trava.js";
 import { type MotivoConfig, gravarConfig, lerConfig } from "./configuracao.js";
+import { type ModGrupo, MAX_MODS, gravarMods, lerMods } from "./mods.js";
 import {
   type DadosVersao,
   informarCopia,
@@ -341,6 +342,31 @@ export function criarCartorio({
       if (r.motivo === "nao_e_dono") return resp.code(403).send(SO_DONO_CONFIG);
       const { status, erro } = RECUSA_CONFIG[r.motivo];
       return resp.code(status).send({ erro });
+    },
+  );
+
+  app.get("/grupo/mods", { onRequest: soPc }, () => ({ mods: lerMods(banco) }));
+  app.put<{ Body: { mods: ModGrupo[] } }>(
+    "/grupo/mods",
+    {
+      onRequest: soPc,
+      schema: {
+        body: {
+          type: "object",
+          required: ["mods"],
+          additionalProperties: false,
+          properties: { mods: { type: "array", maxItems: MAX_MODS, items: { type: "object" } } },
+        },
+      },
+    },
+    (req, resp) => {
+      const r = gravarMods(banco, pcDe(req).id, req.body.mods, agora());
+      if (r.ok) return { mods: lerMods(banco) };
+      if (r.motivo === "nao_e_dono")
+        return resp.code(403).send({ erro: "Só o dono do grupo muda a lista de mods." });
+      return resp.code(400).send({
+        erro: "Lista de mods inválida: cada mod precisa de um arquivo .jar simples, sha512 e endereço https do Modrinth (cdn.modrinth.com).",
+      });
     },
   );
 
