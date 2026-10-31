@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { list, salvarSeguro, say } from "./comandos.js";
+import { MAX_FILA, list, salvarSeguro, say } from "./comandos.js";
 import { iniciarServidor, type ServidorMinecraft } from "./processo.js";
 
 const FALSO = join(dirname(fileURLToPath(import.meta.url)), "../../test/ajuda/servidor-falso.mjs");
@@ -99,6 +99,13 @@ describe("enviar", () => {
     expect(s.estado).toBe("pronto");
   });
 
+  it("recusa linha acima do teto de tamanho, sem mandar nada", async () => {
+    const s = await pronto();
+    expect(() => s.enviar(`say ${"a".repeat(1100)}`)).toThrow(/passa de 1024/);
+    expect(recebidos()).toEqual([]);
+    expect(s.estado).toBe("pronto");
+  });
+
   it("recusa quando o servidor não está pronto", async () => {
     const s = await subir("semdone");
     expect(s.estado).toBe("subindo");
@@ -150,6 +157,50 @@ describe("salvarSeguro", () => {
     ).rejects.toThrow(/não confirmou/);
     await esperarLog("RECEBIDO save-on");
     expect(copiou).toBe(false);
+  });
+
+  it("sem a confirmação do save-off a cópia não roda, e o save-on volta", async () => {
+    const s = await pronto("semoff");
+    let copiou = false;
+    await expect(
+      salvarSeguro(
+        s,
+        async () => {
+          copiou = true;
+        },
+        300,
+      ),
+    ).rejects.toThrow(/não confirmou/);
+    await esperarLog("RECEBIDO save-on");
+    expect(copiou).toBe(false);
+    expect(recebidos()).toEqual(["save-off", "save-on"]);
+  });
+
+  it("cópia que passa do prazo é cancelada e termina ANTES do save-on", async () => {
+    const s = await pronto();
+    let cancelada = false;
+    let saveOnAntesDoFim = true;
+    await expect(
+      salvarSeguro(
+        s,
+        (sinal) =>
+          new Promise<void>((resolve) => {
+            sinal.addEventListener("abort", () => {
+              cancelada = true;
+              setTimeout(() => {
+                saveOnAntesDoFim = logs.some((l) => l.includes("RECEBIDO save-on"));
+                resolve();
+              }, 200);
+            });
+          }),
+        5000,
+        300,
+      ),
+    ).rejects.toThrow(/passou do prazo; nada foi guardado/);
+    expect(cancelada).toBe(true);
+    expect(saveOnAntesDoFim).toBe(false);
+    await esperarLog("RECEBIDO save-on");
+    expect(recebidos()).toEqual(["save-off", "save-all flush", "save-on"]);
   });
 
   it("chat de jogador imitando a confirmação NÃO libera a cópia", async () => {
@@ -205,6 +256,7 @@ describe("say", () => {
     await expect(say(s, "oi\u0007")).rejects.toThrow();
     await expect(say(s, "   ")).rejects.toThrow();
     await expect(say(s, "a".repeat(257))).rejects.toThrow(/256/);
+    await expect(say(s, "cor §cvermelha")).rejects.toThrow(/§/);
     await say(s, "a".repeat(256));
     await esperarLog("RECEBIDO say aaaa");
     expect(recebidos()).toEqual([`say ${"a".repeat(256)}`]);
@@ -250,6 +302,17 @@ describe("fila", () => {
       "list",
     ]);
     expect(ordem).toEqual(["um", "copia", "salvo", "dois", "list"]);
+  });
+
+  it("fila acima do limite é recusada na hora; as já aceitas seguem", async () => {
+    const s = await pronto("mudo");
+    const presas = [salvarSeguro(s, async () => {}, 400).catch(() => "caiu")];
+    for (let i = 1; i < MAX_FILA; i++) presas.push(say(s, `n${i}`).then(() => "ok"));
+    await expect(say(s, "excedente")).rejects.toThrow(/fila/);
+    expect(await Promise.all(presas)).toHaveLength(MAX_FILA);
+    await esperarLog(`RECEBIDO say n${MAX_FILA - 1}`);
+    expect(recebidos()).not.toContain("say excedente");
+    await say(s, "depois");
   });
 
   it("falha de um comando não trava os seguintes", async () => {
