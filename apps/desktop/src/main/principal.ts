@@ -305,6 +305,9 @@ const trocandoVersao = (): boolean => versaoApp?.trocando() ?? false;
 /** Percentual da atualização do mundo em curso (sync-2.2); `undefined` = nenhuma. */
 let atualizandoMundo: number | undefined;
 const atualizando = (): number | undefined => atualizandoMundo;
+/** Por que a última atualização do mundo falhou (syncmel-1.14); some quando a próxima rodada começa. */
+let avisoAtualizacaoMundo: string | undefined;
+const avisoAtualizacao = (): string | undefined => avisoAtualizacaoMundo;
 
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1")
@@ -313,6 +316,7 @@ async function criarInicioDoApp(): Promise<Inicio> {
       restaurando,
       trocandoVersao,
       atualizando,
+      avisoAtualizacao,
       aoServidor: (s) => agendaApp?.observar(s),
     });
   const { criarDepsE2E } = await import("./fake-e2e.js");
@@ -587,8 +591,13 @@ if (!app.requestSingleInstanceLock()) {
       disparoEspalhar = ligarEspalhar({
         env: process.env,
         inicio: inicioApp,
-        aoAvisar: (texto) => console.warn(texto),
+        aoAvisar: (texto) => {
+          console.warn(texto);
+          avisoAtualizacaoMundo = `Não consegui atualizar o mundo: ${texto.replace(/^\[atualizar\] Atualização do mundo: /, "")}`;
+          inicioApp?.mudou();
+        },
         aoProgresso: (p) => {
+          if (p === 0) avisoAtualizacaoMundo = undefined;
           atualizandoMundo = p;
           inicioApp?.mudou();
         },

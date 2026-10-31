@@ -20,7 +20,13 @@ import { validarManifesto, type ArquivoDoManifesto, type Manifesto } from "../ba
 import { abrirPacote } from "../backup/pacote.js";
 import { exigirMundoNaPastaDoServidor } from "../backup/restaurar.js";
 import { Renovador, type ClienteDeTrava, type OpcoesRenovador } from "../cartorio/renovador.js";
-import { aplicarDelta, exigirForaDoHost, type Aplicado, type OpcoesAplicar } from "./aplicar.js";
+import {
+  aplicarDelta,
+  ErroLocal,
+  exigirForaDoHost,
+  type Aplicado,
+  type OpcoesAplicar,
+} from "./aplicar.js";
 import type { Copias } from "../cartorio/tipos.js";
 import {
   conferirEnderecoPrivado,
@@ -235,7 +241,7 @@ export async function espalhar(o: OpcoesEspalhar): Promise<Espalhado> {
       ...(o.renomear ? { renomear: o.renomear } : {}),
       ...(o.ligar ? { ligar: o.ligar } : {}),
       baixar: async (a, destino) => {
-        if (!(await renovador.temTrava())) throw new Error(SEM_VEZ);
+        if (!(await renovador.temTrava())) throw new ErroLocal(SEM_VEZ);
         await o.aoBaixar?.(a);
         await entregar(a, destino);
       },

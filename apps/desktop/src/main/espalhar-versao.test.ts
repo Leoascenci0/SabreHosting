@@ -6,6 +6,7 @@ import { gerarMundo, hashesDoMundo } from "../../../../packages/nucleo/test/ajud
 import { gerarManifesto } from "@sabrehosting/nucleo/backup/manifesto";
 import { hashDoArquivo } from "@sabrehosting/nucleo/integridade/hash";
 import { servirArquivos, type Servidor } from "@sabrehosting/nucleo/sync/transferencia";
+import { ErroLocal } from "@sabrehosting/nucleo/sync/aplicar";
 import { criarEspalhador, criarGatilhoEspalhar } from "./espalhar-versao.js";
 
 const pastas: string[] = [];
@@ -98,6 +99,10 @@ describe("criarEspalhador", () => {
     const c = await cenario();
     const antes = hashesDoMundo(c.mundo);
     await expect(c.montar({ servidorRodando: () => true })(...c.args)).rejects.toThrow(/servidor/i);
+    // syncmel-1.14: é falha local; o `alcancar` não cai na nuvem por causa dela.
+    await expect(c.montar({ servidorRodando: () => true })(...c.args)).rejects.toBeInstanceOf(
+      ErroLocal,
+    );
     expect(c.eventos).toEqual([]);
     expect(hashesDoMundo(c.mundo)).toEqual(antes);
   });
@@ -107,6 +112,7 @@ describe("criarEspalhador", () => {
     const antes = hashesDoMundo(c.mundo);
     c.estado.dono = { id: 1, nome: "Este PC" };
     await expect(c.montar()(...c.args)).rejects.toThrow(/hospedando/i);
+    await expect(c.montar()(...c.args)).rejects.toBeInstanceOf(ErroLocal);
     expect(c.eventos).toEqual([]);
     expect(hashesDoMundo(c.mundo)).toEqual(antes);
   });

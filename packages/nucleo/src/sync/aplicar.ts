@@ -81,16 +81,27 @@ export const baixarDoHost =
   (arquivo: ArquivoDoManifesto, destino: string) =>
     pedirArquivo({ ...origem, sha256: arquivo.sha256, destino, tamanhoMaximo: arquivo.tamanho });
 
+/**
+ * Falha que é deste PC (servidor rodando, hospedando, trava de atualização perdida): trocar de fonte não resolve.
+ * O `alcancar` não cai na nuvem por causa dela (syncmel-1.14).
+ */
+export class ErroLocal extends Error {
+  constructor(mensagem: string) {
+    super(mensagem);
+    this.name = "ErroLocal";
+  }
+}
+
 /** Este PC não hospeda agora: servidor dele parado e sem a trava de host (confirmado "não" dentro do prazo). */
 export async function exigirForaDoHost(
   o: Pick<OpcoesAplicar, "servidorParado" | "hospedaAgora" | "prazoTravaMs">,
 ): Promise<void> {
   if (!o.servidorParado()) {
-    throw new Error("O servidor está rodando; pare o servidor antes de atualizar o mundo.");
+    throw new ErroLocal("O servidor está rodando; pare o servidor antes de atualizar o mundo.");
   }
   const naoHospeda = async () => (await o.hospedaAgora()) === false;
   if ((await travaConfirmada(naoHospeda, o.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS)) !== "sim") {
-    throw new Error(
+    throw new ErroLocal(
       "Este PC está hospedando (ou o cartório não confirmou que não está); o mundo dele não é atualizado agora.",
     );
   }
@@ -102,13 +113,13 @@ async function exigirPodeTrocar(o: OpcoesAplicar, entreRenames = false): Promise
   // muda ali: o cartório não dá o host enquanto a trava de atualização vale, e `temAtualizacaoLocal` é essa conta.
   if (entreRenames) {
     if (!o.servidorParado()) {
-      throw new Error("O servidor está rodando; pare o servidor antes de atualizar o mundo.");
+      throw new ErroLocal("O servidor está rodando; pare o servidor antes de atualizar o mundo.");
     }
   } else await exigirForaDoHost(o);
   const confere = entreRenames && o.temAtualizacaoLocal ? o.temAtualizacaoLocal : o.temAtualizacao;
   const trava = await travaConfirmada(confere, o.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS);
   if (trava !== "sim") {
-    throw new Error(
+    throw new ErroLocal(
       "Este PC perdeu (ou não tem) a trava de atualização do cartório; o mundo continua como estava. Tento de novo depois.",
     );
   }
