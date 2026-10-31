@@ -73,7 +73,8 @@ Nunca peça a uma filha o que foi negado a você.
 
 ### Revisão do PR
 
-1. **Prova, não alegação:** rode você mesma, num worktree do ramo (`using-git-worktrees`), `npm run vistoria`.
+1. **Prova, não alegação:** rode você mesma, num worktree do ramo (`using-git-worktrees`), `npm run vistoria`. O merge
+   depende só dessa vistoria local: **nunca espere o CI do GitHub** (regra do Eliel, 31/10/2026).
 2. **Arquivos:** só os do *Arquivo:* do item; plano como primeiro commit; nada em `CLAUDE.md`, `.claude/`,
    `docs/roadmap-*.md`, `docs/MILESTONE.md`.
 3. **Mundo e segredos:** `python3 scripts/verificar.py --base origin/main` APROVADO (barra mundo real, segredo,

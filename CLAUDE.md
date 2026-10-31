@@ -35,6 +35,10 @@ de outro assunto).
   `python3 scripts/verificar.py --base origin/main`; estado dos roadmaps `python3 scripts/estado_roadmaps.py`.
 - **Vistoria local + CI:** antes de enviar ramo, rodar `npm run vistoria` e colar o resumo no PR. O repositório é
   público, então o GitHub Actions é gratuito: o CI roda a mesma vistoria em todo PR (inclusive de contribuidores).
+- **Testar daqui, nunca esperar o CI (regra do Eliel, 31/10/2026):** a decisão de mergear vem da vistoria rodada
+  **na própria sessão** (`npm run vistoria` num worktree do ramo com a `main` mesclada). Nunca esperar o check do
+  GitHub ficar verde nem agendar aviso para isso; o CI é só uma conferência a mais. CI vermelho depois do merge vira
+  correção imediata.
 - **Correção de bug = regra + prova:** PR que corrige bug traz teste que **falhava antes e passa depois** e, se o erro
   pode voltar por outro caminho, ficha em `docs/memoria/solucoes.md`. Sem teste, o PR diz por quê e o `qa` reprova
   se faltar a linha `Regressão:`.

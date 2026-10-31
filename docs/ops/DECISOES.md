@@ -29,3 +29,4 @@
 | 2026-10-30 | **D2:** rede privada com **WireGuard próprio** na máquina da nuvem (hub), sem Tailscale nem playit.gg | rede-1.1, rede-1.3 |
 | 2026-10-30 | **D3:** máquina na nuvem na **Oracle Cloud Always Free em São Paulo** (ARM). O cadastro é do Eliel, no item que cria a máquina | rede-1.1, rede-1.2 |
 | 2026-10-30 | **D4:** ícone enviado pelo Eliel (tigre-dente-de-sabre + blocos de grama), em `apps/desktop/recursos/icone/` | app-1.1 |
+| 2026-10-31 | **Testar daqui, nunca esperar o CI:** o merge é decidido pela vistoria rodada na própria sessão (worktree do ramo com a main mesclada); não se espera o check do GitHub nem se agenda aviso para isso | Regra do Eliel (CLAUDE.md › Visão técnica) |
