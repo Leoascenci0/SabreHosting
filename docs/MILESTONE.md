@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 20** (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
+**Próxima onda: 21** (numeração única; as rodadas sem número depois da Onda 11 ficam como 12–19 no histórico).
 
-_(nenhum item aberto; rodada da madrugada de 31/10 encerrada às 04:15 — 33 PRs; retomar com `/maxima retomar`)_
+Onda 20 (31/10) — cartmel-1.1 · app-2.1 · sync-1.1 · app-2.2 · sync-1.2 — sessão https://claude.ai/code/session_012qrjntSMKMZcY3GUuomfqa
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
