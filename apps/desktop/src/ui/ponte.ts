@@ -10,7 +10,9 @@ export type EstadoInicio =
   | { tipo: "outro"; nomePc: string; endereco: string }
   | { tipo: "eu"; endereco: string; parando?: boolean };
 
-export type Resultado = { ok: true } | { ok: false; mensagem: string };
+export type CampoComErro = "intervalo" | "distancias" | "historico";
+/** `campo` diz qual campo da tela errou (a tela marca e leva o foco para ele, sem ler o texto da mensagem). */
+export type Resultado = { ok: true } | { ok: false; mensagem: string; campo?: CampoComErro };
 
 export interface ConfiguracoesDaTela {
   abrirComWindows: boolean;
@@ -32,6 +34,7 @@ export interface EstadoBackups {
   itens: BackupDaTela[];
   bloqueado: boolean;
   erro?: string;
+  avisoHistorico?: string;
 }
 
 export interface PcDaTela {
@@ -51,6 +54,8 @@ export interface PonteSabre {
   configuracoes: {
     ler(): Promise<ConfiguracoesDaTela>;
     salvar(valor: ConfiguracoesDaTela): Promise<Resultado>;
+    /** Abre o seletor de pasta do Windows; `undefined` se o amigo cancelar. */
+    escolherPasta(): Promise<string | undefined>;
   };
   backups: {
     listar(): Promise<EstadoBackups>;

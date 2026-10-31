@@ -12,6 +12,9 @@ import { pipeline } from "node:stream/promises";
 import { hashDoArquivo } from "../../integridade/hash.js";
 
 const prefixo = "Histórico longo numa pasta:";
+/** Texto mostrado na tela do app quando a pasta some (antes ou durante a cópia). */
+export const PASTA_NAO_ENCONTRADA =
+  "A pasta do histórico não foi encontrada; o backup deste PC está salvo.";
 
 async function existe(caminho: string): Promise<boolean> {
   return stat(caminho).then(
@@ -35,9 +38,7 @@ export async function copiarParaPasta(
   }
   const info = await stat(pasta).catch(() => undefined);
   if (info === undefined || !info.isDirectory()) {
-    throw new Error(
-      `${prefixo} a pasta não está disponível agora. O backup deste PC foi guardado normalmente.`,
-    );
+    throw new Error(PASTA_NAO_ENCONTRADA);
   }
   const nome = basename(pacote);
   const final = join(pasta, nome);
@@ -55,8 +56,13 @@ export async function copiarParaPasta(
   } catch (erro) {
     await rm(parcial, { force: true });
     if (erro instanceof Error && erro.message.startsWith(prefixo)) throw erro;
+    const sumiu = ["ENOENT", "ENOTDIR", "ENXIO", "EIO"].includes(
+      (erro as NodeJS.ErrnoException).code ?? "",
+    );
     throw new Error(
-      `${prefixo} não consegui copiar (a pasta pode ter sumido no meio). O backup deste PC está intacto.`,
+      sumiu
+        ? PASTA_NAO_ENCONTRADA
+        : `${prefixo} não consegui copiar agora. O backup deste PC está salvo.`,
       { cause: erro },
     );
   }

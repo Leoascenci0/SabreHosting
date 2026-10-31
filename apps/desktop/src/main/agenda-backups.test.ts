@@ -161,6 +161,8 @@ describe("histórico longo no backup agendado (drive-1.1a)", () => {
     const { join } = await import("node:path");
     const { createHash } = await import("node:crypto");
     const { copiarAoConcluir } = await import("./agenda-backups.js");
+    const { criarAvisoHistorico } = await import("./aviso-historico.js");
+    const { PASTA_NAO_ENCONTRADA } = await import("@sabrehosting/nucleo/backup/destinos/pasta");
     const local = mkdtempSync(join(tmpdir(), "sabre-ag-local-"));
     const drive = mkdtempSync(join(tmpdir(), "sabre-ag-drive-"));
     const nome = "2026-10-31T10-00-00-000Z-v1.tar.gz";
@@ -169,7 +171,9 @@ describe("histórico longo no backup agendado (drive-1.1a)", () => {
     const feito = { caminho, sha256: createHash("sha256").update("pacote de teste").digest("hex") };
     const avisos: string[] = [];
     let pasta: string | undefined = drive;
+    const visivel = criarAvisoHistorico();
     const o = {
+      avisoHistorico: visivel,
       pastaBackups: local,
       historicoLongo: () => pasta,
       aoAvisar: (t: string) => void avisos.push(t),
@@ -177,14 +181,17 @@ describe("histórico longo no backup agendado (drive-1.1a)", () => {
     await copiarAoConcluir(o, feito);
     expect(readdirSync(drive)).toEqual([nome]);
     expect(avisos).toEqual([]);
+    expect(visivel.ler()).toBeUndefined();
     rmSync(drive, { recursive: true }); // a pasta some entre um backup e o outro
     await copiarAoConcluir(o, feito); // não lança
     expect(avisos).toHaveLength(1);
-    expect(avisos[0]).toMatch(/histórico longo/i);
+    expect(avisos[0]).toBe(PASTA_NAO_ENCONTRADA);
+    expect(visivel.ler()).toBe(PASTA_NAO_ENCONTRADA); // a tela de Backups lê daqui (ajuste 4)
     expect(readdirSync(local)).toEqual([nome]);
-    pasta = undefined; // desligado: nada acontece
+    pasta = undefined; // desligado: nada acontece e o aviso antigo some
     await copiarAoConcluir(o, feito);
     expect(avisos).toHaveLength(1);
+    expect(visivel.ler()).toBeUndefined();
     rmSync(local, { recursive: true });
   });
 });

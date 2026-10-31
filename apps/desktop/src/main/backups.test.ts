@@ -28,6 +28,14 @@ describe("backups (cola da tela)", () => {
     expect(rodando.bloqueado).toBe(true);
   });
 
+  it("mostra o aviso do histórico longo quando a cópia para a pasta falhou (ajuste 4)", async () => {
+    const texto = "A pasta do histórico não foi encontrada; o backup deste PC está salvo.";
+    const r = await criarBackups(deps({ avisoHistorico: () => texto })).estado();
+    expect(r.avisoHistorico).toBe(texto);
+    expect(r.itens).toHaveLength(2); // a lista local segue normal
+    expect((await criarBackups(deps()).estado()).avisoHistorico).toBeUndefined();
+  });
+
   it("lista que não carrega vira mensagem em pt-BR, sem estourar", async () => {
     const r = await criarBackups(
       deps({ listar: async () => Promise.reject(new Error("x")) }),

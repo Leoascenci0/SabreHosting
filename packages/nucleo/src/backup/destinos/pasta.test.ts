@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { hashDoArquivo } from "../../integridade/hash.js";
-import { copiarParaPasta } from "./pasta.js";
+import { PASTA_NAO_ENCONTRADA, copiarParaPasta } from "./pasta.js";
 
 const pastas: string[] = [];
 const nova = (): string => {
@@ -36,7 +36,7 @@ describe("copiarParaPasta (drive-1.1a)", () => {
     const destino = join(nova(), "sumiu");
     const p = await pacoteDeTeste(local);
     await expect(copiarParaPasta(p.caminho, p.sha256, destino, local)).rejects.toThrow(
-      /histórico longo/i,
+      PASTA_NAO_ENCONTRADA,
     );
     expect(existsSync(destino)).toBe(false); // não recria a pasta por conta própria
     expect(readFileSync(p.caminho).length).toBe(200_000);
@@ -86,7 +86,7 @@ describe("copiarParaPasta (drive-1.1a)", () => {
     const arquivo = join(nova(), "arq");
     writeFileSync(arquivo, "x");
     await expect(copiarParaPasta(p.caminho, p.sha256, arquivo, local)).rejects.toThrow(
-      /histórico longo/i,
+      PASTA_NAO_ENCONTRADA,
     );
   });
 });

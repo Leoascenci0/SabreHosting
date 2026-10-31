@@ -115,6 +115,19 @@ describe("tela de configurações", () => {
     expect(await p.locator("#cfg-intervalo").inputValue()).toBe("30");
   });
 
+  it("histórico longo: pasta e botão só ficam ativos com a opção ligada; erro leva ao campo certo", async () => {
+    const p = await abrir();
+    await expect(p.locator("#cfg-historico-pasta").isDisabled()).resolves.toBe(true);
+    await expect(p.locator("#cfg-historico-escolher").isDisabled()).resolves.toBe(true);
+    await p.locator("#cfg-historico").check();
+    await expect(p.locator("#cfg-historico-escolher").isDisabled()).resolves.toBe(false);
+    await p.locator("#config-salvar").click(); // ligado sem pasta
+    await esperarTexto(p, "#config-erro", "histórico longo");
+    expect(await p.locator("#cfg-historico-pasta").getAttribute("aria-invalid")).toBe("true");
+    expect(await p.locator("#cfg-intervalo").getAttribute("aria-invalid")).toBe("false");
+    expect(() => readFileSync(arquivo())).toThrow();
+  });
+
   it("não mostra a área Grupo a quem não é dono", async () => {
     const p = await abrir();
     expect(await p.locator("legend:visible").allTextContents()).toEqual([

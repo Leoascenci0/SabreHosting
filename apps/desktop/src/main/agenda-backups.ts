@@ -4,6 +4,7 @@ import {
   type Relogio,
   type OpcoesAgenda,
 } from "@sabrehosting/nucleo/backup/agendador";
+import type { AvisoHistorico } from "./aviso-historico.js";
 import { listarBackups } from "@sabrehosting/nucleo/backup/listar";
 import { copiarParaPasta } from "@sabrehosting/nucleo/backup/destinos/pasta";
 
@@ -93,6 +94,8 @@ export interface OpcoesAgendaReal {
   relogio?: Relogio;
   /** Configurações › Backups › Histórico longo numa pasta (lido a cada backup; `undefined`: desligado). */
   historicoLongo?(): string | undefined;
+  /** Onde a tela de Backups lê o último problema da cópia (limpo quando a cópia dá certo ou o recurso é desligado). */
+  avisoHistorico?: AvisoHistorico;
   aoAvisar?(texto: string): void;
 }
 
@@ -101,15 +104,21 @@ export interface OpcoesAgendaReal {
  * está guardado e continua valendo. Nunca apaga nada.
  */
 export async function copiarAoConcluir(
-  o: Pick<OpcoesAgendaReal, "pastaBackups" | "historicoLongo" | "aoAvisar">,
+  o: Pick<OpcoesAgendaReal, "pastaBackups" | "historicoLongo" | "avisoHistorico" | "aoAvisar">,
   feito: { caminho: string; sha256: string },
 ): Promise<void> {
   const pasta = o.historicoLongo?.();
-  if (pasta === undefined || !o.pastaBackups) return;
+  if (pasta === undefined || !o.pastaBackups) {
+    o.avisoHistorico?.definir(undefined);
+    return;
+  }
   try {
     await copiarParaPasta(feito.caminho, feito.sha256, pasta, o.pastaBackups);
+    o.avisoHistorico?.definir(undefined);
   } catch (e) {
-    o.aoAvisar?.(e instanceof Error ? e.message : String(e));
+    const texto = e instanceof Error ? e.message : String(e);
+    o.avisoHistorico?.definir(texto);
+    o.aoAvisar?.(texto);
   }
 }
 

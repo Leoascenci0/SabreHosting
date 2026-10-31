@@ -15,6 +15,7 @@ const inicio = $("cartao");
 const tela = $("tela-backups");
 const detalhe = $("backups-detalhe");
 const erro = $("backups-erro");
+const avisoHistorico = $("backups-aviso-historico");
 const lista = $("lista-backups");
 const confirmacao = $("backups-confirmacao");
 const pergunta = $("backups-pergunta");
@@ -84,6 +85,8 @@ async function carregar(): Promise<void> {
     bloqueado = estado.bloqueado;
     desenhar(estado.itens);
     mostrarErro(estado.erro ?? "");
+    avisoHistorico.textContent = estado.avisoHistorico ?? "";
+    avisoHistorico.hidden = estado.avisoHistorico === undefined;
     detalhe.textContent = estado.bloqueado
       ? "Pare o servidor para poder restaurar um backup."
       : resultado !== ""

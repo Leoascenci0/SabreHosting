@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
 import { criarConfiguracoes } from "./configuracoes.js";
+import { criarAvisoHistorico } from "./aviso-historico.js";
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { depsBackupsReais } from "./deps-backups.js";
@@ -172,6 +173,7 @@ function criarBandeja(): Tray {
   return nova;
 }
 
+const avisoHistorico = criarAvisoHistorico();
 let backupsApp: Backups | undefined;
 let agendaApp: AgendaBackups | undefined;
 const intervaloBackupMin = (): number =>
@@ -195,6 +197,7 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
         pastaDoMundo: process.env["SABRE_PASTA_MUNDO"],
         epoca: async () => (await exigir().estadoTrava()).epoca,
         historicoLongo,
+        avisoHistorico,
         aoAvisar,
       }),
       aoAvisar,
@@ -251,7 +254,10 @@ async function criarInicioDoApp(): Promise<Inicio> {
 async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
   const servidorRodando = (): boolean => inicio.ativo();
   if (process.env["SABRE_E2E"] !== "1") {
-    return criarBackups(depsBackupsReais(process.env, servidorRodando, () => inicio.temOrfao()));
+    return criarBackups({
+      ...depsBackupsReais(process.env, servidorRodando, () => inicio.temOrfao()),
+      avisoHistorico: avisoHistorico.ler,
+    });
   }
   const { depsBackupsE2E } = await import("./fake-e2e.js");
   return criarBackups(depsBackupsE2E(servidorRodando));
@@ -280,6 +286,16 @@ function registrarPonte(inicio: Inicio, backups: Backups, grupo: Grupo): void {
     pasta: app.getPath("userData"),
     aplicarAbrirComWindows,
     aplicarIntervaloBackup: () => agendaApp?.reagendar(),
+    escolherPasta: async () => {
+      const opcoes = {
+        title: "Escolha a pasta do histórico longo",
+        properties: ["openDirectory", "createDirectory"] as ("openDirectory" | "createDirectory")[],
+      };
+      const r = janela
+        ? await dialog.showOpenDialog(janela, opcoes)
+        : await dialog.showOpenDialog(opcoes);
+      return r.canceled ? undefined : r.filePaths[0];
+    },
   });
   const permitir = (evento: IpcMainInvokeEvent): void => {
     if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
@@ -289,6 +305,10 @@ function registrarPonte(inicio: Inicio, backups: Backups, grupo: Grupo): void {
   ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), inicio.jogar()));
   ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), inicio.hospedar()));
   ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), inicio.parar()));
+  ipcMain.handle(
+    "sabre:config:escolher-pasta",
+    (evento) => (permitir(evento), configuracoes.escolherPasta()),
+  );
   ipcMain.handle("sabre:backups:listar", (evento) => (permitir(evento), backups.estado()));
   ipcMain.handle("sabre:backups:restaurar", (evento, nome: unknown) => {
     permitir(evento);
