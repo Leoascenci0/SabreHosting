@@ -55,7 +55,7 @@ import { type MotivoConfig, gravarConfig, lerConfig } from "./configuracao.js";
 import {
   type DadosVersao,
   informarCopia,
-  maisNova,
+  maisNovaGuardada,
   nuvemTem,
   quemTem,
   registrarVersao,
@@ -521,7 +521,7 @@ export function criarCartorio({
       return r.ok ? resp.code(201).send({ numero: r.numero }) : recusar(resp, r);
     },
   );
-  app.get("/versoes/mais-nova", { onRequest: soPc }, () => ({ versao: maisNova(banco) }));
+  app.get("/versoes/mais-nova", { onRequest: soPc }, () => ({ versao: maisNovaGuardada(banco) }));
   app.post<{ Body: { versao: number } }>(
     "/copias",
     {
