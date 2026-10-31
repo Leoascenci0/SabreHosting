@@ -26,7 +26,7 @@ Decisão do Eliel (30/10/2026): "Prism agora, próprio depois".
   *Confirmação:* testes com pastas falsas (instalado, ausente, versão antiga demais).
   *Depende de:* base-1.1
 
-- [ ] **1.2 — Instância do grupo no Prism**
+- [x] **1.2 — Instância do grupo no Prism** (PR #57, 30/10/2026; conferência no Prism real pendente [P])
   *O que fazer:* criar e manter atualizada uma instância "SabreHosting — <grupo>" com a versão do Minecraft e o loader do
   servidor (vindos do cartório), pelo formato de instância ou importação `.mrpack` documentados. Nunca mexer nas
   outras instâncias do amigo.
