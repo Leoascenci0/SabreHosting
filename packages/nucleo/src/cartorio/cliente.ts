@@ -8,7 +8,8 @@ import {
   validarEntradaNoGrupo,
   validarEstadoTrava,
   validarGrupo,
-  validarPc,
+  validarEu,
+  validarListaPcs,
   validarRespostaTrava,
 } from "./tipos.js";
 
@@ -232,7 +233,9 @@ export function criarCliente(opcoes: OpcoesCliente) {
     chamar<T>({ metodo: "GET", rota, repetir: true, validar });
 
   return {
-    eu: () => ler("/eu", validarPc),
+    eu: () => ler("/eu", validarEu),
+    /** Só o dono: os PCs com acesso ao cartório (tela Configurações › Grupo). */
+    listarPcs: () => ler("/pcs", validarListaPcs),
     estadoTrava: () => ler("/trava", validarEstadoTrava),
     pegar: () => trava("/trava/pegar", false),
     /** `sinal`: o renovador cancela ao soltar ou perder, e nenhuma tentativa nova sai. */

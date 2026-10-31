@@ -609,3 +609,64 @@ describe("revisão do PR #84", () => {
     ).toBe(401);
   });
 });
+
+describe("listar os PCs do grupo: GET /pcs (só o dono) e dono no /eu", () => {
+  async function comAna() {
+    const m = montar();
+    const dono = await m.comDono();
+    const texto = (await m.convidar(dono.auth, { nomePc: "pc-da-ana" })).json<{
+      convite: string;
+    }>();
+    const ana = await m.entrar(texto.convite);
+    const pcs = (a: { auth: Record<string, string>; pacote?: PacoteLigacao }) =>
+      m.app.inject({ url: "/pcs", headers: a.auth, remoteAddress: a.pacote?.ip_pc ?? "10.66.0.2" });
+    const eu = (a: { auth: Record<string, string>; pacote?: PacoteLigacao }) =>
+      m.app.inject({ url: "/eu", headers: a.auth, remoteAddress: a.pacote?.ip_pc ?? "10.66.0.2" });
+    return { m, dono, ana, pcs, eu };
+  }
+
+  it("dono lista só id, nome e dono, sem nenhum segredo", async () => {
+    const { dono, ana, pcs } = await comAna();
+    const r = await pcs(dono);
+    expect(r.statusCode).toBe(200);
+    const lista = r.json<Array<Record<string, unknown>>>();
+    expect(lista.map((p) => [p.nome, p.dono])).toEqual([
+      ["pc-do-dono", true],
+      ["pc-da-ana", false],
+    ]);
+    for (const p of lista) expect(Object.keys(p).sort()).toEqual(["dono", "id", "nome"]);
+    expect(r.body).not.toMatch(/token|hash|ip/i);
+    expect(ana).toBeDefined();
+  });
+
+  it("quem não é dono → 403; sem token → 401", async () => {
+    const { ana, pcs } = await comAna();
+    const r = await pcs(ana);
+    expect(r.statusCode).toBe(403);
+    expect(r.json<{ erro: string }>().erro).toMatch(/dono/);
+    expect((await pcs({ auth: {} })).statusCode).toBe(401);
+  });
+
+  it("PC revogado não aparece", async () => {
+    const { m, dono, pcs } = await comAna();
+    const id = (
+      m.banco.prepare("SELECT id FROM pcs WHERE nome = ?").get("pc-da-ana") as {
+        id: number;
+      }
+    ).id;
+    await m.app.inject({
+      method: "POST",
+      url: `/pcs/${id}/revogar`,
+      headers: dono.auth,
+      remoteAddress: "10.66.0.2",
+    });
+    const lista = (await pcs(dono)).json<Array<{ nome: string }>>();
+    expect(lista.map((p) => p.nome)).toEqual(["pc-do-dono"]);
+  });
+
+  it("/eu diz se o PC é o dono", async () => {
+    const { dono, ana, eu } = await comAna();
+    expect((await eu(dono)).json()).toMatchObject({ nome: "pc-do-dono", dono: true });
+    expect((await eu(ana)).json()).toMatchObject({ nome: "pc-da-ana", dono: false });
+  });
+});
