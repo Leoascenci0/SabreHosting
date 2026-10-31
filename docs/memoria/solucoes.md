@@ -30,3 +30,14 @@ fingir root, e o script confere `id -u` · Solução: os ajudantes de teste pass
 root de verdade fica `skipIf` explícito · Prova: `npx vitest run` verde como root e como usuário comum (`useradd -m teste`;
 `su teste -c ...` numa cópia do repositório) · Vezes: 1 · Origem: corr-1.1, PR #118. Regra: depois de mergear item que mexe
 em `infra/` ou `tests/infra/`, rodar a suíte também como usuário comum, e olhar o check da `main` no fim da onda
+
+## S-04 — Commit da filha ficou fora da main depois do merge
+Sintoma: `git log origin/main..origin/roadmap/<item>` não vazio depois do merge; PR já fechado · Causa: a orquestradora
+mergeou enquanto a filha ainda atendia um pedido de ajuste (#128) · Solução: PR de complemento do mesmo ramo (#138);
+regra: só mergear depois do aviso de "pronto" da filha para o último pedido, e conferir o `git log` vazio depois ·
+Prova: #138 mergeado, `git log origin/main..origin/roadmap/basemel-1.6` vazio · Vezes: 1 · Origem: rodada 31/10 (madrugada)
+
+## S-05 — Tipos do workspace somem num worktree
+Sintoma: `TS2307: Cannot find module '@sabrehosting/nucleo/...'` no `npm run vistoria` de um worktree · Causa:
+`node_modules` em atalho para a pasta principal resolve os pacotes do workspace fora do worktree · Solução: `npm ci` no
+próprio worktree (5 s) · Prova: vistoria APROVADA no mesmo worktree depois do `npm ci` · Vezes: 1 · Origem: revisão do #84

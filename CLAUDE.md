@@ -42,6 +42,10 @@ de outro assunto).
 - **Correção de bug = regra + prova:** PR que corrige bug traz teste que **falhava antes e passa depois** e, se o erro
   pode voltar por outro caminho, ficha em `docs/memoria/solucoes.md`. Sem teste, o PR diz por quê e o `qa` reprova
   se faltar a linha `Regressão:`.
+- **Regressão também é processo (regra do Eliel, 31/10/2026):** todo erro que eu descobrir e solucionar (no código, no
+  teste ou no meu próprio jeito de trabalhar) vira ficha em `docs/memoria/solucoes.md` **e** uma linha em "Soluções
+  conhecidas" abaixo, para eu me guiar e não repetir. E todo **roadmap 100% feito vai para `docs/concluidos/`** no PR de
+  controle que fecha o último item (o `corr` fica: é a lista permanente de correções).
 - **Padrões:** imitar o código vizinho; textos, nomes, commits e mensagens do app em pt-BR.
 
 ## Código aberto (decisão do Eliel, 30/10/2026)
@@ -179,7 +183,13 @@ o que se repete). No máximo 10 linhas:
 - **S-02** `git merge` da `main` com CONFLICT (em geral no fim do `docs/ops/DECISOES.md`): resolver ANTES de editar ou
   commitar; o verificador barra marcador de conflito desde o basemel-1.4.
 - **S-01** teste passa sozinho e falha com a máquina ocupada (trava, arquivos grandes): é tempo curto demais no teste,
-  não no código; folga medida ou prazo explícito só no teste, nunca afrouxar o que ele prova.
+  não no código; folga medida ou prazo explícito só no teste, nunca afrouxar o que ele prova. Não rode 2 vistorias juntas.
+- **S-03** vistoria verde na sessão e check vermelho no GitHub: a sessão roda como root e o CI não. Item que mexe em
+  `infra/` ou `tests/infra/` roda os testes também como usuário comum (`useradd -m teste`; `su teste -c ...`).
+- **S-04** mergear antes da filha terminar o último pedido deixa commit fora da `main` (#128→#138): só mergear depois
+  do aviso de "pronto" da filha, e conferir `git log origin/main..origin/<ramo>` vazio depois do merge.
+- **S-05** worktree com `node_modules` em atalho da pasta principal dá `Cannot find module '@sabrehosting/...'`: rode
+  `npm ci` no próprio worktree.
 
 ## Skills sob demanda
 
