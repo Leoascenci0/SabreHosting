@@ -423,3 +423,39 @@ describe("baixarConferido", () => {
     expect(existsSync(destino)).toBe(false);
   });
 });
+
+describe("limite de banda", () => {
+  const grande = Buffer.alloc(200_000, 7);
+  const hashGrande = { algoritmo: "sha256", valor: sha256(grande) } as const;
+
+  it("com limite, o download demora o que a banda manda e o arquivo chega igual", async () => {
+    manipulador = (_req, res) => responder(res, grande);
+    const t0 = Date.now();
+    const r = await baixar({
+      url: url(),
+      hashEsperado: hashGrande,
+      destino: join(pasta, "g.bin"),
+      limiteBytesPorSeg: 100_000, // 200 kB a 100 kB/s: pelo menos ~1 s
+    });
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(800);
+    expect((await readFile(r.caminho)).equals(grande)).toBe(true);
+  });
+
+  it("sem limite, não atrasa", async () => {
+    manipulador = (_req, res) => responder(res, grande);
+    const t0 = Date.now();
+    await baixar({ url: url(), hashEsperado: hashGrande, destino: join(pasta, "g2.bin") });
+    expect(Date.now() - t0).toBeLessThan(800);
+  });
+
+  it.each([0, -5, Number.NaN, 1.5])("recusa limite inválido (%s)", async (limite) => {
+    await expect(
+      baixar({
+        url: url(),
+        hashEsperado: hashCerto,
+        destino: join(pasta, "x"),
+        limiteBytesPorSeg: limite,
+      }),
+    ).rejects.toThrow(/limite/i);
+  });
+});

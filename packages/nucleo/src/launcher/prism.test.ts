@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  compararVersoes,
   detectarPrism,
   lerRegistroWindows,
   type ExecArquivo,
@@ -132,6 +133,22 @@ describe("detectarPrism", () => {
     const r = await detectarPrism({ ambiente, fs, lerRegistro: registro("7.2") });
     expect(r).toMatchObject({ instalado: true, antigo: true, versao: "7.2" });
     expect(r.instalado && r.mensagem).toMatch(/versão 8\.0/);
+  });
+
+  it("compara a versão completa (major.minor.patch) com o mínimo 8.0.0", async () => {
+    await criar(join(instalacaoPadrao(), "prismlauncher.exe"));
+    const antigo = async (v: string) => {
+      const r = await detectarPrism({ ambiente, fs, lerRegistro: registro(v) });
+      return r.instalado && r.antigo;
+    };
+    expect(await antigo("7.9.9")).toBe(true);
+    for (const ok of ["8.0", "8.0.0", "8.1", "9.0.1", "8.0.0-rc1"])
+      expect(await antigo(ok)).toBe(false);
+    expect(await antigo("abc")).toBe(false);
+    expect(compararVersoes("8.2.1", "8.2.0")).toBeGreaterThan(0);
+    expect(compararVersoes("8.2", "8.2.0")).toBe(0);
+    expect(compararVersoes("8.1.9", "8.2.0")).toBeLessThan(0);
+    expect(compararVersoes("abc", "8.0.0")).toBeNull();
   });
 
   it("registro sem a chave: versão null com aviso, não é antigo", async () => {

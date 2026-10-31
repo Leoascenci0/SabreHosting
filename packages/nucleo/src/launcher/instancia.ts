@@ -35,6 +35,32 @@ const PROIBIDO_WINDOWS = /[<>:"/\\|?*\u0000-\u001f]/g;
 const RESERVADO_WINDOWS = /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³]|conin\$|conout\$)$/i;
 const VERSAO_OK = /^[0-9A-Za-z][0-9A-Za-z.+-]*$/;
 const PASTA_SABRE = "SabreHosting";
+const ARQUIVO_MARCADOR = ".sabrehosting.json";
+const MARCADOR = { app: "SabreHosting", formato: 1 } as const;
+
+/** A pasta é do SabreHosting? Vale o marcador dentro dela (não só o nome); ilegível ou de outro programa = não. */
+export async function temMarcadorSabre(pasta: string): Promise<boolean> {
+  try {
+    const dado: unknown = JSON.parse(await readFile(join(pasta, ARQUIVO_MARCADOR), "utf8"));
+    return (
+      typeof dado === "object" && dado !== null && (dado as { app?: unknown }).app === MARCADOR.app
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Grava por arquivo temporário + renomear; apaga o temporário se falhar. */
+async function gravarAtomico(caminho: string, conteudo: Buffer): Promise<void> {
+  const temporario = `${caminho}.${process.pid}.tmp`;
+  try {
+    await writeFile(temporario, conteudo);
+    await rename(temporario, caminho);
+  } catch (erro) {
+    await rm(temporario, { force: true });
+    throw erro;
+  }
+}
 
 /** Nome do grupo como nome de arquivo do Windows (mesmas regras do manifesto do mundo). */
 export function nomeSeguroDoGrupo(grupo: string): string {
@@ -117,7 +143,7 @@ export function montarInstancia(entrada: EntradaInstancia): InstanciaMontada {
 }
 
 /**
- * Grava `<pastaDestino>/SabreHosting/<grupo>.mrpack` por arquivo temporário + renomear. Só mexe no arquivo do
+ * Grava `<pastaDestino>/SabreHosting/<grupo>.mrpack` (e o marcador `.sabrehosting.json`) por arquivo temporário + renomear. Só mexe no arquivo do
  * próprio grupo; conteúdo igual ao que já está lá não é regravado. `lerArquivo` é injetável só para os testes.
  */
 export async function gravarInstancia(
@@ -136,15 +162,19 @@ export async function gravarInstancia(
       throw erro;
     },
   );
-  if (atual?.equals(bytes)) return { caminho, alterado: false };
-  await mkdir(pasta, { recursive: true });
-  const temporario = `${caminho}.${process.pid}.tmp`;
-  try {
-    await writeFile(temporario, bytes);
-    await rename(temporario, caminho);
-  } catch (erro) {
-    await rm(temporario, { force: true });
-    throw erro;
+  const marcado = await temMarcadorSabre(pasta);
+  if (atual !== null && !marcado && !atual.equals(bytes)) {
+    throw new Error(
+      `Já existe um arquivo "${nomeArquivo}" em ${pasta} que não é do SabreHosting; não vou sobrescrever. Renomeie ou mova esse arquivo.`,
+    );
   }
+  await mkdir(pasta, { recursive: true });
+  if (!marcado)
+    await gravarAtomico(
+      join(pasta, ARQUIVO_MARCADOR),
+      Buffer.from(JSON.stringify(MARCADOR), "utf8"),
+    );
+  if (atual?.equals(bytes)) return { caminho, alterado: false };
+  await gravarAtomico(caminho, bytes);
   return { caminho, alterado: true };
 }

@@ -10,6 +10,8 @@ export interface OpcoesLigarEspalhar {
   env: NodeJS.ProcessEnv;
   inicio: { ativo(): boolean; temOrfao(): Promise<boolean> };
   aoAvisar: (texto: string) => void;
+  /** Limite de banda em bytes/s (Configurações › Backups), lido a cada arquivo; ausente: sem limite. */
+  limiteBytesPorSeg?: () => number | undefined;
   /** Só para teste: relógio e rede trocados. */
   agendar?: (tarefa: () => void, ms: number) => void;
   fetchFn?: typeof fetch;
@@ -46,6 +48,7 @@ export function ligarEspalhar(o: OpcoesLigarEspalhar): (() => Promise<void>) | u
       servidorRodando: () => o.inicio.ativo(),
       servidorOrfao: () => o.inicio.temOrfao(),
       versaoLocal,
+      ...(o.limiteBytesPorSeg ? { limiteBytesPorSeg: o.limiteBytesPorSeg } : {}),
     }),
     aoAvisar: (texto) => o.aoAvisar(`[atualizar] ${texto}`),
   });

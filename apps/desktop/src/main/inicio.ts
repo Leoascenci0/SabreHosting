@@ -27,6 +27,8 @@ export interface DepsInicio {
   copiar(texto: string): void;
   /** Há um backup sendo restaurado? Hospedar espera (regra de ouro 2: nunca servidor com o mundo sendo trocado). */
   restaurando?(): boolean;
+  /** Troca de versão em andamento (backup antes de gravar): o servidor não pode subir no meio. */
+  trocandoVersao?(): boolean;
   /** Servidor deste PC criado (ainda pode estar subindo): quem agenda o backup passa a ouvir o estado dele. */
   aoServidor?(servidor: ServidorAtivo): void;
 }
@@ -45,6 +47,8 @@ function motivoDe(e: unknown): MotivoSemCartorio {
 
 export const RESTAURANDO =
   "Um backup está sendo restaurado. Espere terminar para hospedar o servidor.";
+export const TROCANDO_VERSAO =
+  "A versão do Minecraft está sendo trocada (com um backup antes). Espere terminar para hospedar o servidor.";
 const GENERICA = "Não consegui fazer isso agora. Tente de novo em instantes.";
 
 /** Tempos de espera da liberação da trava e do servidor órfão; só os testes mexem. */
@@ -210,6 +214,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
 
     async hospedar(): Promise<Resultado> {
       if (deps.restaurando?.()) return { ok: false, mensagem: RESTAURANDO };
+      if (deps.trocandoVersao?.()) return { ok: false, mensagem: TROCANDO_VERSAO };
       if (ativo || ocupado)
         return { ok: false, mensagem: "O servidor já está subindo ou rodando." };
       ocupado = true;

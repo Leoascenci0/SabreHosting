@@ -26,6 +26,20 @@ function deps(extra: Partial<DepsInicio> = {}): DepsInicio {
   };
 }
 
+describe("hospedar durante a troca de versão do Minecraft", () => {
+  it("é recusado enquanto o backup antes da troca roda, e volta a valer depois", async () => {
+    let trocando = true;
+    const hospedar = vi.fn(async () => ({ servidor: servidorFalso() }));
+    const inicio = criarInicio(deps({ hospedar, trocandoVersao: () => trocando }));
+    const r = await inicio.hospedar();
+    expect(r).toMatchObject({ ok: false });
+    expect(r.ok ? "" : r.mensagem).toMatch(/versão do Minecraft está sendo trocada/);
+    expect(hospedar).not.toHaveBeenCalled();
+    trocando = false;
+    expect(await inicio.hospedar()).toEqual({ ok: true });
+  });
+});
+
 describe("hospedar durante uma restauração de backup", () => {
   it("é recusado enquanto o mundo está sendo trocado, e volta a valer depois", async () => {
     let restaurando = true;

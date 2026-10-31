@@ -29,11 +29,21 @@ describe("ipDaRedePrivada", () => {
   const i = (address: string, family: "IPv4" | "IPv6" = "IPv4") =>
     ({ address, family, internal: false }) as never;
   it("acha o IP da faixa 10.66.0.2–199 e ignora o resto", () => {
-    expect(ipDaRedePrivada({ eth0: [i("192.168.0.5")], wg0: [i("10.66.0.7")] })).toBe("10.66.0.7");
+    expect(ipDaRedePrivada({ eth0: [i("192.168.0.5")], sabre: [i("10.66.0.7")] })).toBe(
+      "10.66.0.7",
+    );
     expect(
       ipDaRedePrivada({ eth0: [i("192.168.0.5"), i("10.66.0.1")], lo: [i("127.0.0.1")] }),
     ).toBeUndefined();
     expect(ipDaRedePrivada({})).toBeUndefined();
+    expect(ipDaRedePrivada({ sabre: [i("10.66.0.200")] })).toBeUndefined(); // fora de 2–199
+    expect(ipDaRedePrivada({ sabre: [i("10.66.0.7", "IPv6")] })).toBeUndefined();
+  });
+  it("aceita só a interface do WireGuard (sabre): outra placa com IP da faixa não vale", () => {
+    expect(ipDaRedePrivada({ Ethernet: [i("10.66.0.9")] })).toBeUndefined();
+    expect(ipDaRedePrivada({ Ethernet: [i("10.66.0.9")], sabre: [i("10.66.0.7")] })).toBe(
+      "10.66.0.7",
+    );
   });
 });
 
@@ -109,6 +119,28 @@ describe("criarServidorDeArquivos (1.10)", () => {
     expect(await c.s.ligar()).toBe(false);
     expect(c.avisos.join(" ")).toMatch(/rede privada/);
     expect(c.s.porta()).toBeUndefined();
+  });
+
+  it("túnel que sobe depois do arranque: relê o IP, liga e publica; o aviso sai uma vez só", async () => {
+    const base = tmp();
+    const avisos: string[] = [];
+    let ip = undefined as string | undefined;
+    const s = criarServidorDeArquivos({
+      endereco: () => ip,
+      conferirToken: async () => null,
+      pastaBackups: join(base, "b"),
+      pastaVitrine: join(base, "v"),
+      aoAvisar: (t) => avisos.push(t),
+      porta: 0,
+      permitirLoopbackParaTeste: true,
+    });
+    abertos.push(s);
+    expect(await s.tentarLigar()).toBe(false);
+    expect(await s.tentarLigar()).toBe(false);
+    expect(avisos).toHaveLength(1);
+    ip = "127.0.0.1"; // o túnel subiu
+    expect(await s.tentarLigar()).toBe(true);
+    expect(s.porta()).toBeDefined();
   });
 
   it("endereço fora da rede privada (0.0.0.0, LAN, internet) é recusado, nada escuta", async () => {

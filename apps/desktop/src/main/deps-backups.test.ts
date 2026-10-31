@@ -160,6 +160,24 @@ describe("backupParado (antes de trocar a versão)", () => {
     expect(readdirSync(c.backups)).toEqual([]);
   });
 
+  it("já existe backup com o mesmo nome: recusa e não mexe no que existe (regra 4)", async () => {
+    const c = cenario();
+    const agora = () => new Date("2026-10-31T12:00:00.000Z");
+    const base = {
+      pastaBackups: c.backups,
+      pastaDoMundo: c.mundo,
+      cliente: c.cliente,
+      servidorRodando: () => false,
+      agora,
+    };
+    await backupParado(base);
+    const [nome] = readdirSync(c.backups);
+    const antes = readFileSync(join(c.backups, nome as string));
+    await expect(backupParado(base)).rejects.toThrow(/Já existe um backup com esse nome/);
+    expect(readdirSync(c.backups)).toEqual([nome]);
+    expect(readFileSync(join(c.backups, nome as string)).equals(antes)).toBe(true);
+  });
+
   it("sem pasta de backups configurada: recusa", async () => {
     const c = cenario();
     await expect(

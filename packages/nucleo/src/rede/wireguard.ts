@@ -22,7 +22,7 @@ export interface ParDeChaves {
 
 export const IP_DO_HUB = "10.66.0.1";
 const REDE = "10.66.0.0/24";
-const NOME_DO_TUNEL = "sabre";
+export const NOME_DO_TUNEL = "sabre";
 const WIREGUARD_EXE = "C:\\Program Files\\WireGuard\\wireguard.exe";
 /** Prefixo PKCS#8 de uma chave privada X25519 (RFC 8410); depois vêm os 32 bytes da chave. */
 const PKCS8_X25519 = Buffer.from("302e020100300506032b656e04220420", "hex");

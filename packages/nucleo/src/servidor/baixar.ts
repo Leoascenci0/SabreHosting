@@ -29,6 +29,8 @@ export interface OpcoesDownload {
   permitirHttpPrivado?: boolean;
   /** Cabeçalhos extras (ex.: Authorization). Vão só ao endereço pedido, nunca a um redirecionamento. */
   cabecalhos?: Record<string, string>;
+  /** Limite de velocidade em bytes por segundo (inteiro ≥ 1). Só atrasa o fluxo; o hash continua conferido. Padrão: sem limite. */
+  limiteBytesPorSeg?: number;
 }
 
 export class ErroDownload extends Error {
@@ -62,7 +64,16 @@ function validar({
   hashEsperado,
   permitirHttpLocal = false,
   permitirHttpPrivado = false,
+  limiteBytesPorSeg,
 }: OpcoesDownload): string {
+  if (
+    limiteBytesPorSeg !== undefined &&
+    (!Number.isInteger(limiteBytesPorSeg) || limiteBytesPorSeg < 1)
+  ) {
+    throw new ErroDownload(
+      "O limite de velocidade do download precisa ser um número inteiro maior que zero.",
+    );
+  }
   const { algoritmo, valor } = hashEsperado;
   const tamanho = TAMANHO_HEX[algoritmo] as number | undefined;
   if (!tamanho || !new RegExp(`^[0-9a-f]{${tamanho}}$`, "i").test(valor)) {
@@ -84,6 +95,7 @@ interface Limites {
   tempoSemDados: number;
   tempoTotal: number;
   cabecalhos: Record<string, string>;
+  limiteBytesPorSeg: number | undefined;
 }
 
 const MAX_SALTOS = 5;
@@ -184,6 +196,9 @@ async function baixarParcial(url: string, parcial: string, limites: Limites): Pr
     if (validador && inicio === 0) await writeFile(meta, validador);
     if (!resposta.body) throw new ErroDeConexao("O servidor não enviou o arquivo.");
     let recebido = inicio;
+    // Freio: o trecho só segue quando o total desta passada cabe na banda (bytes ÷ limite = instante mais cedo).
+    const comeco = Date.now();
+    let passou = 0;
     const contar = new Transform({
       transform(trecho: Buffer, _enc, ok) {
         vigiar();
@@ -191,7 +206,12 @@ async function baixarParcial(url: string, parcial: string, limites: Limites): Pr
         if (recebido > limites.tamanhoMaximo) {
           return ok(new ErroDownload("O arquivo passou do limite permitido; cancelei o download."));
         }
-        ok(null, trecho);
+        passou += trecho.length;
+        const espera = limites.limiteBytesPorSeg
+          ? comeco + (passou / limites.limiteBytesPorSeg) * 1000 - Date.now()
+          : 0;
+        if (espera > 0) setTimeout(() => ok(null, trecho), espera);
+        else ok(null, trecho);
       },
     });
     try {
@@ -233,6 +253,7 @@ export async function baixarConferido(
     tempoSemDados: opcoes.tempoSemDados ?? 30_000,
     tempoTotal: opcoes.tempoTotal ?? 30 * 60_000,
     cabecalhos: opcoes.cabecalhos ?? {},
+    limiteBytesPorSeg: opcoes.limiteBytesPorSeg,
   };
   const esperado = validar(opcoes);
   const parcial = `${destino}.parcial`;

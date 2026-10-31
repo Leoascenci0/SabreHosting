@@ -11,6 +11,7 @@ const PADRAO = {
   intervaloBackupMin: 10,
   quantosGuardar: 10,
   quantosGuardarHistorico: 10,
+  limiteBandaMBs: 10,
   historicoLongoLigado: false,
   historicoLongoPasta: "",
 };
@@ -70,6 +71,7 @@ describe("preferências", () => {
         intervaloBackupMin: 10,
         quantosGuardar: 10,
         quantosGuardarHistorico: 10,
+        limiteBandaMBs: 10,
         historicoLongoLigado: false,
         historicoLongoPasta: "",
       });
@@ -111,6 +113,26 @@ describe("preferências", () => {
       expect(lerPreferencias(pasta)).toEqual({ ...PADRAO, abrirComWindows: true });
     },
   );
+
+  it.each([0, -3, 1.5, 5000, "10", null, true, [3]])(
+    "limiteBandaMBs torto (%j) volta ao padrão 10 sem perder o resto",
+    (v) => {
+      writeFileSync(
+        join(pasta, "preferencias.json"),
+        JSON.stringify({ ...PADRAO, abrirComWindows: true, limiteBandaMBs: v }),
+      );
+      expect(lerPreferencias(pasta)).toEqual({ ...PADRAO, abrirComWindows: true });
+    },
+  );
+
+  it("limiteBandaMBs válido é lido; arquivo antigo sem o campo usa 10", () => {
+    salvarPreferencias(pasta, { ...PADRAO, limiteBandaMBs: 3 });
+    expect(lerPreferencias(pasta).limiteBandaMBs).toBe(3);
+    const velho: Record<string, unknown> = { ...PADRAO };
+    delete velho["limiteBandaMBs"];
+    writeFileSync(join(pasta, "preferencias.json"), JSON.stringify(velho));
+    expect(lerPreferencias(pasta).limiteBandaMBs).toBe(10);
+  });
 
   it("quantosGuardarHistorico válido é lido; arquivo antigo sem o campo usa 10", () => {
     salvarPreferencias(pasta, { ...PADRAO, quantosGuardarHistorico: 4 });

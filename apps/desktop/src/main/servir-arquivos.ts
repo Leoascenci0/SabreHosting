@@ -9,13 +9,15 @@ import {
   servirArquivos,
   type Servidor,
 } from "@sabrehosting/nucleo/sync/transferencia";
+import { NOME_DO_TUNEL } from "@sabrehosting/nucleo/rede/wireguard";
 import { criarVitrine, type Vitrine } from "@sabrehosting/nucleo/sync/vitrine";
 
-/** IP deste PC na rede privada (10.66.0.2–199), lido das interfaces; `undefined` se o túnel não está de pé. */
+/** IP deste PC na rede privada (10.66.0.2–199), lido SÓ da interface do WireGuard; `undefined` se o túnel não está de pé. */
 export function ipDaRedePrivada(
   interfaces: ReturnType<typeof networkInterfaces> = networkInterfaces(),
 ): string | undefined {
-  for (const lista of Object.values(interfaces)) {
+  for (const [nome, lista] of Object.entries(interfaces)) {
+    if (nome.toLowerCase() !== NOME_DO_TUNEL) continue; // outra placa com IP 10.66.x não vale
     for (const i of lista ?? [])
       if (i.family === "IPv4" && ehEnderecoPrivado(i.address)) return i.address;
   }
@@ -67,6 +69,7 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
   const vitrine: Vitrine = criarVitrine(o.pastaVitrine);
   let servidor: Servidor | undefined;
   let ligando = false;
+  let avisouSemRede = false;
 
   return {
     vitrine,
@@ -78,9 +81,12 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
       try {
         const endereco = o.endereco();
         if (!endereco) {
-          o.aoAvisar(
-            "Este PC não está na rede privada do grupo; não passo o mundo aos outros PCs agora.",
-          );
+          if (!avisouSemRede) {
+            avisouSemRede = true; // a releitura periódica não repete o aviso
+            o.aoAvisar(
+              "Este PC não está na rede privada do grupo; não passo o mundo aos outros PCs agora.",
+            );
+          }
           return false;
         }
         servidor = await servirArquivos({
@@ -116,6 +122,14 @@ export function criarServidorDeArquivos(o: OpcoesServirArquivos) {
           `Não atualizei o mundo que passo aos outros PCs: ${erro instanceof Error ? erro.message : String(erro)}`,
         );
       }
+    },
+
+    /** Relê o IP da rede privada (o túnel pode subir depois do arranque); ao ligar, já põe o último bom na vitrine. */
+    async tentarLigar(): Promise<boolean> {
+      if (servidor) return true;
+      if (!(await this.ligar())) return false;
+      await this.publicarUltimoBom();
+      return true;
     },
 
     porta: () => servidor?.porta,
