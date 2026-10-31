@@ -33,7 +33,7 @@ Objetivo: um serviço pequeno na nuvem que sabe qual é a versão mais nova do m
   *Confirmação:* teste: versão só cresce; envio sem trava recusado.
   *Depende de:* cart-1.2
 
-- [ ] **1.4 — Guardar a última cópia do mundo**
+- [x] **1.4 — Guardar a última cópia do mundo** (PR #58, 31/10/2026; servir regiões fica para o sync)
   *O que fazer:* receber delta/pacote da versão aceita, montar a cópia da nuvem (troca atômica), servir regiões para
   quem precisa; guardar alguns backups com rotação.
   *Arquivo:* `services/cartorio/src/armazem.ts`
