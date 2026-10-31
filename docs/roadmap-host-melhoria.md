@@ -46,6 +46,18 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   *Confirmação:* testes terminam rápido e nenhum worker fica vivo.
   *Origem:* host-2.3 · PR #16 · filha + qa
 
+- [ ] **2.5 — Servidor órfão nunca fica solto** (prioridade alta: regra de ouro 1, antes da v0.1)
+  *O que fazer:* se o app morre (fechado à força, queda) com o servidor no ar, o Java fica sem quem renove a trava; ela
+  vence em ~60 s e outro PC pode hospedar com o órfão ainda rodando (dois hosts). Garantir que o órfão se encerre com
+  `save-all flush` + `stop` quando perde o app (ex.: vigia ligado ao app por pipe/PID que pede o stop), e que o app, ao
+  reabrir com órfão vivo nesta pasta, o assuma ou encerre com save antes de oferecer qualquer coisa. Nunca matar sem salvar
+  se houver como salvar.
+  *Arquivo:* `packages/nucleo/src/servidor/processo.ts`, `apps/desktop/src/main/` (deps-reais, inicio)
+  **Tela no app:** não se aplica (aviso "encerrando o servidor anterior…" usa o estado já existente).
+  *Confirmação:* testes: app morto → servidor falso recebe save e stop antes da trava vencer; reabrir com órfão vivo →
+  encerra antes de oferecer Hospedar. Prova real no PC Windows [P].
+  *Origem:* appmel-1.5 · PR #101 · filha + qa (alto)
+
 ## Bloco 1 (cont.) — Configuração do servidor
 
 - [ ] **1.4 — Testes que faltam na configuração e endurecimento**
