@@ -3,6 +3,7 @@ import { IP_DO_HUB } from "../rede/wireguard.js";
 import type { Cofre } from "./cofre.js";
 import {
   type RespostaTrava,
+  cortarErro,
   validarConviteCriado,
   validarEntradaNoGrupo,
   validarEstadoTrava,
@@ -108,6 +109,8 @@ async function lerJson(resposta: Response): Promise<unknown> {
   return JSON.parse(Buffer.concat(partes).toString("utf8"));
 }
 
+const CONVITE_ANTIGO =
+  "Este convite é de uma versão antiga do cartório; peça um convite novo ao dono do grupo.";
 const PRAZO_USAR_MS = 15_000;
 const CONVITE_RECUSADO =
   "O cartório recusou o convite: inválido, já usado ou vencido. Peça um novo ao dono do grupo.";
@@ -166,7 +169,7 @@ export function criarCliente(opcoes: OpcoesCliente) {
     if (!resposta.ok && !(p.recusaE409 && resposta.status === 409)) {
       // A mensagem do cartório (pt-BR, para o amigo) vai junto: "Só o dono do grupo cria convites."
       const corpo = (await lerJson(resposta).catch(() => null)) as { erro?: unknown } | null;
-      const erro = typeof corpo?.erro === "string" ? ` ${corpo.erro}` : "";
+      const erro = typeof corpo?.erro === "string" ? ` ${cortarErro(corpo.erro)}` : "";
       throw new ErroCartorio(
         `O cartório recusou o pedido (${resposta.status}).${erro}`,
         "resposta",
@@ -259,7 +262,12 @@ export function criarCliente(opcoes: OpcoesCliente) {
           corpo: { convite, chave_publica: chavePublica },
           repetir: true,
           prazoMs: PRAZO_USAR_MS,
-          validar: validarEntradaNoGrupo,
+          validar: (v) => {
+            // Cartório antigo devolvia só {token}: sem pacote não há túnel; diz o que fazer.
+            if (typeof v === "object" && v !== null && "token" in v && !("pacote" in v))
+              throw new ErroCartorio(CONVITE_ANTIGO, "resposta");
+            return validarEntradaNoGrupo(v);
+          },
         },
         true,
       ),

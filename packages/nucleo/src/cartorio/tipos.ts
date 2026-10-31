@@ -85,6 +85,13 @@ function inteiro(o: Campos, campo: string, minimo = 0): number {
   return v as number;
 }
 
+const TETO_ERRO = 200;
+
+/** Mensagem do cartório vai para o log e para a tela: corta em ~200 caracteres (com reticências). */
+export function cortarErro(t: string): string {
+  return t.length > TETO_ERRO ? `${t.slice(0, TETO_ERRO)}…` : t;
+}
+
 function texto(o: Campos, campo: string): string {
   const v = o[campo];
   if (typeof v !== "string" || v === "")
@@ -112,7 +119,7 @@ export function validarRespostaTrava(v: unknown): RespostaTrava {
   if (o.ok !== false || !motivo) throw new Error("Resposta inválida do cartório: recusa da trava.");
   return {
     ok: false,
-    erro: texto(o, "erro"),
+    erro: cortarErro(texto(o, "erro")),
     motivo,
     donoPcId: o.donoPcId === null ? null : inteiro(o, "donoPcId", 1),
     epoca: inteiro(o, "epoca"),

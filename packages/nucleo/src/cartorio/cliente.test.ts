@@ -301,11 +301,49 @@ describe("cliente do cartório", () => {
   });
 
   it("teto estourado recusado: content-length acima de 64 KB nem é lido", async () => {
-    const grande = json(200, { ...OK_TRAVA, lixo: "x".repeat(70_000) });
-    const { cliente, chamadas } = montar([grande]);
+    let leituras = 0;
+    let cancelado = false;
+    const corpo = new ReadableStream<Uint8Array>({
+      pull(c) {
+        leituras += 1;
+        c.enqueue(new Uint8Array(1_024).fill(32));
+      },
+      cancel() {
+        cancelado = true;
+      },
+    });
+    const resposta = new Response(corpo, {
+      status: 200,
+      headers: { "content-length": String(70_000) },
+    });
+    const { cliente, chamadas } = montar([resposta]);
     const e = await erroDe(cliente.renovar(7));
     expect(e.tipo).toBe("resposta");
     expect(e.message).toMatch(/grande/);
+    expect(chamadas).toHaveLength(1);
+    expect(cancelado).toBe(true);
+    expect(leituras).toBeLessThanOrEqual(1); // só o enchimento inicial do fluxo; ninguém leu o corpo
+  });
+
+  it("erro longo do cartório é cortado em 200 caracteres (4xx e recusa da trava)", async () => {
+    const longo = "z".repeat(500);
+    const { cliente } = montar([json(403, { erro: longo }), json(409, { ...RECUSA, erro: longo })]);
+    const e = await erroDe(cliente.criarConvite("pc"));
+    expect(e.message).toContain("z".repeat(150));
+    expect(e.message).not.toContain("z".repeat(250));
+    const recusa = await cliente.pegar();
+    if (recusa.ok) throw new Error("esperava recusa");
+    expect(recusa.erro.length).toBeLessThanOrEqual(201);
+    expect(recusa.erro.endsWith("…")).toBe(true);
+  });
+
+  it("convite antigo (só token, sem pacote) é recusado com mensagem clara", async () => {
+    const { cliente, chamadas } = montar([json(200, { token: "t-velho" }), json(200, OK_TRAVA)]);
+    const e = await erroDe(cliente.usarConvite("c", "k"));
+    expect(e.tipo).toBe("resposta");
+    expect(e.message).toBe(
+      "Este convite é de uma versão antiga do cartório; peça um convite novo ao dono do grupo.",
+    );
     expect(chamadas).toHaveLength(1);
   });
 
