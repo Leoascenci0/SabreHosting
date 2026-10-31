@@ -29,14 +29,14 @@ afterEach(async () => {
   await rm(pasta, { recursive: true, force: true });
 });
 
-async function subirCartorio() {
+async function subirCartorio(tetoBytes?: number) {
   const banco: Banco = abrirBanco(join(pasta, "cartorio.db"));
   const armazem = join(pasta, "nuvem");
   const app = criarCartorio({
     banco,
     logger: { level: "silent" },
     trava: TEMPOS,
-    armazem: { pasta: armazem },
+    armazem: { pasta: armazem, ...(tetoBytes ? { tetoBytes } : {}) },
   });
   await app.listen({ host: "127.0.0.1", port: 0 });
   fechar.push(() => app.close());
@@ -162,6 +162,19 @@ describe("importarNoCartorio com cartório de verdade", () => {
     expect((await cliente.estadoTrava()).epoca).toBe(pega.epoca);
     expect(c.versoes()).toHaveLength(0);
     await cliente.soltar(pega.epoca);
+  });
+
+  it("envio que falha depois do registro: mensagem clara, nada na nuvem e trava solta", async () => {
+    const c = await subirCartorio(1000); // a nuvem recusa pacote maior que 1000 bytes
+    const cliente = await c.pc("PC do Lucas");
+    const { zip, trabalho } = await zipDe(mundoInventado());
+    await expect(importarNoCartorio(zip, { cliente, pastaDeTrabalho: trabalho })).rejects.toThrow(
+      /registrado como versão 1 do grupo, mas o envio para a nuvem falhou/,
+    );
+    expect(c.versoes()).toHaveLength(1); // o cartório não apaga versão (achado declarado no PR)
+    expect((await readdir(c.armazem)).filter((n) => n.endsWith(".tar.gz"))).toEqual([]);
+    expect(await readdir(trabalho)).toEqual([]);
+    expect((await cliente.estadoTrava()).dono).toBeNull();
   });
 
   it("zip hostil: recusa sem versão nova, sem gravar e com a trava solta", async () => {

@@ -378,7 +378,16 @@ export async function importarNoCartorio(
           );
         }
         if (!(await renovador.renovarAgora())) throw new Error(SEM_TRAVA);
-        await cliente.enviarPacote(numero, comTrava, pacote, perdeu.signal);
+        // O cartório não apaga versão: falhou daqui em diante, a versão fica registrada sem pacote na nuvem.
+        await cliente
+          .enviarPacote(numero, comTrava, pacote, perdeu.signal)
+          .catch((erro: unknown) => {
+            const motivo = erro instanceof Error ? ` (${erro.message})` : "";
+            throw new Error(
+              `O mundo foi registrado como versão ${numero} do grupo, mas o envio para a nuvem falhou${motivo}. Peça ao dono do grupo para importar de novo; o mundo deste PC não mudou.`,
+              { cause: erro },
+            );
+          });
       },
     });
   } finally {
