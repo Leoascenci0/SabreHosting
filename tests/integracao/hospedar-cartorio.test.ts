@@ -120,6 +120,49 @@ function esperarEstado(s: ServidorMinecraft, alvo: EstadoServidor): Promise<void
 const dormir = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
 
 describe("trava de host contra o cartório real", () => {
+  it("antesDeSubir (hostmel-3.4) roda com a trava já pega e antes do spawn", async () => {
+    const { pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000);
+    const a = await pc("PC A");
+    const b = await pc("PC B");
+    let viu: unknown;
+    const { servidor } = await hospedarFalso(a, [], {
+      antesDeSubir: async () => {
+        expect(criados).toHaveLength(0); // nada de processo ainda
+        viu = await b.pegar(); // e a trava já é do PC A
+      },
+    });
+    await esperarEstado(servidor, "pronto");
+    expect(viu).toMatchObject({ ok: false, motivo: "ocupada" });
+  }, 30_000);
+
+  it("antesDeSubir que falha: solta a trava, relança e não sobe o servidor", async () => {
+    const { pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000);
+    const a = await pc("PC A");
+    const b = await pc("PC B");
+    await expect(
+      hospedarFalso(a, [], {
+        antesDeSubir: async () => {
+          throw new Error("disco cheio");
+        },
+      }),
+    ).rejects.toThrow("disco cheio");
+    expect(criados).toHaveLength(0);
+    expect(await b.pegar()).toMatchObject({ ok: true }); // a trava voltou
+  }, 30_000);
+
+  it("trava ocupada: antesDeSubir nunca roda", async () => {
+    const { pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000);
+    const a = await pc("PC A");
+    const b = await pc("PC B");
+    expect(await b.pegar()).toMatchObject({ ok: true });
+    let rodou = false;
+    await expect(
+      hospedarFalso(a, [], { antesDeSubir: async () => void (rodou = true) }),
+    ).rejects.toThrow();
+    expect(rodou).toBe(false);
+    expect(criados).toHaveLength(0);
+  }, 30_000);
+
   it("renovando, a trava passa do prazo e outro PC continua recusado; parou, solta", async () => {
     const { pc } = await subirCartorio(TEMPOS_FOLGADOS, 2_000);
     const a = await pc("PC A");

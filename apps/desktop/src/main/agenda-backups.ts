@@ -89,6 +89,8 @@ export interface OpcoesAgendaReal {
   pastaBackups: string | undefined;
   /** Pasta do mundo (até app-1.3: `SABRE_PASTA_MUNDO`). */
   pastaDoMundo: string | undefined;
+  /** Relê o mundo a cada servidor pronto (o `level-name` pode mudar com o app aberto); vale mais que `pastaDoMundo` (sem resposta, fica o `pastaDoMundo`). */
+  mundoAgora?(): Promise<string | undefined>;
   /** Época atual da trava do cartório (vai no pacote). */
   epoca(): Promise<number>;
   relogio?: Relogio;
@@ -143,7 +145,8 @@ export async function copiarAoConcluir(
 /** Liga `agendarBackups` do núcleo; sem as pastas configuradas, avisa e não agenda (nunca chuta um caminho). */
 export function iniciarAgendaReal(o: OpcoesAgendaReal) {
   return async (servidor: ServidorObservado, intervaloMin: number): Promise<Agenda | undefined> => {
-    const { pastaBackups, pastaDoMundo } = o;
+    const { pastaBackups } = o;
+    const pastaDoMundo = (await o.mundoAgora?.()) ?? o.pastaDoMundo;
     if (!pastaBackups || !pastaDoMundo) {
       o.aoAvisar?.(
         "Este PC ainda não tem as pastas do mundo e dos backups; o backup agendado não ligou.",
@@ -160,7 +163,7 @@ export function iniciarAgendaReal(o: OpcoesAgendaReal) {
       intervaloMin,
       ...(o.relogio ? { relogio: o.relogio } : {}),
       aoConcluir: (feito) => {
-        void copiarAoConcluir(o, feito);
+        void copiarAoConcluir({ ...o, pastaDoMundo }, feito);
         void o.aoBackupBom?.(feito);
       },
       aoFalhar: (e) => o.aoAvisar?.(`Backup agendado falhou: ${e.message}`),

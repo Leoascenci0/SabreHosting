@@ -37,7 +37,7 @@ import {
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { backupParado, depsBackupsReais } from "./deps-backups.js";
-import { ambienteLegado, lerConfigPc, type ConfigPc } from "./config-pc.js";
+import { ambienteLegado, lerConfigPc, pastaDoMundoAgora, type ConfigPc } from "./config-pc.js";
 import { criarCofreSeguro, ARQUIVO_COFRE } from "./cofre.js";
 import { clienteDoPc, depsReais, pastaModsDaInstancia } from "./deps-reais.js";
 import { registrarBoasVindas } from "./boas-vindas-app.js";
@@ -46,6 +46,7 @@ import { criarModsGrupo, type ModsGrupo } from "./mods-grupo.js";
 import { sincronizarMods } from "@sabrehosting/nucleo/launcher/mods";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
+import { criarEncaixeInicio } from "./encaixe-inicio.js";
 import { criarPastaBase } from "./pasta-base.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { bytesPorSegundo, lerPreferencias, salvarPreferencias } from "./preferencias.js";
@@ -266,6 +267,7 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
       iniciar: iniciarAgendaReal({
         pastaBackups: pc.pastaBackups,
         pastaDoMundo: pc.pastaMundo,
+        mundoAgora: () => pastaDoMundoAgora(pc.pastaServidor),
         epoca: async () => (await exigir().estadoTrava()).epoca,
         historicoLongo,
         avisoHistorico,
@@ -470,6 +472,7 @@ async function criarVersaoDoApp(
         backupParado({
           pastaBackups: pc.pastaBackups,
           pastaDoMundo: pc.pastaMundo,
+          mundoAgora: () => pastaDoMundoAgora(pc.pastaServidor),
           cliente: exigir(),
           servidorRodando,
           servidorOrfao: temOrfao,
@@ -552,18 +555,13 @@ function registrarPonte(
   });
   inicio.aoMudar(() => janela?.webContents.send("sabre:inicio:mudou"));
   ipcMain.handle("sabre:inicio:estado", (evento) => (permitir(evento), inicio.estado()));
-  // Depois de trocar a pasta o app reinicia em ~1,5 s: nada de Jogar/Hospedar com a pasta velha nesse intervalo.
-  const REINICIANDO = "O app está reiniciando para usar a pasta nova. Espere alguns segundos.";
-  ipcMain.handle("sabre:inicio:jogar", (evento) => {
-    permitir(evento);
-    if (pastaBase.trocada()) throw new Error(REINICIANDO);
-    return inicio.jogar();
+  const encaixe = criarEncaixeInicio({
+    trocada: () => pastaBase.trocada(),
+    jogar: () => inicio.jogar(),
+    hospedar: () => inicio.hospedar(),
   });
-  ipcMain.handle("sabre:inicio:hospedar", (evento) => {
-    permitir(evento);
-    if (pastaBase.trocada()) return { ok: false, mensagem: REINICIANDO };
-    return inicio.hospedar();
-  });
+  ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), encaixe.jogar()));
+  ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), encaixe.hospedar()));
   ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), inicio.parar()));
   ipcMain.handle(
     "sabre:config:escolher-pasta",

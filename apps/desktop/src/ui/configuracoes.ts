@@ -49,6 +49,7 @@ const conviteTexto = $<HTMLInputElement>("convite-texto");
 const convitePrazo = $("convite-prazo");
 const conviteCopiar = $<HTMLButtonElement>("convite-copiar");
 const conviteCopiado = $("convite-copiado");
+let anuncioCopia: ReturnType<typeof setTimeout> | undefined; // reescreve "Convite copiado." 100 ms depois de copiar
 const conviteErro = $("convite-erro");
 const avisoGrupo = $("grupo-aviso");
 const erroGrupo = $("grupo-erro");
@@ -196,6 +197,7 @@ function limparConvite(): void {
   convitePrazo.textContent = "";
   conviteResultado.hidden = true;
   conviteCopiar.textContent = "Copiar";
+  clearTimeout(anuncioCopia);
   conviteCopiado.textContent = "";
 }
 
@@ -248,7 +250,13 @@ conviteCopiar.addEventListener("click", () => {
     .writeText(conviteTexto.value)
     .then(() => {
       conviteCopiar.textContent = "Copiado";
-      conviteCopiado.textContent = "Convite copiado."; // região role="status": o leitor de tela anuncia
+      // Região role="status": o leitor de tela anuncia. Limpa e reescreve a cada cópia, para uma segunda cópia
+      // seguida (mesmo texto) também mudar a região.
+      clearTimeout(anuncioCopia); // cópia seguida: só o anúncio mais novo fica
+      conviteCopiado.textContent = "";
+      anuncioCopia = setTimeout(() => {
+        conviteCopiado.textContent = "Convite copiado.";
+      }, 100);
     })
     .catch(() => {
       conviteTexto.select(); // sem permissão para copiar: o texto fica selecionado para Ctrl+C
@@ -364,12 +372,16 @@ async function carregarMods(preservarMensagens = false): Promise<void> {
       mostrarErroMods("");
       avisoMods.textContent = "";
     }
-    if (e.erro) mostrarErroMods(e.erro);
+    // Erro da ação que acabou de rodar não sai para dar lugar à falha de leitura que veio logo depois.
+    if (e.erro && !(preservarMensagens && !erroMods.hidden)) mostrarErroMods(e.erro);
     if (e.aviso) avisoMods.textContent = e.aviso;
     // Atualizando no arranque: olha de novo até acabar, para o amigo ver o resultado.
     if (e.atualizando) aguardaMods = setTimeout(() => void carregarMods(true), 1500);
   } catch {
-    mostrarErroMods("Não consegui ler a lista de mods agora.");
+    // Só o erro de ação visível é preservado: releitura depois de ação bem-sucedida, ou da espera de "atualizando",
+    // mostra a falha de leitura em vez de ficar em silêncio com a lista velha.
+    if (!preservarMensagens || erroMods.hidden)
+      mostrarErroMods("Não consegui ler a lista de mods agora.");
   }
 }
 

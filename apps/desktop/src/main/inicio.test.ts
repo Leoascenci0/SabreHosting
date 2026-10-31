@@ -211,6 +211,35 @@ describe("estado da tela inicial", () => {
   });
 });
 
+describe("hospedar com servidor órfão na pasta (hostmel-3.4)", () => {
+  it("órfão vivo: recusa sem chamar deps.hospedar (nem pega trava nem grava arquivo)", async () => {
+    const hospedar = vi.fn(async () => ({ servidor: servidorFalso() }));
+    const inicio = criarInicio(deps({ hospedar, servidorOrfao: async () => true }));
+    expect(await inicio.hospedar()).toEqual({
+      ok: false,
+      mensagem: expect.stringMatching(/servidor anterior/),
+    });
+    expect(hospedar).not.toHaveBeenCalled();
+    expect(inicio.ativo()).toBe(false);
+  });
+
+  it("falha ao conferir o órfão conta como vivo: recusa", async () => {
+    const hospedar = vi.fn(async () => ({ servidor: servidorFalso() }));
+    const servidorOrfao = async (): Promise<boolean> => {
+      throw new Error("sem /proc");
+    };
+    const r = await criarInicio(deps({ hospedar, servidorOrfao })).hospedar();
+    expect(r.ok).toBe(false);
+    expect(hospedar).not.toHaveBeenCalled();
+  });
+
+  it("sem órfão: hospeda normalmente", async () => {
+    const hospedar = vi.fn(async () => ({ servidor: servidorFalso() }));
+    expect(await criarInicio(deps({ hospedar })).hospedar()).toEqual({ ok: true });
+    expect(hospedar).toHaveBeenCalledOnce();
+  });
+});
+
 describe("hospedar e parar", () => {
   it("hospedar vira 'eu'; parar volta e devolve ao cartório", async () => {
     const s = servidorFalso();
@@ -250,6 +279,7 @@ describe("hospedar e parar", () => {
     const i = criarInicio(deps({ hospedar }));
     const primeiro = i.hospedar();
     expect((await i.hospedar()).ok).toBe(false);
+    await vi.waitFor(() => expect(hospedar).toHaveBeenCalled()); // a checagem do órfão vem antes (hostmel-3.4)
     liberar();
     expect(await primeiro).toEqual({ ok: true });
     expect(hospedar).toHaveBeenCalledOnce();

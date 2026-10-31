@@ -140,30 +140,37 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: falha de `esperarPronta` espera a sessão; Jogar recusado após a troca.
   *Origem:* appmel-1.13 · PR #219 · qa
 
-- [ ] **1.17 — Assistente: mensagem para cofre corrompido**
+- [x] **1.17 — Assistente: mensagem para cofre corrompido** (PR #231, 31/10/2026)
   *O que fazer:* quando `cofreCorrompido` vier verdadeiro, mostrar "Seu acesso guardado neste PC não abre mais; peça um convite novo" (hoje `main/boas-vindas.ts` já informa o estado, mas a tela `ui/boas-vindas.ts` não o trata).
   *Arquivo:* `apps/desktop/src/ui/boas-vindas.ts`
   **Tela no app:** Assistente de boas-vindas (primeira vez).
   *Confirmação:* teste/E2E com `cofreCorrompido: true` mostra a mensagem.
   *Origem:* appmel-1.12 · PR #223 · filha
 
-- [ ] **1.18 — Teste do encaixe de Jogar/Hospedar em `principal.ts`**
+- [x] **1.18 — Teste do encaixe de Jogar/Hospedar em `principal.ts`** (PR #235, 31/10/2026)
   *O que fazer:* extrair os handlers de Jogar/Hospedar para função testável e cobrir a recusa depois de `trocada()` (hoje só `pasta-base.test.ts` cobre `trocada()`; o encaixe no `principal.ts` não tem teste).
   *Arquivo:* `apps/desktop/src/main/principal.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* teste: Jogar e Hospedar recusam depois de `trocada()`.
   *Origem:* appmel-1.16 · PR #224 · filha
 
-- [ ] **1.19 — Reler `level-name` a cada operação**
+- [x] **1.19 — Reler `level-name` a cada operação** (PR #236, 31/10/2026)
   *O que fazer:* resolver `pastaMundo` na hora do backup/espalhar, e não só ao abrir o app (se o `level-name` mudar com o app aberto, o backup ainda aponta o mundo antigo).
   *Arquivo:* `apps/desktop/src/main/config-pc.ts`, `principal.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* teste: `level-name` muda com o app aberto e o backup segue o novo.
   *Origem:* appmel-1.14b · PR #225 · filha
 
-- [ ] **1.20 — Convite copiado: anunciar também a segunda cópia**
+- [x] **1.20 — Convite copiado: anunciar também a segunda cópia** (PR #234, 31/10/2026)
   *O que fazer:* copiar duas vezes seguidas repete o mesmo texto em `#convite-copiado` e o leitor de tela pode não anunciar de novo; limpar a região e reescrever (ou acrescentar um contador invisível) a cada cópia.
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`
   **Tela no app:** Configurações › Grupo › "Criar convite".
   *Confirmação:* e2e: duas cópias seguidas mudam o conteúdo da região entre as duas.
   *Origem:* appmel-1.15 · PR #229 · qa
+
+- [ ] **1.21 — Restaurar backup: reler o `level-name` na hora**
+  *O que fazer:* `restaurar` em `deps-backups.ts` ainda usa a `pastaDoMundo` lida ao abrir o app (o appmel-1.19 corrigiu só o backup agendado e o backup antes de trocar versão). Passar `mundoAgora` (`pastaDoMundoAgora` de `config-pc.ts`) também a `depsBackupsReais.restaurar`, para restaurar no mundo que o `server.properties` diz agora.
+  *Arquivo:* `apps/desktop/src/main/deps-backups.ts`, `apps/desktop/src/main/principal.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: `level-name` muda entre dois Hospedar e restaurar cai no mundo novo (restaurar continua fazendo backup do estado atual antes, regra 4).
+  *Origem:* appmel-1.19 · PR #236 · filha + qa (gravidade média-baixa: não corrompe, pode confundir)
