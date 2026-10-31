@@ -67,7 +67,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Depende de:* cartmel-1.1 e cartmel-2.3 (feitos), app-2.2 (feito)
   *Origem:* app-2.2 · PR #160 · filha
 
-- [ ] **1.8 — Backups: intervalo e quantos guardar (ligar e expor)**
+- [ ] **1.8 — Backups: intervalo e quantos guardar (ligar e expor)** *(cortado em 31/10: a onda 21 entrega só o intervalo; "quantos guardar" e a rotação viraram 1.11)*
   *O que fazer:* ligar `agendarBackups` e a rotação do núcleo ao app (hoje sem consumidor em `apps/desktop`) e só então
   expor os dois campos em Configurações › Backups.
   *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/backup/agendador.ts`, `rotacao.ts`
@@ -89,3 +89,11 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** Configurações › Grupo › "Tirar PC do grupo".
   *Confirmação:* E2E: foco vai ao aviso depois de revogar; teste da mensagem de rede.
   *Origem:* appmel-1.7 · PR #165 · qa interface
+
+- [ ] **1.11 — ⏸️ P · Backups: ligar a rotação e expor "Quantos guardar"**
+  *O que fazer:* ligar `planejarRotacao`/`aplicarRotacao` ao app depois de cada backup bom e expor Configurações › Backups › "Quantos guardar". **Pede o OK do Eliel**: a rotação apaga backups dos amigos sozinha; e falta a fonte que marca cada backup como bom/ruim/não-conferido (rotacao.ts:4: cartório ou app). Padrão atual (10 recentes + 7 dias) e mínimo garantido não mudam sem ele.
+  *Arquivo:* `apps/desktop/src/main/`, `packages/nucleo/src/backup/rotacao.ts`, `apps/desktop/src/ui/configuracoes.ts`
+  **Tela no app:** Configurações › Backups › "Quantos guardar".
+  *Confirmação:* E2E: valor salvo muda quantos backups ficam; teste de que o último bom e os não conferidos nunca saem.
+  *Depende de:* appmel-1.8 e decisão do Eliel.
+  *Origem:* appmel-1.8 · triagem · Máxima
