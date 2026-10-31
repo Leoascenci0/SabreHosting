@@ -153,3 +153,38 @@ describe("agenda de backups", () => {
     expect(aviso).toHaveBeenCalledWith(expect.stringContaining("sem pasta"));
   });
 });
+
+describe("histórico longo no backup agendado (drive-1.1a)", () => {
+  it("copia o backup bom; pasta que some só vira aviso e o backup local fica intacto", async () => {
+    const { mkdtempSync, writeFileSync, readdirSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { createHash } = await import("node:crypto");
+    const { copiarAoConcluir } = await import("./agenda-backups.js");
+    const local = mkdtempSync(join(tmpdir(), "sabre-ag-local-"));
+    const drive = mkdtempSync(join(tmpdir(), "sabre-ag-drive-"));
+    const nome = "2026-10-31T10-00-00-000Z-v1.tar.gz";
+    const caminho = join(local, nome);
+    writeFileSync(caminho, "pacote de teste");
+    const feito = { caminho, sha256: createHash("sha256").update("pacote de teste").digest("hex") };
+    const avisos: string[] = [];
+    let pasta: string | undefined = drive;
+    const o = {
+      pastaBackups: local,
+      historicoLongo: () => pasta,
+      aoAvisar: (t: string) => void avisos.push(t),
+    };
+    await copiarAoConcluir(o, feito);
+    expect(readdirSync(drive)).toEqual([nome]);
+    expect(avisos).toEqual([]);
+    rmSync(drive, { recursive: true }); // a pasta some entre um backup e o outro
+    await copiarAoConcluir(o, feito); // não lança
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatch(/histórico longo/i);
+    expect(readdirSync(local)).toEqual([nome]);
+    pasta = undefined; // desligado: nada acontece
+    await copiarAoConcluir(o, feito);
+    expect(avisos).toHaveLength(1);
+    rmSync(local, { recursive: true });
+  });
+});

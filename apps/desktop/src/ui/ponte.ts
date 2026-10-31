@@ -17,6 +17,8 @@ export interface ConfiguracoesDaTela {
   distanciaVisao: number;
   distanciaSimulacao: number;
   intervaloBackupMin: number;
+  historicoLongoLigado: boolean;
+  historicoLongoPasta: string;
 }
 
 export interface BackupDaTela {

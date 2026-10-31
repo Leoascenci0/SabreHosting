@@ -177,6 +177,12 @@ let agendaApp: AgendaBackups | undefined;
 const intervaloBackupMin = (): number =>
   lerPreferencias(app.getPath("userData")).intervaloBackupMin;
 
+/** Histórico longo: a pasta só vale com a opção ligada (a leitura já desliga pasta torta). */
+const historicoLongo = (): string | undefined => {
+  const p = lerPreferencias(app.getPath("userData"));
+  return p.historicoLongoLigado ? p.historicoLongoPasta : undefined;
+};
+
 /** Backup agendado: liga quando o servidor deste PC fica pronto e segue o intervalo de Configurações › Backups. */
 async function criarAgendaDoApp(): Promise<AgendaBackups> {
   const aoAvisar = (texto: string): void => console.warn(`[backup] ${texto}`);
@@ -188,6 +194,7 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
         pastaBackups: process.env["SABRE_PASTA_BACKUPS"],
         pastaDoMundo: process.env["SABRE_PASTA_MUNDO"],
         epoca: async () => (await exigir().estadoTrava()).epoca,
+        historicoLongo,
         aoAvisar,
       }),
       aoAvisar,

@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import {
   DISTANCIA_SIMULACAO_PADRAO,
   DISTANCIA_VISAO_PADRAO,
@@ -16,6 +16,19 @@ export interface Preferencias {
   distanciaSimulacao: number;
   /** Configurações › Backups › Intervalo (minutos entre um backup e o próximo). */
   intervaloBackupMin: number;
+  /** Configurações › Backups › Histórico longo numa pasta (liga). */
+  historicoLongoLigado: boolean;
+  /** Configurações › Backups › Histórico longo numa pasta (pasta). Vem do arquivo: entrada não confiável. */
+  historicoLongoPasta: string;
+}
+
+/** Ligado exige pasta completa (absoluta); desligado aceita qualquer texto. Lança erro em pt-BR. */
+export function validarHistoricoLongo(ligado: boolean, pasta: string): void {
+  if (ligado && (pasta.trim() === "" || !isAbsolute(pasta))) {
+    throw new Error(
+      "Para ligar o histórico longo, escolha a pasta completa (ex.: a pasta do Drive no seu PC).",
+    );
+  }
 }
 
 export const INTERVALO_BACKUP_PADRAO = 10;
@@ -36,6 +49,8 @@ const PADRAO: Preferencias = {
   distanciaVisao: DISTANCIA_VISAO_PADRAO,
   distanciaSimulacao: DISTANCIA_SIMULACAO_PADRAO,
   intervaloBackupMin: INTERVALO_BACKUP_PADRAO,
+  historicoLongoLigado: false,
+  historicoLongoPasta: "",
 };
 const ARQUIVO = "preferencias.json";
 
@@ -54,7 +69,16 @@ export function lerPreferencias(pasta: string): Preferencias {
     distanciaVisao: Number(bruto.distanciaVisao),
     distanciaSimulacao: Number(bruto.distanciaSimulacao),
     intervaloBackupMin: Number(bruto.intervaloBackupMin ?? PADRAO.intervaloBackupMin),
+    historicoLongoLigado:
+      typeof bruto.historicoLongoLigado === "boolean" ? bruto.historicoLongoLigado : false,
+    historicoLongoPasta:
+      typeof bruto.historicoLongoPasta === "string" ? bruto.historicoLongoPasta : "",
   };
+  try {
+    validarHistoricoLongo(resultado.historicoLongoLigado, resultado.historicoLongoPasta);
+  } catch {
+    resultado.historicoLongoLigado = false; // pasta torta no arquivo: desliga em vez de copiar para lugar duvidoso
+  }
   try {
     validarIntervaloBackup(resultado.intervaloBackupMin);
   } catch {

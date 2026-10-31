@@ -1,6 +1,11 @@
 import type { ConfiguracoesDaTela, Resultado } from "../ui/ponte.js";
 import { validarDistancias } from "@sabrehosting/nucleo/servidor/configurar";
-import { lerPreferencias, salvarPreferencias, validarIntervaloBackup } from "./preferencias.js";
+import {
+  lerPreferencias,
+  salvarPreferencias,
+  validarHistoricoLongo,
+  validarIntervaloBackup,
+} from "./preferencias.js";
 
 export interface DepsConfiguracoes {
   pasta: string;
@@ -21,7 +26,11 @@ function lerValor(valor: unknown): ConfiguracoesDaTela | undefined {
     return undefined;
   }
   if (typeof v["intervaloBackupMin"] !== "number") return undefined;
+  if (typeof v["historicoLongoLigado"] !== "boolean") return undefined;
+  if (typeof v["historicoLongoPasta"] !== "string") return undefined;
   return {
+    historicoLongoLigado: v["historicoLongoLigado"],
+    historicoLongoPasta: v["historicoLongoPasta"].trim(),
     intervaloBackupMin: v["intervaloBackupMin"],
     abrirComWindows: v["abrirComWindows"],
     distanciaVisao: v["distanciaVisao"],
@@ -39,6 +48,7 @@ export function criarConfiguracoes(deps: DepsConfiguracoes) {
       try {
         validarDistancias(novo.distanciaVisao, novo.distanciaSimulacao);
         validarIntervaloBackup(novo.intervaloBackupMin);
+        validarHistoricoLongo(novo.historicoLongoLigado, novo.historicoLongoPasta);
       } catch (e) {
         return { ok: false, mensagem: e instanceof Error ? e.message : GENERICA };
       }

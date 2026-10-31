@@ -18,6 +18,8 @@ const windows = $<HTMLInputElement>("cfg-windows");
 const visao = $<HTMLInputElement>("cfg-visao");
 const simulacao = $<HTMLInputElement>("cfg-simulacao");
 const intervalo = $<HTMLInputElement>("cfg-intervalo");
+const historico = $<HTMLInputElement>("cfg-historico");
+const historicoPasta = $<HTMLInputElement>("cfg-historico-pasta");
 const aviso = $("config-aviso");
 const erro = $("config-erro");
 const salvar = $<HTMLButtonElement>("config-salvar");
@@ -41,16 +43,28 @@ function mostrarErro(texto: string): void {
   erro.textContent = texto;
   erro.hidden = texto === "";
   // Só o campo do erro fica marcado; a mensagem do app cita o intervalo pelo nome ("intervalo do backup").
+  const doHistorico = texto.includes("histórico longo");
+  historicoPasta.setAttribute("aria-invalid", String(doHistorico));
   const doBackup = texto.includes("intervalo do backup");
-  visao.setAttribute("aria-invalid", String(texto !== "" && !doBackup));
-  simulacao.setAttribute("aria-invalid", String(texto !== "" && !doBackup));
+  visao.setAttribute("aria-invalid", String(texto !== "" && !doBackup && !doHistorico));
+  simulacao.setAttribute("aria-invalid", String(texto !== "" && !doBackup && !doHistorico));
   intervalo.setAttribute("aria-invalid", String(doBackup));
 }
 
 function ocupar(ocupado: boolean): void {
   emCurso = ocupado;
   tela.setAttribute("aria-busy", String(ocupado));
-  for (const el of [windows, visao, simulacao, intervalo, salvar, voltar]) el.disabled = ocupado;
+  for (const el of [
+    windows,
+    visao,
+    simulacao,
+    intervalo,
+    historico,
+    historicoPasta,
+    salvar,
+    voltar,
+  ])
+    el.disabled = ocupado;
   salvar.textContent = ocupado ? "Salvando…" : "Salvar";
 }
 
@@ -145,6 +159,8 @@ async function carregar(): Promise<void> {
     visao.value = String(c.distanciaVisao);
     simulacao.value = String(c.distanciaSimulacao);
     intervalo.value = String(c.intervaloBackupMin);
+    historico.checked = c.historicoLongoLigado;
+    historicoPasta.value = c.historicoLongoPasta;
     aviso.textContent = "";
   } catch {
     aviso.textContent = "";
@@ -177,6 +193,8 @@ form.addEventListener("submit", (evento) => {
       distanciaVisao: visao.value === "" ? Number.NaN : Number(visao.value),
       distanciaSimulacao: simulacao.value === "" ? Number.NaN : Number(simulacao.value),
       intervaloBackupMin: intervalo.value === "" ? Number.NaN : Number(intervalo.value),
+      historicoLongoLigado: historico.checked,
+      historicoLongoPasta: historicoPasta.value,
     })
     .then((r) => {
       if (r.ok) aviso.textContent = "Salvo.";
@@ -187,9 +205,11 @@ form.addEventListener("submit", (evento) => {
       ocupar(false);
       (erro.hidden
         ? salvar
-        : erro.textContent?.includes("intervalo do backup")
-          ? intervalo
-          : visao
+        : erro.textContent?.includes("histórico longo")
+          ? historicoPasta
+          : erro.textContent?.includes("intervalo do backup")
+            ? intervalo
+            : visao
       ).focus();
     });
 });

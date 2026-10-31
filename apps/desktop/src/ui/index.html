@@ -105,6 +105,22 @@
           <p class="dica" id="cfg-intervalo-dica">
             De 1 a 1440. Padrão: 10. Vale já, com o servidor no ar.
           </p>
+          <label class="opcao"
+            ><input type="checkbox" id="cfg-historico" aria-describedby="cfg-historico-dica" />
+            Histórico longo numa pasta</label
+          >
+          <label for="cfg-historico-pasta">Pasta do histórico longo</label>
+          <input
+            type="text"
+            id="cfg-historico-pasta"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Ex.: C:\Users\Você\Google Drive\Sabre"
+          />
+          <p class="dica" id="cfg-historico-dica">
+            Cada backup novo também é copiado para esta pasta (use a pasta do Drive, OneDrive ou
+            Dropbox). Nada é apagado nela; se a pasta sumir, o backup deste PC continua normal.
+          </p>
         </fieldset>
         <fieldset id="cfg-grupo" hidden>
           <legend>Grupo</legend>

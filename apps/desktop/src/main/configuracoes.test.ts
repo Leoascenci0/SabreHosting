@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gerarPropriedades } from "@sabrehosting/nucleo/servidor/configurar";
@@ -15,12 +15,16 @@ const valido = {
   distanciaVisao: 12,
   distanciaSimulacao: 6,
   intervaloBackupMin: 30,
+  historicoLongoLigado: false,
+  historicoLongoPasta: "",
 };
 const padrao = {
   abrirComWindows: false,
   distanciaVisao: 10,
   distanciaSimulacao: 8,
   intervaloBackupMin: 10,
+  historicoLongoLigado: false,
+  historicoLongoPasta: "",
 };
 const arquivo = () => join(pasta, "preferencias.json");
 
@@ -37,6 +41,8 @@ describe("configurações", () => {
       distanciaVisao: 10,
       distanciaSimulacao: 8,
       intervaloBackupMin: 10,
+      historicoLongoLigado: false,
+      historicoLongoPasta: "",
     });
   });
 
@@ -121,5 +127,38 @@ describe("configurações", () => {
       ok: false,
       mensagem: "Não consegui salvar agora. Nada foi alterado.",
     });
+  });
+});
+
+describe("histórico longo numa pasta (drive-1.1a)", () => {
+  it("liga com pasta completa e grava", () => {
+    const pastaDrive = join(tmpdir(), "drive");
+    const r = criar().salvar({
+      ...valido,
+      historicoLongoLigado: true,
+      historicoLongoPasta: pastaDrive,
+    });
+    expect(r).toEqual({ ok: true });
+    expect(criar().ler()).toMatchObject({
+      historicoLongoLigado: true,
+      historicoLongoPasta: pastaDrive,
+    });
+  });
+
+  it.each(["", "   ", "relativa/pasta"])(
+    "ligar com pasta inválida (%j) é recusado sem gravar",
+    (p) => {
+      const r = criar().salvar({ ...valido, historicoLongoLigado: true, historicoLongoPasta: p });
+      expect(r).toMatchObject({ ok: false, mensagem: expect.stringMatching(/histórico longo/i) });
+      expect(existsSync(arquivo())).toBe(false);
+    },
+  );
+
+  it("pasta torta escrita à mão no arquivo desliga o histórico (S-07), sem perder o resto", () => {
+    writeFileSync(
+      arquivo(),
+      JSON.stringify({ ...valido, historicoLongoLigado: true, historicoLongoPasta: "../../x" }),
+    );
+    expect(criar().ler()).toMatchObject({ historicoLongoLigado: false, intervaloBackupMin: 30 });
   });
 });
