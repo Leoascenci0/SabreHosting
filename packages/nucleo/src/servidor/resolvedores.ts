@@ -37,11 +37,32 @@ export function resolverModrinth(versao: unknown): Alvo {
 }
 
 /**
- * Instalador do NeoForge no Maven oficial. `sidecar` é o texto do `.sha1` do mesmo Maven
- * (protege de download corrompido, não de servidor comprometido).
+ * Hash sha1 do instalador de cada versão do NeoForge, conferido pelo grupo (versão → sha1). Vazia de valores reais
+ * até o Eliel escolher a versão e o hash ser tirado num PC com acesso ao Maven (ver PR do hostmel-1.1).
  */
-export function resolverNeoForge(versao: string, sidecar: string): Alvo {
-  if (!/^[\w.+-]+$/.test(versao)) throw new Error("Informe a versão do NeoForge (sem padrão).");
+export const HASHES_NEOFORGE: Readonly<Record<string, string>> = {};
+
+/**
+ * Instalador do NeoForge no Maven oficial. O hash que vale é o da `tabela` (fixado pelo grupo); o `sidecar` (texto do
+ * `.sha1` do mesmo Maven) só é conferido contra ela, porque um servidor comprometido serviria jar e sidecar combinados.
+ */
+export function resolverNeoForge(
+  versao: string,
+  sidecar: string,
+  tabela: Readonly<Record<string, string>> = HASHES_NEOFORGE,
+): Alvo {
+  if (!/^\w[\w.+-]*$/.test(versao)) throw new Error("Informe a versão do NeoForge (sem padrão).");
+  const fixado = Object.hasOwn(tabela, versao) ? tabela[versao] : undefined;
+  if (!fixado)
+    throw new Error(
+      `O NeoForge ${versao} ainda não tem o hash conferido pelo grupo; não vou baixar.`,
+    );
   const url = `https://maven.neoforged.net/releases/net/neoforged/neoforge/${versao}/neoforge-${versao}-installer.jar`;
-  return alvo(url, "sha1", sidecar.trim().split(/\s+/)[0], "Maven do NeoForge");
+  const lido = alvo(url, "sha1", sidecar.trim().split(/\s+/)[0], "Maven do NeoForge");
+  const esperado = alvo(url, "sha1", fixado, "grupo");
+  if (lido.hashEsperado.valor !== esperado.hashEsperado.valor)
+    throw new Error(
+      `O hash do NeoForge ${versao} no Maven não confere com o fixado pelo grupo; não vou baixar.`,
+    );
+  return esperado;
 }
