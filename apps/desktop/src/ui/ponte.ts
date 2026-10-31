@@ -74,7 +74,29 @@ export type OpcoesDaVersao =
   | { ok: true; neoforge: boolean; fabricForge: boolean; texto: string }
   | { ok: false; mensagem: string };
 
+export type EstadoBoasVindas =
+  | { aberto: false }
+  | {
+      aberto: true;
+      passo: "convite" | "eula" | "pasta";
+      grupo?: { nome: string; endereco?: string };
+      pastaPadrao: string;
+    };
+export type ConviteConferido =
+  { ok: true; grupo: string; venceEm: number } | { ok: false; mensagem: string };
+export type EntradaNoGrupo =
+  { ok: true; grupo: string; endereco?: string } | { ok: false; mensagem: string };
+
 export interface PonteSabre {
+  boasVindas: {
+    estado(): Promise<EstadoBoasVindas>;
+    conferirConvite(texto: string): Promise<ConviteConferido>;
+    entrar(): Promise<EntradaNoGrupo>;
+    eula(): Promise<{ texto: string; link: string }>;
+    aceitarEula(aceito: boolean): Promise<Resultado>;
+    escolherPasta(): Promise<string | undefined>;
+    concluir(pasta: string): Promise<Resultado>;
+  };
   versao(): Promise<string>;
   abrirComWindows: {
     ler(): Promise<boolean>;
