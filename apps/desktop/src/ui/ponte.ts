@@ -12,6 +12,12 @@ export type EstadoInicio =
 
 export type Resultado = { ok: true } | { ok: false; mensagem: string };
 
+export interface ConfiguracoesDaTela {
+  abrirComWindows: boolean;
+  distanciaVisao: number;
+  distanciaSimulacao: number;
+}
+
 export interface BackupDaTela {
   nome: string;
   criadoEm: string;
@@ -30,6 +36,10 @@ export interface PonteSabre {
   abrirComWindows: {
     ler(): Promise<boolean>;
     definir(ligado: boolean): Promise<boolean>;
+  };
+  configuracoes: {
+    ler(): Promise<ConfiguracoesDaTela>;
+    salvar(valor: ConfiguracoesDaTela): Promise<Resultado>;
   };
   backups: {
     listar(): Promise<EstadoBackups>;
