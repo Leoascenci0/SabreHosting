@@ -19,14 +19,14 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   *Confirmação:* no PC, Jogar abre o Prism no servidor **[P]**; teste: ids que não combinam são recusados.
   *Origem:* lanc-1.3 · PR #206 · qa
 
-- [ ] **2.3 — Download de mod: recusar redirecionamento para outro host e não apagar o mod antes de baixar o novo**
+- [x] **2.3 — Download de mod: recusar redirecionamento para outro host e não apagar o mod antes de baixar o novo** (PR #221, 31/10/2026)
   *O que fazer:* `baixarConferido` ganha opção `hostsPermitidos` (usada por `mods.ts`) e recusa redirect para host fora da lista; o arquivo local de mesmo nome só sai depois do novo estar conferido. Teste de redirect.
   *Arquivo:* `packages/nucleo/src/servidor/baixar.ts`, `packages/nucleo/src/launcher/mods.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* teste: redirect para outro host recusado; falha no download mantém o mod antigo.
   *Origem:* lanc-1.4 · PR #210 · qa
 
-- [ ] **2.4 — Mods do grupo: limpar avisos antigos na tela**
+- [x] **2.4 — Mods do grupo: limpar avisos antigos na tela** (PR #226, 31/10/2026)
   *O que fazer:* em `carregarMods` (`ui/configuracoes.ts`), `avisoMods` nunca é limpo quando o problema some e o `erroMods` de "Não consegui ler a lista…" fica depois de uma leitura bem-sucedida: limpar nos dois casos (sem apagar o erro de uma ação que acabou de falhar).
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`
   **Tela no app:** Configurações › Grupo › "Mods do grupo".
