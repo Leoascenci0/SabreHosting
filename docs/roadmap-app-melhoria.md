@@ -111,3 +111,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** Configurações › Geral › "Pasta do SabreHosting".
   *Confirmação:* teste: trocar a pasta atualiza onde servidor e mundos são lidos; 1 só chamada do executor elevado **[P: UAC no Windows]**.
   *Origem:* app-1.3b · PR #211 · qa
+
+- [ ] **1.14 — Retomar a conexão sem convite novo**
+  *O que fazer:* se a troca do túnel falha depois do convite gasto, hoje o assistente manda pedir convite novo; guardar o estado para "tentar de novo a conexão" com o token já no cofre.
+  *Arquivo:* `apps/desktop/src/main/boas-vindas.ts`, `entrada-no-grupo.ts`
+  **Tela no app:** botão "Tentar de novo" no assistente.
+  *Confirmação:* teste: falha na instalação definitiva, depois sucesso sem novo convite.
+  *Origem:* app-1.3b · PR #211 · filha

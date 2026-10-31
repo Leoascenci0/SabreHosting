@@ -25,7 +25,7 @@ item da mesma tela.
   *Confirmação:* E2E com núcleo falso nos 4 estados.
   *Depende de:* app-1.1, host-2.1
 
-- [ ] **1.3 — Primeira vez: convite, EULA e pasta**
+- [ ] **1.3 — Primeira vez: convite, EULA e pasta** *(corte de 31/10: 1.3a ✅ PR #207 parser+cofre · 1.3b ✅ PR #211 assistente · falta 1.3c: Criar convite/Validade/endereço só leitura e tirar SABRE_ENDERECO/SABRE_CARTORIO_TOKEN de deps-reais, ligando a pasta-base e `abrirJogo` (lancmel-2.2); absorve appmel-1.4)*
   *Desenho aprovado pelo Eliel em 31/10/2026:* `docs/superpowers/specs/2026-10-31-convite-do-grupo-design.md` (§5.2,
   §5.3, §6). Junta o appmel-1.4 (endereço do Jogar vem do cartório, fim do `SABRE_ENDERECO`).
   *O que fazer:* assistente de 3 passos. (1) **Convite:** colar o texto `sabre://convite/1.…` (ou abrir pelo link,
