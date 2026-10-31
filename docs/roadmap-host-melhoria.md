@@ -5,7 +5,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
 
 ## Bloco 1 — Baixar e preparar
 
-- [ ] **1.1 — Hashes fixados por versão**
+- [x] **1.1 — Hashes fixados por versão** (PR #102, 31/10/2026; valores reais [P]: versão do Eliel)
   *O que fazer:* tabela de hashes (NeoForge, Java) por versão, conferida pelo grupo, em vez de confiar só no sidecar
   `.sha1` do mesmo servidor do arquivo (protege contra servidor comprometido).
   *Arquivo:* `packages/nucleo/src/servidor/resolvedores.ts`
