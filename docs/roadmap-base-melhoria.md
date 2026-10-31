@@ -43,3 +43,21 @@ Melhorias achadas durante os itens do `docs/concluidos/roadmap-base.md` (skill `
   *Confirmação:* commit de teste com marcador → REPROVADO; `.md` com `=======` como sublinhado de título não é falso positivo
   (exigir o trio ou a linha exata `=======` entre `<<<<<<<` e `>>>>>>>`).
   *Origem:* onda 6 · orquestradora
+
+- [x] **1.5 — Teste da trava contra o cartório real estável sob carga** (PR #76, 31/10/2026)
+  *O que fazer:* `tests/integracao/hospedar-cartorio.test.ts` › "renovando, a trava passa do prazo e outro PC continua
+  recusado; parou, solta" falhou 1 vez com outro processo pesado rodando ao lado (8 de 8 verdes isolado). Trocar a
+  espera por tempo real por relógio injetado ou dar folga medida (ver ficha S-01).
+  *Arquivo:* `tests/integracao/hospedar-cartorio.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* 4 `npx vitest run` em paralelo, 3 vezes seguidas, sem falha.
+  *Origem:* rodada 31/10 · vistoria do PR #70
+
+- [ ] **1.6 — Quarto teste da trava com folga medida**
+  *O que fazer:* em `tests/integracao/hospedar-cartorio.test.ts`, o 4º teste (folga de ~700 ms) ainda estoura sob carga
+  extrema de CPU; aplicar o mesmo tratamento do basemel-1.5 (tempos folgados só onde o teste exige a trava viva, prazo
+  explícito), sem afrouxar o que ele prova.
+  *Arquivo:* `tests/integracao/hospedar-cartorio.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* 4 `npx vitest run` em paralelo com laço de CPU ao lado, 3 vezes, sem falha.
+  *Origem:* basemel-1.5 · PR #76 · filha (achado baixo)

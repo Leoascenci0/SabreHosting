@@ -178,6 +178,8 @@ o que se repete). No máximo 10 linhas:
 
 - **S-02** `git merge` da `main` com CONFLICT (em geral no fim do `docs/ops/DECISOES.md`): resolver ANTES de editar ou
   commitar; o verificador barra marcador de conflito desde o basemel-1.4.
+- **S-01** teste passa sozinho e falha com a máquina ocupada (trava, arquivos grandes): é tempo curto demais no teste,
+  não no código; folga medida ou prazo explícito só no teste, nunca afrouxar o que ele prova.
 
 ## Skills sob demanda
 

@@ -16,7 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-_(nenhuma onda aberta; leva de 6 ondas concluída em 31/10/2026 — retomar com `/maxima retomar`)_
+_(nenhum item aberto; leva de 31/10 encerrada — retomar com `/maxima retomar`)_
+
+⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente] · ⏸️ app-1.3 [P: aprovar o desenho do convite]
 
 ## Fila
 
@@ -26,7 +28,7 @@ _(nenhuma onda aberta; leva de 6 ondas concluída em 31/10/2026 — retomar com 
 **M2 — Primeira partida**
 - **Próxima onda (Eliel pediu app-1.1 primeiro, para ter prévia):** app-1.1 · rede-2.2 (plugin do proxy: trocar o host da vez + whitelist = redemel-2.1) ·
   cartmel-1.2/1.3 (endurecer a entrada do cartório; banco fora do diretório atual)
-- Depois: app-1.2 · app-1.3 · redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
+- Depois: app-1.3 (após o desenho do convite) · redemel-2.3 [P: internet para fixar o hash do PicoLimbo] · cart-2.2 [P: máquina real]
 - Fechamento M2: versão de teste v0.1 + tutorial para o grupo.
 
 **M3 — Mundo em todos** (ondas montadas pela Máxima ao chegar aqui): sync-1.1 → sync-1.2 → sync-2.1 → sync-2.2;
@@ -43,24 +45,32 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação primeiro.
 
+- **Liberar `repo.papermc.io`** na rede do ambiente da nuvem (Allowed domains). *Trava:* rede-2.2.
+- **Desenho do convite (app-1.3):** hoje o convite é só um segredo; para o amigo colar UM texto e entrar, ele precisa
+  levar também a entrada na rede privada (WireGuard) e o endereço do cartório e do servidor. A Máxima prepara a
+  proposta (planejador) e leva em balão. *Trava:* app-1.3, appmel-1.4.
+
 - **Versão do Minecraft** (e do NeoForge): escolha do Eliel antes do host-3.1 (teste no PC).
 - **D9 — Assinatura do instalador:** sem assinatura (o Windows mostra aviso "editor desconhecido") · certificado de
   assinatura (pago, ~US$ 100+/ano). *Trava:* app-3.2.
 
 ## Backlog
 
+- Melhorias do app: `docs/roadmap-app-melhoria.md` (appmel-1.1 a 1.5; 1.4 junto do app-1.3).
 - Melhorias do launcher: `docs/roadmap-lanc-melhoria.md` (lancmel-1.1).
 - Melhorias da rede: `docs/roadmap-rede-melhoria.md` (redemel-1.1; 2.1 obrigatório antes de ligar o proxy; 2.2; 2.3 [P]).
 - Melhorias do backup: `docs/roadmap-bkp-melhoria.md` (bkpmel-1.1 feito; 1.2, 1.3, 2.1).
-- Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1 a 1.4 e 1.6; 1.5 feito).
+- Melhorias do cartório: `docs/roadmap-cart-melhoria.md` (cartmel-1.1, 1.4, 1.6, 1.8; 1.2, 1.3, 1.5, 1.7 feitos).
 - Melhorias do host: `docs/roadmap-host-melhoria.md` (hostmel-1.1 a 1.4, 2.1 [P], 2.2 a 2.4).
-- Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1 e 1.2, CI).
+- Melhorias da base: `docs/roadmap-base-melhoria.md` (basemel-1.1, 1.2, 1.6; 1.5 feito).
 
 - Bedrock via Geyser (se D1 = Java + Bedrock depois).
 - App para Linux e macOS (o núcleo já é multiplataforma).
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 31/10/2026 — app-1.1 janela, bandeja e design system (#70); cartmel-1.2/1.3 cartório endurecido e banco em /var/lib (#69); basemel-1.5 teste da trava estável (#76); cartmel-1.7 segredo do cartório em arquivo 0600 (#75); app-1.2 tela inicial com 4 estados e saída segura (#74).
 
 - 30/10/2026 — Decididas D6 (regras padrão), D2 (WireGuard), D3 (Oracle Always Free SP), D4 (ícone do Eliel).
 
