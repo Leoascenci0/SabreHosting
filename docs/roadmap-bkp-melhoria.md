@@ -24,7 +24,7 @@ Melhorias achadas durante os itens do `docs/roadmap-bkp.md` (skill `maxima` › 
   *Confirmação:* testes com `é` nas duas formas e com `a` + `a/b` recusados.
   *Origem:* bkpmel-1.1 · PR #29 · qa
 
-- [ ] **1.3 — Mensagens e sobras do backup agendado**
+- [x] **1.3 — Mensagens e sobras do backup agendado** (PR #105, 31/10/2026; com o sinal de cancelamento do hostmel-2.4)
   *O que fazer:* `criarPacote` preserva a mensagem específica do manifesto ("o mundo mudou durante a leitura") em vez
   da genérica; quando o servidor cai no meio do backup, o pacote não chega a ganhar o nome final (descartar antes do
   rename) em vez de ser apagado depois.
