@@ -175,6 +175,7 @@ describe("histórico longo no backup agendado (drive-1.1a)", () => {
     const o = {
       avisoHistorico: visivel,
       pastaBackups: local,
+      pastaDoMundo: undefined as string | undefined,
       historicoLongo: () => pasta,
       aoAvisar: (t: string) => void avisos.push(t),
     };
