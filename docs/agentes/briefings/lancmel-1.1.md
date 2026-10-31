@@ -1,10 +1,9 @@
-# Briefing lancmel-1.1 — Detecção e instância mais firmes (parte a e b)
+# Briefing lancmel-1.1
 
-BASE: 2eb719fe795887ca8b86bb8bf5f4c3a046bc0cba · RAMO: roadmap/lancmel-1.1 · MODELO: haiku (MIÚDO)
-ISSUE: #113
+BASE: be029a5bdaf3d2dbdd4f2a48fb0d028d3ac15743 · RAMO: roadmap/lancmel-1.1 · MODELO: sonnet
 SKILLS: using-superpowers, qualidade-sabre
-LEIA: qualidade-sabre §1
-TRIAGEM: M4 | ~40 linhas + ~40 de teste | RISCO baixo | MIÚDO: sim | REAPROVEITAR: packages/nucleo/src/launcher/instancia.ts:40-49 nomeSeguroDoGrupo (corte em :42); instancia.ts:125 readFile(...).catch; prism.ts:8-11 SistemaArquivos (molde de leitor injetável) | NÃO ESCREVER: comparação de versão completa (VERSAO_MINIMA=8 é inteiro; a condição "mínimo virar 8.x" não ocorreu: registrar no PR); marcador próprio (adiado, ver decisão); mexer em execReal/ExecArquivo (prism.ts:13-14, :159; rede/wireguard.ts importa) | PASSOS: 1. instancia.ts:42: cortar por ponto de código (Array.from(nome).slice(0, MAX_NOME).join("")), teste com grupo de 63 letras + emoji (antes termina em par substituto solto); 2. instancia.ts:125: catch só para ENOENT, demais erros repassados; leitor injetável para provar que erro não-ENOENT propaga e nada é gravado | PROVA: testes falham antes e passam depois; vistoria APROVADA.
+LEIA: qualidade-sabre › references pertinentes ao tipo (integridade/seguranca/enxugar); docs/arquitetura.md só se precisar.
+TRIAGEM: M1/M2 — acabamento em código existente; reaproveitar o que já há, escrever uma vez só (a filha confirma com grep antes).
 
 ## Item (texto literal do roadmap)
 - [ ] **1.1 — Detecção e instância mais firmes**
@@ -17,18 +16,16 @@ TRIAGEM: M4 | ~40 linhas + ~40 de teste | RISCO baixo | MIÚDO: sim | REAPROVEIT
   *Origem:* lanc-1.1 · PR #36 e lanc-1.2 · PR #57 · qa
 
 ## Decisões que valem para este item
-- Decidido pela Máxima (reversível): o **marcador próprio da instância fica para o lanc-1.3**, que é quem vai ler a instância; hoje ninguém o leria. A comparação major.minor.patch só se o mínimo virar 8.x (não virou). Registre os dois em "O que NÃO foi feito" no PR.
-- Nunca copiar código do Prism (GPL-3.0); só comportamento e formato documentados.
+Banda padrão 10 MB/s; nuvem NÃO é fonte do espalhar (decididos 31/10). Demais: docs/ops/DECISOES.md.
 
 ## Critério de pronto
 - [ ] Plano em docs/agentes/planos/lancmel-1.1.md como primeiro commit
-- [ ] Testes novos (falham antes, passam depois) em packages/nucleo/src/launcher/instancia.test.ts
-- [ ] `npm run vistoria` APROVADA
-- [ ] PR (Refs #113 — o item segue aberto pelo marcador) com as seções do modelo e as linhas Triagem/Segurança/Integridade/Enxugamento/Roteamento
+- [ ] Testes novos (falham antes, passam depois)
+- [ ] `npm run vistoria` APROVADA (e, se mexer em infra/, também como usuário comum, S-03)
+- [ ] PR com seções do modelo e linhas Triagem/Segurança/Integridade/Enxugamento/Roteamento, Regressão: e Tela no app:
 
 ## Fora do alcance
-CLAUDE.md, .claude/, docs/roadmap-*.md, docs/MILESTONE.md, docs/agentes/ (exceto o plano), docs/imagens/ (não commitar
-as PNGs regeradas), segredo. Nada fora de packages/nucleo/src/launcher/instancia.ts e o teste dele.
+CLAUDE.md, .claude/, docs/roadmap-*.md, docs/MILESTONE.md, docs/agentes/ (exceto o plano), máquina da nuvem real, mundo real, segredos.
 
-## O que NÃO decidir (perguntar à orquestradora)
-nada
+## O que NÃO decidir
+Nada: dúvida de regra do grupo vira pergunta à sessão de onda.
