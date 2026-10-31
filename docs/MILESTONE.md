@@ -45,7 +45,7 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 
 ## Pendente do Eliel
 
-- **Liberar `maven.neoforged.net`** (e `repo.papermc.io`) na rede do ambiente: sem o hash do NeoForge 1.20.1 nenhuma versão com mods hospeda.
+- **Liberar `maven.neoforged.net`** (e `repo.papermc.io`) na rede do ambiente: sem o hash do NeoForge 1.20.1 nenhuma versão com mods hospeda. Eliel disse 31/10 (14:30) que libera os dois; a próxima onda confere com `curl` e, se abrir, puxa rede-2.2 e os hashes.
 - **Importar o mundo real** pelo tutorial `docs/tutoriais/piloto-importar.md` (no seu PC).
 
 - **redemel-1.3** — tirar o PC revogado da rede privada: precisa do WireGuard instalado de verdade na máquina da nuvem.

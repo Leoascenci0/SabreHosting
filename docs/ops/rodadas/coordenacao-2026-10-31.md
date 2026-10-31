@@ -43,4 +43,5 @@
 
 ## Bastão
 
-_(não passado)_
+_(não passado)_ — plano: passar o bastão quando a Onda 25 fechar (6 ondas e contexto perto da meta de 30%).
+Eliel (14:30): vai liberar maven.neoforged.net e repo.papermc.io; a Onda 26 confere com curl e puxa rede-2.2 + hashes NeoForge 1.20.1.
