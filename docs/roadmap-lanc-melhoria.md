@@ -19,7 +19,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   *Confirmação:* no PC, Jogar abre o Prism no servidor **[P]**; teste: ids que não combinam são recusados.
   *Origem:* lanc-1.3 · PR #206 · qa
 
-- [ ] **2.3 — Download de mod: recusar redirecionamento para outro host e não apagar o mod antes de baixar o novo**
+- [x] **2.3 — Download de mod: recusar redirecionamento para outro host e não apagar o mod antes de baixar o novo** (PR #221, 31/10/2026)
   *O que fazer:* `baixarConferido` ganha opção `hostsPermitidos` (usada por `mods.ts`) e recusa redirect para host fora da lista; o arquivo local de mesmo nome só sai depois do novo estar conferido. Teste de redirect.
   *Arquivo:* `packages/nucleo/src/servidor/baixar.ts`, `packages/nucleo/src/launcher/mods.ts`
   **Tela no app:** não se aplica.
