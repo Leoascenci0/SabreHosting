@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 26**
+**Próxima onda: 33** (Onda 32 aberta)
 
 _(nenhuma onda aberta; bastão da coordenadora passado às 15:10 — ver docs/ops/rodadas/coordenacao-2026-10-31.md)_
 
@@ -70,6 +70,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 31/10/2026 (tarde) — Ondas 26–31 (2º bastão): 26 syncmel-1.9b #202, hostmel-3.3 #201, lancmel-1.1 #200, syncmel-1.3 #203, syncmel-1.11 #204 · 27 syncmel-1.12 #209, lanc-1.3 #206, app-1.3a/b #207/#211, lanc-1.4 #210, sync-2.2 #212 · 28 app-1.3c #217/#218, lancmel-2.1 #215, syncmel-1.13/1.14 #216/#214, appmel-1.13 #219 · 29 lancmel-2.3/2.4 #221/#226, appmel-1.12 #223, 1.14b #225, 1.16 #224 · 30 appmel-1.9 #228, 1.15 #229 · 31 hostmel-3.4 #233, appmel-1.17–1.20 #231/#235/#236/#234. Roadmaps `sync` e `lanc-melhoria` em docs/concluidos/.
 
 - 31/10/2026 (dia) — Onda 25: syncmel-1.7 #191, syncmel-1.9a #192, hostmel-3.2 #193, cartmel-2.5 #194, syncmel-1.10 #195, migra-2.1 #197, controle #198.
 - 31/10/2026 (dia) — Onda 24: piloto-1.1b #184, hostmel-3.1d #185, hostmel-3.1b #186, cartmel-2.4 #187, hostmel-3.1c #188, piloto-1.1c #189, controle #190.
