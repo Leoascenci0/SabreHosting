@@ -331,7 +331,7 @@ export function ehDono(banco: Banco, pcId: number): boolean {
   return donoAtual(banco)?.id === pcId;
 }
 
-/** Os PCs do grupo: só os que têm token ativo; nunca devolve token, hash ou IP. */
+/** Os PCs do grupo: só os que têm token ativo; nunca devolve token, hash ou IP (o IP só sai em `quemTem`, para PC autenticado). */
 export function listarPcsAtivos(banco: Banco): Array<Pc & { dono: boolean }> {
   const linhas = banco
     .prepare(

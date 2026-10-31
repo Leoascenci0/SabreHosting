@@ -10,7 +10,10 @@ import { baixarConferido, type OpcoesDownload } from "../servidor/baixar.js";
  * o cliente reaproveita `baixarConferido` (retomada, conferência de hash, troca atômica).
  */
 
-const REDE_PRIVADA = /^10\.66\.0\.\d{1,3}$/;
+/** .1 é o cartório e .200+ é reservado: PCs ficam em 10.66.0.2–199 (mesma faixa de `gerarPropriedades`). */
+const REDE_PRIVADA = /^10\.66\.0\.(?:[2-9]|[1-9]\d|1\d\d)$/;
+/** Porta em que cada PC serve o mundo na rede privada: constante do app, não entra no cadastro. */
+export const PORTA_ESPALHAR = 25570;
 const HASH_SHA256 = /^[0-9a-f]{64}$/;
 
 /** Só o IP da rede privada do SabreHosting; loopback apenas quando o teste pede. */
@@ -20,11 +23,10 @@ export function conferirEnderecoPrivado(
 ): string {
   const ok =
     isIPv4(endereco) &&
-    ((REDE_PRIVADA.test(endereco) && endereco.split(".").every((n) => Number(n) <= 255)) ||
-      (permitirLoopbackParaTeste && endereco === "127.0.0.1"));
+    (REDE_PRIVADA.test(endereco) || (permitirLoopbackParaTeste && endereco === "127.0.0.1"));
   if (!ok) {
     throw new Error(
-      `Endereço "${endereco}" recusado: a transferência só usa o IP deste PC na rede privada (10.66.0.x).`,
+      `Endereço "${endereco}" recusado: a transferência só usa o IP deste PC na rede privada (10.66.0.2 a 10.66.0.199).`,
     );
   }
   return endereco;
