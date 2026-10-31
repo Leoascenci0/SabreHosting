@@ -60,7 +60,7 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
 
 ## Bloco 1 (cont.) — Configuração do servidor
 
-- [ ] **1.4 — Testes que faltam na configuração e endurecimento**
+- [x] **1.4 — Testes que faltam na configuração e endurecimento** (PR #122, 31/10/2026; servidor só em 10.66.0.2–199)
   *O que fazer:* teste com `10.999.0.1` (octeto inválido) recusado — hoje apagar `octetosValidos` não derruba teste;
   gravar `enable-query=false` explícito; estreitar o IP aceito para a faixa da rede privada do WireGuard quando o
   rede-* a definir.
