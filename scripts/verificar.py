@@ -9,6 +9,7 @@ Reprova (exit 1):
   - commit ou ramo na main;
   - segredo provável (chave privada, token, .env com valor);
   - mundo de Minecraft fora de tests/mundos/ (*.mca, level.dat, playerdata/);
+  - marcador de conflito de merge (abertura, divisória e fechamento, nessa ordem);
   - jar de servidor, executável ou arquivo maior que o teto (scripts/limites.json, "arquivo_max_kb");
   - implementador mexendo em arquivo fora do alcance (só com --implementador).
 Só usa a biblioteca padrão.
@@ -32,6 +33,20 @@ PADROES_SEGREDO = [
 ]
 EXT_BINARIA_PROIBIDA = (".jar", ".exe", ".msi", ".dll", ".zip", ".mca", ".mcr", ".dat_old")
 FORA_DO_ALCANCE_IMPL = ("CLAUDE.md", ".claude/", "docs/MILESTONE.md")
+
+
+def achar_conflito(texto):
+    """Linha (1-based) da abertura de um bloco de conflito; `=======` sozinho não conta."""
+    abertura = None
+    divisoria = False
+    for n, linha in enumerate(texto.splitlines(), 1):
+        if linha.startswith("<" * 7 + " "):
+            abertura, divisoria = n, False
+        elif abertura and linha == "=" * 7:
+            divisoria = True
+        elif abertura and divisoria and linha.startswith(">" * 7 + " "):
+            return abertura
+    return None
 
 
 def git(*args):
@@ -105,9 +120,12 @@ def main():
             erros.append(f"{caminho}: {len(dados)//1024} kB, teto {teto_kb} kB (scripts/limites.json)")
         if a.implementador and caminho.startswith(FORA_DO_ALCANCE_IMPL):
             erros.append(f"{caminho}: fora do alcance do implementador (CLAUDE.md, regra 2)")
+        texto = dados.decode("utf-8", errors="ignore")
+        linha = achar_conflito(texto)
+        if linha:
+            erros.append(f"{caminho}:{linha}: marcador de conflito de merge (resolva o conflito antes de commitar)")
         if caminho == "scripts/verificar.py" or caminho.endswith("/seguranca.md"):
             continue  # o próprio verificador e a doc citam os padrões
-        texto = dados.decode("utf-8", errors="ignore")
         for padrao, nome in PADROES_SEGREDO:
             if padrao.search(texto):
                 erros.append(f"{caminho}: parece conter {nome} (nunca segredo no git)")
