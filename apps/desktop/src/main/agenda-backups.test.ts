@@ -96,6 +96,47 @@ describe("agenda de backups", () => {
     expect(agenda.ativa()).toBe(false);
   });
 
+  it("dois reagendar seguidos com backup em curso deixam um só agendador ativo", async () => {
+    const vivos = new Set<number>();
+    let n = 0;
+    const soltar: (() => void)[] = [];
+    let intervalo = 10;
+    const agenda = criarAgendaBackups<Falso>({
+      intervaloMin: () => intervalo,
+      iniciar: async () => {
+        const id = ++n;
+        vivos.add(id);
+        return {
+          parar: () =>
+            new Promise<void>((ok) => {
+              // O backup em curso demora para terminar; só então o relógio morre.
+              soltar.push(() => (vivos.delete(id), ok()));
+            }),
+        };
+      },
+    });
+    const s = new Falso();
+    agenda.observar(s);
+    s.mudar("pronto");
+    await vazio();
+    intervalo = 20;
+    agenda.reagendar();
+    intervalo = 30;
+    agenda.reagendar();
+    await vazio();
+    while (soltar.length > 0) {
+      soltar.shift()?.();
+      await vazio();
+    }
+    await vazio();
+    while (soltar.length > 0) {
+      soltar.shift()?.();
+      await vazio();
+    }
+    expect(vivos.size).toBe(1);
+    expect(agenda.ativa()).toBe(true);
+  });
+
   it("falha ao preparar vira aviso, não derruba o app", async () => {
     const aviso = vi.fn();
     const agenda = criarAgendaBackups<Falso>({

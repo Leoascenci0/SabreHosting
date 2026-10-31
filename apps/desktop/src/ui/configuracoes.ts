@@ -40,9 +40,11 @@ let botaoDoTirado: HTMLElement | undefined;
 function mostrarErro(texto: string): void {
   erro.textContent = texto;
   erro.hidden = texto === "";
-  for (const campo of [visao, simulacao, intervalo]) {
-    campo.setAttribute("aria-invalid", String(texto !== ""));
-  }
+  // Só o campo do erro fica marcado; a mensagem do app cita o intervalo pelo nome ("intervalo do backup").
+  const doBackup = texto.includes("intervalo do backup");
+  visao.setAttribute("aria-invalid", String(texto !== "" && !doBackup));
+  simulacao.setAttribute("aria-invalid", String(texto !== "" && !doBackup));
+  intervalo.setAttribute("aria-invalid", String(doBackup));
 }
 
 function ocupar(ocupado: boolean): void {
@@ -180,6 +182,11 @@ form.addEventListener("submit", (evento) => {
     .catch(() => mostrarErro("Não consegui salvar agora. Nada foi alterado."))
     .finally(() => {
       ocupar(false);
-      (erro.hidden ? salvar : erro.textContent?.includes("backup") ? intervalo : visao).focus();
+      (erro.hidden
+        ? salvar
+        : erro.textContent?.includes("intervalo do backup")
+          ? intervalo
+          : visao
+      ).focus();
     });
 });

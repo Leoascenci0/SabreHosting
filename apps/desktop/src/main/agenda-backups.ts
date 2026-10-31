@@ -29,6 +29,7 @@ export function criarAgendaBackups<S extends ServidorObservado>(deps: DepsAgenda
   let agenda: Agenda | undefined;
   let geracao = 0;
 
+  // A geração é tomada ANTES de qualquer await: duas chamadas seguidas nunca compartilham o mesmo número.
   async function desligar(): Promise<void> {
     geracao++;
     const antiga = agenda;
@@ -37,8 +38,11 @@ export function criarAgendaBackups<S extends ServidorObservado>(deps: DepsAgenda
   }
 
   async function ligar(): Promise<void> {
-    await desligar();
-    const meu = geracao;
+    const meu = ++geracao;
+    const antiga = agenda;
+    agenda = undefined;
+    await antiga?.parar(); // com backup em curso, espera ele terminar
+    if (meu !== geracao) return; // outra chamada (reagendar, parar) chegou depois e manda
     const alvo = servidor;
     if (!alvo || alvo.estado !== "pronto") return;
     try {
