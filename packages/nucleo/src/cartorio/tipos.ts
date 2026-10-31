@@ -19,6 +19,14 @@ export interface Pc {
   nome: string;
 }
 
+/** Este PC (`GET /eu`): `dono` diz se ele é o dono do grupo. */
+export interface Eu extends Pc {
+  dono: boolean;
+}
+
+/** Um item de `GET /pcs`: só id, nome e se é o dono (nunca token, hash ou IP). */
+export type PcDoGrupo = Eu;
+
 /** 200 de `POST /trava/{pegar,renovar,passar,soltar}`. `expiraEm` é do relógio do cartório: não usar para prazo. */
 export interface TravaAceita {
   ok: true;
@@ -102,6 +110,17 @@ function texto(o: Campos, campo: string): string {
 export function validarPc(v: unknown): Pc {
   const o = objeto(v, "PC");
   return { id: inteiro(o, "id", 1), nome: texto(o, "nome") };
+}
+
+export function validarEu(v: unknown): Eu {
+  const o = objeto(v, "PC");
+  if (typeof o.dono !== "boolean") throw new Error("Resposta inválida do cartório: dono.");
+  return { id: inteiro(o, "id", 1), nome: texto(o, "nome"), dono: o.dono };
+}
+
+export function validarListaPcs(v: unknown): PcDoGrupo[] {
+  if (!Array.isArray(v)) throw new Error("Resposta inválida do cartório: lista de PCs.");
+  return v.map(validarEu);
 }
 
 /** Aceita: a época sempre ≥ 1 (pegar sobe a época). Recusa: a do cartório, que começa em 0. */

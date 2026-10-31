@@ -302,6 +302,22 @@ export function donoAtual(banco: Banco): Pc | undefined {
   return banco.prepare("SELECT id, nome FROM pcs WHERE dono = 1").get() as Pc | undefined;
 }
 
+export function ehDono(banco: Banco, pcId: number): boolean {
+  return donoAtual(banco)?.id === pcId;
+}
+
+/** Os PCs do grupo: só os que têm token ativo; nunca devolve token, hash ou IP. */
+export function listarPcsAtivos(banco: Banco): Array<Pc & { dono: boolean }> {
+  const linhas = banco
+    .prepare(
+      `SELECT id, nome, dono FROM pcs
+       WHERE EXISTS (SELECT 1 FROM tokens WHERE pc_id = pcs.id AND revogado_em IS NULL)
+       ORDER BY id`,
+    )
+    .all() as Array<{ id: number; nome: string; dono: number }>;
+  return linhas.map((l) => ({ id: l.id, nome: l.nome, dono: l.dono === 1 }));
+}
+
 export function pcDoToken(banco: Banco, token: string): Pc | undefined {
   return banco
     .prepare(

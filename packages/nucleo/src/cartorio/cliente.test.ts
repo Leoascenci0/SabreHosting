@@ -113,6 +113,12 @@ describe("cliente do cartório", () => {
     expect(chamadas).toHaveLength(3);
   });
 
+  it("recusa /eu sem o campo dono e lista torta", async () => {
+    const { cliente } = montar([json(200, { id: 3, nome: "pc-b" }), json(200, { id: 1 })]);
+    expect((await erroDe(cliente.eu())).tipo).toBe("resposta");
+    expect((await erroDe(cliente.listarPcs())).tipo).toBe("resposta");
+  });
+
   it("401 não repete e não mostra o token", async () => {
     const { cliente, chamadas } = montar([json(401, { erro: "Acesso negado." })]);
     const e = await erroDe(cliente.eu());
@@ -291,12 +297,20 @@ describe("cliente do cartório", () => {
     const { cliente } = montar([
       json(200, ESTADO),
       json(200, { ...ESTADO, dono: { id: 3, nome: "pc-b" }, epoca: 4 }),
-      json(200, { id: 3, nome: "pc-b" }),
+      json(200, { id: 3, nome: "pc-b", dono: false }),
+      json(200, [
+        { id: 1, nome: "pc-a", dono: true },
+        { id: 3, nome: "pc-b", dono: false },
+      ]),
       json(200, { ...OK_TRAVA, expiraEm: 0 }),
     ]);
     expect(await cliente.estadoTrava()).toEqual(ESTADO);
     expect((await cliente.estadoTrava()).dono).toEqual({ id: 3, nome: "pc-b" });
-    expect(await cliente.eu()).toEqual({ id: 3, nome: "pc-b" });
+    expect(await cliente.eu()).toEqual({ id: 3, nome: "pc-b", dono: false });
+    expect(await cliente.listarPcs()).toEqual([
+      { id: 1, nome: "pc-a", dono: true },
+      { id: 3, nome: "pc-b", dono: false },
+    ]);
     expect((await cliente.soltar(7)).ok).toBe(true);
   });
 
