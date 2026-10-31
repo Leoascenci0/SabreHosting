@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   clipboard,
+  dialog,
   ipcMain,
   Menu,
   nativeImage,
@@ -10,9 +11,8 @@ import {
 } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
-import { hospedar } from "@sabrehosting/nucleo/cartorio/hospedar";
-import { criarInicio, erroSemGrupo, type DepsInicio, type Inicio } from "./inicio.js";
+import { depsReais } from "./deps-reais.js";
+import { criarInicio, type Inicio } from "./inicio.js";
 import { lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida } from "./seguranca.js";
 
@@ -24,6 +24,41 @@ const INICIO_OCULTO = "--oculto";
 let janela: BrowserWindow | null = null;
 let bandeja: Tray | null = null;
 let saindo = false;
+let inicioApp: Inicio | undefined;
+let encerrando = false;
+let podeSair = false;
+
+async function perguntarSair(): Promise<boolean> {
+  if (process.env["SABRE_E2E"] === "1") return true; // o diálogo nativo não é clicável no E2E
+  const opcoes = {
+    type: "warning" as const,
+    buttons: ["Parar e sair", "Cancelar"],
+    defaultId: 1,
+    cancelId: 1,
+    title: "SabreHosting",
+    message: "Os amigos conectados vão cair. Parar o servidor e sair?",
+  };
+  const r = janela
+    ? await dialog.showMessageBox(janela, opcoes)
+    : await dialog.showMessageBox(opcoes);
+  return r.response === 0;
+}
+
+/**
+ * Sair com o servidor no ar: para (salva, para, devolve a trava) ANTES de fechar; senão o Java seguiria sem
+ * renovar a trava e outro PC hospedaria o mesmo mundo (regra de ouro 1).
+ */
+async function sairDoApp(perguntar: boolean): Promise<void> {
+  if (encerrando) return;
+  encerrando = true;
+  if (inicioApp?.ativo()) mostrarJanela(); // o progresso ("Parando o servidor…") aparece na tela
+  const ok = (await inicioApp?.encerrar(perguntar ? perguntarSair : async () => true)) ?? true;
+  encerrando = false;
+  if (!ok) return;
+  podeSair = true;
+  saindo = true;
+  app.quit();
+}
 
 function mostrarJanela(): void {
   if (!janela) return;
@@ -75,10 +110,7 @@ function criarBandeja(): Tray {
       { type: "separator" },
       {
         label: "Sair",
-        click: () => {
-          saindo = true;
-          app.quit();
-        },
+        click: () => void sairDoApp(true),
       },
     ]),
   );
@@ -91,44 +123,9 @@ function veioDaPagina(evento: IpcMainInvokeEvent): boolean {
   return navegacaoPermitida(evento.senderFrame?.url ?? "", PAGINA);
 }
 
-// Cartório, endereço e pasta do servidor vêm do ambiente até a tela de primeira vez (app-1.3); ver .env.exemplo.
-function depsReais(): DepsInicio {
-  const { SABRE_CARTORIO_URL: url, SABRE_CARTORIO_TOKEN: token } = process.env;
-  const { SABRE_PASTA_SERVIDOR: pasta, SABRE_JAVA: java, SABRE_NEOFORGE: neoforge } = process.env;
-  let cliente: ReturnType<typeof criarCliente> | undefined;
-  let falha: unknown;
-  if (url && token) {
-    try {
-      cliente = criarCliente({ url, cofre: { guardar: async () => {}, ler: async () => token } });
-    } catch (e) {
-      falha = e;
-    }
-  }
-  const exigir = () => {
-    if (cliente) return cliente;
-    throw falha ?? erroSemGrupo();
-  };
-  return {
-    lerTrava: () => exigir().estadoTrava(),
-    hospedar: async (aoPerder) => {
-      if (!pasta || !java || !neoforge) {
-        throw new Error("Este PC ainda não está configurado para hospedar o servidor.");
-      }
-      return hospedar({
-        cliente: exigir(),
-        aoPerder,
-        pasta,
-        javaPath: java,
-        versaoNeoForge: neoforge,
-      });
-    },
-    endereco: process.env["SABRE_ENDERECO"] ?? "",
-    copiar: (texto) => clipboard.writeText(texto),
-  };
-}
-
 async function criarInicioDoApp(): Promise<Inicio> {
-  if (process.env["SABRE_E2E"] !== "1") return criarInicio(depsReais());
+  if (process.env["SABRE_E2E"] !== "1")
+    return criarInicio(depsReais(process.env, (t) => clipboard.writeText(t)));
   const { criarDepsE2E } = await import("./fake-e2e.js");
   const espiao = { spawns: [] };
   (globalThis as Record<string, unknown>)["__sabreE2EEspiao"] = espiao;
@@ -169,7 +166,12 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", mostrarJanela);
-  app.on("before-quit", () => {
+  app.on("before-quit", (evento) => {
+    if (!podeSair && (encerrando || inicioApp?.ativo())) {
+      evento.preventDefault(); // saída por fora da bandeja (ex.: desligar o Windows): para o servidor antes
+      void sairDoApp(false);
+      return;
+    }
     saindo = true;
   });
   // Fechar a janela só a esconde: o app continua na bandeja até "Sair".
@@ -177,11 +179,17 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(async () => {
     nativeTheme.themeSource = "system";
-    registrarPonte(await criarInicioDoApp());
+    inicioApp = await criarInicioDoApp();
+    registrarPonte(inicioApp);
     bandeja = criarBandeja();
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {
-      (globalThis as Record<string, unknown>)["__sabreE2E"] = { bandeja, janela, PAGINA };
+      (globalThis as Record<string, unknown>)["__sabreE2E"] = {
+        bandeja,
+        janela,
+        PAGINA,
+        sair: () => sairDoApp(true),
+      };
     }
   });
 }

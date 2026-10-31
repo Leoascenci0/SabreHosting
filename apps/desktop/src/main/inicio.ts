@@ -35,15 +35,73 @@ function motivoDe(e: unknown): MotivoSemCartorio {
 
 const GENERICA = "Não consegui fazer isso agora. Tente de novo em instantes.";
 
-export function criarInicio(deps: DepsInicio) {
+/** Tempos de espera da liberação da trava; só os testes mexem. */
+export interface TemposInicio {
+  passoMs?: number;
+  tentativas?: number;
+}
+
+export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
+  const { passoMs = 300, tentativas = 20 } = tempos;
   let ativo: ServidorAtivo | undefined;
   let ocupado = false;
+  let parando = false;
   const ouvintes = new Set<() => void>();
   const avisar = (): void => ouvintes.forEach((cb) => cb());
 
+  /** Depois da parada, espera o cartório mostrar a trava livre (a devolução roda em segundo plano no núcleo). */
+  async function esperarTravaLivre(): Promise<void> {
+    for (let n = 0; n < tentativas; n++) {
+      try {
+        if ((await deps.lerTrava()).dono === null) return;
+      } catch {
+        return; // sem cartório não há como conferir; a trava vence sozinha no prazo
+      }
+      await new Promise((ok) => setTimeout(ok, passoMs));
+    }
+  }
+
+  async function parar(): Promise<Resultado> {
+    const servidor = ativo;
+    if (!servidor) return { ok: false, mensagem: "O servidor deste PC não está rodando." };
+    parando = true;
+    avisar();
+    try {
+      await servidor.pararServidor();
+      await esperarTravaLivre();
+      if (ativo === servidor) ativo = undefined;
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, mensagem: e instanceof Error && e.message ? e.message : GENERICA };
+    } finally {
+      parando = false;
+    }
+  }
+
   return {
+    parar,
+
+    /** Este PC está com o servidor no ar (ou subindo)? Quem fecha o app precisa saber. */
+    ativo: (): boolean => ativo !== undefined || ocupado,
+
+    /**
+     * Antes de sair do app: com servidor no ar, confirma, para (salva, para e devolve a trava) e só então libera a
+     * saída. `false` = não sair (recusou, ou a parada falhou/estourou o prazo).
+     */
+    async encerrar(confirmar: () => Promise<boolean>, prazoMs = 90_000): Promise<boolean> {
+      if (!ativo && !ocupado) return true;
+      if (!(await confirmar())) return false;
+      let timer: NodeJS.Timeout | undefined;
+      const estouro = new Promise<Resultado>((ok) => {
+        timer = setTimeout(() => ok({ ok: false, mensagem: "estourou" }), prazoMs);
+      });
+      const r = await Promise.race([parar(), estouro]);
+      clearTimeout(timer);
+      return r.ok;
+    },
+
     async estado(): Promise<EstadoInicio> {
-      if (ativo) return { tipo: "eu", endereco: deps.endereco };
+      if (ativo) return { tipo: "eu", endereco: deps.endereco, ...(parando ? { parando } : {}) };
       try {
         const { dono } = await deps.lerTrava();
         if (!dono) return { tipo: "ninguem" };
@@ -77,18 +135,6 @@ export function criarInicio(deps: DepsInicio) {
         return { ok: false, mensagem: e instanceof Error && e.message ? e.message : GENERICA };
       } finally {
         ocupado = false;
-      }
-    },
-
-    async parar(): Promise<Resultado> {
-      const servidor = ativo;
-      if (!servidor) return { ok: false, mensagem: "O servidor deste PC não está rodando." };
-      try {
-        await servidor.pararServidor();
-        if (ativo === servidor) ativo = undefined;
-        return { ok: true };
-      } catch (e) {
-        return { ok: false, mensagem: e instanceof Error && e.message ? e.message : GENERICA };
       }
     },
 

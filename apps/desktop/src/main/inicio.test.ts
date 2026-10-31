@@ -2,6 +2,8 @@ import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import { criarInicio, erroSemGrupo, type DepsInicio } from "./inicio.js";
 
+const RAPIDO = { passoMs: 1, tentativas: 5 };
+
 function servidorFalso() {
   const e = new EventEmitter();
   const pararServidor = vi.fn(async () => {
@@ -129,5 +131,73 @@ describe("jogar", () => {
     const d = deps({ endereco: "" });
     await expect(criarInicio(d).jogar()).rejects.toThrow("endereço");
     expect(d.copiar).not.toHaveBeenCalled();
+  });
+});
+
+describe("encerrar (Sair do app)", () => {
+  it("sem servidor no ar sai sem perguntar", async () => {
+    const confirmar = vi.fn(async () => true);
+    expect(await criarInicio(deps()).encerrar(confirmar)).toBe(true);
+    expect(confirmar).not.toHaveBeenCalled();
+  });
+
+  it("com servidor: confirma, para, espera a trava ficar livre e só então libera a saída", async () => {
+    const ordem: string[] = [];
+    const s = servidorFalso();
+    s.pararServidor.mockImplementation(async () => {
+      ordem.push("parou");
+      s.emit("estado", { estado: "parado" });
+    });
+    let donoNoCartorio: { id: number; nome: string } | null = { id: 1, nome: "Este PC" };
+    const i = criarInicio(
+      deps({
+        hospedar: async () => ({ servidor: s }),
+        lerTrava: async () => {
+          ordem.push("leu");
+          const atual = donoNoCartorio;
+          donoNoCartorio = null; // o cartório solta na 2ª leitura
+          return { dono: atual };
+        },
+      }),
+      RAPIDO,
+    );
+    await i.hospedar();
+    expect(await i.encerrar(async () => true)).toBe(true);
+    expect(ordem).toEqual(["parou", "leu", "leu"]);
+  });
+
+  it("se o usuário recusar, o servidor continua no ar e o app não sai", async () => {
+    const s = servidorFalso();
+    const i = criarInicio(deps({ hospedar: async () => ({ servidor: s }) }), RAPIDO);
+    await i.hospedar();
+    expect(await i.encerrar(async () => false)).toBe(false);
+    expect(s.pararServidor).not.toHaveBeenCalled();
+    expect(i.ativo()).toBe(true);
+  });
+
+  it("parada que falha ou estoura o prazo não libera a saída", async () => {
+    const falha = servidorFalso();
+    falha.pararServidor.mockRejectedValue(new Error("travou"));
+    const i = criarInicio(deps({ hospedar: async () => ({ servidor: falha }) }), RAPIDO);
+    await i.hospedar();
+    expect(await i.encerrar(async () => true)).toBe(false);
+
+    const lento = servidorFalso();
+    lento.pararServidor.mockImplementation(() => new Promise(() => {}));
+    const j = criarInicio(deps({ hospedar: async () => ({ servidor: lento }) }), RAPIDO);
+    await j.hospedar();
+    expect(await j.encerrar(async () => true, 20)).toBe(false);
+  });
+
+  it("durante a parada o estado mostra 'parando'", async () => {
+    const s = servidorFalso();
+    let liberar!: () => void;
+    s.pararServidor.mockImplementation(() => new Promise<void>((ok) => (liberar = ok)));
+    const i = criarInicio(deps({ hospedar: async () => ({ servidor: s }) }), RAPIDO);
+    await i.hospedar();
+    const parada = i.parar();
+    expect(await i.estado()).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565", parando: true });
+    liberar();
+    await parada;
   });
 });

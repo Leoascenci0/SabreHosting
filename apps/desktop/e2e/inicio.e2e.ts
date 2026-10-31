@@ -1,6 +1,6 @@
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,16 +17,27 @@ interface Espiao {
 let aberto: ElectronApplication | undefined;
 let dados: string | undefined;
 
+function dadosAtual(): string {
+  if (!dados) throw new Error("sem pasta de dados");
+  return dados;
+}
+
 function viva(): ElectronApplication {
   if (!aberto) throw new Error("app não aberto");
   return aberto;
 }
 
-async function abrir(cenario: string): Promise<Page> {
+async function abrir(cenario: string, extra: Record<string, string> = {}): Promise<Page> {
   dados = mkdtempSync(join(tmpdir(), "sabre-e2e-"));
   aberto = await electron.launch({
     args: [...semSandbox, `--user-data-dir=${dados}`, pastaApp],
-    env: { ...process.env, SABRE_E2E: "1", SABRE_E2E_CENARIO: cenario } as Record<string, string>,
+    env: {
+      ...process.env,
+      SABRE_E2E: "1",
+      SABRE_E2E_CENARIO: cenario,
+      SABRE_E2E_REGISTRO: join(dados, "registro.txt"),
+      ...extra,
+    } as Record<string, string>,
     timeout: 20_000,
   });
   const pagina = await viva().firstWindow();
@@ -105,7 +116,7 @@ describe("tela inicial", () => {
     const copias = await viva().evaluate(
       () => (globalThis as { __sabreE2EInicio?: { copias: string[] } }).__sabreE2EInicio?.copias,
     );
-    expect(copias).toEqual(["10.0.0.5:25565"]);
+    expect(copias).toEqual(["mundo.exemplo.net"]);
     expect((await espiao()).spawns).toEqual([]);
     await capturar(p, "outro");
   });
@@ -127,5 +138,40 @@ describe("tela inicial", () => {
     await p.locator("#confirmar-parar").click();
     await p.locator('#cartao[data-estado="ninguem"]').waitFor();
     expect((await espiao()).spawns).toHaveLength(1);
+    // A trava voltou ao cartório depois de Parar.
+    const dono = await viva().evaluate(() => {
+      const g = (globalThis as { __sabreE2EInicio?: { dono(): unknown } }).__sabreE2EInicio;
+      return { lido: g !== undefined, dono: g?.dono() ?? null };
+    });
+    expect(dono).toEqual({ lido: true, dono: null });
+  });
+
+  it("sem endereço do grupo: avisa e não mostra Jogar quebrado", async () => {
+    const p = await abrir("outro", { SABRE_E2E_SEM_ENDERECO: "1" });
+    await expect(p.locator("#detalhe").innerText()).resolves.toBe(
+      "Endereço do grupo ainda não configurado",
+    );
+    expect(await visiveis(p)).toEqual([]);
+  });
+
+  it("Sair com o servidor no ar: para, solta a trava e só então fecha o app", async () => {
+    const p = await abrir("eu");
+    const registro = join(dadosAtual(), "registro.txt");
+    const saiu = new Promise<void>((ok) =>
+      viva()
+        .process()
+        .once("exit", () => ok()),
+    );
+    const tentativa = viva().evaluate(() =>
+      (globalThis as { __sabreE2E?: { sair(): Promise<void> } }).__sabreE2E?.sair(),
+    );
+    await p.locator("#principal").waitFor({ state: "attached" });
+    await Promise.race([saiu, tentativa.catch(() => undefined)]);
+    await saiu;
+    // Quando o processo saiu, a ordem já estava gravada: parou → soltou.
+    expect(existsSync(registro)).toBe(true);
+    const fatos = readFileSync(registro, "utf8").trim().split("\n");
+    expect(fatos.indexOf("parou")).toBeGreaterThanOrEqual(0);
+    expect(fatos.indexOf("soltar")).toBeGreaterThan(fatos.indexOf("parou"));
   });
 });

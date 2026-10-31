@@ -6,7 +6,7 @@ export type EstadoInicio =
   | { tipo: "sem-cartorio"; motivo: MotivoSemCartorio }
   | { tipo: "ninguem" }
   | { tipo: "outro"; nomePc: string; endereco: string }
-  | { tipo: "eu"; endereco: string };
+  | { tipo: "eu"; endereco: string; parando?: boolean };
 
 export type Resultado = { ok: true } | { ok: false; mensagem: string };
 

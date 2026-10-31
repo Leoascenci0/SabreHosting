@@ -31,6 +31,8 @@ const MOTIVOS = {
 let atual: EstadoInicio = { tipo: "carregando" };
 let ocupado: string | undefined;
 let copiado = false;
+let ocupadoRemoto: string | undefined; // parada em curso iniciada por fora da tela (ex.: Sair na bandeja)
+const SEM_ENDERECO = "Endereço do grupo ainda não configurado";
 const COPIADO = "Endereço copiado. Cole no Minecraft para entrar.";
 
 function mostrarErro(mensagem: string): void {
@@ -41,7 +43,11 @@ function mostrarErro(mensagem: string): void {
 function desenhar(): void {
   const e = atual;
   cartao.dataset["estado"] = e.tipo;
-  cartao.setAttribute("aria-busy", String(e.tipo === "carregando" || ocupado !== undefined));
+  cartao.setAttribute(
+    "aria-busy",
+    String(e.tipo === "carregando" || ocupado !== undefined || (e.tipo === "eu" && !!e.parando)),
+  );
+  ocupadoRemoto = undefined;
   principal.hidden = parar.hidden = tentar.hidden = true;
   principal.dataset["acao"] = "";
   switch (e.tipo) {
@@ -63,28 +69,38 @@ function desenhar(): void {
       break;
     case "outro":
       status.textContent = `Servidor no PC do ${e.nomePc}`;
-      detalhe.textContent = copiado ? COPIADO : e.endereco ? `Endereço: ${e.endereco}` : "";
+      detalhe.textContent = copiado
+        ? COPIADO
+        : e.endereco
+          ? `Endereço: ${e.endereco}`
+          : SEM_ENDERECO;
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
-      principal.hidden = false;
+      principal.hidden = e.endereco === "";
       break;
     case "eu":
       status.textContent = "Você está hospedando";
-      detalhe.textContent = copiado ? COPIADO : e.endereco ? `Endereço: ${e.endereco}` : "";
+      detalhe.textContent = copiado
+        ? COPIADO
+        : e.endereco
+          ? `Endereço: ${e.endereco}`
+          : SEM_ENDERECO;
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
-      principal.hidden = false;
+      principal.hidden = e.endereco === "";
       parar.hidden = false;
+      if (e.parando) ocupadoRemoto = "Parando o servidor…";
       break;
   }
-  if (ocupado !== undefined) {
+  const emCurso = ocupado ?? ocupadoRemoto;
+  if (emCurso !== undefined) {
     // Ação demorada: texto de progresso e nenhum botão clicável de novo.
     principal.hidden = false;
-    principal.textContent = ocupado;
+    principal.textContent = emCurso;
     parar.hidden = true;
   }
   for (const b of [principal, parar, tentar, confirmarParar, cancelarParar]) {
-    b.disabled = ocupado !== undefined;
+    b.disabled = emCurso !== undefined;
   }
 }
 

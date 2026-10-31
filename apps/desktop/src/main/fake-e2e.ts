@@ -1,7 +1,7 @@
 // Só entra em cena com SABRE_E2E=1 (principal.ts faz o import dinâmico sob essa guarda).
 // Cartório falso com estado + servidor Minecraft de mentira: nenhuma porta abre, nenhum mundo é tocado.
 import { EventEmitter } from "node:events";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -13,19 +13,22 @@ import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 export type Cenario = "ninguem" | "outro" | "eu" | "sem-cartorio";
 const NEO = "21.1.172";
 const MEU_ID = 1;
-const ENDERECO = "10.0.0.5:25565";
+const ENDERECO = "mundo.exemplo.net";
 
 export interface Espiao {
   spawns: { cmd: string; args: readonly string[]; cwd: unknown }[];
 }
 
 /** Processo filho de mentira: diz "Done (" ao subir e sai ao receber "stop". */
-function filhoFalso(): ChildProcess {
+function filhoFalso(registrar: (e: string) => void): ChildProcess {
   const f = new EventEmitter() as EventEmitter & Record<string, unknown>;
   const stdin = new PassThrough();
   const stdout = new PassThrough();
   stdin.on("data", (d: Buffer) => {
-    if (String(d).includes("stop")) setTimeout(() => f.emit("close", 0), 10);
+    if (String(d).includes("stop")) {
+      registrar("parou");
+      setTimeout(() => f.emit("close", 0), 10);
+    }
   });
   f["stdin"] = stdin;
   f["stdout"] = stdout;
@@ -43,6 +46,11 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
   mkdirSync(dirArgs, { recursive: true });
   for (const a of ["unix_args.txt", "win_args.txt"]) writeFileSync(join(dirArgs, a), "# args\n");
 
+  // Ordem dos fatos, para o E2E provar "parou → soltou a trava → só então saiu".
+  const registrar = (evento: string): void => {
+    const arquivo = process.env["SABRE_E2E_REGISTRO"];
+    if (arquivo) appendFileSync(arquivo, `${evento}\n`);
+  };
   let dono: { id: number; nome: string } | null =
     cenario === "outro" ? { id: 2, nome: "Lucas" } : null;
   let epoca = 1;
@@ -72,6 +80,7 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
     },
     renovar: async () => (dono?.id === MEU_ID ? aceita() : recusa()),
     soltar: async () => {
+      registrar("soltar");
       if (dono?.id === MEU_ID) dono = null;
       epoca++;
       return aceita();
@@ -79,7 +88,7 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
   };
 
   const copias: string[] = [];
-  (globalThis as Record<string, unknown>)["__sabreE2EInicio"] = { copias };
+  (globalThis as Record<string, unknown>)["__sabreE2EInicio"] = { copias, dono: () => dono };
   return {
     lerTrava: cliente.estadoTrava,
     hospedar: async (aoPerder) => {
@@ -93,11 +102,11 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
         plataforma: "linux",
         spawnFn: (cmd: string, args: readonly string[], opcoes: SpawnOptions) => {
           espiao.spawns.push({ cmd, args, cwd: opcoes.cwd });
-          return filhoFalso();
+          return filhoFalso(registrar);
         },
       });
     },
-    endereco: ENDERECO,
+    endereco: process.env["SABRE_E2E_SEM_ENDERECO"] === "1" ? "" : ENDERECO,
     copiar: (t) => void copias.push(t),
   };
 }
