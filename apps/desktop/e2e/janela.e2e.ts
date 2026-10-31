@@ -68,6 +68,7 @@ describe("janela do SabreHosting", () => {
     ).toEqual([
       "abrirComWindows",
       "backups",
+      "boasVindas",
       "configuracoes",
       "grupo",
       "importar",

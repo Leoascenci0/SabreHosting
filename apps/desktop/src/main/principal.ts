@@ -36,6 +36,7 @@ import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./age
 import { criarBackups, type Backups } from "./backups.js";
 import { backupParado, depsBackupsReais } from "./deps-backups.js";
 import { clienteDoAmbiente, depsReais } from "./deps-reais.js";
+import { registrarBoasVindas } from "./boas-vindas-app.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
@@ -599,6 +600,13 @@ if (!app.requestSingleInstanceLock()) {
       versaoApp,
       await criarImportacaoDoApp(inicioApp),
     );
+    await registrarBoasVindas({
+      dados: app.getPath("userData"),
+      janela: () => janela,
+      permitir: (evento) => {
+        if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
+      },
+    });
     bandeja = criarBandeja();
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {

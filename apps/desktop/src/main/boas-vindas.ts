@@ -22,7 +22,7 @@ export interface DepsBoasVindas {
   /** Passo elevado: conexão provisória → usar o convite → conexão definitiva com a chave própria. Devolve o token. */
   entrar(convite: Convite, chaves: ParDeChaves): Promise<{ token: string }>;
   /** `GET /grupo` já com o token novo. */
-  lerGrupo(token: string): Promise<{ nome: string; endereco_jogar: string }>;
+  lerGrupo(token: string, portaCartorio: number): Promise<{ nome: string; endereco_jogar: string }>;
   pastaPadrao(): string;
 }
 
@@ -135,7 +135,7 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
         await deps.cofre.guardar(token);
         let grupo: { nome: string; endereco?: string } = { nome: usar.grupo };
         try {
-          const g = await deps.lerGrupo(token);
+          const g = await deps.lerGrupo(token, usar.portaCartorio);
           grupo = { nome: g.nome, endereco: g.endereco_jogar };
         } catch {
           // Já entrou; o nome do convite basta e o endereço vem depois pelo Início.
