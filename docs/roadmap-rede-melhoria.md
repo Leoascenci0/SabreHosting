@@ -56,3 +56,12 @@ Melhorias achadas durante os itens do `docs/roadmap-rede.md` (skill `maxima` ›
   *Confirmação:* testes de cada caso; `tests/infra` verde como root e como usuário comum (S-03).
   *Origem:* rede-1.5 · PR #97 · qa segurança + qa integridade
 
+- [ ] **1.3 — Tirar o peer do WireGuard quando o PC é revogado**
+  *O que fazer:* hoje `POST /pcs/:id/revogar` tira só o acesso ao cartório; o peer do PC continua na rede privada. Quando o
+  PC é revogado, o cartório pede ao ajudante do WireGuard (socket) para remover o peer e liberar o IP; falha do ajudante
+  não desfaz a revogação (fica registrada para nova tentativa).
+  *Arquivo:* `services/cartorio/src/ajudante.ts`, `services/cartorio/src/servidor.ts`, `infra/vps/wg/`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste com ajudante falso: revogar chama a remoção do peer uma vez; ajudante fora do ar não reverte a revogação.
+  *Depende de:* ajudante do WireGuard instalado na máquina da nuvem (ação do Eliel [P] para a instalação real).
+  *Origem:* cartmel-2.2 · PR #163 · qa segurança + qa integridade

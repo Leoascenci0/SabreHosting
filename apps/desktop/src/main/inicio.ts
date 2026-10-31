@@ -9,6 +9,8 @@ interface TravaLida {
 export interface ServidorAtivo {
   pararServidor(): Promise<void>;
   on(evento: "estado", ouvinte: (e: { estado: string }) => void): unknown;
+  /** Estado atual do servidor (o `ServidorMinecraft` do núcleo tem). */
+  estado?: string;
 }
 
 export interface DepsInicio {
@@ -25,6 +27,8 @@ export interface DepsInicio {
   copiar(texto: string): void;
   /** Há um backup sendo restaurado? Hospedar espera (regra de ouro 2: nunca servidor com o mundo sendo trocado). */
   restaurando?(): boolean;
+  /** Servidor deste PC criado (ainda pode estar subindo): quem agenda o backup passa a ouvir o estado dele. */
+  aoServidor?(servidor: ServidorAtivo): void;
 }
 
 export const SEM_GRUPO = "Este PC ainda não entrou no grupo.";
@@ -212,6 +216,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       try {
         const { servidor } = await deps.hospedar(() => avisar());
         ativo = servidor;
+        deps.aoServidor?.(servidor);
         servidor.on("estado", ({ estado }) => {
           if (estado === "parado" || estado === "caiu") {
             if (ativo === servidor) ativo = undefined;

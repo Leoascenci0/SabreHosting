@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { connect, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -127,6 +127,111 @@ describe("servidor", () => {
   });
 });
 
+describe("conexões", () => {
+  it("conexão ociosa (sem enviar nada) é derrubada pelo servidor", async () => {
+    servidor = await servirArquivos({
+      endereco: "127.0.0.1",
+      porta: 0,
+      permitirLoopbackParaTeste: true,
+      conferirToken: async () => null,
+      arquivos: () => undefined,
+      tempoOciosoMs: 150,
+    });
+    const socket = connect(portaDoServidor(), "127.0.0.1");
+    await new Promise<void>((ok) => socket.once("close", () => ok()));
+    expect(socket.destroyed).toBe(true);
+  });
+});
+
+describe("limite de tentativas erradas e cache de token", () => {
+  let agora = 1_000_000;
+  let consultas = 0;
+  const subirCom = async (conferir: (t: string) => Promise<string | null>) =>
+    (servidor = await servirArquivos({
+      endereco: "127.0.0.1",
+      porta: 0,
+      permitirLoopbackParaTeste: true,
+      agora: () => agora,
+      conferirToken: (t) => (consultas++, conferir(t)),
+      arquivos: (h) => (h === HASH ? { caminho: arquivo } : undefined),
+    }));
+  const comToken = (t: string) => fetch(url(), { headers: { authorization: `Bearer ${t}` } });
+  const valido = async (t: string) => (t === CREDENCIAL ? "pc-do-lucas" : null);
+  beforeEach(() => {
+    agora = 1_000_000;
+    consultas = 0;
+  });
+
+  it("6ª tentativa errada: 429 sem chamar o cartório, mesmo com token válido; libera após 60 s", async () => {
+    await subirCom(valido);
+    for (let i = 0; i < 5; i++) expect((await comToken("errado")).status).toBe(401);
+    expect(consultas).toBe(5);
+    consultas = 0;
+    expect((await comToken("errado")).status).toBe(429);
+    expect((await comToken(CREDENCIAL)).status).toBe(429);
+    expect((await fetch(url())).status).toBe(429);
+    expect(consultas).toBe(0);
+    agora += 60_000;
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+  });
+  it("a janela conta do 1º erro e os 429 não a prolongam", async () => {
+    await subirCom(valido);
+    const t0 = agora;
+    expect((await comToken("errado")).status).toBe(401);
+    for (const salto of [10_000, 10_000, 10_000, 20_000]) {
+      agora += salto;
+      expect((await comToken("errado")).status).toBe(401);
+    }
+    agora = t0 + 55_000;
+    expect((await comToken(CREDENCIAL)).status).toBe(429);
+    agora = t0 + 59_999;
+    expect((await comToken(CREDENCIAL)).status).toBe(429);
+    agora = t0 + 60_000;
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+  });
+  it("falhas vencidas são esquecidas: depois de 61 s o IP recomeça do zero e volta a ser limitado", async () => {
+    await subirCom(valido);
+    for (let i = 0; i < 4; i++) expect((await comToken("errado")).status).toBe(401);
+    agora += 61_000;
+    for (let i = 0; i < 5; i++) expect((await comToken("errado")).status).toBe(401);
+    expect((await comToken("errado")).status).toBe(429);
+  });
+  it("token ausente também conta como tentativa errada", async () => {
+    await subirCom(valido);
+    for (let i = 0; i < 5; i++) expect((await fetch(url())).status).toBe(401);
+    expect((await fetch(url())).status).toBe(429);
+  });
+  it("token válido repetido consulta o cartório 1 vez; após 30 s consulta de novo", async () => {
+    await subirCom(valido);
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+    expect(consultas).toBe(1);
+    agora += 29_000;
+    await comToken(CREDENCIAL);
+    expect(consultas).toBe(1);
+    agora += 1_000;
+    await comToken(CREDENCIAL);
+    expect(consultas).toBe(2);
+  });
+  it("token inválido não entra no cache: cada tentativa consulta o cartório", async () => {
+    await subirCom(valido);
+    await comToken("errado");
+    await comToken("errado");
+    expect(consultas).toBe(2);
+  });
+  it("503 (cartório fora) não conta como erro nem entra no cache", async () => {
+    let fora = true;
+    await subirCom(async (t) => {
+      if (fora) throw new Error("cartório fora");
+      return valido(t);
+    });
+    for (let i = 0; i < 8; i++) expect((await comToken(CREDENCIAL)).status).toBe(503);
+    fora = false;
+    expect((await comToken(CREDENCIAL)).status).toBe(200);
+    expect(consultas).toBe(9);
+  });
+});
+
 describe("cliente", () => {
   const baixar = (destino: string, hash = HASH) =>
     pedirArquivo({
@@ -154,9 +259,10 @@ describe("cliente", () => {
   });
   it("conexão cortada no meio retoma com Range e o hash final é igual", async () => {
     const pedidos: Array<string | undefined> = [];
+    const autorizacoes: Array<string | undefined> = [];
     falso = createServer((req, res) => {
       pedidos.push(req.headers.range);
-      expect(req.headers.authorization).toBe(`Bearer ${CREDENCIAL}`);
+      autorizacoes.push(req.headers.authorization);
       if (!req.headers.range) {
         res.writeHead(200, { "content-length": conteudo.length, etag: `"${HASH}"` });
         return void res.write(conteudo.subarray(0, 3000), () =>
@@ -175,8 +281,39 @@ describe("cliente", () => {
     await new Promise<void>((ok) => f.listen(0, "127.0.0.1", ok));
     const destino = join(pasta, "saida.pacote");
     await baixar(destino);
+    expect(autorizacoes.length).toBeGreaterThan(1);
+    expect(autorizacoes.every((a) => a === `Bearer ${CREDENCIAL}`)).toBe(true);
     expect(pedidos[0]).toBeUndefined();
     expect(pedidos[1]).toMatch(/^bytes=[1-9]\d*-$/);
+    expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
+  });
+  it("arquivo completo como parcial não gera segundo download: só confere o hash", async () => {
+    await subir();
+    let corpos = 0;
+    const destino = join(pasta, "saida.pacote");
+    await writeFile(`${destino}.parcial`, conteudo);
+    await writeFile(`${destino}.parcial.meta`, `"${HASH}"`);
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (...a: Parameters<typeof fetch>) => {
+      const r = await original(...a);
+      if (r.status === 200 || r.status === 206) corpos++;
+      return r;
+    }) as typeof fetch;
+    try {
+      await baixar(destino);
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(corpos).toBe(0);
+    expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
+    expect(existsSync(`${destino}.parcial`)).toBe(false);
+  });
+  it("parcial do tamanho certo mas com conteúdo errado: descarta e baixa de novo", async () => {
+    await subir();
+    const destino = join(pasta, "saida.pacote");
+    await writeFile(`${destino}.parcial`, Buffer.alloc(conteudo.length, 1));
+    await writeFile(`${destino}.parcial.meta`, `"${HASH}"`);
+    await baixar(destino);
     expect(sha(await (await import("node:fs/promises")).readFile(destino))).toBe(HASH);
   });
   it("hash errado: apaga o parcial e não cria o destino", async () => {

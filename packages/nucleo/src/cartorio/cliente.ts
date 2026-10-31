@@ -18,12 +18,15 @@ export type TipoErroCartorio = "rede" | "servidor" | "acesso" | "resposta" | "ca
 
 /** Nunca leva o token: nem na mensagem, nem na causa. */
 export class ErroCartorio extends Error {
+  /** Código HTTP da recusa (só nas do tipo "resposta"); a tela escolhe a mensagem por ele. */
+  readonly status: number | undefined;
   constructor(
     mensagem: string,
     readonly tipo: TipoErroCartorio,
-    opcoes?: ErrorOptions,
+    opcoes?: ErrorOptions & { status?: number },
   ) {
     super(mensagem, opcoes);
+    this.status = opcoes?.status;
     this.name = "ErroCartorio";
   }
 }
@@ -174,6 +177,7 @@ export function criarCliente(opcoes: OpcoesCliente) {
       throw new ErroCartorio(
         `O cartório recusou o pedido (${resposta.status}).${erro}`,
         "resposta",
+        { status: resposta.status },
       );
     }
     if (!p.validar) {
@@ -255,6 +259,13 @@ export function criarCliente(opcoes: OpcoesCliente) {
         corpo: { nomePc, validadeHoras },
         repetir: false,
         validar: validarConviteCriado,
+      }),
+    /** Só o dono. Não repete: tirar duas vezes daria 404 e esconderia o primeiro sucesso. 204 = tirado. */
+    revogarPc: (id: number) =>
+      chamar<undefined>({
+        metodo: "POST",
+        rota: `/pcs/${encodeURIComponent(id)}/revogar`,
+        repetir: false,
       }),
     /**
      * Pelo túnel provisório, sem token. Repete: o cartório aceita a mesma chave de novo (mesmo IP, token novo), então

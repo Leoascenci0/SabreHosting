@@ -10,6 +10,8 @@ export interface OpcoesDepsBackups {
   pastaBackups: string | undefined;
   /** Pasta do mundo do servidor (até app-1.3: `SABRE_PASTA_MUNDO`). */
   pastaDoMundo: string | undefined;
+  /** Pasta do servidor (até app-1.3: `SABRE_PASTA_SERVIDOR`); o mundo tem de estar direto dentro dela. */
+  pastaDoServidor?: string | undefined;
   cliente: OpcoesRenovador["cliente"] & {
     estadoTrava(): Promise<{ epoca: number }>;
   };
@@ -64,6 +66,7 @@ export function depsBackups(o: OpcoesDepsBackups): DepsBackups {
           sha256: await hashDoArquivo(alvo.caminho),
           pastaDoMundo,
           pastaBackups,
+          ...(o.pastaDoServidor ? { pastaDoServidor: o.pastaDoServidor } : {}),
           temTrava: () => renovador.temTrava(),
           servidorParado: () => !o.servidorRodando(),
           versao: Math.max(0, ...lista.map((b) => b.versao)),
@@ -93,6 +96,7 @@ export function depsBackupsReais(
   return depsBackups({
     pastaBackups: env["SABRE_PASTA_BACKUPS"],
     pastaDoMundo: env["SABRE_PASTA_MUNDO"],
+    pastaDoServidor: env["SABRE_PASTA_SERVIDOR"],
     cliente: cliente ?? {
       pegar: semGrupo,
       renovar: semGrupo,

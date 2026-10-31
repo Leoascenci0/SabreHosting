@@ -53,14 +53,12 @@ async function servidorNaPasta(
   return true;
 }
 
-// Cartório, endereço e pasta do servidor vêm do ambiente até a tela de primeira vez (app-1.3); ver .env.exemplo.
-export function depsReais(
+/** O cliente do cartório feito do ambiente; `exigir()` lança o erro de "sem grupo" quando falta ou é inválido. */
+export function clienteDoAmbiente(
   env: NodeJS.ProcessEnv,
-  copiar: (texto: string) => void,
-  extras: ExtrasDepsReais = {},
-): DepsInicio {
+  fetchFn?: typeof fetch,
+): () => ReturnType<typeof criarCliente> {
   const { SABRE_CARTORIO_URL: url, SABRE_CARTORIO_TOKEN: token } = env;
-  const { SABRE_PASTA_SERVIDOR: pasta, SABRE_JAVA: java, SABRE_NEOFORGE: neoforge } = env;
   let cliente: ReturnType<typeof criarCliente> | undefined;
   let falha: unknown;
   if (url && token) {
@@ -68,16 +66,26 @@ export function depsReais(
       cliente = criarCliente({
         url,
         cofre: { guardar: async () => {}, ler: async () => token },
-        ...(extras.fetchFn ? { fetchFn: extras.fetchFn } : {}),
+        ...(fetchFn ? { fetchFn } : {}),
       });
     } catch (e) {
       falha = e;
     }
   }
-  const exigir = () => {
+  return () => {
     if (cliente) return cliente;
     throw falha ?? erroSemGrupo();
   };
+}
+
+// Cartório, endereço e pasta do servidor vêm do ambiente até a tela de primeira vez (app-1.3); ver .env.exemplo.
+export function depsReais(
+  env: NodeJS.ProcessEnv,
+  copiar: (texto: string) => void,
+  extras: ExtrasDepsReais = {},
+): DepsInicio {
+  const { SABRE_PASTA_SERVIDOR: pasta, SABRE_JAVA: java, SABRE_NEOFORGE: neoforge } = env;
+  const exigir = clienteDoAmbiente(env, extras.fetchFn);
   return {
     lerTrava: async () => exigir().estadoTrava(),
     // Único caminho que sobe o servidor: pega a trava antes e devolve depois (regra de ouro 1).

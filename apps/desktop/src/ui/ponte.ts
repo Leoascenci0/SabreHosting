@@ -16,6 +16,7 @@ export interface ConfiguracoesDaTela {
   abrirComWindows: boolean;
   distanciaVisao: number;
   distanciaSimulacao: number;
+  intervaloBackupMin: number;
 }
 
 export interface BackupDaTela {
@@ -31,6 +32,14 @@ export interface EstadoBackups {
   erro?: string;
 }
 
+export interface PcDaTela {
+  id: number;
+  nome: string;
+  dono: boolean;
+}
+
+export type EstadoGrupo = { dono: false } | { dono: true; pcs: PcDaTela[]; erro?: string };
+
 export interface PonteSabre {
   versao(): Promise<string>;
   abrirComWindows: {
@@ -44,6 +53,10 @@ export interface PonteSabre {
   backups: {
     listar(): Promise<EstadoBackups>;
     restaurar(nome: string): Promise<Resultado>;
+  };
+  grupo: {
+    estado(): Promise<EstadoGrupo>;
+    tirar(id: number): Promise<Resultado>;
   };
   inicio: {
     estado(): Promise<EstadoInicio>;
