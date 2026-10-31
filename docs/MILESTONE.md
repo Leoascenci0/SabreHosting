@@ -13,6 +13,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 | **M4 — Troca sem queda** | servidor muda sozinho para o PC mais forte; host que cai é substituído | migra |
 | **M5 — Adeus hospedagem** | histórico no Drive, atualização automática, piloto e cancelamento da hospedagem | drive, app 3.2, piloto |
 | **M6 — Launcher próprio** | o SabreHosting abre o jogo sozinho, sem o Prism (depende da aprovação da Microsoft) | lanc (bloco 2) |
+| **M7 — Construir juntos** | biblioteca de construções (Litematica) no app; holograma posicionado por um aparece para todos | bibl |
 
 ## Em curso
 
@@ -42,6 +43,9 @@ app-2.1, app-2.2, app-3.1 [P]; lanc-1.1 → lanc-1.2 [P] → lanc-1.3 [P] → la
 **M5 — Adeus hospedagem:** drive-1.1 → drive-1.2 [P]; app-3.2 [P, D9]; piloto-1.1 → 1.2 → 1.3 [P].
 
 **M6 — Launcher próprio** (só com a aprovação da Microsoft): lanc-2.2 [P] · lanc-2.3 → lanc-2.4 [P].
+
+**M7 — Construir juntos** (D9; depois do M3): bibl-1.1 → bibl-1.2 → bibl-1.3 [P]; bibl-2.1 [P] (SOZINHO; pode
+  abrir D-bibl-1) → bibl-2.2 → bibl-2.3; bibl-3.1 [P]. O bibl-1.1 só depende do cartório e pode entrar antes, numa onda folgada.
 
 ## Pendente do Eliel
 
