@@ -242,4 +242,35 @@ describe("infra/vps/gerar-segredo.sh", () => {
     expect(readFileSync(arq, "utf8")).toBe(conteudo);
     expect(b.stdout + b.stderr).not.toContain(segredo);
   });
+
+  it("openssl que falha: sai com erro e não deixa arquivo", () => {
+    const falso = join(estado, "bin");
+    mkdirSync(falso);
+    writeFileSync(join(falso, "openssl"), "#!/bin/sh\nexit 1\n");
+    chmodSync(join(falso, "openssl"), 0o755);
+    const arq = join(estado, "cartorio.env");
+    const r = spawnSync("bash", [GERAR, arq], {
+      encoding: "utf8",
+      env: { PATH: `${falso}:${process.env.PATH}` },
+    });
+    expect(r.status).not.toBe(0);
+    expect(existsSync(arq)).toBe(false);
+  });
+
+  it("arquivo com segredo inválido é refeito", () => {
+    const arq = join(estado, "cartorio.env");
+    writeFileSync(arq, "SABRE_CARTORIO_SEGREDO_ADMIN=\n", { mode: 0o600 });
+    expect(gerar(arq).status).toBe(0);
+    expect(readFileSync(arq, "utf8")).toMatch(/^SABRE_CARTORIO_SEGREDO_ADMIN=[0-9a-f]{64}\n$/);
+  });
+
+  it("arquivo bom com permissão frouxa volta a 0600 sem trocar o segredo", () => {
+    const arq = join(estado, "cartorio.env");
+    gerar(arq);
+    const antes = readFileSync(arq, "utf8");
+    chmodSync(arq, 0o644);
+    expect(gerar(arq).status).toBe(0);
+    expect(statSync(arq).mode & 0o777).toBe(0o600);
+    expect(readFileSync(arq, "utf8")).toBe(antes);
+  });
 });
