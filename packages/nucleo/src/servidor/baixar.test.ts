@@ -47,6 +47,22 @@ afterEach(async () => {
   await rm(pasta, { recursive: true, force: true });
 });
 
+describe("http na rede privada", () => {
+  it.each(["http://192.168.0.5/a", "http://10.66.1.5/a", "http://8.8.8.8/a"])(
+    "recusa %s mesmo com permitirHttpPrivado",
+    async (u) => {
+      await expect(
+        baixarConferido({
+          url: u,
+          hashEsperado: hashCerto,
+          destino: join(pasta, "x"),
+          permitirHttpPrivado: true,
+        }),
+      ).rejects.toThrow(/https/);
+    },
+  );
+});
+
 describe("baixarConferido", () => {
   it("hash certo: renomeia para o destino e não deixa parcial", async () => {
     const destino = join(pasta, "a.jar");

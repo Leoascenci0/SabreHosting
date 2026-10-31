@@ -25,6 +25,10 @@ export interface OpcoesDownload {
   tempoTotal?: number;
   /** Só para teste: libera http em localhost/127.0.0.1. Nunca ligado pelo app. Padrão: falso. */
   permitirHttpLocal?: boolean;
+  /** Libera http só em IP da rede privada 10.66.0.x (WireGuard já cifra o caminho). Padrão: falso. */
+  permitirHttpPrivado?: boolean;
+  /** Cabeçalhos extras (ex.: Authorization). Vão só ao endereço pedido, nunca a um redirecionamento. */
+  cabecalhos?: Record<string, string>;
 }
 
 export class ErroDownload extends Error {
@@ -49,7 +53,16 @@ const tamanhoOuZero = (caminho: string) =>
     () => 0,
   );
 
-function validar({ url, hashEsperado, permitirHttpLocal = false }: OpcoesDownload): string {
+const IP_PRIVADO = /^10\.66\.0\.(?:\d{1,3})$/;
+const ehIpPrivado = (h: string) =>
+  IP_PRIVADO.test(h) && h.split(".").every((n) => Number(n) <= 255);
+
+function validar({
+  url,
+  hashEsperado,
+  permitirHttpLocal = false,
+  permitirHttpPrivado = false,
+}: OpcoesDownload): string {
   const { algoritmo, valor } = hashEsperado;
   const tamanho = TAMANHO_HEX[algoritmo] as number | undefined;
   if (!tamanho || !new RegExp(`^[0-9a-f]{${tamanho}}$`, "i").test(valor)) {
@@ -57,7 +70,10 @@ function validar({ url, hashEsperado, permitirHttpLocal = false }: OpcoesDownloa
   }
   const { protocol, hostname } = new URL(url);
   const local = hostname === "localhost" || hostname === "127.0.0.1";
-  if (protocol !== "https:" && !(permitirHttpLocal && protocol === "http:" && local)) {
+  const liberado =
+    protocol === "http:" &&
+    ((permitirHttpLocal && local) || (permitirHttpPrivado && ehIpPrivado(hostname)));
+  if (protocol !== "https:" && !liberado) {
     throw new ErroDownload("O download precisa usar https; recusei por segurança.");
   }
   return valor.toLowerCase();
@@ -67,6 +83,7 @@ interface Limites {
   tamanhoMaximo: number;
   tempoSemDados: number;
   tempoTotal: number;
+  cabecalhos: Record<string, string>;
 }
 
 const MAX_SALTOS = 5;
@@ -90,6 +107,9 @@ async function buscar(url: string, cabecalhos: Record<string, string>, sinal: Ab
       );
     }
     url = proximo.href;
+    cabecalhos = Object.fromEntries(
+      Object.entries(cabecalhos).filter(([k]) => ["range", "if-range"].includes(k)),
+    ); // token não acompanha redirecionamento
   }
 }
 
@@ -98,7 +118,7 @@ async function baixarParcial(url: string, parcial: string, limites: Limites): Pr
   const meta = `${parcial}.meta`;
   let validador = await readFile(meta, "utf8").catch(() => "");
   let inicio = validador ? await tamanhoOuZero(parcial) : 0;
-  const cabecalhos: Record<string, string> = {};
+  const cabecalhos: Record<string, string> = { ...limites.cabecalhos };
   if (inicio > 0) {
     cabecalhos.range = `bytes=${inicio}-`;
     cabecalhos["if-range"] = validador;
@@ -206,6 +226,7 @@ export async function baixarConferido(
     tamanhoMaximo: opcoes.tamanhoMaximo ?? 1024 ** 3,
     tempoSemDados: opcoes.tempoSemDados ?? 30_000,
     tempoTotal: opcoes.tempoTotal ?? 30 * 60_000,
+    cabecalhos: opcoes.cabecalhos ?? {},
   };
   const esperado = validar(opcoes);
   const parcial = `${destino}.parcial`;

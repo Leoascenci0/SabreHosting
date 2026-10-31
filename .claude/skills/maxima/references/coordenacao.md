@@ -21,14 +21,23 @@ Avisos sobem um nível por vez: o item avisa a **onda** (`send_message` para o i
 O Eliel se guia pela lista de chats do claude.ai/code; cada sessão tem que dizer de qual onda é.
 - **Numeração:** as ondas seguem um número único do projeto, que não volta a 1 (o próximo número fica no estado do
   coordenador e no `docs/MILESTONE.md`, seção "Em curso").
-- **Formato que o Eliel quer ver na lista:**
+- **Formato que o Eliel quer ver na lista** (ele abre **só** o chat da Máxima; o resto nasce dele):
   ```
-  Onda 20 — cartmel-1.1 · hostmel-2.1
-    Item 1 · cartmel-1.1 — revogar PC
-    Item 2 · hostmel-2.1 — calibrar a nota
-  Onda 21 — …
-    Item 1 · …
+  Máxima retomar (ou continuar)        ← o chat que o Eliel abre: coordenador
+    Onda 20 — cartmel-1.1 · hostmel-2.1
+      Item 1 · cartmel-1.1 — revogar PC
+      Item 2 · hostmel-2.1 — calibrar a nota
+    Onda 21 — …
+      Item 1 · …
   ```
+- **Limite do app (conferido em 31/10):** a lista lateral só dobra **um nível**: tudo o que nasce do chat da Máxima
+  aparece achatado debaixo dele, inclusive os itens (mesmo sendo filhos da onda). O Eliel decidiu manter assim (sem
+  arquivar e sem tirar a onda de dentro da Máxima); os títulos `Onda N` e `Item k` guiam a leitura. Não tente
+  contornar.
+- **Errado (enche o contexto):** o chat da Máxima se renomear para a onda (ex.: "Máxima — onda 58") e abrir os itens
+  direto debaixo dele. A onda é **sempre outra sessão**, criada pelo coordenador; só ela cria os itens.
+- **Bastão:** a coordenadora seguinte é criada pela atual com o título `Máxima continuar — <data> (<n>º bastão)`; as
+  ondas seguintes nascem dela e ficam debaixo dela.
 - **Título da sessão de onda:** `Onda <N> — <itens separados por " · ">`.
 - **Título da sessão de item:** `Item <k> · <sigla-id> — <título curto>`, com `k` = 1, 2, 3… na ordem em que a onda
   despacha (recomeça em 1 em cada onda).
@@ -77,7 +86,8 @@ O Eliel se guia pela lista de chats do claude.ai/code; cada sessão tem que dize
 
 Sem onda aberta (espere a atual fechar, usando a margem até 35%): grave o estado, commite e envie; crie a **sessão coordenadora seguinte**
 (`create_session`, mesmo modelo, prompt abaixo); apague o seu heartbeat; escreva no estado "bastão → <id novo>";
-termine. De dia, avise o Eliel em uma linha com o link da nova sessão.
+termine. Título da nova sessão: `Máxima continuar — <data> (<n>º bastão)`. De dia, avise o Eliel em uma linha com o
+link da nova sessão.
 
 > Você é a coordenadora da Máxima no SabreHosting (nível 1 de `references/coordenacao.md`). Siga a skill `maxima`,
 > modo `retomar`, a partir do estado `docs/ops/rodadas/coordenacao-<data>.md` no ramo `<ramo>` (bastão recebido de
