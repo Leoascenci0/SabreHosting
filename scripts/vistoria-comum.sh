@@ -22,8 +22,14 @@ git -C "$RAIZ" archive HEAD | tar -x -C "$PASTA"
 chown -R "$USUARIO" "$PASTA"
 chmod 755 "$PASTA"
 
-# su limpa o ambiente: repassa só o PATH (para achar node/npm) e usa a pasta temporária como HOME de trabalho.
+# su mantém parte do ambiente do root: repassa o PATH (para achar node/npm) e dá ao usuário um HOME e um cache do npm
+# próprios (o de /root não é dele). Certificado extra do proxy, se existir, vai numa cópia legível pelo usuário.
+CERT=""
+if [ -n "${NODE_EXTRA_CA_CERTS:-}" ] && [ -r "$NODE_EXTRA_CA_CERTS" ]; then
+  CERT="$PASTA/ca.pem"
+  cp "$NODE_EXTRA_CA_CERTS" "$CERT"
+  chown "$USUARIO" "$CERT"
+fi
 set +e
-su -s /bin/bash "$USUARIO" -c "export PATH='$PATH'; cd '$PASTA' && $INSTALAR && $COMANDO"
-CODIGO=$?
-exit "$CODIGO"
+su -s /bin/bash "$USUARIO" -c "export PATH='$PATH' HOME='$PASTA' npm_config_cache='$PASTA/.npm' NODE_EXTRA_CA_CERTS='$CERT'; cd '$PASTA' && $INSTALAR && $COMANDO"
+exit $?
