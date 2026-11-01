@@ -164,7 +164,7 @@ describe("tela de configurações", () => {
     await ir(p, "geral");
     expect(await legendas()).toEqual(["Geral"]);
     // Grupo e Mods têm tela própria (barra lateral › Grupo): sem aba aqui.
-    expect(await p.locator('[role="tab"]').allTextContents()).toEqual([
+    expect(await p.locator('[role="tab"]').allInnerTexts()).toEqual([
       "Geral",
       "Servidor",
       "Backups",
