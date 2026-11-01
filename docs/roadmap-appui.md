@@ -15,7 +15,7 @@ Um amigo que nunca viu o app entende em 5 segundos: **o servidor está ligado? p
 
 ## Itens (ordem de execução)
 
-- [ ] **1.1 — Estrutura da janela: barra lateral fixa e área de conteúdo**
+- [x] **1.1 — Estrutura da janela: barra lateral fixa e área de conteúdo** (PR #280)
   *O que fazer:* trocar "cartão que troca de tela" por uma estrutura fixa: barra lateral com **Início, Backups, Grupo, Configurações** (ícone + nome, item atual destacado), faixa de demonstração por cima, conteúdo à direita com largura boa (máx. ~960 px, centralizado), tamanho mínimo da janela. Atualizar `tokens.css` (escala de tipografia, espaços, sombras suaves, cores de estado: ligado/desligado/atenção) e `docs/design-system.md`. As telas atuais entram dentro da estrutura sem mudar de conteúdo ainda.
   *Arquivo:* `apps/desktop/src/ui/index.html`, `tela.css`, `tokens.css`, `tela.ts`, `docs/design-system.md`, testes
   **Tela no app:** barra lateral › Início / Backups / Grupo / Configurações.
