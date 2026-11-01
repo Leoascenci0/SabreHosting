@@ -14,3 +14,10 @@
 
 - **Onda 34:** ✅ lancmel-2.8 #252 (`javaw` reaproveitado confere tamanho + sha256) · controle #253. Melhorias dos PRs #244–#250: nenhuma nova. Backlog de código sem P esgotado. Revisão por diff + vistoria (sem `qa` separado). Custo: filha US$ 0,41; onda n/d.
 - **Encerramento:** fila sem P vazia. Exceção que parou: tudo o que sobra é P ou bloqueado (appmel-1.23 precisa de GitHub Actions; appmel-1.14a decisão de segurança; domínios 403; provas no Windows; D9). Watchdogs apagados. Bastão não passado (1 onda).
+
+## 4º bastão — dia (01/11, 10:33 Brasília)
+
+- Coordenadora: este chat, ramo `claude/sharp-sagan-biw69m`. Turno: dia, Eliel presente.
+- Conferência 10:33: repo.papermc.io e maven.neoforged.net seguem sem resposta (bloqueados).
+- Eliel decidiu appmel-1.14a: reemitir o pacote da conexão ao mesmo PC por até 30 min (DECISOES 01/11).
+- Onda 35: appmel-1.14 · appmel-1.23 (só o código; rodar o ensaio no GitHub segue P). hostmel-2.1 fica: precisa de PCs reais.

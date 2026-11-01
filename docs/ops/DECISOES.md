@@ -49,3 +49,4 @@
 | 2026-10-31 | **Importar o mundo da hospedagem lendo o .zip direto:** dependência nova de leitura de zip (pequena, muito usada, versão fixada no lockfile); o app valida cada caminho do zip (nada fora da pasta de destino). Decisão do Eliel | piloto-1.1 |
 | 2026-10-31 | **Rotação na pasta sincronizada (drive-1.1b) segue a mesma regra 10 + 7 dias** da decisão do appmel-1.11. Decidido pela Máxima (aplicação direta da decisão do Eliel) | drive-1.1b |
 | 2026-10-31 | **Dependência nova `electron-builder`** (MIT, devDependency do app, versão fixada no lockfile): gera o instalador NSIS do Windows no GitHub Actions; sem assinatura de código (D9 segue com o Eliel). Autorizado pelo item app-3.1 ("Pode, e siga sozinha") | app-3.1 |
+| 2026-11-01 | **Retomar a conexão sem convite novo (appmel-1.14):** o cartório pode reemitir o pacote da conexão só para o mesmo PC que gastou o convite, e só até 30 min depois do uso; passou disso, convite novo. Decisão do Eliel | appmel-1.14 |
