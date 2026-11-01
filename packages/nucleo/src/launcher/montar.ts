@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { createHash, randomBytes } from "node:crypto";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { baixarConferido, type OpcoesDownload } from "../servidor/baixar.js";
@@ -66,8 +66,14 @@ const HOSTS_JAVA = [
  * Baixa para um nome temporário único (pid + aleatório) e só então renomeia para o destino: duas montagens ao mesmo
  * tempo, ou duas peças com o mesmo caminho, nunca disputam o mesmo `.parcial`. Já conferido no cache: nada baixa.
  */
-async function baixarSemColisao(baixar: Baixar, o: OpcoesDownload): Promise<void> {
+async function baixarSemColisao(
+  baixar: Baixar,
+  o: OpcoesDownload,
+  /** Versão já marcada como montada: arquivo com este tamanho (do manifesto) dispensa reler o hash. */
+  tamanhoConfiavel?: number,
+): Promise<void> {
   try {
+    if (tamanhoConfiavel !== undefined && (await stat(o.destino)).size === tamanhoConfiavel) return;
     if (
       (await hashDoArquivo(o.destino, o.hashEsperado.algoritmo)) ===
       o.hashEsperado.valor.toLowerCase()
@@ -86,6 +92,19 @@ async function baixarSemColisao(baixar: Baixar, o: OpcoesDownload): Promise<void
     await rm(`${temporario}.parcial.meta`, { force: true });
   }
 }
+
+/** Marcador `.montada.json` lido do disco (entrada não confiável): só vale se for desta versão e deste Java. */
+function marcadorValido(texto: string | undefined, versao: string, javaMajor: number): boolean {
+  try {
+    const m = JSON.parse(texto ?? "") as Record<string, unknown>;
+    return m?.app === "SabreHosting" && m.versao === versao && m.javaMajor === javaMajor;
+  } catch {
+    return false;
+  }
+}
+
+const tamanhoDe = (t: unknown): number | undefined =>
+  typeof t === "number" && Number.isSafeInteger(t) && t >= 0 ? t : undefined;
 
 const sha1De = (texto: string) => createHash("sha1").update(texto).digest("hex");
 
@@ -164,7 +183,10 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
   const baixar = opcoes.baixar ?? baixarConferido;
   if (!ID_VERSAO.test(versao)) throw new Error(`Versão do Minecraft inválida: ${versao}.`);
   // Marcador antigo não vale numa remontagem: se esta falhar no meio, a versão fica sem marcador.
-  await rm(join(cache, "versions", versao, ".montada.json"), { force: true });
+  // Antes de apagar, guarda o conteúdo: ele só serve para pular a releitura de hash (lancmel-2.7).
+  const arquivoMarcador = join(cache, "versions", versao, ".montada.json");
+  const marcadorAntigo = await readFile(arquivoMarcador, "utf8").catch(() => undefined);
+  await rm(arquivoMarcador, { force: true });
 
   const manifesto = JSON.parse(await buscar(URL_MANIFESTO)) as {
     versions?: Record<string, unknown>[];
@@ -189,7 +211,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
       rules?: unknown;
       downloads?: { artifact?: { path?: unknown; url?: unknown; sha1?: unknown; size?: unknown } };
     }>;
-    assetIndex?: { id?: unknown; url?: unknown; sha1?: unknown };
+    assetIndex?: { id?: unknown; url?: unknown; sha1?: unknown; size?: unknown };
     javaVersion?: { majorVersion?: unknown };
   };
   const javaMajor = v.javaVersion?.majorVersion;
@@ -200,6 +222,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     javaMajor > 99
   )
     throw new Error("A Mojang não informou a versão do Java dessa versão do Minecraft.");
+  const marcada = marcadorValido(marcadorAntigo, versao, javaMajor);
   const c = v.downloads?.client;
   if (!c) throw new Error("A Mojang não publicou o cliente dessa versão.");
   const idAssets = v.assetIndex?.id;
@@ -213,6 +236,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
       url: exigirUrl(c.url, "o cliente"),
       sha1: exigirSha1(c.sha1, "o cliente"),
       destino: jarCliente,
+      tamanho: tamanhoDe(c.size),
     },
   ];
   const bibliotecas: string[] = [];
@@ -237,6 +261,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
       url: exigirUrl(a.url, "uma biblioteca"),
       sha1: exigirSha1(a.sha1, "uma biblioteca"),
       destino,
+      tamanho: tamanhoDe(a.size),
     };
     if (nova(peca)) bibliotecas.push(destino);
   }
@@ -248,6 +273,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     url: exigirUrl(ia.url, "o índice de assets"),
     sha1: exigirSha1(ia.sha1, "o índice de assets"),
     destino: indiceDestino,
+    tamanho: tamanhoDe(ia.size),
   };
 
   const total = () => pecas.length;
@@ -260,16 +286,23 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     )
       throw new Error("A Mojang apontou um arquivo para fora dos servidores oficiais; recusei.");
     await mkdir(dirname(p.destino), { recursive: true });
-    await baixarSemColisao(baixar, {
-      url: p.url,
-      hashEsperado: { algoritmo: "sha1", valor: p.sha1 },
-      destino: p.destino,
-      tamanhoMaximo: Math.min(typeof p.tamanho === "number" ? p.tamanho + 1 : TETO_PECA, TETO_PECA),
-      hostsPermitidos: permitirHttpLocal
-        ? [...HOSTS_ARQUIVOS, "127.0.0.1", "[::1]"]
-        : HOSTS_ARQUIVOS,
-      permitirHttpLocal,
-    });
+    await baixarSemColisao(
+      baixar,
+      {
+        url: p.url,
+        hashEsperado: { algoritmo: "sha1", valor: p.sha1 },
+        destino: p.destino,
+        tamanhoMaximo: Math.min(
+          typeof p.tamanho === "number" ? p.tamanho + 1 : TETO_PECA,
+          TETO_PECA,
+        ),
+        hostsPermitidos: permitirHttpLocal
+          ? [...HOSTS_ARQUIVOS, "127.0.0.1", "[::1]"]
+          : HOSTS_ARQUIVOS,
+        permitirHttpLocal,
+      },
+      marcada ? p.tamanho : undefined,
+    );
     opcoes.aoProgredir?.(++feitos, total());
   };
   const emParalelo = async (lista: Peca[]) => {
@@ -317,7 +350,18 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
       tamanhoMaximo: 512 * 1024 ** 2,
       hostsPermitidos: HOSTS_JAVA, // vale também nos redirecionamentos (baixarConferido confere cada salto)
     });
-    ({ javaw } = await extrairJava(pacoteJava, pacoteJava.replace(/\.zip$/, "")));
+    const pastaJava = pacoteJava.replace(/\.zip$/, "");
+    ({ javaw } = await extrairJava(pacoteJava, pastaJava));
+    // O `.java.json` pode sobrar sem o `javaw` (pasta mexida à mão ou limpeza): extrai de novo em vez de reaproveitar.
+    if (
+      !(await stat(javaw).then(
+        () => true,
+        () => false,
+      ))
+    ) {
+      await rm(pastaJava, { recursive: true, force: true });
+      ({ javaw } = await extrairJava(pacoteJava, pastaJava));
+    }
   }
 
   // Por último: a versão só conta como montada com tudo conferido.
