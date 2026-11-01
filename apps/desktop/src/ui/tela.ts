@@ -1,3 +1,4 @@
+import { haQuanto } from "./ha-quanto.js";
 import type { EstadoInicio, PonteSabre } from "./ponte.js";
 
 declare global {
@@ -19,6 +20,7 @@ const erro = $("erro");
 const principal = $<HTMLButtonElement>("principal");
 const parar = $<HTMLButtonElement>("parar");
 const tentar = $<HTMLButtonElement>("tentar");
+const copiarEndereco = $<HTMLButtonElement>("copiar-endereco");
 const confirmacao = $("confirmacao");
 const confirmarParar = $<HTMLButtonElement>("confirmar-parar");
 const cancelarParar = $<HTMLButtonElement>("cancelar-parar");
@@ -48,6 +50,39 @@ function mostrarErro(mensagem: string): void {
   erro.hidden = mensagem === "";
 }
 
+type Tom = "ligado" | "desligado" | "troca" | "atencao";
+
+function texto(id: string, valor: string | undefined): void {
+  const fato = $(`fato-${id}`);
+  fato.hidden = valor === undefined;
+  if (valor !== undefined) $(`${id === "versao" ? "versao-mundo" : id}-valor`).textContent = valor;
+}
+
+/** As linhas do painel só aparecem quando há dado (nunca "0" ou "ninguém" inventado). */
+function desenharFatos(e: EstadoInicio): void {
+  const painel = e.tipo === "ninguem" || e.tipo === "outro" || e.tipo === "eu" ? e : undefined;
+  const endereco = e.tipo === "outro" || e.tipo === "eu" ? e.endereco : "";
+  $("fato-endereco").hidden = endereco === "";
+  $("endereco-valor").textContent = endereco;
+  texto(
+    "jogadores",
+    e.tipo === "eu" && !e.parando
+      ? e.jogadores === undefined
+        ? undefined
+        : e.jogadores.length === 0
+          ? "Ninguém por enquanto"
+          : e.jogadores.join(", ")
+      : e.tipo === "outro"
+        ? "Não dá para ver quem está jogando daqui"
+        : undefined,
+  );
+  texto("backup", painel?.ultimoBackup ? haQuanto(painel.ultimoBackup) : undefined);
+  texto(
+    "versao",
+    painel?.versaoMundo !== undefined ? `versão ${painel.versaoMundo} do mundo` : undefined,
+  );
+}
+
 function desenhar(): void {
   const e = atual;
   cartao.dataset["estado"] = e.tipo;
@@ -57,6 +92,7 @@ function desenhar(): void {
   );
   ocupadoRemoto = undefined;
   let bloqueado = false;
+  let tom: Tom = "desligado";
   principal.hidden = parar.hidden = tentar.hidden = true;
   principal.dataset["acao"] = "";
   switch (e.tipo) {
@@ -65,14 +101,24 @@ function desenhar(): void {
       detalhe.textContent = "";
       break;
     case "sem-cartorio":
+      tom = "atencao";
       status.textContent = "Sem conexão com o grupo";
       detalhe.textContent = MOTIVOS[e.motivo];
       tentar.hidden = false;
       break;
-    case "ninguem":
-      if (e.atualizando !== undefined) {
-        // Hospedar fica fechado até o mundo chegar à versão mais nova; Jogar não depende disto.
-        status.textContent = `Atualizando seu mundo… ${e.atualizando}%`;
+    case "ninguem": {
+      const trabalho =
+        e.atualizando !== undefined
+          ? `Atualizando seu mundo… ${e.atualizando}%`
+          : e.trabalho === "restaurando"
+            ? "Restaurando um backup…"
+            : e.trabalho === "trocando-versao"
+              ? "Trocando a versão do Minecraft…"
+              : undefined;
+      if (trabalho !== undefined) {
+        // Hospedar fica fechado até terminar; Jogar não depende disto.
+        tom = "troca";
+        status.textContent = trabalho;
         detalhe.textContent = "Hospedar volta quando terminar.";
         principal.textContent = "Hospedar";
         principal.hidden = false;
@@ -85,24 +131,33 @@ function desenhar(): void {
       principal.dataset["acao"] = "hospedar";
       principal.hidden = false;
       break;
+    }
     case "orfao":
+      tom = "atencao";
       status.textContent = "O servidor anterior não parou";
       detalhe.textContent = "Feche o Java no Gerenciador de Tarefas ou reinicie o PC.";
       tentar.hidden = false;
       break;
     case "outro":
+      tom = "ligado";
       status.textContent = `Servidor no PC do ${e.nomePc}`;
       detalhe.textContent =
-        (e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO) +
-        (e.atualizando !== undefined ? ` · Atualizando seu mundo… ${e.atualizando}%` : "") +
-        (e.aviso !== undefined ? ` · ${e.aviso}` : "");
+        e.endereco === ""
+          ? SEM_ENDERECO
+          : [
+              e.atualizando !== undefined ? `Atualizando seu mundo… ${e.atualizando}%` : "",
+              e.aviso ?? "",
+            ]
+              .filter((t) => t !== "")
+              .join(" · ") || "Copie o endereço ou toque em Jogar.";
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
       principal.hidden = e.endereco === "";
       break;
     case "eu":
+      tom = e.parando ? "troca" : "ligado";
       status.textContent = "Você está hospedando";
-      detalhe.textContent = e.endereco ? `Endereço: ${e.endereco}` : SEM_ENDERECO;
+      detalhe.textContent = e.endereco ? "Seus amigos já podem entrar." : SEM_ENDERECO;
       principal.textContent = "Jogar";
       principal.dataset["acao"] = "jogar";
       principal.hidden = e.endereco === "";
@@ -110,6 +165,8 @@ function desenhar(): void {
       if (e.parando) ocupadoRemoto = "Parando o servidor…";
       break;
   }
+  $("estado").dataset["tom"] = tom;
+  desenharFatos(e);
   const emCurso = ocupado ?? ocupadoRemoto;
   if (emCurso !== undefined) {
     // Ação demorada: texto de progresso e nenhum botão clicável de novo.
@@ -124,6 +181,14 @@ function desenhar(): void {
       (bloqueado && b === principal);
   }
 }
+
+copiarEndereco.addEventListener("click", () => {
+  const valor = $("endereco-valor").textContent ?? "";
+  navigator.clipboard
+    .writeText(valor)
+    .then(() => mostrarAviso("Endereço copiado."))
+    .catch(() => mostrarAviso("Não consegui copiar. Selecione o endereço e copie com Ctrl+C."));
+});
 
 // Importar mundo (importar.ts) liga/desliga a trava dos botões do servidor e avisa por aqui.
 window.addEventListener("sabre:importacao", () => desenhar());

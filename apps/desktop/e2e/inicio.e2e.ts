@@ -60,6 +60,9 @@ async function capturar(pagina: Page, nome: string): Promise<void> {
   await pagina.emulateMedia({ colorScheme: "light" });
   await pagina.waitForTimeout(200);
   await registrarCaptura(pagina, join(imagens, `app-1.2-${nome}.png`));
+  // appui-1.2: antes/depois do redesenho (SABRE_CAPTURA_SUFIXO=antes rodado no código anterior).
+  const sufixo = process.env["SABRE_CAPTURA_SUFIXO"] ?? "depois";
+  await registrarCaptura(pagina, join(imagens, `appui-1.2/${nome}-${sufixo}.png`));
 }
 
 afterEach(async () => {
@@ -74,7 +77,7 @@ afterEach(async () => {
 
 const visiveis = (p: Page) =>
   p.evaluate(() =>
-    [...document.querySelectorAll<HTMLButtonElement>("#principal, .acoes button")]
+    [...document.querySelectorAll<HTMLButtonElement>("#principal, #parar, #tentar")]
       .filter((b) => !b.hidden && !b.closest("[hidden]"))
       .map((b) => b.textContent),
   );
@@ -134,7 +137,7 @@ describe("tela inicial", () => {
     expect(await visiveis(p)).toEqual(["Jogar"]);
     await p.locator("#principal").click();
     await expect(p.locator("#aviso").innerText()).resolves.toContain("Endereço copiado");
-    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
+    await expect(p.locator("#endereco-valor").innerText()).resolves.toBe("mundo.exemplo.net");
     const copias = await viva().evaluate(
       () => (globalThis as { __sabreE2EInicio?: { copias: string[] } }).__sabreE2EInicio?.copias,
     );
@@ -147,11 +150,11 @@ describe("tela inicial", () => {
     const p = await abrir("eu");
     await p.locator("#principal").click();
     await expect(p.locator("#aviso").innerText()).resolves.toContain("Endereço copiado");
-    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
+    await expect(p.locator("#endereco-valor").innerText()).resolves.toBe("mundo.exemplo.net");
     await p.waitForFunction(() => document.getElementById("aviso")?.textContent === "", undefined, {
       timeout: 8000,
     });
-    await expect(p.locator("#detalhe").innerText()).resolves.toContain("mundo.exemplo.net");
+    await expect(p.locator("#endereco-valor").innerText()).resolves.toBe("mundo.exemplo.net");
   });
 
   it("eu hospedo: Jogar e Parar; Parar pede confirmação e devolve a vez", async () => {
@@ -219,4 +222,69 @@ describe("tela inicial", () => {
       expect(fatos.indexOf("soltar")).toBeGreaterThan(fatos.indexOf("parou"));
     },
   );
+});
+
+describe("painel de controle do Início (appui-1.2)", () => {
+  const texto = (p: Page, id: string) => p.locator(`#${id}`).innerText();
+  const aparece = (p: Page, id: string) => p.locator(`#${id}`).isVisible();
+
+  it("parado: estado grande, último backup, versão do mundo; sem endereço nem jogadores", async () => {
+    const p = await abrir("ninguem");
+    await expect(texto(p, "status")).resolves.toBe("Ninguém está hospedando");
+    await expect(p.locator("#estado").getAttribute("data-tom")).resolves.toBe("desligado");
+    await expect(texto(p, "backup-valor")).resolves.toBe("há 3 horas");
+    await expect(texto(p, "versao-mundo-valor")).resolves.toBe("versão 12 do mundo");
+    expect(await aparece(p, "fato-endereco")).toBe(false);
+    expect(await aparece(p, "fato-jogadores")).toBe(false);
+    expect(await visiveis(p)).toEqual(["Hospedar"]);
+    await capturar(p, "painel-parado");
+  });
+
+  it("ligado: endereço com Copiar e quem está jogando (2 jogadores, depois ninguém)", async () => {
+    const p = await abrir("eu");
+    await expect(p.locator("#estado").getAttribute("data-tom")).resolves.toBe("ligado");
+    await expect(texto(p, "endereco-valor")).resolves.toBe("mundo.exemplo.net");
+    await expect(texto(p, "jogadores-valor")).resolves.toBe("Ana, Lucas");
+    expect(await visiveis(p)).toContain("Parar o servidor");
+    await capturar(p, "painel-ligado");
+  });
+
+  it("ligado sem ninguém: diz 'Ninguém por enquanto'", async () => {
+    const p = await abrir("eu", { SABRE_E2E_JOGADORES: "" });
+    await expect(texto(p, "jogadores-valor")).resolves.toBe("Ninguém por enquanto");
+  });
+
+  it("outro PC hospeda: não promete lista de jogadores", async () => {
+    const p = await abrir("outro");
+    await expect(texto(p, "jogadores-valor")).resolves.toBe(
+      "Não dá para ver quem está jogando daqui",
+    );
+    await expect(texto(p, "endereco-valor")).resolves.toBe("mundo.exemplo.net");
+  });
+
+  it("sem dado (grupo sem backup nem versão): as linhas não aparecem", async () => {
+    const p = await abrir("ninguem", { SABRE_E2E_SEM_DADOS: "1" });
+    for (const id of ["fato-backup", "fato-versao", "fato-jogadores", "fato-endereco"]) {
+      expect(await aparece(p, id), id).toBe(false);
+    }
+  });
+
+  it.each([
+    [{ SABRE_E2E_ATUALIZANDO: "40" }, "Atualizando seu mundo… 40%"],
+    [{ SABRE_E2E_TRABALHO: "restaurando" }, "Restaurando um backup…"],
+    [{ SABRE_E2E_TRABALHO: "versao" }, "Trocando a versão do Minecraft…"],
+  ])("trocando %j: tom de troca e Hospedar travado", async (env, frase) => {
+    const p = await abrir("ninguem", env);
+    await expect(texto(p, "status")).resolves.toBe(frase);
+    await expect(p.locator("#estado").getAttribute("data-tom")).resolves.toBe("troca");
+    await expect(p.locator("#principal").isDisabled()).resolves.toBe(true);
+    await capturar(p, "painel-trocando");
+  });
+
+  it("erro: tom de atenção, só 'Tentar de novo' como ação do servidor", async () => {
+    const p = await abrir("sem-cartorio");
+    await expect(p.locator("#estado").getAttribute("data-tom")).resolves.toBe("atencao");
+    expect(await visiveis(p)).toEqual(["Tentar de novo"]);
+    expect(await aparece(p, "principal")).toBe(false);
+  });
 });
