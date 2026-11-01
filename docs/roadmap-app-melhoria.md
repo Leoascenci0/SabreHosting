@@ -210,9 +210,23 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste falha com `^45.2.0` e passa com versão exata **[P: ensaio no GitHub]**.
   *Origem:* appmel-1.23 · ensaio do workflow · coordenadora
 
-- [ ] **1.27 — Tela inicial do app: todos os botões à vista, sem rolar** (decisão do Eliel, 01/11/2026)
+- [x] **1.27 — Tela inicial do app: todos os botões à vista, sem rolar** (✅ PR #267, 01/11/2026; conferência no Windows [P])
   *O que fazer:* na janela padrão a tela inicial mostra só o Hospedar; "Backups" e "Configurações" ficam abaixo da dobra e "Importar mundo" está escondido dentro de Backups (o Eliel achou que o app só tinha um botão). Mostrar sem rolar: Hospedar (com seus estados), Importar mundo, Backups e Configurações como botões de verdade, com a janela padrão maior. Importar mundo mantém o fluxo e a confirmação de hoje (só muda o atalho; sem duplicar a lógica). pt-BR, sem termo técnico, carregando/foco/teclado preservados, tema claro e escuro.
   *Arquivo:* `apps/desktop/src/ui/index.html`, `tela.css`, `tela.ts`, `importar.ts`, `apps/desktop/src/main/principal.ts`, `apps/desktop/e2e/`
   **Tela no app:** Início › botões Hospedar, Importar mundo, Backups, Configurações.
   *Confirmação:* e2e: na janela padrão os 3 botões extras estão visíveis na viewport sem rolagem (falha antes, passa depois); no Windows com o instalador novo **[P: Eliel, tutorial `docs/tutoriais/2026-11-01-ensaio-instalador.md`]**.
   *Origem:* decisão do Eliel · rodou do código-fonte com SABRE_E2E=1
+
+- [x] **1.28 — Instalação nova não mostra "Atenção com o mundo"** (✅ PR #268, 01/11/2026; pedido direto do Eliel)
+  *O que fazer:* no primeiro arranque (assistente não concluído) a checagem da troca do mundo avisava "A pasta do servidor não está configurada". Só avisa se o assistente já foi concluído.
+  *Arquivo:* `apps/desktop/src/main/config-pc.ts`, `principal.ts`, `config-pc.test.ts`
+  **Tela no app:** não se aplica (some um aviso falso).
+  *Confirmação:* teste `falhaSemPastaDoServidor`; no Windows com o instalador novo **[P: Eliel]**.
+  *Origem:* ensaio do instalador · Eliel
+
+- [ ] **1.29 — O main recusar "hospedar" durante a importação do mundo**
+  *O que fazer:* `importando()` (`apps/desktop/src/main/importar.ts`) existe, mas a trava é só na tela; o main deve recusar hospedar durante importação.
+  *Arquivo:* `apps/desktop/src/main/importar.ts`, `inicio.ts`, testes
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste no main: hospedar durante importação é recusado.
+  *Origem:* appmel-1.27 · PR #267 · filha
