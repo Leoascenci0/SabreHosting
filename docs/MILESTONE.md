@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 39**
+**Próxima onda: 40**
 
 _(nenhuma onda aberta; Onda 38 fechada em 01/11 — ver docs/ops/rodadas/coordenacao-2026-11-01.md)_
 
@@ -70,6 +70,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 01/11/2026 (noite) — Onda 39: appmel-1.30 #272 (app empacotado não abria: ícones fora do app.asar + bandeja derrubava o arranque; teste de empacotamento), controle #273. Ensaio novo: run 41342283125. Aguarda teste no Windows (Eliel).
 
 - 01/11/2026 (tarde) — Onda 38: appmel-1.27 #267 (tela inicial em grade 2×2 sem rolar), appmel-1.28 #268 (aviso falso "Atenção com o mundo" no instalador de ensaio), controle #269. Aberto: appmel-1.29 (main recusar hospedar durante importação).
 

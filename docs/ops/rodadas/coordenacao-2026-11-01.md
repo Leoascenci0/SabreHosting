@@ -46,3 +46,4 @@
 
 - Eliel instalou o ensaio do run 41338605522: atalho existe, app não abre. Reproduzi empacotando local (electron-builder --linux --dir) e rodando: `UnhandledPromiseRejection: ENOENT recursos/icone/bandeja-16.png not found in app.asar`. Causa: `electron-builder.json` só inclui `dist/**/*` e `package.json`; `criarBandeja()` (principal.ts:743) lê PNG de `recursos/icone/` e lança antes de `criarJanela` (:744) → nenhuma janela. Nenhuma vistoria cobria o app empacotado.
 - Onda 39: appmel-1.30. Sessão: session_012qrjnu4no5wqTBfnUjCK42 (base 78da1b6, aberta 19:18 UTC). Watchdog 45 min.
+- **Onda 39 FECHADA:** ✅ appmel-1.30 #272 · controle #273 (main d35f7e8). Vistoria + comum + verificador + qa APROVADOS. Run novo 41342283125, artefato 122.560.245 B. S-19 fica com Vezes 1 (promoção ao CLAUDE.md só com ≥2). Melhorias sugeridas (não viraram item): passo de CI `--dir` + janela; sem bandeja, fechar a janela só esconde. Watchdog apagado.
