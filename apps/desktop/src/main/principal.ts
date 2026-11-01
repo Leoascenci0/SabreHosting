@@ -47,6 +47,7 @@ import {
 import { criarCofreSeguro, ARQUIVO_COFRE } from "./cofre.js";
 import { clienteDoPc, depsReais, pastaModsDaInstancia } from "./deps-reais.js";
 import { registrarBoasVindas } from "./boas-vindas-app.js";
+import { criarDemonstracao, protegerEscrita, TEXTO_DEMONSTRACAO } from "./demonstracao.js";
 import { tentar } from "./tolerante.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
 import { criarModsGrupo, type ModsGrupo } from "./mods-grupo.js";
@@ -365,6 +366,36 @@ async function criarInicioDoApp(): Promise<Inicio> {
   return inicio;
 }
 
+/** Peças de mentira do modo "Explorar sem grupo" (appmel-1.31): só as de `fake-e2e.ts`, em pasta temporária. */
+interface PecasDemonstracao {
+  inicio: Inicio;
+  backups: Backups;
+  grupo: Grupo;
+  versao: Versao;
+  mods: ModsGrupo;
+  importacao: Importacao;
+}
+
+async function montarPecasDemonstracao(): Promise<PecasDemonstracao> {
+  const f = await import("./fake-e2e.js");
+  const parado = (): boolean => false; // o servidor de mentira nunca sobe: Hospedar é recusado no main
+  return {
+    inicio: criarInicio({
+      ...f.criarDepsE2E("ninguem", { spawns: [] }), // antes dos backups: eles leem o cartório falso daqui
+      restaurando: parado,
+      trocandoVersao: parado,
+    }),
+    backups: criarBackups(f.depsBackupsE2E(parado)),
+    grupo: criarGrupo(f.depsGrupoE2E(true)),
+    versao: criarVersao(f.depsVersaoE2E(parado, true)),
+    mods: criarModsGrupo(f.depsModsE2E(parado, true)),
+    importacao: criarImportacao(f.depsImportacaoE2E(parado, parado, true)),
+  };
+}
+
+/** Só em memória: fechou o app, a demonstração acaba. Não guarda nada em disco nem no cofre. */
+const demo = criarDemonstracao(montarPecasDemonstracao);
+
 async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
   const servidorRodando = (): boolean => inicio.ativo();
   if (process.env["SABRE_E2E"] !== "1") {
@@ -548,14 +579,20 @@ function registrarPonte(
   const permitir = (evento: IpcMainInvokeEvent): void => {
     if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
   };
+  /** Em demonstração as leituras vêm das peças de mentira; fora dela, das de verdade. */
+  const de = <K extends keyof PecasDemonstracao>(
+    k: K,
+    real: PecasDemonstracao[K],
+  ): PecasDemonstracao[K] => demo.pecas()?.[k] ?? real;
   const pastaBase = criarPastaBase({
     dados: app.getPath("userData"),
     servidorRodando: () => inicio.ativo() || inicio.temOrfao(),
   });
   ipcMain.handle("sabre:pasta:estado", (evento) => (permitir(evento), pastaBase.estado()));
+  const trocarPasta = protegerEscrita(demo, (pasta: unknown) => pastaBase.trocar(pasta));
   ipcMain.handle("sabre:pasta:trocar", async (evento, pasta: unknown) => {
     permitir(evento);
-    const r = await pastaBase.trocar(pasta); // o main revalida a pasta e o servidor parado
+    const r = await trocarPasta(pasta); // o main revalida a pasta e o servidor parado
     // A configuração é lida no arranque: o app reinicia para já usar a pasta nova (no E2E, não).
     if (r.ok && process.env["SABRE_E2E"] !== "1") {
       setTimeout(() => {
@@ -566,63 +603,89 @@ function registrarPonte(
     return r;
   });
   inicio.aoMudar(() => janela?.webContents.send("sabre:inicio:mudou"));
-  ipcMain.handle("sabre:inicio:estado", (evento) => (permitir(evento), inicio.estado()));
+  ipcMain.handle(
+    "sabre:inicio:estado",
+    (evento) => (permitir(evento), de("inicio", inicio).estado()),
+  );
   const encaixe = criarEncaixeInicio({
     trocada: () => pastaBase.trocada(),
     jogar: () => inicio.jogar(),
     hospedar: () => inicio.hospedar(),
   });
-  ipcMain.handle("sabre:inicio:jogar", (evento) => (permitir(evento), encaixe.jogar()));
-  ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), encaixe.hospedar()));
-  ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), inicio.parar()));
+  const hospedar = protegerEscrita(demo, () => encaixe.hospedar());
+  const parar = protegerEscrita(demo, () => inicio.parar());
+  ipcMain.handle("sabre:inicio:jogar", (evento) => {
+    permitir(evento);
+    // Em demonstração não copia endereço nem abre o jogo (não há servidor de verdade).
+    return demo.ativa()
+      ? { copiado: false, endereco: "", aviso: TEXTO_DEMONSTRACAO }
+      : encaixe.jogar();
+  });
+  ipcMain.handle("sabre:inicio:hospedar", (evento) => (permitir(evento), hospedar()));
+  ipcMain.handle("sabre:inicio:parar", (evento) => (permitir(evento), parar()));
   ipcMain.handle(
     "sabre:config:escolher-pasta",
     (evento) => (permitir(evento), configuracoes.escolherPasta()),
   );
-  ipcMain.handle("sabre:backups:listar", (evento) => (permitir(evento), backups.estado()));
+  ipcMain.handle(
+    "sabre:backups:listar",
+    (evento) => (permitir(evento), de("backups", backups).estado()),
+  );
+  // Em demonstração as escritas abaixo são recusadas AQUI, no main (não só escondidas na tela).
+  const restaurar = protegerEscrita(demo, (nome: unknown) => backups.restaurar(nome));
   ipcMain.handle("sabre:backups:restaurar", (evento, nome: unknown) => {
     permitir(evento);
-    return backups.restaurar(nome); // o nome só vale se estiver na lista; a cola confere
+    return restaurar(nome); // o nome só vale se estiver na lista; a cola confere
   });
   ipcMain.handle(
     "sabre:importar:escolherZip",
-    (evento) => (permitir(evento), importacao.escolher()),
+    (evento) => (permitir(evento), de("importacao", importacao).escolher()),
   );
+  const importar = protegerEscrita(demo, (confirmado: unknown) => importacao.executar(confirmado));
   ipcMain.handle("sabre:importar:executar", (evento, confirmado: unknown) => {
     permitir(evento);
-    return importacao.executar(confirmado); // só `true` vale; o arquivo é o que o seletor do main deu
+    return importar(confirmado); // só `true` vale; o arquivo é o que o seletor do main deu
   });
-  ipcMain.handle("sabre:grupo:estado", (evento) => (permitir(evento), grupo.estado()));
+  ipcMain.handle("sabre:grupo:estado", (evento) => (permitir(evento), de("grupo", grupo).estado()));
+  const tirarPc = protegerEscrita(demo, (id: unknown) => grupo.tirar(id));
   ipcMain.handle("sabre:grupo:tirar", (evento, id: unknown) => {
     permitir(evento);
-    return grupo.tirar(id); // o main revalida dono, lista e "não é o dono" antes de revogar
+    return tirarPc(id); // o main revalida dono, lista e "não é o dono" antes de revogar
   });
+  const criarConvite = protegerEscrita(demo, (entrada: unknown) => grupo.criarConvite(entrada));
   ipcMain.handle("sabre:grupo:criar-convite", (evento, entrada: unknown) => {
     permitir(evento);
-    return grupo.criarConvite(entrada); // o main revalida o dono, o nome e a validade; o texto não é gravado nem logado
+    return criarConvite(entrada); // o main revalida o dono, o nome e a validade; o texto não é gravado nem logado
   });
-  ipcMain.handle("sabre:mods:estado", (evento) => (permitir(evento), mods.estado()));
+  ipcMain.handle("sabre:mods:estado", (evento) => (permitir(evento), de("mods", mods).estado()));
+  const adicionarMod = protegerEscrita(demo, (mod: unknown) => mods.adicionar(mod));
   ipcMain.handle("sabre:mods:adicionar", (evento, mod: unknown) => {
     permitir(evento);
-    return mods.adicionar(mod); // o main confere dono, repetido e os campos (host, .jar, hash) antes de gravar
+    return adicionarMod(mod); // o main confere dono, repetido e os campos (host, .jar, hash) antes de gravar
   });
+  const tirarMod = protegerEscrita(demo, (arquivo: unknown) => mods.tirar(arquivo));
   ipcMain.handle("sabre:mods:tirar", (evento, arquivo: unknown) => {
     permitir(evento);
-    return mods.tirar(arquivo);
+    return tirarMod(arquivo);
   });
-  ipcMain.handle("sabre:versoes:estado", (evento) => (permitir(evento), versao.estado()));
+  ipcMain.handle(
+    "sabre:versoes:estado",
+    (evento) => (permitir(evento), de("versao", versao).estado()),
+  );
   ipcMain.handle("sabre:versoes:opcoes", (evento, v: unknown) => {
     permitir(evento);
-    return versao.opcoes(v); // o main confere dono e se a versão está na lista oficial
+    return de("versao", versao).opcoes(v); // o main confere dono e se a versão está na lista oficial
   });
+  const gravarVersao = protegerEscrita(demo, (v: unknown) => versao.gravar(v));
   ipcMain.handle("sabre:versoes:gravar", (evento, v: unknown) => {
     permitir(evento);
-    return versao.gravar(v); // dono, servidor parado e lista oficial são revalidados aqui
+    return gravarVersao(v); // dono, servidor parado e lista oficial são revalidados aqui
   });
   ipcMain.handle("sabre:config:ler", (evento) => (permitir(evento), configuracoes.ler()));
+  const salvarConfig = protegerEscrita(demo, (valor: unknown) => configuracoes.salvar(valor));
   ipcMain.handle("sabre:config:salvar", (evento, valor: unknown) => {
     permitir(evento);
-    return configuracoes.salvar(valor); // valida antes de gravar; a tela só mostra a mensagem
+    return salvarConfig(valor); // valida antes de gravar; a tela só mostra a mensagem
   });
   ipcMain.handle("sabre:versao", (evento) => {
     if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
@@ -635,6 +698,7 @@ function registrarPonte(
   ipcMain.handle("sabre:abrir-com-windows:definir", (evento, ligado: unknown) => {
     if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
     if (!ehBooleano(ligado)) throw new Error("valor inválido");
+    if (demo.ativa()) throw new Error(TEXTO_DEMONSTRACAO); // mexeria no Windows de verdade
     const pasta = app.getPath("userData");
     salvarPreferencias(pasta, { ...lerPreferencias(pasta), abrirComWindows: ligado });
     aplicarAbrirComWindows(ligado);
@@ -729,6 +793,7 @@ if (!app.requestSingleInstanceLock()) {
     await registrarBoasVindas({
       dados: app.getPath("userData"),
       janela: () => janela,
+      demonstracao: demo,
       permitir: (evento) => {
         if (!veioDaPagina(evento, PAGINA)) throw new Error("origem não permitida");
       },

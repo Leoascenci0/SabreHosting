@@ -301,3 +301,24 @@ button.link {
   color: var(--cor-texto-suave);
   font-size: 0.875rem;
 }
+
+/* Faixa fixa do modo demonstração (appmel-1.31): sempre visível, no alto, em qualquer tela do app. */
+.faixa-demo {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-3);
+  padding: var(--espaco-2) var(--espaco-4);
+  background: var(--cor-destaque);
+  color: var(--cor-fundo);
+  font-weight: 600;
+}
+
+/* Abre espaço no alto para a faixa não cobrir o cartão. */
+body:has(.faixa-demo:not([hidden])) {
+  padding-top: calc(var(--espaco-4) + 64px);
+}

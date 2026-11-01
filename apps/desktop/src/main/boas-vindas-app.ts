@@ -4,14 +4,18 @@ import { join } from "node:path";
 import { criarCliente } from "@sabrehosting/nucleo/cartorio/cliente";
 import { gerarChavesDoPc, IP_DO_HUB } from "@sabrehosting/nucleo/rede/wireguard";
 import { criarBoasVindas, type BoasVindas, type DepsBoasVindas } from "./boas-vindas.js";
+import type { EstadoBoasVindas } from "../ui/ponte.js";
 import { ARQUIVO_COFRE, criarCofreSeguro } from "./cofre.js";
 import { criarEntradaNoGrupo } from "./entrada-no-grupo.js";
+import { protegerEscrita, type Demonstracao } from "./demonstracao.js";
 
 export interface OpcoesBoasVindasDoApp {
   dados: string;
   janela(): BrowserWindow | null;
   /** Barra mensagem que não veio da nossa página (mesma regra das outras telas). */
   permitir(evento: IpcMainInvokeEvent): void;
+  /** Modo "Explorar sem grupo" (appmel-1.31): só em memória; as peças dele ficam no `principal.ts`. */
+  demonstracao: Pick<Demonstracao<unknown>, "ativa" | "entrar" | "sair">;
   /** Chamado depois que o assistente conclui com sucesso (o app reinicia para ler a configuração nova). */
   aoConcluir?(): void;
 }
@@ -60,9 +64,22 @@ export async function registrarBoasVindas(op: OpcoesBoasVindasDoApp): Promise<Bo
   const bv = criarBoasVindas(deps);
   const ligar = <A extends unknown[]>(canal: string, fazer: (...a: A) => unknown): void =>
     void ipcMain.handle(canal, (evento, ...a) => (op.permitir(evento), fazer(...(a as A))));
-  ligar("sabre:bv:estado", () => bv.estado());
+  // Em demonstração o assistente fica fechado (o app abre com dados de mentira) e a tela mostra a faixa.
+  ligar("sabre:bv:estado", async (): Promise<EstadoBoasVindas> =>
+    op.demonstracao.ativa() ? { aberto: false, demonstracao: true } : bv.estado(),
+  );
+  // Só vale no assistente de primeira vez: um PC já configurado nunca entra em demonstração.
+  ligar("sabre:bv:explorar", async (): Promise<boolean> => {
+    if (!(await bv.estado()).aberto) return false;
+    await op.demonstracao.entrar();
+    return true;
+  });
+  ligar("sabre:bv:sair-demo", () => op.demonstracao.sair());
   ligar("sabre:bv:conferir", (texto: unknown) => bv.conferirConvite(texto));
-  ligar("sabre:bv:entrar", () => bv.entrar());
+  ligar(
+    "sabre:bv:entrar",
+    protegerEscrita(op.demonstracao, () => bv.entrar()),
+  );
   ligar("sabre:bv:eula", () => bv.eula());
   // O endereço sai do núcleo, nunca da janela; no E2E só conta o pedido (não abre navegador).
   ligar("sabre:bv:abrir-eula", async () => {
@@ -75,8 +92,9 @@ export async function registrarBoasVindas(op: OpcoesBoasVindasDoApp): Promise<Bo
   });
   ligar("sabre:bv:aceitar-eula", (aceito: unknown) => bv.aceitarEula(aceito));
   ligar("sabre:bv:escolher-pasta", () => escolher());
+  const concluir = protegerEscrita(op.demonstracao, (pasta: unknown) => bv.concluir(pasta));
   ligar("sabre:bv:concluir", async (pasta: unknown) => {
-    const r = await bv.concluir(pasta);
+    const r = await concluir(pasta);
     if (r.ok) op.aoConcluir?.();
     return r;
   });

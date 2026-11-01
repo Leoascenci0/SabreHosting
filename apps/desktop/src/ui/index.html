@@ -12,6 +12,10 @@
     <link rel="stylesheet" href="tela.css" />
   </head>
   <body>
+    <div class="faixa-demo" id="faixa-demo" role="status" hidden>
+      <span>Modo demonstração: dados de mentira, nada é de verdade.</span>
+      <button type="button" class="secundario" id="faixa-demo-sair">Sair da demonstração</button>
+    </div>
     <main class="cartao" id="cartao" data-estado="carregando" aria-busy="true">
       <img
         class="icone"
@@ -405,7 +409,12 @@
         </p>
         <div class="acoes">
           <button type="button" class="principal" id="bv-conferir">Conferir convite</button>
+          <button type="button" class="secundario" id="bv-explorar">Explorar sem grupo</button>
         </div>
+        <p class="dica">
+          Quer só dar uma olhada? “Explorar sem grupo” mostra o app com dados de mentira, sem
+          hospedar nada.
+        </p>
         <div
           class="confirmacao"
           id="bv-entrar-caixa"
