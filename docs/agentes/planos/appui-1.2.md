@@ -9,7 +9,7 @@ Base 582dd0a. Só interface: nada muda em servidor, mundo, trava ou cartório.
 
 ## Tela
 - `index.html`: cartão do Início vira painel: faixa de estado (ícone + título + frase), grade de 3 informações (endereço + Copiar, quem está jogando, último backup/versão do mundo), botão principal grande, links secundários (Importar mundo, Tentar de novo, Parar). Mantém ids existentes.
-- `tela.ts`: formata "há X" em palavras (função pura testada), mostra/oculta linhas por dado; Copiar reaproveita `inicio.jogar`-cópia? Não: usa botão Copiar via `navigator.clipboard` indisponível -> nova ponte seria código novo; reaproveita `inicio.jogar()` só no principal. Copiar chama `window.sabre.inicio.copiarEndereco` (já existe `deps.copiar`; expõe via jogar sem Prism não serve) — decisão: nova ponte mínima `inicio.copiar()` que chama `deps.copiar(endereco)`.
+- `tela.ts`: formata "há X" em palavras (função pura testada) e mostra/oculta linhas por dado. Copiar reaproveita a mesma cópia do convite (ver código vizinho), sem ponte nova.
 - `tela.css`: estilos com tokens, claro/escuro, min 720x480.
 
 ## Testes (TDD)

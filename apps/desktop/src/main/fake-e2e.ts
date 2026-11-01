@@ -132,6 +132,15 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
       });
     },
     eu: async () => ({ id: MEU_ID }),
+    // Painel do Início: dados de mentira (SABRE_E2E_SEM_DADOS=1 tira todos, como no app sem grupo).
+    ...(process.env["SABRE_E2E_SEM_DADOS"] === "1"
+      ? {}
+      : {
+          ultimoBackup: async () => new Date(Date.now() - 3 * 3_600_000).toISOString(),
+          versaoMundo: async () => 12,
+          jogadores: async () =>
+            (process.env["SABRE_E2E_JOGADORES"] ?? "Ana,Lucas").split(",").filter((n) => n !== ""),
+        }),
     servidorOrfao: async () => cenario === "dono-eu-orfao",
     endereco: process.env["SABRE_E2E_SEM_ENDERECO"] === "1" ? "" : ENDERECO,
     copiar: (t) => void copias.push(t),

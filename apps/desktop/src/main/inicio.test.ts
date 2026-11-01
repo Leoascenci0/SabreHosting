@@ -453,3 +453,77 @@ describe("encerrar (Sair do app)", () => {
     expect(s.pararServidor).toHaveBeenCalledOnce();
   });
 });
+
+describe("dados do painel do Início (appui-1.2)", () => {
+  it("parado: traz último backup e versão do mundo quando existem; sem dado, os campos não aparecem", async () => {
+    const com = criarInicio(
+      deps({ ultimoBackup: async () => "2026-11-01T10:00:00Z", versaoMundo: async () => 12 }),
+    );
+    expect(await com.estado()).toEqual({
+      tipo: "ninguem",
+      ultimoBackup: "2026-11-01T10:00:00Z",
+      versaoMundo: 12,
+    });
+    const sem = criarInicio(
+      deps({ ultimoBackup: async () => undefined, versaoMundo: async () => undefined }),
+    );
+    expect(await sem.estado()).toEqual({ tipo: "ninguem" });
+    expect(await criarInicio(deps()).estado()).toEqual({ tipo: "ninguem" });
+  });
+
+  it("dep que falha não derruba o estado nem inventa dado", async () => {
+    const inicio = criarInicio(
+      deps({
+        ultimoBackup: async () => Promise.reject(new Error("sem pasta")),
+        versaoMundo: async () => Promise.reject(new Error("sem cartório")),
+      }),
+    );
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+  });
+
+  it("hospedando neste PC: lista quem está jogando (2 e 0 jogadores)", async () => {
+    let nomes = ["Ana", "Lucas"];
+    const inicio = criarInicio(deps({ jogadores: async () => nomes }));
+    await inicio.hospedar();
+    expect(await inicio.estado()).toMatchObject({ tipo: "eu", jogadores: ["Ana", "Lucas"] });
+    nomes = [];
+    expect(await inicio.estado()).toMatchObject({ tipo: "eu", jogadores: [] });
+  });
+
+  it("jogadores indisponíveis (servidor subindo): campo ausente, nunca 'ninguém' inventado", async () => {
+    const inicio = criarInicio(deps({ jogadores: async () => undefined }));
+    await inicio.hospedar();
+    expect(await inicio.estado()).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565" });
+  });
+
+  it("outro PC hospeda: não consulta jogadores (só neste PC)", async () => {
+    const jogadores = vi.fn(async () => ["Ana"]);
+    const inicio = criarInicio(
+      deps({
+        lerTrava: async () => ({ dono: { id: 2, nome: "Lucas" } }),
+        jogadores,
+        versaoMundo: async () => 7,
+      }),
+    );
+    const e = await inicio.estado();
+    expect(e).toMatchObject({ tipo: "outro", nomePc: "Lucas", versaoMundo: 7 });
+    expect(e).not.toHaveProperty("jogadores");
+    expect(jogadores).not.toHaveBeenCalled();
+  });
+});
+
+describe("trabalho no mundo aparece no estado (appui-1.2)", () => {
+  it("restaurando e trocando de versão viram `trabalho`; livre, nada", async () => {
+    let restaurando = true;
+    let trocando = false;
+    const inicio = criarInicio(
+      deps({ restaurando: () => restaurando, trocandoVersao: () => trocando }),
+    );
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem", trabalho: "restaurando" });
+    restaurando = false;
+    trocando = true;
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem", trabalho: "trocando-versao" });
+    trocando = false;
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+  });
+});
