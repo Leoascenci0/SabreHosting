@@ -26,6 +26,13 @@ describe("electron-builder.json", () => {
   });
 });
 
+/** Texto de um job de `versao.yml` (do nome até o próximo job ou o fim). */
+const trabalho = (nome: string): string => {
+  const yml = lerTexto(".github/workflows/versao.yml");
+  const m = yml.match(new RegExp(`^  ${nome}:\\n([\\s\\S]*?)(?=^  [a-z-]+:\\n|(?![\\s\\S]))`, "m"));
+  return m?.[1] ?? "";
+};
+
 describe("versao.yml", () => {
   const yml = lerTexto(".github/workflows/versao.yml");
   it("dispara só em tag de versão", () => {
@@ -53,6 +60,31 @@ describe("versao.yml", () => {
   });
 });
 
+describe("versao.yml — escrita só na release (appmel-1.25)", () => {
+  const instalador = trabalho("instalador");
+  const release = trabalho("release");
+  it("o job do ensaio (instalador) só lê: sem contents: write", () => {
+    expect(instalador).toMatch(/permissions:\s*\n\s+contents: read/);
+    expect(instalador).not.toMatch(/contents: write/);
+    expect(instalador).not.toMatch(/GITHUB_TOKEN|gh release/);
+  });
+  it("o checkout não deixa o token gravado no .git", () => {
+    const bloco = instalador.split(/\n      - /).find((b) => b.includes("actions/checkout")) ?? "";
+    expect(bloco).toMatch(/persist-credentials: false/);
+  });
+  it("só o job release escreve, depende do instalador e roda só em tag", () => {
+    expect(release).toMatch(/needs: instalador/);
+    expect(release).toMatch(/permissions:\s*\n\s+contents: write/);
+    expect(release).toMatch(/gh release create/);
+    expect([...(lerTexto(".github/workflows/versao.yml").replace(/^#.*$/gm, "").match(/contents: write/g) ?? [])]).toHaveLength(1);
+  });
+  it("o instalador e os checksums viajam como artefato entre os jobs", () => {
+    expect(instalador).toMatch(/name: instalador-release/);
+    expect(release).toMatch(/download-artifact@[0-9a-f]{40}/);
+    expect(release).toMatch(/name: instalador-release/);
+  });
+});
+
 describe("versao.yml — ensaio sem release (appmel-1.23)", () => {
   const yml = lerTexto(".github/workflows/versao.yml");
   it("pode ser disparado à mão, só para ensaio", () => {
@@ -62,10 +94,11 @@ describe("versao.yml — ensaio sem release (appmel-1.23)", () => {
     expect(yml).toMatch(/electron-builder[^\n]*--publish never/);
   });
   it("tag, checksums e release só valem em push de tag", () => {
-    for (const nome of ["Conferir que a tag bate", "Checksums e teto", "Publicar a release"]) {
+    for (const nome of ["Conferir que a tag bate", "Checksums e teto", "Subir o instalador e os checksums"]) {
       const bloco = yml.split(/\n      - /).find((b) => b.includes(nome)) ?? "";
       expect(bloco, nome).toMatch(/if: github\.event_name == 'push'/);
     }
+    expect(trabalho("release")).toMatch(/^    if: github\.event_name == 'push'/m);
   });
   it("no ensaio sobe o .exe como artefato, com a action fixada por hash", () => {
     const bloco = yml.split(/\n      - /).find((b) => b.includes("actions/upload-artifact")) ?? "";
