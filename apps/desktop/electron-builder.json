@@ -3,7 +3,7 @@
   "appId": "org.sabrehosting.desktop",
   "productName": "SabreHosting",
   "directories": { "output": "release", "buildResources": "recursos" },
-  "files": ["dist/**/*", "package.json"],
+  "files": ["dist/**/*", "package.json", "recursos/icone/*.png"],
   "asarUnpack": [
     "node_modules/@sabrehosting/nucleo/dist/servidor/vigia.js",
     "node_modules/@sabrehosting/nucleo/dist/servidor/comandos.js"
