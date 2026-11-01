@@ -20,6 +20,13 @@ describe("electron-builder.json", () => {
     expect(cfg.nsis.perMachine).toBe(false);
     expect(cfg.nsis.oneClick).toBe(false);
   });
+  it("o Electron do app tem versão exata (sem ^ ou ~) e igual à do lockfile; o electron-builder recusa faixa", () => {
+    const pkg = JSON.parse(lerTexto("apps/desktop/package.json"));
+    const versao: string = pkg.devDependencies?.electron ?? pkg.dependencies?.electron;
+    expect(versao).toMatch(/^\d+\.\d+\.\d+$/);
+    const lock = JSON.parse(lerTexto("package-lock.json"));
+    expect(lock.packages["node_modules/electron"].version).toBe(versao);
+  });
   it("tem nome de arquivo previsível e usa o ícone do projeto", () => {
     expect(cfg.nsis.artifactName).toBe("SabreHosting-Setup-${version}.${ext}");
     expect(cfg.win.icon).toBe("recursos/icone/icone.ico");
