@@ -9,6 +9,7 @@ const telas = [
   "tela-grupo",
   "tela-mods",
   "tela-config",
+  "tela-importar",
   "tela-boas-vindas",
 ]
   .map((id) => document.getElementById(id))
@@ -23,6 +24,7 @@ const VOLTAR: Record<string, string> = {
   "tela-grupo": "grupo-voltar",
   "tela-mods": "mods-voltar", // volta ao Grupo; o Grupo se fecha com o próprio "Voltar"
   "tela-config": "config-voltar",
+  "tela-importar": "importar-voltar", // volta ao Início; o botão fica travado durante a importação
 };
 const ABRIR: Partial<Record<Area, string>> = {
   backups: "ver-backups",
@@ -51,7 +53,13 @@ function ir(destino: Area): void {
   let tela = telaVisivel();
   if (!tela || areaDeTela(tela.id) === undefined) return;
   // Dentro de Mods, "Grupo" na barra volta à tela do Grupo.
-  if (destino === atual && tela.id !== "tela-mods") return;
+  if (destino === atual && tela.id !== "tela-mods" && tela.id !== "tela-importar") return;
+  if (tela.id === "tela-importar") {
+    // Importar é subtela do Início: sair dele é o "Voltar" da própria tela. Importando, o botão está travado e a barra espera.
+    document.getElementById(VOLTAR["tela-importar"] ?? "")?.click();
+    tela = telaVisivel();
+    if (destino === "inicio" || !tela || tela.id === "tela-importar") return marcar();
+  }
   if (tela.id === "tela-mods") {
     document.getElementById(VOLTAR["tela-mods"] ?? "")?.click();
     tela = telaVisivel();

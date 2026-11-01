@@ -1,6 +1,7 @@
 // Assistente de primeira vez (app-1.3b): Convite → EULA → Pasta. A janela nunca guarda o convite além do campo de
 // texto e nunca recebe chave nem token: quem entra no grupo é o main.
 import { executarOcupado } from "./executar-ocupado.js";
+import { marcarPasso } from "./passos.js";
 import type { EstadoBoasVindas, PonteSabre } from "./ponte.js";
 
 declare global {
@@ -16,7 +17,11 @@ const $ = <T extends HTMLElement>(id: string): T => {
 };
 const tela = $("tela-boas-vindas");
 const passoTexto = $("bv-passo");
+const bolinhas = $("bv-bolinhas");
+const titulo = $("titulo-bv");
 const convite = $("bv-convite");
+const formConvite = $("bv-convite-form");
+const outro = $<HTMLButtonElement>("bv-outro");
 const texto = $<HTMLInputElement>("bv-texto");
 const conferir = $<HTMLButtonElement>("bv-conferir");
 const caixa = $("bv-entrar-caixa");
@@ -42,13 +47,21 @@ const TENTAR_DE_NOVO = "Tentar de novo";
 /** O botão de entrar vira "Tentar de novo" só quando o convite foi gasto e a conexão não terminou (appmel-1.14). */
 function rotularEntrar(repetir: boolean): void {
   entrar.textContent = repetir ? TENTAR_DE_NOVO : ENTRAR;
+  outro.hidden = repetir; // convite já gasto: só dá para repetir com ele
 }
 
-const ROTULOS = {
-  convite: "Passo 1 de 3 · Convite",
-  eula: "Passo 2 de 3 · Contrato da Mojang",
-  pasta: "Passo 3 de 3 · Pasta",
+// Uma pergunta por tela: o título é a pergunta e o foco vai para ele a cada passo (leitor de tela).
+const PASSOS = {
+  convite: { n: 1, titulo: "Qual é o seu convite?" },
+  eula: { n: 2, titulo: "Você aceita o contrato da Mojang?" },
+  pasta: { n: 3, titulo: "Em qual pasta guardar o servidor e os mundos?" },
 } as const;
+
+/** Convite conferido: a tela só pergunta se entra (o campo some); `false` volta ao campo. */
+function mostrarConferido(sim: boolean): void {
+  formConvite.hidden = sim;
+  caixa.hidden = !sim;
+}
 
 function mostrarStatus(t: string): void {
   status.textContent = t;
@@ -61,7 +74,7 @@ function mostrarErro(t: string): void {
 let avisoOcupado = "";
 function ocupar(sim: boolean): void {
   tela.setAttribute("aria-busy", String(sim));
-  for (const b of [conferir, entrar, continuar, escolher, concluir, abrirEula, explorar]) {
+  for (const b of [conferir, entrar, outro, continuar, escolher, concluir, abrirEula, explorar]) {
     b.disabled = sim;
   }
   texto.disabled = caminho.disabled = aceito.disabled = sim;
@@ -86,8 +99,10 @@ function irPara(passo: "convite" | "eula" | "pasta"): void {
   convite.hidden = passo !== "convite";
   eula.hidden = passo !== "eula";
   pasta.hidden = passo !== "pasta";
-  passoTexto.textContent = ROTULOS[passo];
+  marcarPasso(passoTexto, bolinhas, PASSOS[passo].n, 3);
+  titulo.textContent = PASSOS[passo].titulo;
   mostrarErro("");
+  titulo.focus();
 }
 
 async function aberto(e: Extract<EstadoBoasVindas, { aberto: true }>): Promise<void> {
@@ -120,7 +135,7 @@ function mostrarContrato(q: { texto: string; link: string }): void {
 
 conferir.addEventListener("click", () => {
   rodar("Conferindo o convite…", async () => {
-    caixa.hidden = true;
+    mostrarConferido(false);
     rotularEntrar(false);
     const r = await window.sabre.boasVindas.conferirConvite(texto.value);
     if (!r.ok) return mostrarErro(r.mensagem);
@@ -129,7 +144,7 @@ conferir.addEventListener("click", () => {
       timeStyle: "short",
     });
     pergunta.textContent = `Entrar no grupo ${r.grupo}? (convite vale até ${vence})`;
-    caixa.hidden = false;
+    mostrarConferido(true);
     entrar.focus();
   });
 });
@@ -146,7 +161,7 @@ entrar.addEventListener("click", () => {
       else if (repetindo) {
         // Não dá mais para repetir (passou o prazo ou o grupo recusou): a mensagem pede convite novo.
         rotularEntrar(false);
-        caixa.hidden = true;
+        mostrarConferido(false);
         texto.value = "";
       }
       mostrarErro(r.mensagem);
@@ -155,11 +170,20 @@ entrar.addEventListener("click", () => {
     }
     rotularEntrar(false);
     texto.value = ""; // o convite já foi usado: não deixa o texto na janela
-    caixa.hidden = true;
+    mostrarConferido(false);
     mostrarContrato(await window.sabre.boasVindas.eula());
     irPara("eula");
     mostrarStatus(`Você entrou no grupo ${r.grupo}.`);
   });
+});
+
+/** Trocar de convite antes de gastar o atual; depois do primeiro "Entrar" o convite já foi usado e só dá para repetir. */
+outro.addEventListener("click", () => {
+  if (entrar.textContent === TENTAR_DE_NOVO) return;
+  texto.value = "";
+  mostrarConferido(false);
+  mostrarErro("");
+  texto.focus();
 });
 
 abrirEula.addEventListener("click", () => {

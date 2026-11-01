@@ -796,3 +796,77 @@ button.link {
 #mods-lista .meta {
   margin-top: 2px;
 }
+
+/* Passo a passo (appui-1.6): indicador "Passo n de N" + bolinhas, igual em Boas-vindas e Importar mundo. */
+.passos {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-3);
+  width: 100%;
+}
+
+.passo-rotulo {
+  margin: 0;
+  font-size: var(--texto-1);
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.passo-bolinhas {
+  display: flex;
+  gap: var(--espaco-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passo-bolinhas li {
+  width: 28px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--cor-borda);
+}
+
+.passo-bolinhas li[data-feito="true"] {
+  background: var(--cor-destaque);
+}
+
+#tela-importar h2,
+#tela-boas-vindas h2 {
+  margin: 0;
+  font-size: var(--texto-4);
+  text-align: left;
+  width: 100%;
+}
+
+#tela-importar h2:focus,
+#tela-boas-vindas h2:focus {
+  outline: none; /* título só recebe o foco para o leitor de tela ler; não é um controle */
+}
+
+#tela-importar .config > p,
+#tela-boas-vindas .config > p {
+  margin: 0;
+}
+
+/* "Explorar sem grupo": alternativa visível, separada do caminho principal por um "ou". */
+.ou {
+  margin: 0;
+  text-align: center;
+  color: var(--cor-texto-suave);
+}
+
+.alternativa {
+  display: grid;
+  justify-items: start;
+  gap: var(--espaco-2);
+}
+
+#tela-importar .acoes,
+#tela-boas-vindas .acoes {
+  justify-content: flex-start;
+}
+
+#tela-importar > .acoes {
+  justify-self: start;
+}
