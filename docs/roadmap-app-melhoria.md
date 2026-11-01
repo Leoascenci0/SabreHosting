@@ -238,3 +238,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* testes acima; no Windows com o instalador novo **[P: Eliel]**.
   *Origem:* ensaio do instalador (run 41338605522) · Eliel
 
+
+- [ ] **1.31 — Modo demonstração: "Explorar sem grupo" na boas-vindas** (decisão do Eliel, 01/11/2026)
+  *O que fazer:* na tela de boas-vindas (passo do convite) um botão secundário "Explorar sem grupo" abre o app inteiro (início, backups, configurações) com dados de mentira, sem hospedar, sem tocar no mundo e sem falar com o cartório; faixa fixa "Modo demonstração" com botão "Sair da demonstração" que volta ao convite. Reaproveitar o modo demonstração que já existe (item 1.2); nada de dado real.
+  *Arquivo:* `apps/desktop/src/ui/boas-vindas.ts`, `tela.ts`, `apps/desktop/src/main/boas-vindas-app.ts`, testes
+  **Tela no app:** Boas-vindas › Passo 1 › "Explorar sem grupo"; faixa "Modo demonstração" › "Sair da demonstração".
+  *Confirmação:* teste: em demonstração, hospedar/backup/importar ficam recusados no main; no Windows com o instalador novo **[P: Eliel]**.
+  *Origem:* Eliel, ao abrir o instalador de ensaio (a tela de boas-vindas era o único que ele via)
