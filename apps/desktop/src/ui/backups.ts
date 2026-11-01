@@ -1,4 +1,5 @@
 import type { BackupDaTela, PonteSabre } from "./ponte.js";
+import { dataEmPalavras } from "./ha-quanto.js";
 
 declare global {
   interface Window {
@@ -21,7 +22,10 @@ const confirmacao = $("backups-confirmacao");
 const pergunta = $("backups-pergunta");
 const confirmar = $<HTMLButtonElement>("backups-confirmar");
 const cancelar = $<HTMLButtonElement>("backups-cancelar");
-const voltar = $<HTMLButtonElement>("voltar-backups");
+const voltar = $<HTMLButtonElement>("voltar-backups"); // escondido: a barra lateral navega e aciona este botão
+const titulo = $("titulo-backups");
+const progresso = $("backups-progresso");
+const vazio = $("backups-vazio");
 const abrir = $<HTMLButtonElement>("ver-backups");
 
 let escolhido: BackupDaTela | undefined;
@@ -30,8 +34,7 @@ let bloqueado = false;
 let botaoDoEscolhido: HTMLElement | undefined;
 let resultado = ""; // "Pronto…" fica na tela até a próxima ação; a lista recarregada não o apaga
 
-const dataDe = (iso: string): string =>
-  new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+const dataDe = (iso: string): string => dataEmPalavras(iso) ?? "data desconhecida";
 
 function tamanhoDe(bytes: number): string {
   const mb = bytes / (1024 * 1024);
@@ -55,7 +58,10 @@ function desenhar(itens: BackupDaTela[]): void {
     ...itens.map((b) => {
       const li = document.createElement("li");
       const texto = document.createElement("span");
-      texto.textContent = dataDe(b.criadoEm);
+      const quando = document.createElement("span");
+      quando.className = "quando";
+      quando.textContent = dataDe(b.criadoEm);
+      texto.append(quando);
       const meta = document.createElement("span");
       meta.className = "meta";
       meta.textContent = `${tamanhoDe(b.tamanho)} · ${b.dePc}`;
@@ -68,7 +74,7 @@ function desenhar(itens: BackupDaTela[]): void {
       botao.addEventListener("click", () => {
         escolhido = b;
         botaoDoEscolhido = botao;
-        pergunta.textContent = `Restaurar o backup de ${dataDe(b.criadoEm)} (${tamanhoDe(b.tamanho)})? O mundo de agora será trocado por ele.`;
+        pergunta.textContent = `Voltar o mundo para o backup de ${dataDe(b.criadoEm)} (${tamanhoDe(b.tamanho)})? O mundo de agora será trocado por ele.`;
         confirmacao.hidden = false;
         cancelar.focus();
       });
@@ -87,13 +93,10 @@ async function carregar(): Promise<void> {
     mostrarErro(estado.erro ?? "");
     avisoHistorico.textContent = estado.avisoHistorico ?? "";
     avisoHistorico.hidden = estado.avisoHistorico === undefined;
+    vazio.hidden = estado.itens.length > 0 || Boolean(estado.erro);
     detalhe.textContent = estado.bloqueado
       ? "Pare o servidor para poder restaurar um backup."
-      : resultado !== ""
-        ? resultado
-        : estado.itens.length === 0 && !estado.erro
-          ? "Ainda não há backups neste PC."
-          : "";
+      : resultado;
   } catch {
     mostrarErro("Não consegui ler a lista de backups.");
   }
@@ -105,7 +108,7 @@ abrir.addEventListener("click", () => {
   confirmacao.hidden = true;
   resultado = "";
   void carregar();
-  voltar.focus();
+  titulo.focus();
 });
 voltar.addEventListener("click", () => {
   tela.hidden = true;
@@ -124,7 +127,8 @@ confirmar.addEventListener("click", () => {
   mostrarErro("");
   resultado = "";
   confirmacao.hidden = true;
-  detalhe.textContent = "Restaurando o backup…";
+  detalhe.textContent = "Restaurando o backup… não feche o app.";
+  progresso.hidden = false;
   tela.setAttribute("aria-busy", "true");
   atualizarBotoes();
   window.sabre.backups
@@ -140,6 +144,7 @@ confirmar.addEventListener("click", () => {
     .finally(() => {
       emCurso = false;
       escolhido = undefined;
+      progresso.hidden = true;
       tela.setAttribute("aria-busy", "false");
       void carregar();
     });

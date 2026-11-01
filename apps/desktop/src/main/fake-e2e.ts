@@ -159,9 +159,13 @@ export function depsBackupsE2E(servidorRodando: () => boolean): DepsBackups {
   mkdirSync(backups, { recursive: true });
   writeFileSync(join(mundo, "level.dat"), "do-backup");
   const nome = nomeDoBackup(new Date("2026-10-30T14:05:09.000Z"), 7);
-  const pronto = criarPacote(mundo, join(backups, nome), { versao: 7, epoca: 1 }).then(() =>
-    writeFileSync(join(mundo, "level.dat"), "atual"),
-  );
+  // SABRE_E2E_SEM_BACKUPS=1: pasta de backups vazia (estado vazio da tela).
+  const pronto =
+    process.env["SABRE_E2E_SEM_BACKUPS"] === "1"
+      ? Promise.resolve()
+      : criarPacote(mundo, join(backups, nome), { versao: 7, epoca: 1 }).then(() =>
+          writeFileSync(join(mundo, "level.dat"), "atual"),
+        );
   const compartilhado = (globalThis as Record<string, unknown>)["__sabreE2EInicio"] as {
     cliente: Parameters<typeof depsBackups>[0]["cliente"];
   };
