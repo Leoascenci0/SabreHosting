@@ -39,3 +39,17 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   **Tela no app:** Configurações › Grupo › "Mods do grupo".
   *Confirmação:* E2E: leitura falhando logo após ação com erro mantém o erro da ação.
   *Origem:* lancmel-2.4 · PR #226 · filha
+
+- [x] **2.6 — Extrair o Java baixado e apontar o `javaw`** (✅ PR #246, 01/11/2026)
+  *O que fazer:* `montar.ts` já baixa o zip do Java com hash conferido, mas não o extrai. Extrair para a pasta do cache (reusar o `yauzl` que já é dependência do núcleo e a regra de caminho de `importar.ts`; **sem dependência nova**), recusando entrada com `..`, caminho absoluto ou link simbólico (zip slip), extraindo para pasta temporária e renomeando só depois (regra 3), e gravar o caminho do `javaw` no marcador da instância.
+  *Arquivo:* `packages/nucleo/src/launcher/montar.ts` (e arquivo novo `zip.ts` ao lado, se passar de ~80 linhas)
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste com zip falso gerado no teste: extrai, acha o `javaw`, recusa `../fora` e caminho absoluto, e uma falha no meio não deixa pasta pela metade. Versão real do Java no PC **[P: junto do lanc-2.3]**.
+  *Origem:* lanc-2.3 · PR #240 · filha
+
+- [x] **2.7 — Montagem já marcada não relê o hash dos ~3 mil assets** (✅ PR #249, 01/11/2026; reaproveitamento do Java confere o `javaw`)
+  *O que fazer:* quando `.montada.json` existe e confere com a versão pedida, pular a releitura de hash dos assets e das bibliotecas (só conferir que os arquivos existem e têm o tamanho do manifesto); sem o marcador, ou com tamanho diferente, rebaixa/reconfere como hoje. Depende do 2.6 (mesmo arquivo).
+  *Arquivo:* `packages/nucleo/src/launcher/montar.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste de cache: segunda montagem não chama o hash nem o download; arquivo com tamanho trocado volta a ser baixado.
+  *Origem:* lanc-2.3 · PR #240 · filha (desempenho)
