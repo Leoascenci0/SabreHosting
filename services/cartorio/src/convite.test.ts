@@ -407,6 +407,16 @@ describe("convite do grupo: usar (sala de entrada, duas fases)", () => {
     expect((await eu(b.token)).statusCode).toBe(200); // a recusa não mexe no token que já vale
   });
 
+  it("repetir com a mesma chave aceita no limite exato de 30 min (o cartório usa `>`, não `>=`)", async () => {
+    const m = montar();
+    const { texto } = await comConvite(m);
+    const t = ler(texto);
+    const chave = gerarParProvisorio().publica;
+    expect((await m.usar(t.c, chave, t.i)).statusCode).toBe(200);
+    m.relogio.agora += 30 * 60_000;
+    expect((await m.usar(t.c, chave, t.i)).statusCode).toBe(200);
+  });
+
   it("recusa da repetição não diz o motivo: janela vencida e chave errada dão a mesma resposta", async () => {
     const m = montar();
     const { texto } = await comConvite(m);
