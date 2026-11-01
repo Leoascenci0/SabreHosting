@@ -39,4 +39,4 @@
 
 - Coordenadora: sessão do ramo `claude/friendly-pasteur-de049o`. Onda 37 cancelada (duplicada); fila sem P vazia.
 - Eliel rodou o app do código-fonte (modo teste `SABRE_E2E=1`, cenário `ninguem`) e viu só o botão Hospedar: reproduzido, Backups e Configurações ficam abaixo da dobra (janela baixa). Decisão do Eliel: corrigir e organizar a tela inicial.
-- Onda 38: appmel-1.27 (tela inicial). Sessão: preenchida abaixo.
+- Onda 38: appmel-1.27 (tela inicial). Sessão: session_012qrjnrJrYwXfY7iEiWQCiC (base a5294b4, aberta 18:13 UTC; controle #266). Watchdog 60 min.
