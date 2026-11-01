@@ -23,7 +23,7 @@ export interface OpcoesDownload {
   tempoSemDados?: number;
   /** Milissegundos no máximo para uma passada inteira. Padrão: 30 min. */
   tempoTotal?: number;
-  /** Só para teste: libera http em localhost/127.0.0.1. Nunca ligado pelo app. Padrão: falso. */
+  /** Só para teste: libera http em localhost/127.0.0.1/[::1]. Nunca ligado pelo app. Padrão: falso. */
   permitirHttpLocal?: boolean;
   /** Libera http só em IP da rede privada 10.66.0.x (WireGuard já cifra o caminho). Padrão: falso. */
   permitirHttpPrivado?: boolean;
@@ -89,7 +89,8 @@ function validar({
   if (hostsPermitidos && !hostPermitido(hostname, hostsPermitidos)) {
     throw new ErroDownload("O endereço do download não está na lista permitida; recusei.");
   }
-  const local = hostname === "localhost" || hostname === "127.0.0.1";
+  // O hostname de um URL IPv6 vem com colchetes: new URL("http://[::1]/").hostname === "[::1]".
+  const local = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
   const liberado =
     protocol === "http:" &&
     ((permitirHttpLocal && local) || (permitirHttpPrivado && ehIpPrivado(hostname)));

@@ -22,7 +22,7 @@ export interface OpcoesMontar {
   baixar?: Baixar;
   /** Baixa também o pacote do Java (Adoptium, sha256 conferido). Extrair e apontar o Java é do item que o usa. */
   java?: boolean;
-  /** Só para teste: libera http em 127.0.0.1 nos downloads. Nunca ligado pelo app. */
+  /** Só para teste: libera http em 127.0.0.1/[::1] nos downloads. Nunca ligado pelo app. */
   permitirHttpLocal?: boolean;
   /** Chamado a cada peça pronta (para a barra de progresso). */
   aoProgredir?: (feitos: number, total: number) => void;
@@ -253,7 +253,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     const vigiado = new URL(p.url);
     if (
       !HOSTS_ARQUIVOS.includes(vigiado.hostname) &&
-      !(permitirHttpLocal && vigiado.hostname === "127.0.0.1")
+      !(permitirHttpLocal && ["127.0.0.1", "[::1]"].includes(vigiado.hostname))
     )
       throw new Error("A Mojang apontou um arquivo para fora dos servidores oficiais; recusei.");
     await mkdir(dirname(p.destino), { recursive: true });
@@ -262,7 +262,9 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
       hashEsperado: { algoritmo: "sha1", valor: p.sha1 },
       destino: p.destino,
       tamanhoMaximo: Math.min(typeof p.tamanho === "number" ? p.tamanho + 1 : TETO_PECA, TETO_PECA),
-      hostsPermitidos: permitirHttpLocal ? [...HOSTS_ARQUIVOS, "127.0.0.1"] : HOSTS_ARQUIVOS,
+      hostsPermitidos: permitirHttpLocal
+        ? [...HOSTS_ARQUIVOS, "127.0.0.1", "[::1]"]
+        : HOSTS_ARQUIVOS,
       permitirHttpLocal,
     });
     opcoes.aoProgredir?.(++feitos, total());
