@@ -44,7 +44,7 @@ const LADO_MOD = { ambos: "jogo e servidor", cliente: "só o jogo", servidor: "s
 /** Passos curtos: o que precisa estar preenchido para seguir (a conferência de verdade fica no app). */
 const PASSOS = [
   { campos: [campos.nome, campos.versao], falta: "Digite o nome e a versão do mod." },
-  { campos: [campos.arquivo], falta: "Digite o nome do arquivo do mod (termina em .jar)." },
+  { campos: [campos.arquivo], falta: "Digite o nome do arquivo do mod." },
   { campos: [campos.url], falta: "Cole o link de download do mod." },
 ];
 
@@ -79,6 +79,7 @@ function fecharFormulario(): void {
 }
 
 function ocupar(ocupado: boolean): void {
+  tela.setAttribute("aria-busy", String(ocupado));
   for (const b of [novo, anterior, proximo, enviar, descartar, confirmar, cancelar, voltar])
     b.disabled = ocupado;
   for (const b of lista.querySelectorAll("button")) b.disabled = ocupado;

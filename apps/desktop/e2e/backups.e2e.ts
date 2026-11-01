@@ -104,7 +104,8 @@ describe("tela de backups", () => {
       const w = window as unknown as { __viuProgresso?: boolean };
       w.__viuProgresso = false;
       new MutationObserver(() => {
-        if (!alvo.hidden) w.__viuProgresso = true;
+        // Visível de verdade (não só sem o atributo `hidden`): ocupa espaço na tela.
+        if (!alvo.hidden && alvo.getBoundingClientRect().height > 0) w.__viuProgresso = true;
       }).observe(alvo, { attributes: true, attributeFilter: ["hidden"] });
     });
     await pagina.locator("#backups-confirmar").click();

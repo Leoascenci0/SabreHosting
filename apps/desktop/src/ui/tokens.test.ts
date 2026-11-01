@@ -78,6 +78,19 @@ describe("tokens", () => {
     }
   });
 
+  it.each([
+    ["claro", claro],
+    ["escuro", escuro],
+  ])("anel de foco e cores de estado leem bem como elemento gráfico (3:1) no tema %s", (_n, t) => {
+    for (const nome of ["--cor-destaque", "--cor-ligado", "--cor-atencao", "--cor-erro"]) {
+      expect(contraste(cor(t, nome), cor(t, "--cor-fundo")), nome).toBeGreaterThanOrEqual(3);
+      expect(contraste(cor(t, nome), cor(t, "--cor-superficie")), nome).toBeGreaterThanOrEqual(3);
+    }
+    expect(
+      contraste(cor(t, "--cor-texto-suave"), cor(t, "--cor-superficie")),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("tem escala de tipografia, mais espaços e sombras suaves nos dois temas", () => {
     for (const nome of ["--texto-1", "--texto-2", "--texto-3", "--texto-4", "--texto-5"]) {
       expect(claro[nome], nome).toMatch(/rem$/);
