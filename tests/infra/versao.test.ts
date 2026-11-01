@@ -53,6 +53,28 @@ describe("versao.yml", () => {
   });
 });
 
+describe("versao.yml — ensaio sem release (appmel-1.23)", () => {
+  const yml = lerTexto(".github/workflows/versao.yml");
+  it("pode ser disparado à mão, só para ensaio", () => {
+    expect(yml).toMatch(/^\s+workflow_dispatch:/m);
+  });
+  it("nunca publica pelo electron-builder", () => {
+    expect(yml).toMatch(/electron-builder[^\n]*--publish never/);
+  });
+  it("tag, checksums e release só valem em push de tag", () => {
+    for (const nome of ["Conferir que a tag bate", "Checksums e teto", "Publicar a release"]) {
+      const bloco = yml.split(/\n      - /).find((b) => b.includes(nome)) ?? "";
+      expect(bloco, nome).toMatch(/if: github\.event_name == 'push'/);
+    }
+  });
+  it("no ensaio sobe o .exe como artefato, com a action fixada por hash", () => {
+    const bloco = yml.split(/\n      - /).find((b) => b.includes("actions/upload-artifact")) ?? "";
+    expect(bloco).toMatch(/upload-artifact@[0-9a-f]{40}/);
+    expect(bloco).toMatch(/if: github\.event_name == 'workflow_dispatch'/);
+    expect(bloco).toMatch(/path: apps\/desktop\/release\/SabreHosting-Setup-\*\.exe/);
+  });
+});
+
 describe("checksums.mjs", () => {
   let pasta: string;
   beforeEach(() => {

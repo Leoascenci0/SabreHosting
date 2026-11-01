@@ -1,7 +1,9 @@
 name: Versão
 
-# Só roda quando alguém cria uma tag vX.Y.Z (a Máxima, no fim de um milestone). Não assina o instalador (decisão D9, do Eliel).
+# Release só sai quando alguém cria uma tag vX.Y.Z (a Máxima, no fim de um milestone). Disparo à mão (ensaio) gera o
+# instalador e o sobe como artefato, sem criar tag nem release. Não assina o instalador (decisão D9, do Eliel).
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*.*.*"
@@ -22,6 +24,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - name: Conferir que a tag bate com a versão do app
+        if: github.event_name == 'push'
         shell: bash
         run: |
           VERSAO=$(node -p "require('./apps/desktop/package.json').version")
@@ -32,13 +35,23 @@ jobs:
       - run: npm ci
       - run: npm run build -w apps/desktop
       - name: Gerar o instalador (NSIS)
-        run: npx electron-builder --config electron-builder.json --win
+        run: npx electron-builder --config electron-builder.json --win --publish never
         working-directory: apps/desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false" # sem assinatura de código
       - name: Checksums e teto de tamanho
+        if: github.event_name == 'push'
         run: node apps/desktop/scripts/checksums.mjs apps/desktop/release
+      - name: Subir o instalador do ensaio como artefato
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: instalador-ensaio
+          path: apps/desktop/release/SabreHosting-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 7
       - name: Publicar a release
+        if: github.event_name == 'push'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
