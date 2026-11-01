@@ -379,6 +379,48 @@ describe("convite do grupo: usar (sala de entrada, duas fases)", () => {
     expect(m.banco.prepare("SELECT count(*) AS n FROM pcs").get()).toEqual({ n: 2 });
   });
 
+  it("repetir com a mesma chave vale até 30 min depois do uso (token e pacote novos); aos 31 min → 401", async () => {
+    const m = montar();
+    const { texto } = await comConvite(m);
+    const t = ler(texto);
+    const chave = gerarParProvisorio().publica;
+    const a = (await m.usar(t.c, chave, t.i)).json<{ token: string; pacote: PacoteLigacao }>();
+    const trocasAntes = m.chamadas.filter((c) => c[0] === "entrada-trocar").length;
+    m.relogio.agora += 29 * 60_000;
+    const r = await m.usar(t.c, chave, t.i);
+    expect(r.statusCode).toBe(200);
+    const b = r.json<{ token: string; pacote: PacoteLigacao }>();
+    expect(b.token).not.toBe(a.token);
+    expect(b.pacote.ip_pc).toBe(a.pacote.ip_pc);
+    expect(m.chamadas.filter((c) => c[0] === "entrada-trocar")).toHaveLength(trocasAntes + 1);
+    const eu = (token: string) =>
+      m.app.inject({
+        url: "/eu",
+        headers: { authorization: `Bearer ${token}` },
+        remoteAddress: a.pacote.ip_pc,
+      });
+    expect((await eu(a.token)).statusCode).toBe(401);
+    expect((await eu(b.token)).statusCode).toBe(200);
+    m.relogio.agora += 2 * 60_000; // 31 min depois do uso
+    const tarde = await m.usar(t.c, chave, t.i);
+    expect(tarde.statusCode).toBe(401);
+    expect((await eu(b.token)).statusCode).toBe(200); // a recusa não mexe no token que já vale
+  });
+
+  it("recusa da repetição não diz o motivo: janela vencida e chave errada dão a mesma resposta", async () => {
+    const m = montar();
+    const { texto } = await comConvite(m);
+    const t = ler(texto);
+    const chave = gerarParProvisorio().publica;
+    expect((await m.usar(t.c, chave, t.i)).statusCode).toBe(200);
+    const errada = await m.usar(t.c, gerarParProvisorio().publica, t.i);
+    m.relogio.agora += 31 * 60_000;
+    const vencida = await m.usar(t.c, chave, t.i);
+    expect(vencida.statusCode).toBe(401);
+    expect(vencida.statusCode).toBe(errada.statusCode);
+    expect(vencida.body).toBe(errada.body);
+  });
+
   it("ajudante falha no trocar → 503; o PC repete e entra (não encalha)", async () => {
     const m = montar();
     const { texto } = await comConvite(m);

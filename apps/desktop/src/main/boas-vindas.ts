@@ -53,6 +53,10 @@ const SEM_GRUPO = "Entre no grupo com o convite antes de continuar.";
 const PASTA_INVALIDA =
   "Escolha uma pasta completa (por exemplo, C:\\Jogos\\SabreHosting), não a raiz do disco.";
 const FALHA_PASTA = "Não consegui preparar a pasta. Escolha outra.";
+const PASSOU_A_JANELA =
+  "Passaram 30 minutos desde que esse convite foi usado, então ele não serve mais. Peça um convite novo para quem administra o grupo.";
+/** O cartório só reemite a conexão para o mesmo PC até 30 min depois do uso (Eliel, 01/11; JANELA_REPETICAO_MS). */
+const JANELA_RETOMADA_MS = 30 * 60_000;
 
 /**
  * A pasta-base vinda da janela: texto, caminho completo, sem `..`, fora da raiz do disco e das pastas do sistema
@@ -123,7 +127,15 @@ function mensagemSegura(e: unknown, segredos: string[]): string {
 }
 
 export function criarBoasVindas(deps: DepsBoasVindas) {
+  // Convite, chaves e retomada ficam SÓ em memória (nunca em disco): fechou o app, pede convite novo.
   let convite: Convite | undefined;
+  /** Nascem no 1º `entrar` deste convite; a repetição precisa da MESMA chave (o cartório só reemite para ela). */
+  let chaves: ParDeChaves | undefined;
+  /** Instante em que a entrada falhou com o convite já gasto: "Tentar de novo" vale até 30 min depois. */
+  let gastoEm: number | undefined;
+  const esquecer = (): void => {
+    convite = chaves = gastoEm = undefined;
+  };
   let aceitoEm: Date | undefined;
   let entrando = false;
 
@@ -148,8 +160,9 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
 
     /** Confere formato e prazo ANTES de tudo (nada de rede, nada de disco). */
     async conferirConvite(entrada: unknown): Promise<ConviteConferido> {
-      convite = undefined;
       const r = lerConvite(typeof entrada === "string" ? entrada : "", deps.agora());
+      // Conferir de novo o MESMO convite não perde a chave (a repetição precisa dela); outro convite recomeça.
+      if (!r.ok || r.convite.codigo !== convite?.codigo) esquecer();
       if (!r.ok) return { ok: false, mensagem: r.mensagem };
       convite = r.convite;
       return { ok: true, grupo: r.convite.grupo, venceEm: r.convite.venceEm };
@@ -159,14 +172,18 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
       if (entrando) return { ok: false, mensagem: "Já estou entrando no grupo." };
       const usar = convite;
       if (!usar) return { ok: false, mensagem: SEM_CONVITE };
+      if (gastoEm !== undefined && deps.agora() - gastoEm >= JANELA_RETOMADA_MS) {
+        esquecer();
+        return { ok: false, mensagem: PASSOU_A_JANELA };
+      }
       if (usar.venceEm <= deps.agora()) {
-        convite = undefined;
+        esquecer();
         return { ok: false, mensagem: VENCEU };
       }
       if (!deps.cofreDisponivel()) return { ok: false, mensagem: SEM_COFRE };
       entrando = true;
-      const chaves = deps.gerarChaves();
-      const segredos = [usar.codigo, usar.chavePrivadaProvisoria, chaves.privada];
+      const minhas = (chaves ??= deps.gerarChaves());
+      const segredos = [usar.codigo, usar.chavePrivadaProvisoria, minhas.privada];
       try {
         let guardado = false;
         const guardar = async (t: string): Promise<void> => {
@@ -176,13 +193,16 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
         };
         let token: string;
         try {
-          ({ token } = await deps.entrar(usar, chaves, guardar));
+          ({ token } = await deps.entrar(usar, minhas, guardar));
         } catch (e) {
-          // Falha depois do cartório aceitar: o convite foi gasto e não serve de novo.
-          if ((e as { conviteGasto?: unknown } | null)?.conviteGasto === true) convite = undefined;
+          const falha = e as { conviteGasto?: unknown; status?: unknown; tipo?: unknown } | null;
+          // Cartório aceitou mas a conexão falhou: guarda o instante (a janela conta do 1º uso).
+          if (falha?.conviteGasto === true) gastoEm ??= deps.agora();
+          // Cartório recusou (usado por outro, vencido, janela passada): não adianta repetir.
+          else if (falha?.status === 401 || falha?.tipo === "acesso") esquecer();
           throw e;
         }
-        convite = undefined; // usado: não serve de novo
+        esquecer(); // usado: não serve de novo
         if (!guardado) await guardar(token);
         let grupo: { nome: string; endereco?: string } = { nome: usar.grupo };
         try {
@@ -198,7 +218,11 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
           ...(grupo.endereco ? { endereco: grupo.endereco } : {}),
         };
       } catch (e) {
-        return { ok: false, mensagem: mensagemSegura(e, segredos) };
+        return {
+          ok: false,
+          mensagem: mensagemSegura(e, segredos),
+          ...(gastoEm !== undefined ? { tentarDeNovo: true as const } : {}),
+        };
       } finally {
         entrando = false;
       }
