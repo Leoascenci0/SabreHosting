@@ -1,6 +1,6 @@
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -153,7 +153,7 @@ describe("tela de configurações", () => {
     expect(() => readFileSync(arquivo())).toThrow();
   });
 
-  it("não mostra a área Grupo a quem não é dono; cada aba mostra só as suas seções", async () => {
+  it("cada aba mostra só as suas seções; Grupo e Mods não são mais abas", async () => {
     const p = await abrir();
     await ir(p, "servidor");
     await p.locator("#cfg-endereco").waitFor(); // o endereço chega junto com o estado do grupo
@@ -161,12 +161,14 @@ describe("tela de configurações", () => {
     expect(await legendas()).toEqual(["Servidor", "Endereço do servidor"]);
     await ir(p, "backups");
     expect(await legendas()).toEqual(["Backups"]);
-    await ir(p, "grupo");
-    expect(await legendas()).toEqual([]);
-    await ir(p, "mods");
-    expect(await legendas()).toEqual(["Mods do grupo"]);
     await ir(p, "geral");
     expect(await legendas()).toEqual(["Geral"]);
+    // Grupo e Mods têm tela própria (barra lateral › Grupo): sem aba aqui.
+    expect(await p.locator('[role="tab"]').allInnerTexts()).toEqual([
+      "Geral",
+      "Servidor",
+      "Backups",
+    ]);
   });
 
   it("Endereço do servidor: aparece para todos, só leitura, com o endereço do cartório", async () => {
@@ -176,282 +178,6 @@ describe("tela de configurações", () => {
     const campo = p.locator("#grupo-endereco");
     expect(await campo.inputValue()).toBe("mundo.exemplo.net");
     expect(await campo.isEditable()).toBe(false);
-  });
-
-  const revogados = (): Promise<number[]> =>
-    aberto?.evaluate(
-      () =>
-        (globalThis as unknown as { __sabreE2EGrupo: { revogados: number[] } }).__sabreE2EGrupo
-          .revogados,
-    ) as Promise<number[]>;
-
-  it("convite: dono cria com nome e validade, vê o prazo e copia; nada fica em disco", async () => {
-    const p = await abrir(true);
-    await ir(p, "grupo");
-    await p.locator("#grupo-lista li").first().waitFor();
-    expect(await p.locator("#convite-resultado").isHidden()).toBe(true);
-
-    await p.locator("#convite-criar").click(); // sem nome: não chama o cartório
-    await esperarTexto(p, "#convite-erro", "Digite o nome");
-    await p.locator("#convite-nome").fill("PC do João");
-    await esperarTexto(p, "#convite-nome-ficou", "pc-do-joao");
-    await p.locator("#convite-validade").selectOption("24");
-    await p.locator("#convite-criar").click();
-    await p.locator("#convite-resultado:not([hidden])").waitFor();
-    const texto = await p.locator("#convite-texto").inputValue();
-    expect(texto).toBe("sabre://convite/1.FALSO-pc-do-joao");
-    expect(await p.locator("#convite-prazo").textContent()).toContain("Vale até");
-    expect(
-      await aberto?.evaluate(
-        () =>
-          (globalThis as unknown as { __sabreE2EGrupo: { convites: unknown[] } }).__sabreE2EGrupo
-            .convites,
-      ),
-    ).toEqual([{ nomePc: "pc-do-joao", horas: 24 }]);
-
-    await p.locator("#convite-copiar").click();
-    await esperarTexto(p, "#convite-copiar", "Copiado");
-    // Região de status: é ela que o leitor de tela anuncia (o rótulo do botão sozinho não é).
-    expect(await p.locator("#convite-copiado").getAttribute("role")).toBe("status");
-    await esperarTexto(p, "#convite-copiado", "Convite copiado");
-    expect(await aberto?.evaluate(({ clipboard }) => clipboard.readText())).toBe(texto);
-
-    // Segunda cópia seguida: a região tem que mudar de novo (limpa e reescrita) para o leitor de tela anunciar.
-    await p.evaluate(() => {
-      const w = globalThis as unknown as { __mudancasConvite: number };
-      w.__mudancasConvite = 0;
-      new MutationObserver((registros) => {
-        w.__mudancasConvite += registros.length;
-      }).observe(document.querySelector("#convite-copiado") as Node, {
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-    });
-    await p.locator("#convite-copiar").click();
-    await p.waitForTimeout(500);
-    const mudancas = await p.evaluate(
-      () => (globalThis as unknown as { __mudancasConvite: number }).__mudancasConvite,
-    );
-    expect(mudancas).toBeGreaterThanOrEqual(2);
-    await esperarTexto(p, "#convite-copiado", "Convite copiado");
-
-    // Sair e voltar: o texto some da tela, e nada do convite foi gravado nas preferências.
-    await p.locator("#config-voltar").click();
-    await p.locator("#ver-config").click();
-    await ir(p, "grupo");
-    await p.locator("#grupo-lista li").first().waitFor();
-    expect(await p.locator("#convite-resultado").isHidden()).toBe(true);
-    expect(await p.locator("#convite-texto").inputValue()).toBe("");
-    const gravados = readdirSync(dados ?? "", { recursive: true, withFileTypes: true })
-      .filter((e) => e.isFile())
-      .map((e) => readFileSync(join(e.parentPath, e.name)).toString("latin1"));
-    expect(
-      gravados.some((c) => c.includes("sabre://convite") || c.includes("FALSO-pc-do-joao")),
-    ).toBe(false);
-  });
-
-  it("convite: amigo (não-dono) não vê o formulário", async () => {
-    const p = await abrir(false);
-    await grupoChegou(p);
-    await ir(p, "grupo");
-    expect(await p.locator("#cfg-grupo").isHidden()).toBe(true);
-    expect(await p.locator("#convite-criar").isVisible()).toBe(false);
-  });
-
-  it("grupo: não-dono não vê a área nem o botão", async () => {
-    const p = await abrir();
-    await grupoChegou(p);
-    await ir(p, "grupo");
-    expect(await p.locator("#cfg-grupo").isHidden()).toBe(true);
-    expect(await p.locator("#grupo-lista button").count()).toBe(0);
-  });
-
-  it("grupo: dono vê os PCs; o dono não tem botão; cancelar não revoga; confirmar revoga", async () => {
-    const p = await abrir(true);
-    await ir(p, "grupo");
-    await p.locator("#grupo-lista li").first().waitFor();
-    expect(await p.locator("#grupo-lista li").count()).toBe(3);
-    expect(await p.locator("#grupo-lista button").count()).toBe(2); // sem botão no dono
-    expect(await p.locator("#grupo-lista button").first().textContent()).toBe("Tirar PC do grupo");
-
-    // Cancelar: a pergunta cita o NOME do PC e nada é revogado.
-    await p
-      .locator("#grupo-lista li", { hasText: "Lucas" })
-      .getByRole("button", { name: "Tirar PC do grupo" })
-      .click();
-    await esperarTexto(p, "#grupo-pergunta", "PC do Lucas");
-    expect(await p.locator("#grupo-confirmacao").textContent()).toContain("novo convite");
-    await p.locator("#grupo-cancelar").click();
-    expect(await p.locator("#grupo-confirmacao").isHidden()).toBe(true);
-    expect(await revogados()).toEqual([]);
-    expect(await p.locator("#grupo-lista li").count()).toBe(3);
-
-    // Confirmar: chama revogarPc só desse PC e a lista perde o PC.
-    await p
-      .locator("#grupo-lista li", { hasText: "Lucas" })
-      .getByRole("button", { name: "Tirar PC do grupo" })
-      .click();
-    await p.locator("#grupo-confirmar").click();
-    await esperarTexto(p, "#grupo-aviso", "PC do Lucas saiu do grupo");
-    expect(await revogados()).toEqual([2]);
-    expect(await p.locator("#grupo-lista li").count()).toBe(2);
-    // O foco não se perde: vai ao aviso; e o botão não tem aria-label que esconda o texto visível.
-    expect(await p.evaluate(() => document.activeElement?.id)).toBe("grupo-aviso");
-    expect(await p.locator("#grupo-lista button[aria-label]").count()).toBe(0);
-  });
-  const listasDeMods = (): Promise<Array<Array<{ arquivo: string }>>> =>
-    aberto?.evaluate(
-      () =>
-        (globalThis as unknown as { __sabreE2EMods: { listas: unknown[] } }).__sabreE2EMods.listas,
-    ) as Promise<Array<Array<{ arquivo: string }>>>;
-
-  it("mods: amigo vê a lista, mas não tem como editar", async () => {
-    const p = await abrir();
-    await ir(p, "mods");
-    await p.locator("#mods-lista li").first().waitFor();
-    expect(await p.locator("#mods-lista").textContent()).toContain("Sodium");
-    expect(await p.locator("#mods-adicionar").isHidden()).toBe(true);
-    expect(await p.locator("#mods-lista button").count()).toBe(0);
-  });
-
-  it("mods: dono adiciona (confirma só ao tirar) e a lista segue o cartório", async () => {
-    const p = await abrir(true);
-    await ir(p, "mods");
-    await p.locator("#mods-adicionar:not([hidden])").waitFor();
-    await p.locator("#mods-nome").fill("Lithium");
-    await p.locator("#mods-versao").fill("0.13.0");
-    await p.locator("#mods-arquivo").fill("lithium.jar");
-    await p.locator("#mods-url").fill("https://evil.example/lithium.jar");
-    await p.locator("#mods-hash").fill("b".repeat(128));
-    await p.locator("#mods-adicionar-botao").click();
-    await esperarTexto(p, "#mods-erro", "cdn.modrinth.com");
-    expect(await listasDeMods()).toEqual([]); // link de outro site: nada gravado
-    await p.locator("#mods-url").fill("https://cdn.modrinth.com/data/x/versions/y/lithium.jar");
-    await p.locator("#mods-adicionar-botao").click();
-    await p.waitForFunction(() => document.querySelectorAll("#mods-lista li").length === 2);
-    expect((await listasDeMods())[0]?.map((m) => m.arquivo)).toEqual(["sodium.jar", "lithium.jar"]);
-
-    await p.locator("#mods-lista li", { hasText: "Sodium" }).getByRole("button").click();
-    await esperarTexto(p, "#mods-pergunta", "Sodium");
-    await p.locator("#mods-cancelar").click();
-    expect((await listasDeMods()).length).toBe(1); // cancelar não grava
-    await p.locator("#mods-lista li", { hasText: "Sodium" }).getByRole("button").click();
-    await p.locator("#mods-confirmar").click();
-    await p.waitForFunction(() => document.querySelectorAll("#mods-lista li").length === 1);
-    expect((await listasDeMods())[1]?.map((m) => m.arquivo)).toEqual(["lithium.jar"]);
-  });
-
-  it("mods: aviso e erro antigos somem quando a lista volta a carregar", async () => {
-    const p = await abrir(true);
-    await ir(p, "mods");
-    // O Electron passa o módulo do Electron antes do argumento; o argumento é o par [nome, ligado].
-    const interruptor = (nome: "semInstancia" | "falhaLer", ligado: boolean): Promise<unknown> =>
-      aberto?.evaluate(
-        (_electron, [n, v]: [string, boolean]) => {
-          const falso = (globalThis as unknown as Record<string, Record<string, boolean>>)[
-            "__sabreE2EMods"
-          ];
-          if (falso) falso[n] = v;
-        },
-        [nome, ligado],
-      ) as Promise<unknown>;
-    const reabrir = async (): Promise<void> => {
-      await p.locator("#config-voltar").click();
-      await p.locator("#ver-config").click();
-      await ir(p, "mods");
-      await p.locator("#mods-adicionar:not([hidden])").waitFor();
-    };
-    const adicionar = async (nome: string, arquivo: string): Promise<void> => {
-      await p.locator("#mods-nome").fill(nome);
-      await p.locator("#mods-versao").fill("1.0.0");
-      await p.locator("#mods-arquivo").fill(arquivo);
-      await p.locator("#mods-url").fill(`https://cdn.modrinth.com/data/x/versions/y/${arquivo}`);
-      await p.locator("#mods-hash").fill("c".repeat(128));
-      await p.locator("#mods-adicionar-botao").click();
-    };
-
-    // Aviso: sem a pasta da instância, o aviso aparece; depois a pasta existe e o aviso some.
-    await p.locator("#mods-adicionar:not([hidden])").waitFor();
-    await interruptor("semInstancia", true);
-    await adicionar("Lithium", "lithium.jar");
-    await esperarTexto(p, "#mods-aviso", "Prism ainda não foi criada");
-    await interruptor("semInstancia", false);
-    await adicionar("Iris", "iris.jar"); // uma conferência que dá certo limpa o aviso no servidor
-    await p.waitForFunction(() => document.querySelectorAll("#mods-lista li").length === 3);
-    await reabrir();
-    await p.waitForFunction(
-      () => document.querySelector("#mods-aviso")?.textContent === "",
-      undefined,
-      {
-        timeout: 5000,
-      },
-    );
-
-    // Erro de leitura: some quando a leitura volta.
-    await interruptor("falhaLer", true);
-    await reabrir();
-    const erroVisivel = (): boolean =>
-      (document.querySelector("#mods-erro") as HTMLElement | null)?.hidden === false;
-    await p.waitForFunction(erroVisivel, undefined, { timeout: 5000 });
-    await interruptor("falhaLer", false);
-    await reabrir();
-    await p.waitForFunction(
-      () => (document.querySelector("#mods-erro") as HTMLElement | null)?.hidden === true,
-      undefined,
-      {
-        timeout: 5000,
-      },
-    );
-  });
-
-  it("mods: leitura que falha logo após uma ação com erro mantém o erro da ação", async () => {
-    const p = await abrir(true);
-    await ir(p, "mods");
-    await p.locator("#mods-adicionar:not([hidden])").waitFor();
-    // A ação lê a lista (passa), confere o link (erro de ação); a leitura logo depois da ação falha.
-    const interruptorMods = (campos: Record<string, boolean | number>): Promise<unknown> =>
-      aberto?.evaluate((_electron, c: Record<string, boolean | number>) => {
-        const falso = (globalThis as unknown as Record<string, Record<string, unknown>>)[
-          "__sabreE2EMods"
-        ];
-        if (falso) Object.assign(falso, c);
-      }, campos) as Promise<unknown>;
-    await p.locator("#mods-nome").fill("Lithium");
-    await p.locator("#mods-versao").fill("0.13.0");
-    await p.locator("#mods-arquivo").fill("lithium.jar");
-    await p.locator("#mods-url").fill("https://evil.example/lithium.jar");
-    await p.locator("#mods-hash").fill("b".repeat(128));
-    await interruptorMods({ falhaLer: true, leiturasOk: 1 });
-    await p.locator("#mods-adicionar-botao").click();
-    // Dá tempo de a ação e a leitura (que falha) terminarem; o erro da ação tem que continuar na tela.
-    await p.waitForTimeout(1000);
-    expect(await p.locator("#mods-erro").textContent()).toContain("cdn.modrinth.com");
-    expect(await p.locator("#mods-erro").textContent()).not.toContain("cartório");
-    await interruptorMods({ falhaLer: false, leiturasOk: 0 });
-  });
-
-  it("mods: releitura depois de ação bem-sucedida mostra a falha de leitura", async () => {
-    const p = await abrir(true);
-    await ir(p, "mods");
-    await p.locator("#mods-adicionar:not([hidden])").waitFor();
-    const interruptorMods = (campos: Record<string, boolean | number>): Promise<unknown> =>
-      aberto?.evaluate((_electron, c: Record<string, boolean | number>) => {
-        const falso = (globalThis as unknown as Record<string, Record<string, unknown>>)[
-          "__sabreE2EMods"
-        ];
-        if (falso) Object.assign(falso, c);
-      }, campos) as Promise<unknown>;
-    await p.locator("#mods-nome").fill("Iris");
-    await p.locator("#mods-versao").fill("1.0.0");
-    await p.locator("#mods-arquivo").fill("iris2.jar");
-    await p.locator("#mods-url").fill("https://cdn.modrinth.com/data/x/versions/y/iris2.jar");
-    await p.locator("#mods-hash").fill("c".repeat(128));
-    // A ação lê (passa), grava com sucesso; a releitura logo depois falha e não há erro de ação na tela.
-    await interruptorMods({ falhaLer: true, leiturasOk: 1 });
-    await p.locator("#mods-adicionar-botao").click();
-    await esperarTexto(p, "#mods-erro", "cartório agora");
-    await interruptorMods({ falhaLer: false, leiturasOk: 0 });
   });
 
   it("versão: não-dono não vê a área", async () => {
@@ -585,24 +311,22 @@ describe("configurações em seções (appui-1.3)", () => {
     await p.keyboard.press("ArrowRight");
     expect(await p.locator("#aba-servidor").getAttribute("aria-selected")).toBe("true");
     await p.keyboard.press("End");
-    expect(await p.locator("#aba-mods").getAttribute("aria-selected")).toBe("true");
+    expect(await p.locator("#aba-backups").getAttribute("aria-selected")).toBe("true");
     await p.keyboard.press("ArrowRight"); // dá a volta
     expect(await p.locator("#aba-geral").getAttribute("aria-selected")).toBe("true");
     await p.keyboard.press("ArrowLeft");
-    expect(await p.locator("#aba-mods").getAttribute("aria-selected")).toBe("true");
+    expect(await p.locator("#aba-backups").getAttribute("aria-selected")).toBe("true");
   });
 
   it("nenhuma aba passa de 1,5 vez a altura da janela (dono, com tudo aparecendo)", async () => {
     const p = await abrir(true);
     await grupoChegou(p);
-    await ir(p, "mods");
-    await p.locator("#mods-adicionar:not([hidden])").waitFor();
     await ir(p, "backups");
     await p.locator("#cfg-historico").check(); // liga o histórico: a aba mais comprida
     for (const tema of ["light", "dark"] as const) {
       await aberto?.evaluate(({ nativeTheme }, t) => void (nativeTheme.themeSource = t), tema);
       await p.emulateMedia({ colorScheme: tema });
-      for (const aba of ["geral", "servidor", "backups", "grupo", "mods"]) {
+      for (const aba of ["geral", "servidor", "backups"]) {
         await ir(p, aba);
         const [alto, janela] = await p.evaluate(() => [
           document.querySelector(".conteudo")?.scrollHeight ?? 0,

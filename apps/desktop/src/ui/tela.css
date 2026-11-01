@@ -385,9 +385,7 @@ button.link {
 /* Trocar de aba só esconde as outras: o que foi digitado fica, nada recarrega. */
 .config[data-aba="geral"] > fieldset:not([data-aba="geral"]),
 .config[data-aba="servidor"] > fieldset:not([data-aba="servidor"]),
-.config[data-aba="backups"] > fieldset:not([data-aba="backups"]),
-.config[data-aba="grupo"] > fieldset:not([data-aba="grupo"]),
-.config[data-aba="mods"] > fieldset:not([data-aba="mods"]) {
+.config[data-aba="backups"] > fieldset:not([data-aba="backups"]) {
   display: none;
 }
 
@@ -493,6 +491,8 @@ button.link {
 }
 
 #tela-backups,
+#tela-grupo,
+#tela-mods,
 #tela-config {
   width: min(100%, 640px);
 }
@@ -629,4 +629,128 @@ button.link {
   min-height: 32px;
   padding: 0;
   margin-inline-start: var(--espaco-2);
+}
+
+/* Grupo e Mods em telas próprias (appui-1.4): painéis com título, campos alinhados e passos curtos. */
+#tela-grupo,
+#tela-mods {
+  justify-items: stretch;
+  text-align: left;
+}
+
+#tela-grupo h2,
+#tela-mods h2 {
+  justify-self: start;
+}
+
+#grupo-area {
+  display: grid;
+  gap: var(--espaco-3);
+}
+
+.painel {
+  display: grid;
+  gap: var(--espaco-2);
+  padding: var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+}
+
+.painel h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.painel .dica,
+#tela-mods .dica {
+  margin: 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
+}
+
+.painel input[type="text"],
+.painel input[type="url"],
+.painel select {
+  font: inherit;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 var(--espaco-2);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.painel input:focus-visible,
+.painel select:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+.painel .acoes,
+#tela-grupo > .acoes {
+  justify-content: flex-start;
+}
+
+#tela-mods #mods-dono {
+  display: grid;
+  gap: var(--espaco-3);
+  justify-items: stretch;
+}
+
+#tela-mods #mods-novo {
+  justify-self: start;
+}
+
+/* Linhas de aviso vazias não deixam vão (continuam no lugar para o leitor de tela anunciar). */
+#tela-grupo .detalhe,
+#tela-mods .detalhe {
+  min-height: 0;
+}
+
+#tela-grupo .detalhe:empty,
+#tela-mods .detalhe:empty {
+  margin-block: calc(var(--espaco-2) * -1) 0;
+}
+
+#grupo-lista li,
+#mods-lista li {
+  min-height: 62px;
+}
+
+#tela-mods #mods-voltar {
+  justify-self: start;
+}
+
+.passo {
+  display: grid;
+  gap: var(--espaco-2);
+}
+
+.passo[hidden],
+#mods-dono[hidden] {
+  display: none;
+}
+
+.painel details summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--cor-destaque);
+}
+
+.painel details summary:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+.painel details[open] {
+  display: grid;
+  gap: var(--espaco-2);
+}
+
+#grupo-lista .meta,
+#mods-lista .meta {
+  margin-top: 2px;
 }

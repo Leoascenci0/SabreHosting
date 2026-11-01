@@ -3,7 +3,14 @@ import { AREAS, areaDeTela, proximoIndice, type Area } from "./navegacao-regras.
 // Barra lateral fixa: não troca telas por conta própria; só aperta os botões que cada tela já tem
 // (abrir/voltar), para o comportamento de cada área continuar o mesmo.
 const barra = document.getElementById("barra");
-const telas = ["cartao", "tela-backups", "tela-config", "tela-boas-vindas"]
+const telas = [
+  "cartao",
+  "tela-backups",
+  "tela-grupo",
+  "tela-mods",
+  "tela-config",
+  "tela-boas-vindas",
+]
   .map((id) => document.getElementById(id))
   .filter((el): el is HTMLElement => el !== null);
 const botoes = new Map<Area, HTMLButtonElement>(
@@ -13,11 +20,12 @@ const botoes = new Map<Area, HTMLButtonElement>(
 );
 const VOLTAR: Record<string, string> = {
   "tela-backups": "voltar-backups",
+  "tela-grupo": "grupo-voltar",
+  "tela-mods": "mods-voltar", // volta ao Grupo; o Grupo se fecha com o próprio "Voltar"
   "tela-config": "config-voltar",
 };
 const ABRIR: Partial<Record<Area, string>> = {
   backups: "ver-backups",
-  grupo: "ver-config",
   configuracoes: "ver-config",
 };
 
@@ -29,7 +37,7 @@ function telaVisivel(): HTMLElement | undefined {
 
 function marcar(): void {
   const tela = telaVisivel();
-  atual = tela ? areaDeTela(tela.id, atual) : undefined;
+  atual = tela ? areaDeTela(tela.id) : undefined;
   if (barra) barra.hidden = atual === undefined;
   for (const [area, b] of botoes) {
     const ativo = area === atual;
@@ -40,25 +48,21 @@ function marcar(): void {
 }
 
 function ir(destino: Area): void {
-  const tela = telaVisivel();
-  if (!tela || areaDeTela(tela.id, atual) === undefined) return;
-  const igual = destino === atual;
-  if (igual && destino !== "grupo") return;
-  const sair = VOLTAR[tela.id];
-  // Já na tela certa (Grupo <-> Configurações): não volta ao Início, só troca o item marcado.
-  const mesmaTela =
-    tela.id === "tela-config" && (destino === "grupo" || destino === "configuracoes");
-  if (!mesmaTela && sair) document.getElementById(sair)?.click();
-  const abrir = ABRIR[destino];
-  if (!mesmaTela && abrir) document.getElementById(abrir)?.click();
-  atual = destino;
-  if (destino === "grupo") {
-    const grupo = document.getElementById("cfg-grupo");
-    if (grupo && !grupo.hidden) grupo.scrollIntoView({ block: "start" });
-    else document.getElementById("tela-config")?.scrollIntoView({ block: "start" });
-  } else if (mesmaTela) {
-    document.getElementById("tela-config")?.scrollIntoView({ block: "start" });
+  let tela = telaVisivel();
+  if (!tela || areaDeTela(tela.id) === undefined) return;
+  // Dentro de Mods, "Grupo" na barra volta à tela do Grupo.
+  if (destino === atual && tela.id !== "tela-mods") return;
+  if (tela.id === "tela-mods") {
+    document.getElementById(VOLTAR["tela-mods"] ?? "")?.click();
+    tela = telaVisivel();
+    if (destino === "grupo" || !tela) return marcar();
   }
+  document.getElementById(VOLTAR[tela.id] ?? "")?.click();
+  const abrir = ABRIR[destino];
+  if (abrir) document.getElementById(abrir)?.click();
+  // Grupo não tem botão no Início: a tela própria escuta o pedido da barra.
+  if (destino === "grupo")
+    document.dispatchEvent(new CustomEvent("sabre:abrir", { detail: "grupo" }));
   marcar();
 }
 

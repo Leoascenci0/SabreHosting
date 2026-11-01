@@ -59,8 +59,23 @@ describe("barra lateral", () => {
     expect(await atual()).toBe("configuracoes");
 
     await item("grupo").click();
-    await expect(pagina.locator("#tela-config").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#tela-grupo").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#tela-config").isHidden()).resolves.toBe(true);
     expect(await atual()).toBe("grupo");
+
+    // Mods é subtela de Grupo: a barra continua em "Grupo" e voltar à barra leva à tela do Grupo.
+    await pagina.locator("#ver-mods").click();
+    await expect(pagina.locator("#tela-mods").isVisible()).resolves.toBe(true);
+    expect(await atual()).toBe("grupo");
+    await item("grupo").click();
+    await expect(pagina.locator("#tela-grupo").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#tela-mods").isHidden()).resolves.toBe(true);
+    await pagina.locator("#ver-mods").click();
+    await item("backups").click(); // de Mods direto para outra área
+    await expect(pagina.locator("#tela-backups").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#tela-mods").isHidden()).resolves.toBe(true);
+    expect(await atual()).toBe("backups");
+    await item("grupo").click();
 
     await item("inicio").click();
     await expect(pagina.locator("#cartao").isVisible()).resolves.toBe(true);
