@@ -112,7 +112,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: trocar a pasta atualiza onde servidor e mundos são lidos; 1 só chamada do executor elevado **[P: UAC no Windows]**.
   *Origem:* app-1.3b · PR #211 · qa
 
-- [ ] **1.14 — Retomar a conexão sem convite novo**
+- [x] **1.14 — Retomar a conexão sem convite novo** (✅ PR #257, 01/11/2026; janela de 30 min no cartório, estado só em memória; prova em PC Windows ⏸️ P)
   *O que fazer:* se a troca do túnel falha depois do convite gasto, hoje o assistente manda pedir convite novo; guardar o estado para "tentar de novo a conexão" com o token já no cofre.
   *Arquivo:* `apps/desktop/src/main/boas-vindas.ts`, `entrada-no-grupo.ts`
   **Tela no app:** botão "Tentar de novo" no assistente.
@@ -182,9 +182,23 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: caminho dentro de `app.asar` vira `app.asar.unpacked`; fora dele não muda. Instalador com servidor subindo **[P: PC Windows]**.
   *Origem:* app-3.1 · Backlog do milestone · máxima
 
-- [ ] **1.23 — Ensaiar o empacotamento sem criar release**
+- [x] **1.23 — Ensaiar o empacotamento sem criar release** (✅ PR #259, 01/11/2026; código pronto, rodar o workflow no GitHub ⏸️ P; `files` do electron-builder fica sem mudança até o 1º .exe)
   *O que fazer:* `workflow_dispatch` em `versao.yml` com `--publish never`, subindo o `.exe` como artefato; conferir também se o `files` do electron-builder precisa incluir o `dist` do núcleo (a 1ª tag mostra).
   *Arquivo:* `.github/workflows/versao.yml`, `apps/desktop/electron-builder.json`
   **Tela no app:** não se aplica.
   *Confirmação:* ensaio no GitHub gera o `.exe` como artefato **[P: rodar o workflow]**.
   *Origem:* app-3.1 · PR #241 · filha
+
+- [ ] **1.24 — Teste do limite exato de 30 min na reemissão do convite**
+  *O que fazer:* `convite.test.ts` só prova 29 e 31 min; trocar `>` por `>=` no cartório não seria pego. Acrescentar o caso de 30 min exatos (aceita) e um comentário em `boas-vindas.ts` dizendo que o app usa `>=` (mais estrito que o cartório, de propósito).
+  *Arquivo:* `services/cartorio/src/convite.test.ts`, `apps/desktop/src/main/boas-vindas.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste novo falha se o operador mudar.
+  *Origem:* appmel-1.14 · PR #257 · qa (segurança) · MIÚDO
+
+- [ ] **1.25 — `versao.yml`: `contents: write` só no passo da release**
+  *O que fazer:* hoje o `contents: write` vale para o job inteiro, também no disparo manual de ensaio, e o `checkout` grava esse token no `.git`. Usar `persist-credentials: false` no checkout e dar a permissão só ao passo que cria a release (job separado), com teste que fixe isso.
+  *Arquivo:* `.github/workflows/versao.yml`, `tests/infra/versao.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: o job do ensaio não tem `contents: write`.
+  *Origem:* appmel-1.23 · PR #259 · qa (segurança)
