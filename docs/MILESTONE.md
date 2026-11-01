@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 41**
+**Próxima onda: 42**
 
-- Onda 40 (01/11, noite) — appmel-1.31: modo demonstração ("Explorar sem grupo") — sessão: ver docs/ops/rodadas/coordenacao-2026-11-01.md
+- Onda 41 (01/11, noite) — appui-1.1 → 1.2 → 1.3 → 1.4 (redesenho da interface, em sequência) — sessão: ver docs/ops/rodadas/coordenacao-2026-11-01.md
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -70,6 +70,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 01/11/2026 (noite) — Onda 40: appmel-1.31 #276 (modo demonstração "Explorar sem grupo"), controle #277; roadmap `appui` criado (#278). Pendentes: appui-1.5 a 1.7 (próxima onda).
 
 - 01/11/2026 (noite) — Onda 39: appmel-1.30 #272 (app empacotado não abria: ícones fora do app.asar + bandeja derrubava o arranque; teste de empacotamento), controle #273. Ensaio novo: run 41342283125. Aguarda teste no Windows (Eliel).
 

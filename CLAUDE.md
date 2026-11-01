@@ -136,7 +136,7 @@ qual parte detalhada (`references/*.md`) ler para o tipo da mudança.
 - Estado em arquivo, não no chat: `docs/MILESTONE.md` (o plano geral: em curso, fila, pendente do Eliel, backlog,
   feito), `docs/ops/BOARD.md` (fila do CEO), `docs/ops/DECISOES.md` (decisões, todos leem antes).
 - **Roadmaps por etapa:** `docs/roadmap-<sigla>.md`, um por etapa; **cada item cabe num chat**. Siglas: `base`,
-  `host`, `bkp`, `rede`, `cart`, `app`, `sync`, `migra`, `drive`, `piloto`, `lanc` (launcher), `corr` (correções). Melhoria achada
+  `host`, `bkp`, `rede`, `cart`, `app`, `sync`, `migra`, `drive`, `piloto`, `lanc` (launcher), `corr` (correções), `appui` (redesenho da interface do app). Melhoria achada
   durante um item vira item no `docs/roadmap-<sigla>-melhoria.md` (sigla `<sigla>mel`); a filha só descreve no PR.
 - **Fila:** um orquestrador por vez; no máximo 1 PR de controle + 3 itens abertos. Item que pede decisão do Eliel
   nunca vai para agente.
