@@ -8,19 +8,19 @@ sem fonte ou imagem de internet (o app funciona sem rede).
 
 Tema claro por padrão; o escuro vem pelo tema do sistema (`prefers-color-scheme`). Toda cor existe nos dois temas.
 
-| Token               | Para quê                               | Claro     | Escuro    |
-| ------------------- | -------------------------------------- | --------- | --------- |
-| `--cor-fundo`       | fundo da janela                        | `#f4f7f8` | `#0e171c` |
-| `--cor-superficie`  | cartões                                | `#ffffff` | `#16242b` |
-| `--cor-borda`       | contornos                              | `#cfd9dd` | `#2a3d46` |
-| `--cor-texto`       | texto principal                        | `#14232a` | `#eaf2f4` |
-| `--cor-texto-suave` | apoio (versão, dicas)                  | `#4a5d66` | `#9fb4bd` |
-| `--cor-destaque`    | título e ação principal (cor do ícone) | `#0a6b80` | `#4fd1e8` |
-| `--cor-sobre-destaque` | texto dentro de botão destacado     | `#ffffff` | `#0e171c` |
-| `--cor-erro`        | erro e ação que derruba algo (Parar)   | `#b3261e` | `#ff8a80` |
-| `--cor-ligado`      | estado: servidor ligado                | `#1b7a3a` | `#6ee08f` |
-| `--cor-desligado`   | estado: servidor desligado             | `#56676f` | `#9fb4bd` |
-| `--cor-atencao`     | estado: atenção (trocando de host…)    | `#8a5a00` | `#ffc94d` |
+| Token                  | Para quê                               | Claro     | Escuro    |
+| ---------------------- | -------------------------------------- | --------- | --------- |
+| `--cor-fundo`          | fundo da janela                        | `#f4f7f8` | `#0e171c` |
+| `--cor-superficie`     | cartões                                | `#ffffff` | `#16242b` |
+| `--cor-borda`          | contornos                              | `#cfd9dd` | `#2a3d46` |
+| `--cor-texto`          | texto principal                        | `#14232a` | `#eaf2f4` |
+| `--cor-texto-suave`    | apoio (versão, dicas)                  | `#4a5d66` | `#9fb4bd` |
+| `--cor-destaque`       | título e ação principal (cor do ícone) | `#0a6b80` | `#4fd1e8` |
+| `--cor-sobre-destaque` | texto dentro de botão destacado        | `#ffffff` | `#0e171c` |
+| `--cor-erro`           | erro e ação que derruba algo (Parar)   | `#b3261e` | `#ff8a80` |
+| `--cor-ligado`         | estado: servidor ligado                | `#1b7a3a` | `#6ee08f` |
+| `--cor-desligado`      | estado: servidor desligado             | `#56676f` | `#9fb4bd` |
+| `--cor-atencao`        | estado: atenção (trocando de host…)    | `#8a5a00` | `#ffc94d` |
 
 Texto sobre fundo ou superfície tem contraste mínimo 4,5:1 (AA); `tokens.test.ts` confere nos dois temas.
 
@@ -43,6 +43,10 @@ Sombras suaves: `--sombra-1` (cartão, item atual) e `--sombra-2` (o que flutua)
 - Teclado: Tab entra no item atual; setas, Home e End andam pela barra; Enter abre. Navegação em `navegacao.ts`
   (aperta os botões que cada tela já tem; sem roteador).
 - Grupo ainda abre a seção de Grupo dentro de Configurações (tela própria no item 1.4).
+- **Configurações** (appui-1.3): abas internas Geral / Servidor / Backups / Grupo / Mods (`.abas`; trocar só esconde, nada
+  recarrega). Campo = rótulo acima, entrada de largura padrão com unidade ao lado e botão "Padrão" (valor vindo da ponte),
+  ajuda de uma linha + "Saiba mais" (`<details>`). Barra fixa no rodapé (`.barra-salvar`): "Há alterações não salvas",
+  Salvar (só com mudança), Descartar, Voltar. Nenhuma aba passa de 1,5× a altura da janela (testado).
 
 ## Regras de tom (texto na tela)
 
