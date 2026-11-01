@@ -6,6 +6,7 @@ export type Area = (typeof AREAS)[number];
 export function areaDeTela(idTela: string): Area | undefined {
   switch (idTela) {
     case "cartao":
+    case "tela-importar": // subtela do Início (Importar mundo)
       return "inicio";
     case "tela-backups":
       return "backups";

@@ -19,6 +19,11 @@ describe("barra lateral: regras", () => {
     expect(AREAS).not.toContain("mods");
   });
 
+  it("Importar mundo é subtela do Início: marca Início e não vira item da barra", () => {
+    expect(areaDeTela("tela-importar")).toBe("inicio");
+    expect(AREAS).not.toContain("importar");
+  });
+
   it("setas dão a volta; Home e End vão às pontas; outra tecla é ignorada", () => {
     expect(proximoIndice(3, 4, "ArrowDown")).toBe(0);
     expect(proximoIndice(0, 4, "ArrowUp")).toBe(3);
