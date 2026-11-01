@@ -1,4 +1,4 @@
-import type { CampoComErro, ModDaTela, PcDaTela, PonteSabre } from "./ponte.js";
+import type { CampoComErro, LeituraDaTela, ModDaTela, PcDaTela, PonteSabre } from "./ponte.js";
 import { nomeNaRede } from "./nome-na-rede.js";
 import { rotuloConfirmarVersao } from "./rotulo-versao.js";
 
@@ -29,6 +29,10 @@ const historicoEscolher = $<HTMLButtonElement>("cfg-historico-escolher");
 const aviso = $("config-aviso");
 const erro = $("config-erro");
 const salvar = $<HTMLButtonElement>("config-salvar");
+const descartar = $<HTMLButtonElement>("config-descartar");
+const pendente = $("config-pendente");
+const abas = [...form.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+const botoesPadrao = [...form.querySelectorAll<HTMLButtonElement>("button.padrao")];
 const voltar = $<HTMLButtonElement>("config-voltar");
 const abrir = $<HTMLButtonElement>("ver-config");
 
@@ -110,6 +114,72 @@ let botaoDoTirado: HTMLElement | undefined;
 
 let campoComErro: CampoComErro | undefined;
 
+/** Em que aba mora cada campo que o main pode recusar (o erro leva a pessoa até ele). */
+const ABA_DO_CAMPO: Record<CampoComErro, string> = {
+  distancias: "servidor",
+  intervalo: "backups",
+  quantos: "backups",
+  banda: "backups",
+  historico: "backups",
+  quantosHistorico: "backups",
+};
+
+/** Trocar de aba só mostra outra parte da mesma tela: o que foi digitado fica e nada é relido. */
+function irParaAba(nome: string, focar = false): void {
+  form.dataset["aba"] = nome;
+  for (const a of abas) {
+    const ativa = a.dataset["ir"] === nome;
+    a.setAttribute("aria-selected", String(ativa));
+    a.tabIndex = ativa ? 0 : -1;
+    if (ativa && focar) a.focus();
+  }
+}
+for (const [i, aba] of abas.entries()) {
+  aba.addEventListener("click", () => irParaAba(aba.dataset["ir"] ?? "geral"));
+  aba.addEventListener("keydown", (e) => {
+    const destino = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: abas.length - 1 }[e.key];
+    if (destino === undefined) return;
+    e.preventDefault();
+    irParaAba(abas[(destino + abas.length) % abas.length]?.dataset["ir"] ?? "geral", true);
+  });
+}
+
+/** Foto dos campos salvos: "Há alterações não salvas" é a diferença entre a tela e a foto. */
+const valores = (): string =>
+  JSON.stringify([
+    windows.checked,
+    visao.value,
+    simulacao.value,
+    intervalo.value,
+    quantos.value,
+    banda.value,
+    historico.checked,
+    historicoPasta.value,
+    historicoQuantos.value,
+  ]);
+let foto: string | undefined;
+let padroes: LeituraDaTela["padroes"] | undefined;
+
+function atualizarBarra(): void {
+  const mudou = foto !== undefined && valores() !== foto;
+  pendente.hidden = !mudou;
+  salvar.disabled = emCurso || !mudou;
+  descartar.disabled = emCurso || !mudou;
+}
+form.addEventListener("input", atualizarBarra);
+form.addEventListener("change", atualizarBarra);
+
+for (const b of botoesPadrao) {
+  b.addEventListener("click", () => {
+    const campo = $<HTMLInputElement>(b.dataset["campo"] ?? "");
+    const valor = padroes?.[b.dataset["padrao"] as keyof LeituraDaTela["padroes"]];
+    if (valor === undefined) return;
+    campo.value = String(valor);
+    campo.dispatchEvent(new Event("input", { bubbles: true }));
+    campo.focus();
+  });
+}
+
 /** O campo marcado vem do `campo` do app, nunca do texto da mensagem. */
 function mostrarErro(texto: string, campo?: CampoComErro): void {
   erro.textContent = texto;
@@ -131,6 +201,7 @@ function atualizarHistorico(): void {
   historicoPasta.disabled = !livre;
   historicoEscolher.disabled = !livre;
   historicoQuantos.disabled = !livre;
+  for (const b of botoesPadrao) b.disabled = $<HTMLInputElement>(b.dataset["campo"] ?? "").disabled;
 }
 
 function ocupar(ocupado: boolean): void {
@@ -146,11 +217,12 @@ function ocupar(ocupado: boolean): void {
     historico,
     historicoPasta,
     historicoQuantos,
-    salvar,
     voltar,
   ])
     el.disabled = ocupado;
   salvar.textContent = ocupado ? "Salvando…" : "Salvar";
+  atualizarHistorico();
+  atualizarBarra();
 }
 
 function mostrarErroGrupo(texto: string): void {
@@ -520,14 +592,12 @@ confirmarVersao.addEventListener("click", () => {
     });
 });
 
-async function carregar(): Promise<void> {
-  limparConvite();
-  void carregarGrupo();
-  void carregarVersao();
-  void carregarMods();
+/** Lê só a configuração (o Descartar usa esta); grupo, versão e mods não são relidos. */
+async function carregarConfig(): Promise<void> {
   aviso.textContent = "Carregando…";
   try {
     const c = await window.sabre.configuracoes.ler();
+    padroes = c.padroes;
     windows.checked = c.abrirComWindows;
     visao.value = String(c.distanciaVisao);
     simulacao.value = String(c.distanciaSimulacao);
@@ -537,12 +607,27 @@ async function carregar(): Promise<void> {
     historicoQuantos.value = String(c.quantosGuardarHistorico);
     historico.checked = c.historicoLongoLigado;
     historicoPasta.value = c.historicoLongoPasta;
+    for (const b of botoesPadrao) {
+      const nome = form.querySelector(`label[for="${b.dataset["campo"]}"]`)?.textContent ?? "";
+      b.setAttribute("aria-label", `Padrão: ${nome}`);
+      b.title = `Voltar para ${String(c.padroes[b.dataset["padrao"] as keyof typeof c.padroes])}`;
+    }
+    foto = valores();
     atualizarHistorico();
     aviso.textContent = "";
   } catch {
     aviso.textContent = "";
     mostrarErro("Não consegui ler as configurações.");
   }
+  atualizarBarra();
+}
+
+async function carregar(): Promise<void> {
+  limparConvite();
+  void carregarGrupo();
+  void carregarVersao();
+  void carregarMods();
+  await carregarConfig();
 }
 
 historico.addEventListener("change", atualizarHistorico);
@@ -634,6 +719,7 @@ abrir.addEventListener("click", () => {
   inicio.hidden = true;
   tela.hidden = false;
   mostrarErro("");
+  irParaAba("geral");
   void carregar();
   void carregarPasta();
   windows.focus();
@@ -644,9 +730,14 @@ voltar.addEventListener("click", () => {
   inicio.hidden = false;
   abrir.focus();
 });
+descartar.addEventListener("click", () => {
+  if (emCurso) return;
+  mostrarErro("");
+  void carregarConfig();
+});
 form.addEventListener("submit", (evento) => {
   evento.preventDefault();
-  if (emCurso) return;
+  if (emCurso || salvar.disabled) return;
   mostrarErro("");
   aviso.textContent = "";
   ocupar(true);
@@ -665,8 +756,13 @@ form.addEventListener("submit", (evento) => {
       historicoLongoPasta: historicoPasta.value,
     })
     .then((r) => {
-      if (r.ok) aviso.textContent = "Salvo.";
-      else mostrarErro(r.mensagem, r.campo);
+      if (r.ok) {
+        aviso.textContent = "Salvo.";
+        foto = valores();
+      } else {
+        mostrarErro(r.mensagem, r.campo);
+        if (r.campo) irParaAba(ABA_DO_CAMPO[r.campo]);
+      }
     })
     .catch(() => mostrarErro("Não consegui salvar agora. Nada foi alterado."))
     .finally(() => {

@@ -359,6 +359,126 @@ button.link {
   font-size: 0.875rem;
 }
 
+/* Configurações em seções (appui-1.3): abas internas, campos alinhados e barra de salvar fixa. */
+.config .abas {
+  display: flex;
+  gap: var(--espaco-1);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.config .abas button {
+  padding-inline: var(--espaco-3);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--cor-texto-suave);
+}
+
+.config .abas button[aria-selected="true"] {
+  border-bottom-color: var(--cor-destaque);
+  color: var(--cor-destaque);
+  font-weight: 600;
+}
+
+/* Trocar de aba só esconde as outras: o que foi digitado fica, nada recarrega. */
+.config[data-aba="geral"] > fieldset:not([data-aba="geral"]),
+.config[data-aba="servidor"] > fieldset:not([data-aba="servidor"]),
+.config[data-aba="backups"] > fieldset:not([data-aba="backups"]),
+.config[data-aba="grupo"] > fieldset:not([data-aba="grupo"]),
+.config[data-aba="mods"] > fieldset:not([data-aba="mods"]) {
+  display: none;
+}
+
+/* A ajuda curta e o "Saiba mais" dividem a mesma linha; aberto, o texto longo ocupa a largura toda. */
+.config .campo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-1) var(--espaco-3);
+}
+
+.config .campo > label,
+.config .campo > .entrada,
+.config .campo > .linha-pasta,
+.config .campo > details[open] {
+  flex: 1 0 100%;
+}
+
+.config .entrada {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+.config .entrada input[type="number"] {
+  width: 8rem;
+}
+
+.config .unidade {
+  color: var(--cor-texto-suave);
+  min-width: 4.5rem;
+}
+
+.config button.padrao {
+  min-height: 44px;
+  padding-inline: var(--espaco-3);
+}
+
+.config summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  color: var(--cor-destaque);
+  cursor: pointer;
+}
+
+.config summary:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+.config details p {
+  margin: 0 0 var(--espaco-2);
+}
+
+.config .barra-salvar {
+  position: sticky;
+  bottom: calc(-1 * var(--espaco-4));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-1) var(--espaco-3);
+  margin-inline: calc(-1 * var(--espaco-2));
+  padding: var(--espaco-2);
+  border-top: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+}
+
+.config .barra-salvar p {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+
+.config .barra-salvar p:empty {
+  display: none;
+}
+
+.config .barra-salvar .erro {
+  flex-basis: 100%;
+}
+
+.config .barra-salvar .acoes {
+  margin-left: auto;
+}
+
+.config .barra-salvar button.principal {
+  min-width: 0;
+}
+
 /* Faixa do modo demonstração (appmel-1.31): no alto da janela, por cima da barra e do conteúdo, em qualquer tela. */
 .faixa-demo {
   display: flex;
