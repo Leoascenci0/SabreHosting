@@ -54,7 +54,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   *Confirmação:* teste de cache: segunda montagem não chama o hash nem o download; arquivo com tamanho trocado volta a ser baixado.
   *Origem:* lanc-2.3 · PR #240 · filha (desempenho)
 
-- [ ] **2.8 — `javaw` reaproveitado precisa bater com o que foi extraído**
+- [x] **2.8 — `javaw` reaproveitado precisa bater com o que foi extraído** (✅ PR #252, 01/11/2026)
   *O que fazer:* hoje, com `.java.json` presente, `extrairJava` (e o `stat` em `montar.ts`) só confere que o `javaw.exe` **existe**: um `javaw` trocado ou truncado seria executado. Gravar no `.java.json` o tamanho e o sha256 do `javaw` na extração; no reaproveitamento, reler esse arquivo (~100 KB, barato) e comparar; se não bater, ou se o marcador for antigo (sem hash), apagar a pasta e extrair de novo do zip (que já tem hash conferido).
   *Arquivo:* `packages/nucleo/src/launcher/zip.ts` (e o `stat` redundante em `montar.ts`)
   **Tela no app:** não se aplica.

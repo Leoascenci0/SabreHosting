@@ -12,3 +12,5 @@
 | 2026-10-31 (dia) | Coordenadora (este chat, Opus) | 1 | 5,09 (lido às 15:10) | — | — |
 | 2026-10-31 (tarde) | Ondas 26–31 (2º bastão): ~28 itens | 6 sessões de onda + filhas + qa (não registrado; ondas ~0,5–2,3 cada) | n/d (≈ US$ 10–15 estimado) | — | hostmel-3.4 (opus) |
 | 2026-10-31 (tarde) | Coordenadora 2º bastão (este chat) | 1 | n/d | — | — |
+
+- Onda 34 (01/11): filha lancmel-2.8 US$ 0,41; sessão de onda n/d.

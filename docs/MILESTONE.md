@@ -16,7 +16,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 34**
+**Próxima onda: 35**
 
 _(nenhuma onda aberta; bastão da coordenadora passado às 15:10 — ver docs/ops/rodadas/coordenacao-2026-10-31.md)_
 
@@ -70,6 +70,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 01/11/2026 (madrugada) — Onda 34: lancmel-2.8 #252 (`javaw` reaproveitado confere tamanho e sha256), controle. Backlog de código sem P esgotado (achados menores já feitos na Onda 33).
 
 - 01/11/2026 (madrugada) — Onda 33: cartmel-2.6 #244, hostmel-3.5 #245, lancmel-2.6 #246, appmel-1.22 #247 (asarUnpack), corr-1.2 #248 (`npm run vistoria:comum`), lancmel-2.7 #249, controle #250.
 

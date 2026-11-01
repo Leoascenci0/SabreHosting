@@ -20,3 +20,5 @@ _Reescrito pela coordenadora da Máxima em 31/10/2026, 19:25 (Ondas 26–33). Es
 - **Custo:** ondas e filhas da tarde não medidas (sessões de onda US$ 0,5–2,3 cada).
 - **O que não foi verificado:** nada rodou num PC Windows nem na nuvem de verdade; Onda 29 sem `qa` separado (revisão por diff + vistoria).
 - **Fila sem P quase vazia (00:05).** Só sobra appmel-1.23 (precisa do GitHub Actions). Tudo que sobra espera você (appmel-1.14a, D9/app-3.2, lanc-2.2), os domínios bloqueados (rede-2.2, migra-2.x, redemel-2.2/2.3) ou o Windows/nuvem reais.
+
+- **Onda 34 (01/11, madrugada):** lancmel-2.8 #252 — o `javaw` do Java baixado só é reaproveitado se tamanho e sha256 baterem com o extraído. Melhorias dos PRs #244–#250 consolidadas: nenhuma nova além desta. Fila sem P vazia; só sobra appmel-1.23 (precisa rodar o GitHub Actions) e o que espera você.
