@@ -34,3 +34,9 @@
 - **Onda 36 adendo:** appmel-1.26 #263 (Electron fixado em 45.2.0 + tests/infra/versao.test.ts), main bdeed18. O pedido chegou depois de ela fechar os itens e ela o fez mesmo assim.
 - **2º ensaio do versao.yml** (run 41317655804, main bdeed18): ✅ SUCESSO; artefato instalador-ensaio 122.254.303 bytes (116,6 MiB) vs teto 120 MiB — folga de ~3 MiB. Expira 08/11. O .exe não foi baixado (proxy da nuvem barra o blob do GitHub).
 - **Erros da coordenadora (fichas):** mandei item extra a uma onda em curso e, sem esperar resposta, abri outra onda para o mesmo item → trabalho duplicado (pedido a uma onda em curso: esperar a resposta dela antes de abrir outra); create_session disparado em paralelo com prompt provisório e hash curto (S-09 de novo: nunca criar sessão antes de ter o hash completo e o prompt final).
+
+## 5º bastão — dia (01/11, ~15:30 Brasília)
+
+- Coordenadora: sessão do ramo `claude/friendly-pasteur-de049o`. Onda 37 cancelada (duplicada); fila sem P vazia.
+- Eliel rodou o app do código-fonte (modo teste `SABRE_E2E=1`, cenário `ninguem`) e viu só o botão Hospedar: reproduzido, Backups e Configurações ficam abaixo da dobra (janela baixa). Decisão do Eliel: corrigir e organizar a tela inicial.
+- Onda 38: appmel-1.27 (tela inicial). Sessão: preenchida abaixo.

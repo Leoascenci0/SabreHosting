@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 38**
+**Próxima onda: 39**
 
-_(nenhuma onda aberta; Ondas 35–36 fechadas e 37 cancelada em 01/11 — ver docs/ops/rodadas/coordenacao-2026-11-01.md)_
+- Onda 38 (01/11, tarde) — appmel-1.27: tela inicial do app (janela maior; Hospedar, Importar mundo, Backups e Configurações visíveis sem rolar) — sessão: ver docs/ops/rodadas/coordenacao-2026-11-01.md
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
