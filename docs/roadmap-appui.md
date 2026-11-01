@@ -15,25 +15,25 @@ Um amigo que nunca viu o app entende em 5 segundos: **o servidor está ligado? p
 
 ## Itens (ordem de execução)
 
-- [ ] **1.1 — Estrutura da janela: barra lateral fixa e área de conteúdo**
+- [x] **1.1 — Estrutura da janela: barra lateral fixa e área de conteúdo** (PR #280)
   *O que fazer:* trocar "cartão que troca de tela" por uma estrutura fixa: barra lateral com **Início, Backups, Grupo, Configurações** (ícone + nome, item atual destacado), faixa de demonstração por cima, conteúdo à direita com largura boa (máx. ~960 px, centralizado), tamanho mínimo da janela. Atualizar `tokens.css` (escala de tipografia, espaços, sombras suaves, cores de estado: ligado/desligado/atenção) e `docs/design-system.md`. As telas atuais entram dentro da estrutura sem mudar de conteúdo ainda.
   *Arquivo:* `apps/desktop/src/ui/index.html`, `tela.css`, `tokens.css`, `tela.ts`, `docs/design-system.md`, testes
   **Tela no app:** barra lateral › Início / Backups / Grupo / Configurações.
   *Confirmação:* e2e: cada item da barra abre a sua tela e marca o atual; teclado (Tab/setas) navega; captura antes/depois.
 
-- [ ] **1.2 — Início como painel de controle**
+- [x] **1.2 — Início como painel de controle**
   *O que fazer:* o Início mostra, de relance: **estado do servidor** grande, com cor e ícone (ligado / desligado / trocando de host / sem conexão) e uma frase simples; **endereço para os amigos** com botão Copiar; **quem está jogando** (lista ou "ninguém"); **último backup** (há quanto tempo, em palavras) e **versão do mundo**; **um botão principal** grande (Hospedar / Parar / Jogar, conforme o estado) e as ações raras (Importar mundo, Tentar de novo) como links secundários. Sem texto técnico.
   *Arquivo:* `apps/desktop/src/ui/index.html`, `tela.ts`, `tela.css`, `apps/desktop/src/main/inicio.ts` (só se faltar dado), testes
   **Tela no app:** Início.
   *Confirmação:* e2e por estado (parado, ligado, trocando, erro) conferindo o texto e qual botão aparece; captura antes/depois. Depende de 1.1.
 
-- [ ] **1.3 — Configurações em seções, com campos bem alinhados**
+- [x] **1.3 — Configurações em seções, com campos bem alinhados**
   *O que fazer:* dividir em **abas ou lista lateral interna** (Geral, Servidor, Backups) em vez de uma coluna única; cada campo com rótulo acima, campo de largura padrão, ajuda curta em uma linha (o texto longo vira "Saiba mais" que abre/fecha); campos numéricos com unidade ao lado ("minutos", "MB/s"); barra de salvar **fixa no rodapé**, com "Há alterações não salvas" e Salvar/Descartar; "Padrão" como botão por campo. Mover Grupo e Mods para telas próprias (1.4).
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`, `index.html`, `tela.css`, testes
   **Tela no app:** Configurações › Geral / Servidor / Backups.
   *Confirmação:* e2e: trocar de aba mantém o que foi digitado; salvar só habilita com mudança; valor fora do limite mostra o erro no campo; nenhuma tela passa de 1,5 altura da janela. Depende de 1.1.
 
-- [ ] **1.4 — Grupo e Mods: telas próprias, listas limpas**
+- [x] **1.4 — Grupo e Mods: telas próprias, listas limpas**
   *O que fazer:* **Grupo**: lista de PCs com nome, quando foi visto e "Tirar do grupo" (com confirmação); criar convite num painel simples (nome do PC, validade, botão Criar → texto com Copiar). **Mods**: lista com nome, versão e onde vale; "Adicionar mod" abre um formulário em passos curtos (nome, arquivo, link; hash e "onde usar" em "Avançado" recolhido). Visível só ao dono do grupo, como hoje.
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts` (extrair grupo/mods), novos `grupo.ts`/`mods.ts`, `index.html`, `tela.css`, testes
   **Tela no app:** barra lateral › Grupo (e Grupo › Mods).
