@@ -21,7 +21,7 @@ Um amigo que nunca viu o app entende em 5 segundos: **o servidor está ligado? p
   **Tela no app:** barra lateral › Início / Backups / Grupo / Configurações.
   *Confirmação:* e2e: cada item da barra abre a sua tela e marca o atual; teclado (Tab/setas) navega; captura antes/depois.
 
-- [ ] **1.2 — Início como painel de controle**
+- [x] **1.2 — Início como painel de controle**
   *O que fazer:* o Início mostra, de relance: **estado do servidor** grande, com cor e ícone (ligado / desligado / trocando de host / sem conexão) e uma frase simples; **endereço para os amigos** com botão Copiar; **quem está jogando** (lista ou "ninguém"); **último backup** (há quanto tempo, em palavras) e **versão do mundo**; **um botão principal** grande (Hospedar / Parar / Jogar, conforme o estado) e as ações raras (Importar mundo, Tentar de novo) como links secundários. Sem texto técnico.
   *Arquivo:* `apps/desktop/src/ui/index.html`, `tela.ts`, `tela.css`, `apps/desktop/src/main/inicio.ts` (só se faltar dado), testes
   **Tela no app:** Início.
