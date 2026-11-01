@@ -47,6 +47,16 @@ export async function nomeDoMundo(pastaServidor: string): Promise<string> {
   return simples ? nome : "world";
 }
 
+/**
+ * Aviso para "sem pasta do servidor" na checagem da troca do mundo. Antes de o assistente terminar (primeira vez,
+ * instalação nova) não há mundo nem troca a conferir: não é problema e não deve assustar com "Atenção com o mundo".
+ */
+export function falhaSemPastaDoServidor(dados: string): string | undefined {
+  return lerSalvo(dados).concluido
+    ? "A pasta do servidor não está configurada; não deu para conferir se a última troca do mundo terminou."
+    : undefined;
+}
+
 /** Pasta do mundo lida AGORA (o `level-name` pode ter mudado com o app aberto); `undefined` sem pasta do servidor. */
 export async function pastaDoMundoAgora(
   pastaServidor: string | undefined,

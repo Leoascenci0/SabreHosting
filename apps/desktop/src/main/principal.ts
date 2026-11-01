@@ -37,7 +37,13 @@ import {
 import { criarAgendaBackups, iniciarAgendaReal, type AgendaBackups } from "./agenda-backups.js";
 import { criarBackups, type Backups } from "./backups.js";
 import { backupParado, depsBackupsReais } from "./deps-backups.js";
-import { ambienteLegado, lerConfigPc, pastaDoMundoAgora, type ConfigPc } from "./config-pc.js";
+import {
+  ambienteLegado,
+  falhaSemPastaDoServidor,
+  lerConfigPc,
+  pastaDoMundoAgora,
+  type ConfigPc,
+} from "./config-pc.js";
 import { criarCofreSeguro, ARQUIVO_COFRE } from "./cofre.js";
 import { clienteDoPc, depsReais, pastaModsDaInstancia } from "./deps-reais.js";
 import { registrarBoasVindas } from "./boas-vindas-app.js";
@@ -147,7 +153,7 @@ function mostrarJanela(): void {
 function criarJanela(oculta: boolean): BrowserWindow {
   const nova = new BrowserWindow({
     width: 880,
-    height: 600,
+    height: 640,
     minWidth: 480,
     minHeight: 360,
     show: false,
@@ -677,7 +683,7 @@ if (!app.requestSingleInstanceLock()) {
           () => undefined,
           (erro: unknown) => (erro instanceof Error ? erro.message : String(erro)),
         )
-      : "A pasta do servidor não está configurada; não deu para conferir se a última troca do mundo terminou.";
+      : falhaSemPastaDoServidor(app.getPath("userData"));
     if (falhaDaTroca !== undefined) {
       console.error("Recuperar troca do mundo:", falhaDaTroca);
       void avisarProblemaDoMundo(falhaDaTroca);

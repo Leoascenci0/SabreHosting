@@ -118,9 +118,15 @@ function desenhar(): void {
     parar.hidden = true;
   }
   for (const b of [principal, parar, tentar, confirmarParar, cancelarParar]) {
-    b.disabled = emCurso !== undefined || (bloqueado && b === principal);
+    b.disabled =
+      emCurso !== undefined ||
+      cartao.dataset["importando"] !== undefined ||
+      (bloqueado && b === principal);
   }
 }
+
+// Importar mundo (importar.ts) liga/desliga a trava dos botões do servidor e avisa por aqui.
+window.addEventListener("sabre:importacao", () => desenhar());
 
 async function atualizar(): Promise<void> {
   try {

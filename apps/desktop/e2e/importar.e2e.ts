@@ -28,7 +28,6 @@ async function abrir(extra: Record<string, string> = {}): Promise<Page> {
   const pagina = await aberto.firstWindow();
   await pagina.waitForLoadState("load");
   await pagina.locator("#cartao:not([data-estado=carregando])").waitFor();
-  await pagina.locator("#ver-backups").click();
   await pagina.locator("#importar-abrir").click();
   await pagina.locator("#importar-painel").waitFor();
   return pagina;
@@ -50,7 +49,7 @@ afterEach(async () => {
   if (dados) rmSync(dados, { recursive: true, force: true });
 });
 
-describe("tela Backups › Importar mundo", () => {
+describe("tela inicial › Importar mundo", () => {
   it("grupo sem mundo: mostra versão e aviso de plugins; confirmar importa como versão 1", async () => {
     const pagina = await abrir();
     await expect(pagina.locator("#importar-info").innerText()).resolves.toContain(
