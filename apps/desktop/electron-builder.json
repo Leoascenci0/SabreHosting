@@ -4,6 +4,10 @@
   "productName": "SabreHosting",
   "directories": { "output": "release", "buildResources": "recursos" },
   "files": ["dist/**/*", "package.json"],
+  "asarUnpack": [
+    "node_modules/@sabrehosting/nucleo/dist/servidor/vigia.js",
+    "node_modules/@sabrehosting/nucleo/dist/servidor/comandos.js"
+  ],
   "publish": null,
   "win": {
     "target": [{ "target": "nsis", "arch": ["x64"] }],
