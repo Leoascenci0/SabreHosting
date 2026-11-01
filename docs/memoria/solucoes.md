@@ -89,3 +89,6 @@ Sintoma: no lote lancmel-2.5 + appmel-1.20 a filha rodou `git checkout --` num a
 
 ## S-17 — Download em arquivo temporário de nome fixo colide quando duas peças vão para o mesmo destino (lanc-2.3)
 Sintoma: peças paralelas (ou duas montagens) escrevendo no mesmo `.parcial` davam falha espúria de hash. Causa: nome temporário derivado só do destino. Regra: temporário único por download (pid/aleatório) e peças deduplicadas por destino; mesmo caminho com hash diferente é erro. Vale também para o marcador `.montada.json` (apagar o antigo no início).
+
+## S-18 — Roadmap 100% feito ficava em `docs/` (regra existia só no texto)
+Sintoma: em 01/11/2026 quatro roadmaps completos seguiam fora de `docs/concluidos/` (`cart-melhoria` 15/15, `drive` 2/2, `sync-melhoria` 14/14 e a 2ª leva de `lanc-melhoria` 9/9, que até duplicava o nome do arquivo já arquivado) · Causa: a regra do Eliel (31/10) estava no CLAUDE.md e na Máxima, mas nada barrava o esquecimento no PR de controle · Solução: movidos (a 2ª leva do lancmel foi juntada ao arquivo da 1ª em `docs/concluidos/`) e o `scripts/verificar.py` passou a reprovar commit/ramo com `docs/roadmap-*.md` sem item aberto (exceto `roadmap-corr.md`) · Prova: teste em `tests/infra/verificar.test.ts` falha no verificador antigo · Vezes: 1 · Regra: regra de processo que se esquece vira trava no verificador, não só texto.

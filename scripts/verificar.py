@@ -11,6 +11,7 @@ Reprova (exit 1):
   - mundo de Minecraft fora de tests/mundos/ (*.mca, level.dat, playerdata/);
   - marcador de conflito de merge (abertura, divisória e fechamento, nessa ordem);
   - jar de servidor, executável ou arquivo maior que o teto (scripts/limites.json, "arquivo_max_kb");
+  - roadmap 100% feito ainda em docs/ (vai para docs/concluidos/; o roadmap-corr.md fica);
   - implementador mexendo em arquivo fora do alcance (só com --implementador).
 Só usa a biblioteca padrão.
 """
@@ -33,6 +34,8 @@ PADROES_SEGREDO = [
 ]
 EXT_BINARIA_PROIBIDA = (".jar", ".exe", ".msi", ".dll", ".zip", ".mca", ".mcr", ".dat_old")
 FORA_DO_ALCANCE_IMPL = ("CLAUDE.md", ".claude/", "docs/MILESTONE.md")
+ITEM_ROADMAP = re.compile(r"^- \[( |x)\] \*\*\d+\.\d+ — ", re.M)
+ROADMAP_PERMANENTE = ("docs/roadmap-corr.md",)  # lista permanente de correções
 
 
 def achar_conflito(texto):
@@ -79,6 +82,21 @@ def conteudo(caminho, staged):
             return f.read()
     except OSError:
         return b""
+
+
+def roadmaps_concluidos_fora(staged):
+    """Roadmaps em docs/ com todos os itens marcados (CLAUDE.md: roadmap 100% feito vai para docs/concluidos/)."""
+    caminhos = git("ls-files", "docs/roadmap-*.md").split() if staged else \
+        sorted(f"docs/{n}" for n in os.listdir(os.path.join(RAIZ, "docs"))
+               if n.startswith("roadmap-") and n.endswith(".md")) if os.path.isdir(os.path.join(RAIZ, "docs")) else []
+    fora = []
+    for caminho in caminhos:
+        if caminho in ROADMAP_PERMANENTE or "/" in caminho[len("docs/"):]:
+            continue
+        marcas = ITEM_ROADMAP.findall(conteudo(caminho, staged).decode("utf-8", errors="ignore"))
+        if marcas and all(m == "x" for m in marcas):
+            fora.append(caminho)
+    return fora
 
 
 def eh_mundo(caminho):
@@ -129,6 +147,9 @@ def main():
         for padrao, nome in PADROES_SEGREDO:
             if padrao.search(texto):
                 erros.append(f"{caminho}: parece conter {nome} (nunca segredo no git)")
+
+    for caminho in roadmaps_concluidos_fora(a.staged):
+        erros.append(f"{caminho}: roadmap 100% feito; mova para docs/concluidos/ (git mv) no mesmo PR")
 
     for av in avisos:
         print(f"AVISO: {av}")
