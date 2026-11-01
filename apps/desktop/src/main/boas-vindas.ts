@@ -172,6 +172,7 @@ export function criarBoasVindas(deps: DepsBoasVindas) {
       if (entrando) return { ok: false, mensagem: "Já estou entrando no grupo." };
       const usar = convite;
       if (!usar) return { ok: false, mensagem: SEM_CONVITE };
+      // O app usa `>=` (aos 30 min exatos já desiste); o cartório usa `>` (ainda aceita). Mais estrito aqui, de propósito.
       if (gastoEm !== undefined && deps.agora() - gastoEm >= JANELA_RETOMADA_MS) {
         esquecer();
         return { ok: false, mensagem: PASSOU_A_JANELA };
