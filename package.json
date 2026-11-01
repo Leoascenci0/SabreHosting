@@ -16,6 +16,7 @@
     "lint": "eslint . && tsc --build && tsc -p apps/desktop/e2e/tsconfig.json && prettier --check \"{apps,packages,services}/**/*.{ts,json}\" \"*.{ts,js,json}\"",
     "formatar": "prettier --write \"{apps,packages,services}/**/*.{ts,json}\" \"*.{ts,js,json}\"",
     "vistoria": "npm run lint && npm test && npm run test:e2e -w apps/desktop && python3 scripts/verificar.py --base origin/main",
+    "vistoria:comum": "bash scripts/vistoria-comum.sh",
     "estado": "python3 scripts/estado_roadmaps.py"
   },
   "devDependencies": {
