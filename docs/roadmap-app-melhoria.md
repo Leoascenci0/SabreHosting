@@ -238,9 +238,23 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* testes acima; no Windows com o instalador novo **[P: Eliel]**.
   *Origem:* ensaio do instalador (run 41338605522) · Eliel
 
-- [ ] **1.31 — Modo demonstração: "Explorar sem grupo" na boas-vindas** (decisão do Eliel, 01/11/2026)
+- [x] **1.31 — Modo demonstração: "Explorar sem grupo" na boas-vindas** (✅ PR #276, 01/11/2026; decisão do Eliel)
   *O que fazer:* na tela de boas-vindas (passo do convite) um botão secundário "Explorar sem grupo" abre o app inteiro (início com os 4 botões, Backups, Configurações) com dados de mentira, sem hospedar, sem tocar no mundo e sem falar com o cartório; faixa fixa "Modo demonstração" com botão "Sair da demonstração" que volta ao convite. Reaproveitar o modo de teste/fake que já existe (`fake-e2e.ts`, item 1.2), mas sem depender de variável de ambiente; nada de dado real. O modo demonstração NÃO grava nada na pasta real do usuário nem no cofre (pasta de dados temporária ou memória). Em demonstração, Hospedar/Backup/Importar/Salvar configurações são recusados no processo principal (não só escondidos na tela) com o texto "Isso é só uma demonstração".
   *Arquivo:* `apps/desktop/src/ui/boas-vindas.ts`, `tela.ts`, `index.html`, `apps/desktop/src/main/boas-vindas-app.ts`, `principal.ts`, `fake-e2e.ts`, testes
   **Tela no app:** Boas-vindas › Passo 1 › "Explorar sem grupo"; faixa "Modo demonstração" › "Sair da demonstração".
   *Confirmação:* e2e do Electron que falha antes e passa depois (botão leva ao app completo; em demonstração hospedar/backup/importar são recusados no main e nada é gravado; sair volta ao convite); no Windows com o instalador novo **[P: Eliel]**.
   *Origem:* Eliel, ao abrir o instalador de ensaio (a tela de boas-vindas era tudo o que ele via)
+
+- [ ] **1.32 — Modo demonstração: recusar também `bv:conferir` e `bv:aceitar-eula` no main**
+  *O que fazer:* `protegerEscrita` cobre todos os handlers que gravam, mas `bv:conferir` e `bv:aceitar-eula` ficaram sem a recusa (só alcançáveis chamando a ponte direto, não pela tela). Incluí-los e cobrir no teste.
+  *Arquivo:* `apps/desktop/src/main/principal.ts`, `demonstracao.test.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: em demonstração os dois são recusados.
+  *Origem:* appmel-1.31 · PR #276 · qa
+
+- [ ] **1.33 — Limpar as pastas temporárias do modo demonstração ao sair**
+  *O que fazer:* as peças falsas deixam pastas em `os.tmpdir()` quando o app fecha; apagar a pasta da demonstração ao sair da demonstração e ao encerrar o app (só a pasta criada por ela).
+  *Arquivo:* `apps/desktop/src/main/demonstracao.ts`, `principal.ts`, testes
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: a pasta temporária some depois de sair.
+  *Origem:* appmel-1.31 · PR #276 · filha
