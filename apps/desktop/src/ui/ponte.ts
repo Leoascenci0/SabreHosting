@@ -47,6 +47,11 @@ export interface ConfiguracoesDaTela {
   limiteBandaMBs: number;
 }
 
+/** O que `configuracoes.ler()` devolve: os valores de hoje e os padrões de fábrica (botão "Padrão"). */
+export interface LeituraDaTela extends ConfiguracoesDaTela {
+  padroes: ConfiguracoesDaTela;
+}
+
 export interface BackupDaTela {
   nome: string;
   criadoEm: string;
@@ -164,7 +169,7 @@ export interface PonteSabre {
     definir(ligado: boolean): Promise<boolean>;
   };
   configuracoes: {
-    ler(): Promise<ConfiguracoesDaTela>;
+    ler(): Promise<LeituraDaTela>;
     salvar(valor: ConfiguracoesDaTela): Promise<Resultado>;
     /** Abre o seletor de pasta do Windows; `undefined` se o amigo cancelar. */
     escolherPasta(): Promise<string | undefined>;

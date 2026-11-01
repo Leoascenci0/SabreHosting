@@ -91,6 +91,9 @@ const PADRAO: Preferencias = {
 };
 const ARQUIVO = "preferencias.json";
 
+/** Os padrões de fábrica (cópia): a tela os recebe pela ponte para o botão "Padrão" de cada campo. */
+export const preferenciasPadrao = (): Preferencias => ({ ...PADRAO });
+
 /** Só número de verdade (true, "5" e [3] não viram número); ausente usa o padrão. */
 const numeroOuPadrao = (v: unknown, padrao: number): number =>
   v === undefined ? padrao : typeof v === "number" ? v : Number.NaN;
