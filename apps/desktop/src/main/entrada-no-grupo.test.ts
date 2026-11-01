@@ -41,6 +41,7 @@ function montar(
   const passos: string[] = [];
   const configs: string[] = [];
   const chamadas: Array<{ exe: string; args: readonly string[] }> = [];
+  const corpos: string[] = [];
   const entrar = criarEntradaNoGrupo({
     pastaRede: pasta,
     plataforma: "win32",
@@ -72,9 +73,13 @@ function montar(
       }
       throw new Error("sem sinal");
     },
-    fetchFn: (async () => (passos.push("usar"), resposta())) as typeof fetch,
+    fetchFn: (async (_u: unknown, init?: RequestInit) => (
+      passos.push("usar"),
+      corpos.push(String(init?.body)),
+      resposta()
+    )) as typeof fetch,
   });
-  return { entrar, passos, configs, chamadas };
+  return { entrar, passos, configs, chamadas, corpos };
 }
 
 const OK = () =>
@@ -149,16 +154,33 @@ describe("entrada no grupo (passo elevado)", () => {
     }
   });
 
-  it("falha ao instalar a definitiva depois do convite gasto: token já está no cofre e o erro manda pedir convite novo", async () => {
+  it("falha ao instalar a definitiva depois do convite gasto: token já está no cofre e o erro leva ao Tentar de novo", async () => {
     const { entrar } = montar(OK, { instalarDefinitiva: true });
     const guardados: string[] = [];
     const erro = await entrar(convite, proprias, async (t) => void guardados.push(t)).catch(
       (e: unknown) => e,
     );
     expect(erro).toMatchObject({ conviteGasto: true });
-    expect((erro as Error).message).toContain("convite novo");
+    expect((erro as Error).message).toContain("Tentar de novo");
     expect((erro as Error).message).not.toContain("tk");
     expect(guardados).toEqual(["tk"]);
+  });
+
+  it("Tentar de novo (appmel-1.14): falha na definitiva, depois entra com o MESMO convite e a MESMA chave", async () => {
+    const falha = { instalarDefinitiva: true };
+    const { entrar, passos, configs, corpos } = montar(OK, falha);
+    const guardados: string[] = [];
+    const guardar = async (t: string) => void guardados.push(t);
+    await expect(entrar(convite, proprias, guardar)).rejects.toMatchObject({ conviteGasto: true });
+    expect(readdirSync(pasta)).toEqual([]);
+    falha.instalarDefinitiva = false;
+    expect(await entrar(convite, proprias, guardar)).toEqual({ token: "tk" });
+    expect(corpos).toHaveLength(2);
+    expect(corpos[1]).toBe(corpos[0]); // mesmo código e mesma chave pública: o cartório reemite só para ela
+    expect(corpos[0]).toContain(proprias.publica);
+    expect(passos.slice(-4)).toEqual(["instalar", "usar", "desinstalar", "instalar"]);
+    expect(configs.at(-1)).toContain(proprias.privada);
+    expect(readdirSync(pasta)).toEqual([]);
   });
 
   it("cofre falha ao guardar o token: a definitiva nunca é gravada, o passo elevado é cancelado e o erro manda pedir convite novo", async () => {
