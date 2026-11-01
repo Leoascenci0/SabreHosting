@@ -59,6 +59,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Backlog
 
+- **appuimel — Backup manual e origem** (decidido pelo Eliel 01/11; vem na onda seguinte à 42, mesma tela Backups): campo `origem` no manifesto + botão "Fazer backup agora" (só com servidor pronto). Detalhe no PR #286. Também: `npm run test:e2e -- <arquivo>` ignora o filtro (repassar argumentos ao vitest).
+
 - Melhorias: quase tudo feito na madrugada de 31/10. Abertos: appmel-1.4 (vai com o app-1.3); lancmel-1.1 parte
   "marcador da instância" (vai com o lanc-1.3); redemel-2.1 (com o rede-2.2), 2.2 e 2.3 [P: internet]; cartmel-1.1 (destravado: só o dono, pelo app — próximo da fila);
   hostmel-2.1 [P: PCs reais].
