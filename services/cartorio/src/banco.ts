@@ -253,10 +253,14 @@ export function lerConvite(banco: Banco, convite: string): LinhaConvite | undefi
     .get(hashSegredo(convite)) as LinhaConvite | undefined;
 }
 
+/** Repetição do convite gasto (resposta perdida, conexão que falhou): só até 30 min depois do uso (Eliel, 01/11). */
+export const JANELA_REPETICAO_MS = 30 * 60_000;
+
 /**
  * Entrada pela sala provisória, em duas fases. 1º uso: marca o convite, cria o PC e o token. Repetição (resposta
- * perdida) com a MESMA chave definitiva, antes do prazo e da confirmação: revoga o token anterior e devolve outro.
- * Chave diferente, convite vencido, confirmado ou sem sala → `undefined`.
+ * perdida ou conexão que falhou) com a MESMA chave definitiva, até `JANELA_REPETICAO_MS` depois do uso, antes do prazo
+ * e da confirmação: revoga o token anterior e devolve outro. Chave diferente, janela passada, convite vencido,
+ * confirmado ou sem sala → `undefined` (a mesma recusa: o motivo não sai).
  */
 export function entrarPeloConvite(
   banco: Banco,
@@ -289,7 +293,12 @@ export function entrarPeloConvite(
         .run(agora, chavePub, hash);
       pcId = registrarPc(banco, hash, agora);
     } else {
-      if (c.pc_id === null || c.chave_pub_def !== chavePub) return undefined;
+      if (
+        c.pc_id === null ||
+        c.chave_pub_def !== chavePub ||
+        agora - c.usado_em > JANELA_REPETICAO_MS
+      )
+        return undefined;
       pcId = c.pc_id;
       banco
         .prepare("UPDATE tokens SET revogado_em = ? WHERE pc_id = ? AND revogado_em IS NULL")

@@ -301,7 +301,8 @@ const ACESSO_FALSO = "token-falso-do-e2e";
  * Assistente de primeira vez do E2E: cartório e WireGuard falsos. Sem `SABRE_E2E_BOAS_VINDAS=1` o PC já nasce
  * configurado (as outras telas não veem o assistente). `SABRE_E2E_SEM_COFRE=1` tira o cofre do sistema.
  * `SABRE_E2E_COFRE_CORROMPIDO=1` faz o PC já configurado com um token guardado que não decifra. O convite com
- * código `usado` é recusado como o cartório recusaria. Tudo que o "passo elevado" recebeu fica em
+ * código `usado` é recusado como o cartório recusaria; o de código `cai-uma-vez` gasta o convite e falha na conexão
+ * só na primeira vez (o "Tentar de novo" entra). Tudo que o "passo elevado" recebeu fica em
  * `__sabreE2EBoasVindas` (chamadas, token guardado) para o teste conferir.
  */
 export function depsBoasVindasE2E(dados: string): {
@@ -335,6 +336,10 @@ export function depsBoasVindasE2E(dados: string): {
         registro.entradas.push(convite.grupo);
         if (convite.codigo === "usado")
           throw Object.assign(new Error("O convite foi recusado."), { tipo: "acesso" });
+        if (convite.codigo === "cai-uma-vez" && registro.entradas.length === 1)
+          throw Object.assign(new Error("A conexão não terminou. Clique em “Tentar de novo”."), {
+            conviteGasto: true,
+          });
         return { token: ACESSO_FALSO };
       },
       lerGrupo: async () => ({ nome: "Amigos do E2E", endereco_jogar: "jogar.exemplo.org:25565" }),

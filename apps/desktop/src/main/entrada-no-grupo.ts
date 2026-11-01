@@ -32,7 +32,7 @@ export interface OpcoesEntrada {
   fetchFn?: typeof fetch;
 }
 
-/** Falha DEPOIS de o convite ser gasto: ele não serve mais; a mensagem manda pedir outro. */
+/** Falha DEPOIS de o convite ser gasto: o assistente oferece "Tentar de novo" com o mesmo convite e a mesma chave. */
 export class ErroDepoisDoConvite extends Error {
   readonly conviteGasto = true;
   constructor(mensagem: string, causa: unknown) {
@@ -42,7 +42,7 @@ export class ErroDepoisDoConvite extends Error {
 }
 
 const FALHA_TROCA =
-  "Entrei no grupo, mas não consegui terminar a conexão privada deste PC. Esse convite já foi usado: peça um convite novo para quem administra o grupo e tente de novo.";
+  "Entrei no grupo, mas não consegui terminar a conexão privada deste PC. Clique em “Tentar de novo” nos próximos 30 minutos, sem fechar o app; depois disso, peça um convite novo para quem administra o grupo.";
 
 const PRAZO_ELEVADO_MS = 5 * 60_000;
 const ESPERA_SCRIPT_S = 150;
@@ -89,7 +89,8 @@ const existe = (a: string): Promise<boolean> =>
  * - Cartório recusou (usado, vencido, fora do ar): o app pede o cancelamento, a provisória é desinstalada e a chave
  *   própria nunca é gravada nem instalada; o erro que sobe é o do cartório.
  * - O token vai para o cofre (`guardarToken`) assim que o cartório responde, ANTES de gravar a definitiva: se a troca
- *   falhar, o token não se perde; o erro (`ErroDepoisDoConvite`) manda pedir convite novo.
+ *   falhar, o token não se perde; o erro (`ErroDepoisDoConvite`) leva ao "Tentar de novo" (appmel-1.14), que repete
+ *   tudo com o mesmo convite e a mesma chave: o cartório reemite token e pacote só para ela, até 30 min.
  * Nada vai para log nem para erro.
  *
  * LIMITE (prova real é [P]): só um Windows de verdade mostra o UAC uma vez e instala/desinstala o túnel.

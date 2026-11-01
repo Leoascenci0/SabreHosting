@@ -95,6 +95,19 @@ describe("assistente de primeira vez", () => {
     expect((await registro()).tokens).toEqual([]);
   });
 
+  it("conexão falha depois do convite gasto: o botão vira Tentar de novo e entra sem convite novo", async () => {
+    const pagina = await abrir();
+    await conferir(pagina, convite({ c: "cai-uma-vez" }));
+    await expect(pagina.locator("#bv-entrar").innerText()).resolves.toBe("Entrar no grupo");
+    await pagina.locator("#bv-entrar").click();
+    await expect.poll(() => pagina.locator("#bv-erro").innerText()).toContain("Tentar de novo");
+    await expect(pagina.locator("#bv-entrar").innerText()).resolves.toBe("Tentar de novo");
+    await expect(pagina.locator("#bv-entrar").isEnabled()).resolves.toBe(true);
+    await pagina.locator("#bv-entrar").click();
+    await pagina.locator("#bv-eula:not([hidden])").waitFor();
+    expect((await registro()).entradas).toHaveLength(2);
+  });
+
   it("sem cofre seguro: explica e não gasta o convite", async () => {
     const pagina = await abrir({ SABRE_E2E_SEM_COFRE: "1" });
     await conferir(pagina, convite());

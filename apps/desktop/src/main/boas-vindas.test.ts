@@ -208,19 +208,110 @@ describe("boas-vindas (main)", () => {
     expect(chamadas.filter((c) => c === "chaves")).toHaveLength(1);
   });
 
-  it("falha depois do convite gasto: avisa para pedir convite novo e não deixa o convite valer de novo", async () => {
-    const { bv, chamadas } = montar({
+  /** Passo elevado que falha na definitiva (convite já gasto) nas `falhas` primeiras vezes. */
+  function gastaEFalha(falhas: number) {
+    const relogio = { agora: AGORA };
+    const usos: Array<{ codigo: string; publica: string; privada: string }> = [];
+    const m = montar({
+      agora: () => relogio.agora,
+      entrar: async (c, chaves, guardar) => {
+        usos.push({ codigo: c.codigo, publica: chaves.publica, privada: chaves.privada });
+        await guardar(`token-${usos.length}`);
+        if (usos.length <= falhas)
+          throw Object.assign(new Error("Clique em Tentar de novo."), { conviteGasto: true });
+        return { token: `token-${usos.length}` };
+      },
+    });
+    return { ...m, relogio, usos };
+  }
+
+  it("falha na definitiva depois do convite gasto: Tentar de novo reusa convite e chaves e entra", async () => {
+    const { bv, usos, chamadas, guardados, relogio } = gastaEFalha(1);
+    await bv.conferirConvite(texto());
+    const r = await bv.entrar();
+    expect(r).toMatchObject({ ok: false, tentarDeNovo: true });
+    expect(JSON.stringify(r)).not.toContain(usos[0]?.privada);
+    relogio.agora += 29 * 60_000;
+    const de = await bv.entrar();
+    expect(de).toEqual({ ok: true, grupo: "Amigos do Eliel", endereco: "jogar.exemplo.org:25565" });
+    expect(usos).toHaveLength(2);
+    expect(usos[1]).toEqual(usos[0]); // MESMO convite e MESMA chave: o cartório só reemite para o mesmo PC
+    expect(chamadas.filter((c) => c === "chaves")).toHaveLength(1);
+    expect(guardados.at(-1)).toBe("token-2");
+    expect(await bv.estado()).toMatchObject({ aberto: true, passo: "eula" });
+    expect((await bv.entrar()).ok).toBe(false); // entrou: nada fica guardado para repetir
+    expect(usos).toHaveLength(2);
+  });
+
+  it("falhou de novo: o botão continua, e a janela de 30 min conta do primeiro uso", async () => {
+    const { bv, usos, relogio } = gastaEFalha(5);
+    await bv.conferirConvite(texto());
+    await bv.entrar();
+    relogio.agora += 20 * 60_000;
+    expect(await bv.entrar()).toMatchObject({ ok: false, tentarDeNovo: true });
+    relogio.agora += 10 * 60_000; // 30 min do 1º uso
+    const r = await bv.entrar();
+    expect(r.ok).toBe(false);
+    expect(r).not.toHaveProperty("tentarDeNovo");
+    expect(!r.ok && r.mensagem).toContain("convite novo");
+    expect(usos).toHaveLength(2); // passou a janela: nem tenta (não pede o administrador à toa)
+    expect((await bv.entrar()).ok).toBe(false);
+    expect(usos).toHaveLength(2);
+  });
+
+  it("o cartório recusou a repetição (401): esquece o convite e pede outro", async () => {
+    let vez = 0;
+    const { bv } = montar({
       entrar: async () => {
-        chamadas.push("entrar");
-        throw Object.assign(new Error("Peça um convite novo."), { conviteGasto: true });
+        vez++;
+        if (vez === 1) throw Object.assign(new Error("x"), { conviteGasto: true });
+        throw Object.assign(new Error("Cartório recusou (401)"), { tipo: "acesso" });
+      },
+    });
+    await bv.conferirConvite(texto());
+    expect(await bv.entrar()).toMatchObject({ tentarDeNovo: true });
+    const r = await bv.entrar();
+    expect(r).not.toHaveProperty("tentarDeNovo");
+    expect(!r.ok && r.mensagem).toContain("convite novo");
+    expect((await bv.entrar()).ok).toBe(false);
+    expect(vez).toBe(2);
+  });
+
+  it("conferir outro convite descarta a retomada (chaves novas para o convite novo)", async () => {
+    const { bv, usos, chamadas } = gastaEFalha(1);
+    await bv.conferirConvite(texto());
+    await bv.entrar();
+    await bv.conferirConvite(texto({ c: "outro-codigo-do-convite" }));
+    expect((await bv.entrar()).ok).toBe(true);
+    expect(usos[1]?.codigo).toBe("outro-codigo-do-convite");
+    expect(usos[1]?.publica).not.toBe(usos[0]?.publica);
+    expect(chamadas.filter((c) => c === "chaves")).toHaveLength(2);
+  });
+
+  it("conferir de novo o MESMO convite não perde a retomada (a chave continua a mesma)", async () => {
+    const { bv, usos } = gastaEFalha(1);
+    await bv.conferirConvite(texto());
+    await bv.entrar();
+    await bv.conferirConvite(texto());
+    expect((await bv.entrar()).ok).toBe(true);
+    expect(usos[1]).toEqual(usos[0]);
+  });
+
+  it("falha antes do cartório (UAC negado): repetir usa a MESMA chave (o cartório pode ter marcado o convite)", async () => {
+    const chaves: string[] = [];
+    let vez = 0;
+    const { bv } = montar({
+      entrar: async (_c, k) => {
+        chaves.push(k.publica);
+        if (++vez === 1) throw new Error("Não consegui instalar a rede privada.");
+        return { token: "t" };
       },
     });
     await bv.conferirConvite(texto());
     const r = await bv.entrar();
-    expect(!r.ok && r.mensagem).toContain("convite novo");
-    expect((await bv.entrar()).ok).toBe(false);
-    expect(chamadas.filter((c) => c === "entrar")).toHaveLength(1);
-    expect(await bv.estado()).toMatchObject({ aberto: true, passo: "convite" });
+    expect(r).toEqual({ ok: false, mensagem: "Não consegui instalar a rede privada." });
+    expect((await bv.entrar()).ok).toBe(true);
+    expect(chaves[1]).toBe(chaves[0]);
   });
 
   it("o token chega ao cofre pelo passo elevado e não é guardado duas vezes", async () => {

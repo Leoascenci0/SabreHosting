@@ -34,6 +34,13 @@ const concluir = $<HTMLButtonElement>("bv-concluir");
 const status = $("bv-status");
 const erro = $("bv-erro");
 
+const ENTRAR = "Entrar no grupo";
+const TENTAR_DE_NOVO = "Tentar de novo";
+/** O botão de entrar vira "Tentar de novo" só quando o convite foi gasto e a conexão não terminou (appmel-1.14). */
+function rotularEntrar(repetir: boolean): void {
+  entrar.textContent = repetir ? TENTAR_DE_NOVO : ENTRAR;
+}
+
 const ROTULOS = {
   convite: "Passo 1 de 3 · Convite",
   eula: "Passo 2 de 3 · Contrato da Mojang",
@@ -108,6 +115,7 @@ function mostrarContrato(q: { texto: string; link: string }): void {
 conferir.addEventListener("click", () => {
   rodar("Conferindo o convite…", async () => {
     caixa.hidden = true;
+    rotularEntrar(false);
     const r = await window.sabre.boasVindas.conferirConvite(texto.value);
     if (!r.ok) return mostrarErro(r.mensagem);
     const vence = new Date(r.venceEm).toLocaleString("pt-BR", {
@@ -121,9 +129,25 @@ conferir.addEventListener("click", () => {
 });
 
 entrar.addEventListener("click", () => {
-  rodar("Entrando no grupo… aceite o pedido de administrador do Windows.", async () => {
+  const repetindo = entrar.textContent === TENTAR_DE_NOVO;
+  const aviso = repetindo
+    ? "Tentando de novo com o mesmo convite… aceite o pedido de administrador do Windows."
+    : "Entrando no grupo… aceite o pedido de administrador do Windows.";
+  rodar(aviso, async () => {
     const r = await window.sabre.boasVindas.entrar();
-    if (!r.ok) return mostrarErro(r.mensagem);
+    if (!r.ok) {
+      if (r.tentarDeNovo) rotularEntrar(true);
+      else if (repetindo) {
+        // Não dá mais para repetir (passou o prazo ou o grupo recusou): a mensagem pede convite novo.
+        rotularEntrar(false);
+        caixa.hidden = true;
+        texto.value = "";
+      }
+      mostrarErro(r.mensagem);
+      if (r.tentarDeNovo) entrar.focus();
+      return;
+    }
+    rotularEntrar(false);
     texto.value = ""; // o convite já foi usado: não deixa o texto na janela
     caixa.hidden = true;
     mostrarContrato(await window.sabre.boasVindas.eula());

@@ -113,7 +113,9 @@ export type EstadoBoasVindas =
 export type ConviteConferido =
   { ok: true; grupo: string; venceEm: number } | { ok: false; mensagem: string };
 export type EntradaNoGrupo =
-  { ok: true; grupo: string; endereco?: string } | { ok: false; mensagem: string };
+  | { ok: true; grupo: string; endereco?: string }
+  /** `tentarDeNovo`: o convite foi gasto mas a conexão falhou; `entrar()` de novo reusa o mesmo (até 30 min). */
+  | { ok: false; mensagem: string; tentarDeNovo?: true };
 
 export type TrocaDePasta = { ok: true; anterior: string } | { ok: false; mensagem: string };
 
