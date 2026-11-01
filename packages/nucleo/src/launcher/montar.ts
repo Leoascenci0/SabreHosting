@@ -352,16 +352,6 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     });
     const pastaJava = pacoteJava.replace(/\.zip$/, "");
     ({ javaw } = await extrairJava(pacoteJava, pastaJava));
-    // O `.java.json` pode sobrar sem o `javaw` (pasta mexida à mão ou limpeza): extrai de novo em vez de reaproveitar.
-    if (
-      !(await stat(javaw).then(
-        () => true,
-        () => false,
-      ))
-    ) {
-      await rm(pastaJava, { recursive: true, force: true });
-      ({ javaw } = await extrairJava(pacoteJava, pastaJava));
-    }
   }
 
   // Por último: a versão só conta como montada com tudo conferido.
