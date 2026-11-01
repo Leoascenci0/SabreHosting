@@ -202,3 +202,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** não se aplica.
   *Confirmação:* teste: o job do ensaio não tem `contents: write`.
   *Origem:* appmel-1.23 · PR #259 · qa (segurança)
+
+- [x] **1.26 — Ensaio do `versao.yml` falhou: electron-builder não acha a versão fixa do Electron** (✅ PR desta onda, 01/11/2026; ensaio de novo ⏸️ P da coordenadora)
+  *O que fazer:* o ensaio (https://github.com/Leoascenci0/SabreHosting/actions/runs/41314693757) falhou com `Electron version "^45.2.0" is a range, not a fixed version… Cannot compute electron version from installed node modules` (o electron fica no `node_modules` da raiz do workspace; lockfile tem 45.2.0). Fixar a versão: `electronVersion` no `apps/desktop/electron-builder.json` ou versão exata no `package.json`, de modo que o Dependabot continue atualizando os dois juntos. Teste/verificador que barre faixa (`^`/`~`) nesse campo. Não rodar o workflow; a coordenadora roda o ensaio de novo.
+  *Arquivo:* `apps/desktop/electron-builder.json` e/ou `apps/desktop/package.json`, `.github/dependabot.yml`, `tests/infra/` (teste novo ou em `versao.test.ts`)
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste falha com `^45.2.0` e passa com versão exata **[P: ensaio no GitHub]**.
+  *Origem:* appmel-1.23 · ensaio do workflow · coordenadora
