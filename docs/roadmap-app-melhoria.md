@@ -209,3 +209,10 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   **Tela no app:** não se aplica.
   *Confirmação:* teste falha com `^45.2.0` e passa com versão exata **[P: ensaio no GitHub]**.
   *Origem:* appmel-1.23 · ensaio do workflow · coordenadora
+
+- [ ] **1.27 — Tela inicial do app: todos os botões à vista, sem rolar** (decisão do Eliel, 01/11/2026)
+  *O que fazer:* na janela padrão a tela inicial mostra só o Hospedar; "Backups" e "Configurações" ficam abaixo da dobra e "Importar mundo" está escondido dentro de Backups (o Eliel achou que o app só tinha um botão). Mostrar sem rolar: Hospedar (com seus estados), Importar mundo, Backups e Configurações como botões de verdade, com a janela padrão maior. Importar mundo mantém o fluxo e a confirmação de hoje (só muda o atalho; sem duplicar a lógica). pt-BR, sem termo técnico, carregando/foco/teclado preservados, tema claro e escuro.
+  *Arquivo:* `apps/desktop/src/ui/index.html`, `tela.css`, `tela.ts`, `importar.ts`, `apps/desktop/src/main/principal.ts`, `apps/desktop/e2e/`
+  **Tela no app:** Início › botões Hospedar, Importar mundo, Backups, Configurações.
+  *Confirmação:* e2e: na janela padrão os 3 botões extras estão visíveis na viewport sem rolagem (falha antes, passa depois); no Windows com o instalador novo **[P: Eliel, tutorial `docs/tutoriais/2026-11-01-ensaio-instalador.md`]**.
+  *Origem:* decisão do Eliel · rodou do código-fonte com SABRE_E2E=1
