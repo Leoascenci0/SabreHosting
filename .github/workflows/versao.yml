@@ -2,6 +2,7 @@ name: Versão
 
 # Release só sai quando alguém cria uma tag vX.Y.Z (a Máxima, no fim de um milestone). Disparo à mão (ensaio) gera o
 # instalador e o sobe como artefato, sem criar tag nem release. Não assina o instalador (decisão D9, do Eliel).
+# Permissão de escrita (contents: write) só no job `release`, que nunca roda no ensaio.
 on:
   workflow_dispatch:
   push:
@@ -16,9 +17,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     permissions:
-      contents: write # só este job cria a release
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -50,14 +53,38 @@ jobs:
           path: apps/desktop/release/SabreHosting-Setup-*.exe
           if-no-files-found: error
           retention-days: 7
-      - name: Publicar a release
+      - name: Subir o instalador e os checksums para a release
         if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: instalador-release
+          path: |
+            apps/desktop/release/SabreHosting-Setup-*.exe
+            apps/desktop/release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: instalador
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # só este job cria a release
+    steps:
+      - name: Baixar o instalador e os checksums
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: instalador-release
+          path: release
+      - name: Publicar a release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            apps/desktop/release/SabreHosting-Setup-*.exe \
-            apps/desktop/release/SHA256SUMS.txt \
+            release/SabreHosting-Setup-*.exe \
+            release/SHA256SUMS.txt \
             --title "SabreHosting ${GITHUB_REF_NAME}" \
             --notes "Instalador para Windows. Confira o SHA-256 em SHA256SUMS.txt antes de instalar."
