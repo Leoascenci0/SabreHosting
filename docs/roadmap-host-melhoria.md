@@ -120,3 +120,10 @@ Melhorias achadas durante os itens do `docs/roadmap-host.md` (skill `maxima` ›
   **Tela no app:** não se aplica.
   *Confirmação:* teste: trava ocupada deixa o `server.properties` intacto; órfão vivo → Hospedar recusa sem trocar o arquivo.
   *Origem:* appmel-1.9 · PR #228 · filha + qa
+
+- [ ] **3.5 — Download local aceita `::1` (e só ele) além de `localhost`/`127.0.0.1`**
+  *O que fazer:* em `baixar.ts` (`local = hostname === "localhost" || …`) o `new URL("http://[::1]/").hostname` vem como `[::1]`; incluir `[::1]` no teste de "local" e fazer o mesmo no `permitirHttpLocal` de `montar.ts`. Continua só para teste, nunca ligado pelo app; `http` para qualquer outro host continua recusado.
+  *Arquivo:* `packages/nucleo/src/servidor/baixar.ts`, `packages/nucleo/src/launcher/montar.ts`
+  **Tela no app:** não se aplica.
+  *Confirmação:* teste: `http://[::1]:porta` passa com `permitirHttpLocal` e é recusado sem ele; `http://[::2]` recusado.
+  *Origem:* Backlog do milestone (achado menor) · máxima

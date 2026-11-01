@@ -15,3 +15,10 @@ na fila. Ramos `roadmap/corr-<id>`. Toda correção traz teste que falhava antes
   **Tela no app:** não se aplica.
   *Confirmação:* `npx vitest run tests/infra` verde como usuário comum (não root) e como root; check da `main` verde.
   *Depende de:* nada
+
+- [ ] **1.2 — Vistoria local também como usuário comum (S-03)**
+  *O que fazer:* a sessão roda como root e o CI não; criar `scripts/vistoria-comum.sh` (e `npm run vistoria:comum`) que copia o repositório limpo para uma pasta temporária, roda `npx vitest run` como usuário sem privilégio (`useradd -m` se faltar; `su`) e devolve o resultado. O PR descreve a linha que a Máxima deve acrescentar à regra do S-03 (a filha não edita `.claude/`).
+  *Arquivo:* `scripts/vistoria-comum.sh`, `package.json`
+  **Tela no app:** não se aplica.
+  *Confirmação:* o script falha num teste que só passa como root (criado no teste do próprio script) e passa na `main`.
+  *Origem:* corr-1.1 · S-03 · Backlog do milestone · máxima
