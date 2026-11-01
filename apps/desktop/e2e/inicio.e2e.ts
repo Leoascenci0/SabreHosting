@@ -74,7 +74,7 @@ afterEach(async () => {
 
 const visiveis = (p: Page) =>
   p.evaluate(() =>
-    [...document.querySelectorAll<HTMLButtonElement>(".acoes button")]
+    [...document.querySelectorAll<HTMLButtonElement>("#principal, .acoes button")]
       .filter((b) => !b.hidden && !b.closest("[hidden]"))
       .map((b) => b.textContent),
   );

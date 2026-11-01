@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { IP_DO_HUB } from "@sabrehosting/nucleo/rede/wireguard";
-import { ambienteLegado, lerConfigPc } from "./config-pc.js";
+import { ambienteLegado, falhaSemPastaDoServidor, lerConfigPc } from "./config-pc.js";
 
 let dados: string;
 beforeEach(() => void (dados = mkdtempSync(join(tmpdir(), "sabre-cfg-"))));
@@ -193,5 +193,15 @@ describe("ambienteLegado (para quem ainda lê no formato SABRE_*)", () => {
       estado: async () => ({ tipo: "ausente" as const }),
     };
     expect((await lerConfigPc(dados, ausente, {})).cofreCorrompido).toBeUndefined();
+  });
+});
+
+describe("falhaSemPastaDoServidor: instalação nova não assusta o amigo", () => {
+  it("assistente ainda não concluído (primeira vez): sem aviso", () => {
+    expect(falhaSemPastaDoServidor(dados)).toBeUndefined();
+  });
+  it("assistente concluído mas sem pasta utilizável: avisa", () => {
+    gravar({ concluido: true, pastaBase: "..", grupo: { nome: "A", endereco: "a:1" } });
+    expect(falhaSemPastaDoServidor(dados)).toMatch(/pasta do servidor não está configurada/);
   });
 });
