@@ -18,458 +18,539 @@
     </div>
     <div class="janela">
       <nav class="barra" id="barra" aria-label="Áreas do app" hidden>
-        <button type="button" class="item-barra" data-area="inicio"><svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></svg><span>Início</span></button>
-        <button type="button" class="item-barra" data-area="backups"><svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3C7 3 4 4.6 4 6.5v11C4 19.4 7 21 12 21s8-1.6 8-3.5v-11C20 4.6 17 3 12 3zm0 2c3.9 0 6 1 6 1.5S15.9 8 12 8 6 7 6 6.5 8.1 5 12 5zm6 12.5c0 .5-2.1 1.5-6 1.5s-6-1-6-1.5V9.2C7.3 10.1 9.5 10.5 12 10.5s4.7-.4 6-1.3z" /></svg><span>Backups</span></button>
-        <button type="button" class="item-barra" data-area="grupo"><svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm7 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM9 13c-3 0-6 1.5-6 4v3h12v-3c0-2.5-3-4-6-4zm7 .5c-.4 0-.8 0-1.2.1 1.4 1 2.2 2.3 2.2 3.9v2.5h4V17.5c0-2-2.7-4-5-4z" /></svg><span>Grupo</span></button>
-        <button type="button" class="item-barra" data-area="configuracoes"><svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-1.7-1L15 3.3h-4l-.4 2.7a7.5 7.5 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.7 7.7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.7h4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" /></svg><span>Configurações</span></button>
+        <button type="button" class="item-barra" data-area="inicio">
+          <svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></svg
+          ><span>Início</span>
+        </button>
+        <button type="button" class="item-barra" data-area="backups">
+          <svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M12 3C7 3 4 4.6 4 6.5v11C4 19.4 7 21 12 21s8-1.6 8-3.5v-11C20 4.6 17 3 12 3zm0 2c3.9 0 6 1 6 1.5S15.9 8 12 8 6 7 6 6.5 8.1 5 12 5zm6 12.5c0 .5-2.1 1.5-6 1.5s-6-1-6-1.5V9.2C7.3 10.1 9.5 10.5 12 10.5s4.7-.4 6-1.3z"
+            /></svg
+          ><span>Backups</span>
+        </button>
+        <button type="button" class="item-barra" data-area="grupo">
+          <svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm7 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM9 13c-3 0-6 1.5-6 4v3h12v-3c0-2.5-3-4-6-4zm7 .5c-.4 0-.8 0-1.2.1 1.4 1 2.2 2.3 2.2 3.9v2.5h4V17.5c0-2-2.7-4-5-4z"
+            /></svg
+          ><span>Grupo</span>
+        </button>
+        <button type="button" class="item-barra" data-area="configuracoes">
+          <svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-1.7-1L15 3.3h-4l-.4 2.7a7.5 7.5 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.7 7.7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.7h4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"
+            /></svg
+          ><span>Configurações</span>
+        </button>
       </nav>
       <div class="conteudo">
-    <main class="cartao" id="cartao" data-estado="carregando" aria-busy="true">
-      <img
-        class="icone"
-        src="../../recursos/icone/icone-512.png"
-        alt="Tigre-dente-de-sabre do SabreHosting"
-      />
-      <h1>SabreHosting</h1>
-      <p class="status" id="status" role="status">Verificando o servidor…</p>
-      <p class="detalhe" id="detalhe"></p>
-      <p class="aviso" id="aviso" role="status"></p>
-      <p class="erro" id="erro" role="alert" hidden></p>
-      <div class="grade">
-        <button type="button" class="principal" id="principal" hidden></button>
-        <button type="button" class="secundario" id="importar-abrir">Importar mundo</button>
-        <button type="button" class="secundario" id="ver-backups">Backups</button>
-        <button type="button" class="secundario" id="ver-config">Configurações</button>
-      </div>
-      <div class="acoes">
-        <button type="button" class="secundario" id="parar" hidden>Parar o servidor</button>
-        <button type="button" class="secundario" id="tentar" hidden>Tentar de novo</button>
-      </div>
-      <p class="detalhe" id="importar-status" role="status" hidden></p>
-      <p class="erro" id="importar-erro" role="alert" hidden></p>
-      <div
-        class="confirmacao importar"
-        id="importar-painel"
-        role="alertdialog"
-        aria-labelledby="importar-titulo"
-        aria-describedby="importar-explica"
-        hidden
-      >
-        <p class="titulo" id="importar-titulo"></p>
-        <p class="detalhe" id="importar-info"></p>
-        <ul class="avisos" id="importar-avisos"></ul>
-        <p id="importar-explica"></p>
-        <div class="acoes">
-          <button type="button" class="principal" id="importar-confirmar">Importar</button>
-          <button type="button" class="secundario" id="importar-cancelar">Cancelar</button>
-        </div>
-      </div>
-      <div
-        class="confirmacao"
-        id="confirmacao"
-        role="alertdialog"
-        aria-labelledby="pergunta"
-        hidden
-      >
-        <p id="pergunta">Os amigos conectados vão cair. Parar o servidor?</p>
-        <div class="acoes">
-          <button type="button" class="perigo" id="confirmar-parar">Parar</button>
-          <button type="button" class="secundario" id="cancelar-parar">Cancelar</button>
-        </div>
-      </div>
-      <p class="versao" id="versao"></p>
-    </main>
-    <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>
-      <h2 id="titulo-backups">Backups</h2>
-      <p class="detalhe" id="backups-detalhe" role="status"></p>
-      <p class="erro" id="backups-erro" role="alert" hidden></p>
-      <p class="detalhe" id="backups-aviso-historico" role="status" hidden></p>
-      <ul class="lista-backups" id="lista-backups"></ul>
-      <div
-        class="confirmacao"
-        id="backups-confirmacao"
-        role="alertdialog"
-        aria-labelledby="backups-pergunta"
-        hidden
-      >
-        <p id="backups-pergunta"></p>
-        <p class="detalhe">
-          O mundo de agora é guardado num backup antes da troca, e dá para voltar a ele depois.
-        </p>
-        <div class="acoes">
-          <button type="button" class="perigo" id="backups-confirmar">Restaurar</button>
-          <button type="button" class="secundario" id="backups-cancelar">Cancelar</button>
-        </div>
-      </div>
-      <button type="button" class="secundario" id="voltar-backups">Voltar</button>
-    </main>
-    <main class="cartao" id="tela-config" aria-labelledby="titulo-config" hidden>
-      <h2 id="titulo-config">Configurações</h2>
-      <form class="config" id="config-form" novalidate>
-        <fieldset>
-          <legend>Geral</legend>
-          <label class="opcao">
-            <input type="checkbox" id="cfg-windows" />
-            Abrir o SabreHosting quando o Windows ligar
-          </label>
-          <div id="cfg-pasta-area" hidden>
-            <label for="cfg-pasta">Pasta do SabreHosting</label>
-            <input
-              type="text"
-              id="cfg-pasta"
-              readonly
-              aria-describedby="cfg-pasta-dica cfg-pasta-erro"
+        <main class="cartao" id="cartao" data-estado="carregando" aria-busy="true">
+          <header class="topo">
+            <img
+              class="icone"
+              src="../../recursos/icone/icone-512.png"
+              alt="Tigre-dente-de-sabre do SabreHosting"
             />
-            <p class="dica" id="cfg-pasta-dica">
-              Onde ficam o servidor, o mundo e os backups. Só dá para trocar com o servidor parado.
-            </p>
-            <button type="button" class="secundario" id="cfg-pasta-trocar">Trocar pasta…</button>
-            <div
-              id="cfg-pasta-confirmacao"
-              role="alertdialog"
-              aria-labelledby="cfg-pasta-pergunta"
-              hidden
-            >
-              <p id="cfg-pasta-pergunta"></p>
-              <p class="detalhe">
-                O mundo e os backups atuais NÃO são movidos: continuam na pasta de hoje. O
-                SabreHosting reinicia para usar a nova.
-              </p>
-              <div class="acoes">
-                <button type="button" class="principal" id="cfg-pasta-confirmar">
-                  Usar esta pasta
-                </button>
-                <button type="button" class="secundario" id="cfg-pasta-cancelar">Cancelar</button>
-              </div>
+            <h1>SabreHosting</h1>
+          </header>
+          <section class="estado" id="estado" data-tom="neutro" aria-label="Estado do servidor">
+            <svg class="estado-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="9" />
+              <path class="marca marca-ligado" d="m8 12.5 3 3 5-6" />
+              <path class="marca marca-desligado" d="M9 9h6v6H9z" />
+              <path class="marca marca-troca" d="M12 7v5l3 2" />
+              <path class="marca marca-atencao" d="M12 7v6m0 3v.5" />
+            </svg>
+            <div class="estado-texto">
+              <p class="status" id="status" role="status">Verificando o servidor…</p>
+              <p class="detalhe" id="detalhe"></p>
             </div>
-            <p class="erro" id="cfg-pasta-erro" role="alert" hidden></p>
-            <p class="dica" id="cfg-pasta-aviso" aria-live="polite" hidden></p>
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend>Servidor</legend>
-          <label for="cfg-visao">Distância de visão</label>
-          <input type="number" id="cfg-visao" inputmode="numeric" min="3" max="32" step="1" />
-          <p class="dica" id="cfg-visao-dica">De 3 a 32. Padrão: 10. Quanto maior, mais pesado.</p>
-          <label for="cfg-simulacao">Distância de simulação</label>
-          <input type="number" id="cfg-simulacao" inputmode="numeric" min="5" max="32" step="1" />
-          <p class="dica" id="cfg-simulacao-dica">
-            De 5 a 32, e menor que a distância de visão. Padrão: 8.
-          </p>
-          <p class="dica">Vale na próxima vez que o servidor for ligado.</p>
-          <div id="cfg-versao-area" hidden>
-            <label for="cfg-versao">Versão do Minecraft (todos os PCs do grupo usam a mesma)</label>
-            <select id="cfg-versao" aria-describedby="cfg-versao-dica cfg-versao-erro"></select>
-            <p class="dica" id="cfg-versao-dica" aria-live="polite"></p>
-            <p class="dica">
-              Só dá para trocar com o servidor parado. Convém ter um backup recente antes de trocar.
-            </p>
-            <button type="button" id="cfg-versao-trocar" disabled>Trocar a versão</button>
-            <div
-              id="cfg-versao-confirmacao"
-              role="alertdialog"
-              aria-labelledby="cfg-versao-pergunta"
-              hidden
-            >
-              <p id="cfg-versao-pergunta"></p>
-              <p class="detalhe">Todos os PCs do grupo passam a usar esta versão.</p>
-              <div class="acoes">
-                <button type="button" class="perigo" id="cfg-versao-confirmar">Trocar</button>
-                <button type="button" class="secundario" id="cfg-versao-cancelar">Cancelar</button>
-              </div>
+          </section>
+          <dl class="fatos" id="fatos">
+            <div class="fato" id="fato-endereco" hidden>
+              <dt>Endereço para os amigos</dt>
+              <dd>
+                <span id="endereco-valor"></span>
+                <button type="button" class="link" id="copiar-endereco">Copiar</button>
+              </dd>
             </div>
-            <p class="erro" id="cfg-versao-erro" role="alert" hidden></p>
-            <p class="dica" id="cfg-versao-aviso" role="status"></p>
+            <div class="fato" id="fato-jogadores" hidden>
+              <dt>Quem está jogando</dt>
+              <dd id="jogadores-valor"></dd>
+            </div>
+            <div class="fato" id="fato-backup" hidden>
+              <dt>Último backup</dt>
+              <dd id="backup-valor"></dd>
+            </div>
+            <div class="fato" id="fato-versao" hidden>
+              <dt>Versão do mundo</dt>
+              <dd id="versao-mundo-valor"></dd>
+            </div>
+          </dl>
+          <p class="aviso" id="aviso" role="status"></p>
+          <p class="erro" id="erro" role="alert" hidden></p>
+          <button type="button" class="principal grande" id="principal" hidden></button>
+          <div class="acoes links">
+            <button type="button" class="link" id="importar-abrir">Importar mundo</button>
+            <button type="button" class="link" id="ver-backups">Backups</button>
+            <button type="button" class="link" id="ver-config">Configurações</button>
+            <button type="button" class="link" id="parar" hidden>Parar o servidor</button>
+            <button type="button" class="link" id="tentar" hidden>Tentar de novo</button>
           </div>
-        </fieldset>
-        <fieldset>
-          <legend>Backups</legend>
-          <label for="cfg-intervalo">Intervalo (minutos)</label>
-          <input
-            type="number"
-            id="cfg-intervalo"
-            inputmode="numeric"
-            min="1"
-            max="1440"
-            step="1"
-            aria-describedby="cfg-intervalo-dica"
-          />
-          <p class="dica" id="cfg-intervalo-dica">
-            De 1 a 1440. Padrão: 10. Vale já, com o servidor no ar.
-          </p>
-          <label for="cfg-quantos">Quantos guardar</label>
-          <input
-            type="number"
-            id="cfg-quantos"
-            inputmode="numeric"
-            min="1"
-            max="1000"
-            step="1"
-            aria-describedby="cfg-quantos-dica"
-          />
-          <p class="dica" id="cfg-quantos-dica">
-            Os backups mais novos que ficam guardados (padrão: 10). Os dos últimos 7 dias sempre
-            ficam, além destes. Os mais antigos são apagados sozinhos.
-          </p>
-          <label for="cfg-banda">Limite de banda para atualizar o mundo (MB/s)</label>
-          <input
-            type="number"
-            id="cfg-banda"
-            inputmode="numeric"
-            min="1"
-            max="1000"
-            step="1"
-            aria-describedby="cfg-banda-dica"
-          />
-          <p class="dica" id="cfg-banda-dica">
-            A velocidade máxima, em megabytes por segundo, com que este PC baixa o mundo novo dos
-            outros PCs (padrão: 10). Menor deixa a internet livre para jogar; maior atualiza mais
-            rápido. Vale já a partir do próximo arquivo baixado.
-          </p>
-          <label class="opcao"
-            ><input type="checkbox" id="cfg-historico" aria-describedby="cfg-historico-dica" />
-            Copiar também os backups para uma pasta (Drive, OneDrive…)</label
-          >
-          <label for="cfg-historico-pasta">Pasta do histórico longo</label>
-          <div class="linha-pasta">
-            <input
-              type="text"
-              id="cfg-historico-pasta"
-              readonly
-              disabled
-              autocomplete="off"
-              aria-describedby="cfg-historico-dica"
-              placeholder="Nenhuma pasta escolhida"
-            />
-            <button type="button" class="secundario" id="cfg-historico-escolher" disabled>
-              Escolher pasta…
-            </button>
-          </div>
-          <p class="dica" id="cfg-historico-dica">
-            Cada backup novo também é copiado para a pasta escolhida (use a pasta do Drive, OneDrive
-            ou Dropbox no seu PC). Se a pasta sumir, o backup deste PC continua normal.
-          </p>
-          <label for="cfg-historico-quantos">Quantos guardar nesta pasta</label>
-          <input
-            type="number"
-            id="cfg-historico-quantos"
-            inputmode="numeric"
-            min="1"
-            max="1000"
-            step="1"
-            disabled
-            aria-describedby="cfg-historico-quantos-dica"
-          />
-          <p class="dica" id="cfg-historico-quantos-dica">
-            Padrão: 10, além dos últimos 7 dias, que sempre ficam. Os mais antigos são apagados da
-            pasta sozinhos, e apagar na pasta também apaga na nuvem do serviço sincronizado.
-          </p>
-        </fieldset>
-        <fieldset id="cfg-endereco" hidden>
-          <legend>Endereço do servidor</legend>
-          <label for="grupo-endereco">Endereço do servidor</label>
-          <input
-            type="text"
-            id="grupo-endereco"
-            readonly
-            autocomplete="off"
-            aria-describedby="grupo-endereco-dica"
-          />
-          <p class="dica" id="grupo-endereco-dica">
-            É o endereço que os amigos usam no Minecraft. Vem do grupo e não se muda aqui.
-          </p>
-        </fieldset>
-        <fieldset id="cfg-grupo" hidden>
-          <legend>Grupo</legend>
-          <p class="dica">PCs com acesso ao grupo. Só o dono do grupo vê esta área.</p>
-          <ul class="lista-backups" id="grupo-lista"></ul>
+          <p class="detalhe" id="importar-status" role="status" hidden></p>
+          <p class="erro" id="importar-erro" role="alert" hidden></p>
           <div
-            class="confirmacao"
-            id="grupo-confirmacao"
+            class="confirmacao importar"
+            id="importar-painel"
             role="alertdialog"
-            aria-labelledby="grupo-pergunta"
+            aria-labelledby="importar-titulo"
+            aria-describedby="importar-explica"
             hidden
           >
-            <p id="grupo-pergunta"></p>
-            <p class="detalhe">
-              O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
-            </p>
+            <p class="titulo" id="importar-titulo"></p>
+            <p class="detalhe" id="importar-info"></p>
+            <ul class="avisos" id="importar-avisos"></ul>
+            <p id="importar-explica"></p>
             <div class="acoes">
-              <button type="button" class="perigo" id="grupo-confirmar">Tirar do grupo</button>
-              <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
+              <button type="button" class="principal" id="importar-confirmar">Importar</button>
+              <button type="button" class="secundario" id="importar-cancelar">Cancelar</button>
             </div>
           </div>
-          <div class="campo-convite" id="grupo-convite">
-            <p class="dica">
-              Para um PC novo entrar no grupo, crie um convite e envie o texto a quem vai usar.
-            </p>
-            <label for="convite-nome">Nome do PC convidado</label>
-            <input
-              id="convite-nome"
-              type="text"
-              maxlength="40"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
-            <label for="convite-validade">Vale por</label>
-            <select id="convite-validade">
-              <option value="1" selected>1 hora</option>
-              <option value="24">1 dia</option>
-              <option value="72">3 dias</option>
-            </select>
+          <div
+            class="confirmacao"
+            id="confirmacao"
+            role="alertdialog"
+            aria-labelledby="pergunta"
+            hidden
+          >
+            <p id="pergunta">Os amigos conectados vão cair. Parar o servidor?</p>
             <div class="acoes">
-              <button type="button" id="convite-criar">Criar convite</button>
+              <button type="button" class="perigo" id="confirmar-parar">Parar</button>
+              <button type="button" class="secundario" id="cancelar-parar">Cancelar</button>
             </div>
-            <div id="convite-resultado" hidden>
-              <label for="convite-texto">Texto do convite</label>
+          </div>
+          <p class="versao" id="versao"></p>
+        </main>
+        <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>
+          <h2 id="titulo-backups">Backups</h2>
+          <p class="detalhe" id="backups-detalhe" role="status"></p>
+          <p class="erro" id="backups-erro" role="alert" hidden></p>
+          <p class="detalhe" id="backups-aviso-historico" role="status" hidden></p>
+          <ul class="lista-backups" id="lista-backups"></ul>
+          <div
+            class="confirmacao"
+            id="backups-confirmacao"
+            role="alertdialog"
+            aria-labelledby="backups-pergunta"
+            hidden
+          >
+            <p id="backups-pergunta"></p>
+            <p class="detalhe">
+              O mundo de agora é guardado num backup antes da troca, e dá para voltar a ele depois.
+            </p>
+            <div class="acoes">
+              <button type="button" class="perigo" id="backups-confirmar">Restaurar</button>
+              <button type="button" class="secundario" id="backups-cancelar">Cancelar</button>
+            </div>
+          </div>
+          <button type="button" class="secundario" id="voltar-backups">Voltar</button>
+        </main>
+        <main class="cartao" id="tela-config" aria-labelledby="titulo-config" hidden>
+          <h2 id="titulo-config">Configurações</h2>
+          <form class="config" id="config-form" novalidate>
+            <fieldset>
+              <legend>Geral</legend>
+              <label class="opcao">
+                <input type="checkbox" id="cfg-windows" />
+                Abrir o SabreHosting quando o Windows ligar
+              </label>
+              <div id="cfg-pasta-area" hidden>
+                <label for="cfg-pasta">Pasta do SabreHosting</label>
+                <input
+                  type="text"
+                  id="cfg-pasta"
+                  readonly
+                  aria-describedby="cfg-pasta-dica cfg-pasta-erro"
+                />
+                <p class="dica" id="cfg-pasta-dica">
+                  Onde ficam o servidor, o mundo e os backups. Só dá para trocar com o servidor
+                  parado.
+                </p>
+                <button type="button" class="secundario" id="cfg-pasta-trocar">
+                  Trocar pasta…
+                </button>
+                <div
+                  id="cfg-pasta-confirmacao"
+                  role="alertdialog"
+                  aria-labelledby="cfg-pasta-pergunta"
+                  hidden
+                >
+                  <p id="cfg-pasta-pergunta"></p>
+                  <p class="detalhe">
+                    O mundo e os backups atuais NÃO são movidos: continuam na pasta de hoje. O
+                    SabreHosting reinicia para usar a nova.
+                  </p>
+                  <div class="acoes">
+                    <button type="button" class="principal" id="cfg-pasta-confirmar">
+                      Usar esta pasta
+                    </button>
+                    <button type="button" class="secundario" id="cfg-pasta-cancelar">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+                <p class="erro" id="cfg-pasta-erro" role="alert" hidden></p>
+                <p class="dica" id="cfg-pasta-aviso" aria-live="polite" hidden></p>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Servidor</legend>
+              <label for="cfg-visao">Distância de visão</label>
+              <input type="number" id="cfg-visao" inputmode="numeric" min="3" max="32" step="1" />
+              <p class="dica" id="cfg-visao-dica">
+                De 3 a 32. Padrão: 10. Quanto maior, mais pesado.
+              </p>
+              <label for="cfg-simulacao">Distância de simulação</label>
               <input
-                id="convite-texto"
+                type="number"
+                id="cfg-simulacao"
+                inputmode="numeric"
+                min="5"
+                max="32"
+                step="1"
+              />
+              <p class="dica" id="cfg-simulacao-dica">
+                De 5 a 32, e menor que a distância de visão. Padrão: 8.
+              </p>
+              <p class="dica">Vale na próxima vez que o servidor for ligado.</p>
+              <div id="cfg-versao-area" hidden>
+                <label for="cfg-versao"
+                  >Versão do Minecraft (todos os PCs do grupo usam a mesma)</label
+                >
+                <select id="cfg-versao" aria-describedby="cfg-versao-dica cfg-versao-erro"></select>
+                <p class="dica" id="cfg-versao-dica" aria-live="polite"></p>
+                <p class="dica">
+                  Só dá para trocar com o servidor parado. Convém ter um backup recente antes de
+                  trocar.
+                </p>
+                <button type="button" id="cfg-versao-trocar" disabled>Trocar a versão</button>
+                <div
+                  id="cfg-versao-confirmacao"
+                  role="alertdialog"
+                  aria-labelledby="cfg-versao-pergunta"
+                  hidden
+                >
+                  <p id="cfg-versao-pergunta"></p>
+                  <p class="detalhe">Todos os PCs do grupo passam a usar esta versão.</p>
+                  <div class="acoes">
+                    <button type="button" class="perigo" id="cfg-versao-confirmar">Trocar</button>
+                    <button type="button" class="secundario" id="cfg-versao-cancelar">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+                <p class="erro" id="cfg-versao-erro" role="alert" hidden></p>
+                <p class="dica" id="cfg-versao-aviso" role="status"></p>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Backups</legend>
+              <label for="cfg-intervalo">Intervalo (minutos)</label>
+              <input
+                type="number"
+                id="cfg-intervalo"
+                inputmode="numeric"
+                min="1"
+                max="1440"
+                step="1"
+                aria-describedby="cfg-intervalo-dica"
+              />
+              <p class="dica" id="cfg-intervalo-dica">
+                De 1 a 1440. Padrão: 10. Vale já, com o servidor no ar.
+              </p>
+              <label for="cfg-quantos">Quantos guardar</label>
+              <input
+                type="number"
+                id="cfg-quantos"
+                inputmode="numeric"
+                min="1"
+                max="1000"
+                step="1"
+                aria-describedby="cfg-quantos-dica"
+              />
+              <p class="dica" id="cfg-quantos-dica">
+                Os backups mais novos que ficam guardados (padrão: 10). Os dos últimos 7 dias sempre
+                ficam, além destes. Os mais antigos são apagados sozinhos.
+              </p>
+              <label for="cfg-banda">Limite de banda para atualizar o mundo (MB/s)</label>
+              <input
+                type="number"
+                id="cfg-banda"
+                inputmode="numeric"
+                min="1"
+                max="1000"
+                step="1"
+                aria-describedby="cfg-banda-dica"
+              />
+              <p class="dica" id="cfg-banda-dica">
+                A velocidade máxima, em megabytes por segundo, com que este PC baixa o mundo novo
+                dos outros PCs (padrão: 10). Menor deixa a internet livre para jogar; maior atualiza
+                mais rápido. Vale já a partir do próximo arquivo baixado.
+              </p>
+              <label class="opcao"
+                ><input type="checkbox" id="cfg-historico" aria-describedby="cfg-historico-dica" />
+                Copiar também os backups para uma pasta (Drive, OneDrive…)</label
+              >
+              <label for="cfg-historico-pasta">Pasta do histórico longo</label>
+              <div class="linha-pasta">
+                <input
+                  type="text"
+                  id="cfg-historico-pasta"
+                  readonly
+                  disabled
+                  autocomplete="off"
+                  aria-describedby="cfg-historico-dica"
+                  placeholder="Nenhuma pasta escolhida"
+                />
+                <button type="button" class="secundario" id="cfg-historico-escolher" disabled>
+                  Escolher pasta…
+                </button>
+              </div>
+              <p class="dica" id="cfg-historico-dica">
+                Cada backup novo também é copiado para a pasta escolhida (use a pasta do Drive,
+                OneDrive ou Dropbox no seu PC). Se a pasta sumir, o backup deste PC continua normal.
+              </p>
+              <label for="cfg-historico-quantos">Quantos guardar nesta pasta</label>
+              <input
+                type="number"
+                id="cfg-historico-quantos"
+                inputmode="numeric"
+                min="1"
+                max="1000"
+                step="1"
+                disabled
+                aria-describedby="cfg-historico-quantos-dica"
+              />
+              <p class="dica" id="cfg-historico-quantos-dica">
+                Padrão: 10, além dos últimos 7 dias, que sempre ficam. Os mais antigos são apagados
+                da pasta sozinhos, e apagar na pasta também apaga na nuvem do serviço sincronizado.
+              </p>
+            </fieldset>
+            <fieldset id="cfg-endereco" hidden>
+              <legend>Endereço do servidor</legend>
+              <label for="grupo-endereco">Endereço do servidor</label>
+              <input
                 type="text"
+                id="grupo-endereco"
                 readonly
                 autocomplete="off"
-                spellcheck="false"
+                aria-describedby="grupo-endereco-dica"
               />
-              <p class="detalhe" id="convite-prazo"></p>
-              <p class="detalhe">
-                Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se fechar
-                esta tela, crie outro.
+              <p class="dica" id="grupo-endereco-dica">
+                É o endereço que os amigos usam no Minecraft. Vem do grupo e não se muda aqui.
               </p>
-              <div class="acoes">
-                <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+            </fieldset>
+            <fieldset id="cfg-grupo" hidden>
+              <legend>Grupo</legend>
+              <p class="dica">PCs com acesso ao grupo. Só o dono do grupo vê esta área.</p>
+              <ul class="lista-backups" id="grupo-lista"></ul>
+              <div
+                class="confirmacao"
+                id="grupo-confirmacao"
+                role="alertdialog"
+                aria-labelledby="grupo-pergunta"
+                hidden
+              >
+                <p id="grupo-pergunta"></p>
+                <p class="detalhe">
+                  O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
+                </p>
+                <div class="acoes">
+                  <button type="button" class="perigo" id="grupo-confirmar">Tirar do grupo</button>
+                  <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
+                </div>
               </div>
-              <p class="detalhe" id="convite-copiado" role="status"></p>
-            </div>
-            <p class="erro" id="convite-erro" role="alert" hidden></p>
-          </div>
-          <p class="detalhe" id="grupo-aviso" role="status"></p>
-          <p class="erro" id="grupo-erro" role="alert" hidden></p>
-        </fieldset>
-        <fieldset id="cfg-mods">
-          <legend>Mods do grupo</legend>
-          <p class="dica" id="mods-dica">
-            Todos os PCs do grupo usam estes mods. Só o dono do grupo muda a lista.
-          </p>
-          <p class="dica" id="mods-atualizando" role="status" hidden>Atualizando mods…</p>
-          <ul class="lista-backups" id="mods-lista"></ul>
-          <div
-            class="confirmacao"
-            id="mods-confirmacao"
-            role="alertdialog"
-            aria-labelledby="mods-pergunta"
-            hidden
-          >
-            <p id="mods-pergunta"></p>
-            <p class="detalhe">
-              O mod sai da lista e é apagado dos PCs do grupo na próxima atualização. Mods que são
-              seus, fora da lista, não são mexidos.
-            </p>
+              <div class="campo-convite" id="grupo-convite">
+                <p class="dica">
+                  Para um PC novo entrar no grupo, crie um convite e envie o texto a quem vai usar.
+                </p>
+                <label for="convite-nome">Nome do PC convidado</label>
+                <input
+                  id="convite-nome"
+                  type="text"
+                  maxlength="40"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
+                <label for="convite-validade">Vale por</label>
+                <select id="convite-validade">
+                  <option value="1" selected>1 hora</option>
+                  <option value="24">1 dia</option>
+                  <option value="72">3 dias</option>
+                </select>
+                <div class="acoes">
+                  <button type="button" id="convite-criar">Criar convite</button>
+                </div>
+                <div id="convite-resultado" hidden>
+                  <label for="convite-texto">Texto do convite</label>
+                  <input
+                    id="convite-texto"
+                    type="text"
+                    readonly
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                  <p class="detalhe" id="convite-prazo"></p>
+                  <p class="detalhe">
+                    Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se
+                    fechar esta tela, crie outro.
+                  </p>
+                  <div class="acoes">
+                    <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+                  </div>
+                  <p class="detalhe" id="convite-copiado" role="status"></p>
+                </div>
+                <p class="erro" id="convite-erro" role="alert" hidden></p>
+              </div>
+              <p class="detalhe" id="grupo-aviso" role="status"></p>
+              <p class="erro" id="grupo-erro" role="alert" hidden></p>
+            </fieldset>
+            <fieldset id="cfg-mods">
+              <legend>Mods do grupo</legend>
+              <p class="dica" id="mods-dica">
+                Todos os PCs do grupo usam estes mods. Só o dono do grupo muda a lista.
+              </p>
+              <p class="dica" id="mods-atualizando" role="status" hidden>Atualizando mods…</p>
+              <ul class="lista-backups" id="mods-lista"></ul>
+              <div
+                class="confirmacao"
+                id="mods-confirmacao"
+                role="alertdialog"
+                aria-labelledby="mods-pergunta"
+                hidden
+              >
+                <p id="mods-pergunta"></p>
+                <p class="detalhe">
+                  O mod sai da lista e é apagado dos PCs do grupo na próxima atualização. Mods que
+                  são seus, fora da lista, não são mexidos.
+                </p>
+                <div class="acoes">
+                  <button type="button" class="perigo" id="mods-confirmar">Tirar da lista</button>
+                  <button type="button" class="secundario" id="mods-cancelar">Cancelar</button>
+                </div>
+              </div>
+              <div id="mods-adicionar" hidden>
+                <label for="mods-nome">Nome do mod</label>
+                <input type="text" id="mods-nome" maxlength="100" />
+                <label for="mods-versao">Versão do mod</label>
+                <input type="text" id="mods-versao" maxlength="100" />
+                <label for="mods-arquivo">Nome do arquivo (termina em .jar)</label>
+                <input type="text" id="mods-arquivo" maxlength="128" />
+                <label for="mods-url">Link de download (cdn.modrinth.com)</label>
+                <input type="url" id="mods-url" />
+                <label for="mods-hash">Hash SHA-512 do arquivo</label>
+                <input
+                  type="text"
+                  id="mods-hash"
+                  maxlength="128"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <label for="mods-lado">Onde usar</label>
+                <select id="mods-lado">
+                  <option value="ambos">No jogo e no servidor</option>
+                  <option value="cliente">Só no jogo (cada amigo)</option>
+                  <option value="servidor">Só no servidor</option>
+                </select>
+                <p class="dica">O link e o hash aparecem na página do arquivo, no Modrinth.</p>
+                <button type="button" id="mods-adicionar-botao">Adicionar à lista</button>
+              </div>
+              <p class="detalhe" id="mods-aviso" role="status"></p>
+              <p class="erro" id="mods-erro" role="alert" hidden></p>
+            </fieldset>
+            <p class="detalhe" id="config-aviso" role="status"></p>
+            <p class="erro" id="config-erro" role="alert" hidden></p>
             <div class="acoes">
-              <button type="button" class="perigo" id="mods-confirmar">Tirar da lista</button>
-              <button type="button" class="secundario" id="mods-cancelar">Cancelar</button>
+              <button type="submit" class="principal" id="config-salvar">Salvar</button>
+              <button type="button" class="secundario" id="config-voltar">Voltar</button>
             </div>
-          </div>
-          <div id="mods-adicionar" hidden>
-            <label for="mods-nome">Nome do mod</label>
-            <input type="text" id="mods-nome" maxlength="100" />
-            <label for="mods-versao">Versão do mod</label>
-            <input type="text" id="mods-versao" maxlength="100" />
-            <label for="mods-arquivo">Nome do arquivo (termina em .jar)</label>
-            <input type="text" id="mods-arquivo" maxlength="128" />
-            <label for="mods-url">Link de download (cdn.modrinth.com)</label>
-            <input type="url" id="mods-url" />
-            <label for="mods-hash">Hash SHA-512 do arquivo</label>
-            <input
-              type="text"
-              id="mods-hash"
-              maxlength="128"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <label for="mods-lado">Onde usar</label>
-            <select id="mods-lado">
-              <option value="ambos">No jogo e no servidor</option>
-              <option value="cliente">Só no jogo (cada amigo)</option>
-              <option value="servidor">Só no servidor</option>
-            </select>
-            <p class="dica">O link e o hash aparecem na página do arquivo, no Modrinth.</p>
-            <button type="button" id="mods-adicionar-botao">Adicionar à lista</button>
-          </div>
-          <p class="detalhe" id="mods-aviso" role="status"></p>
-          <p class="erro" id="mods-erro" role="alert" hidden></p>
-        </fieldset>
-        <p class="detalhe" id="config-aviso" role="status"></p>
-        <p class="erro" id="config-erro" role="alert" hidden></p>
-        <div class="acoes">
-          <button type="submit" class="principal" id="config-salvar">Salvar</button>
-          <button type="button" class="secundario" id="config-voltar">Voltar</button>
-        </div>
-      </form>
-    </main>
-    <main class="cartao" id="tela-boas-vindas" aria-labelledby="titulo-bv" aria-busy="false" hidden>
-      <h2 id="titulo-bv">Bem-vindo ao SabreHosting</h2>
-      <p class="detalhe" id="bv-passo" role="status"></p>
-      <div class="config" id="bv-convite">
-        <label for="bv-texto">Cole aqui o convite que você recebeu</label>
-        <input type="text" id="bv-texto" autocomplete="off" spellcheck="false" />
-        <p class="dica">
-          É o texto que o administrador do grupo te enviou. Ele vale por tempo limitado.
-        </p>
-        <div class="acoes">
-          <button type="button" class="principal" id="bv-conferir">Conferir convite</button>
-          <button type="button" class="secundario" id="bv-explorar">Explorar sem grupo</button>
-        </div>
-        <p class="dica">
-          Quer só dar uma olhada? “Explorar sem grupo” mostra o app com dados de mentira, sem
-          hospedar nada.
-        </p>
-        <div
-          class="confirmacao"
-          id="bv-entrar-caixa"
-          role="alertdialog"
-          aria-labelledby="bv-entrar-pergunta"
+          </form>
+        </main>
+        <main
+          class="cartao"
+          id="tela-boas-vindas"
+          aria-labelledby="titulo-bv"
+          aria-busy="false"
           hidden
         >
-          <p id="bv-entrar-pergunta"></p>
-          <p class="detalhe">
-            O Windows vai pedir permissão de administrador para criar a conexão privada com o grupo.
-            Aceite o pedido.
-          </p>
-          <div class="acoes">
-            <button type="button" class="principal" id="bv-entrar">Entrar no grupo</button>
+          <h2 id="titulo-bv">Bem-vindo ao SabreHosting</h2>
+          <p class="detalhe" id="bv-passo" role="status"></p>
+          <div class="config" id="bv-convite">
+            <label for="bv-texto">Cole aqui o convite que você recebeu</label>
+            <input type="text" id="bv-texto" autocomplete="off" spellcheck="false" />
+            <p class="dica">
+              É o texto que o administrador do grupo te enviou. Ele vale por tempo limitado.
+            </p>
+            <div class="acoes">
+              <button type="button" class="principal" id="bv-conferir">Conferir convite</button>
+              <button type="button" class="secundario" id="bv-explorar">Explorar sem grupo</button>
+            </div>
+            <p class="dica">
+              Quer só dar uma olhada? “Explorar sem grupo” mostra o app com dados de mentira, sem
+              hospedar nada.
+            </p>
+            <div
+              class="confirmacao"
+              id="bv-entrar-caixa"
+              role="alertdialog"
+              aria-labelledby="bv-entrar-pergunta"
+              hidden
+            >
+              <p id="bv-entrar-pergunta"></p>
+              <p class="detalhe">
+                O Windows vai pedir permissão de administrador para criar a conexão privada com o
+                grupo. Aceite o pedido.
+              </p>
+              <div class="acoes">
+                <button type="button" class="principal" id="bv-entrar">Entrar no grupo</button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div class="config" id="bv-eula" hidden>
-        <p id="bv-eula-texto"></p>
-        <button type="button" class="secundario" id="bv-eula-abrir">
-          Ler o contrato no navegador
-        </button>
-        <label class="opcao" for="bv-eula-aceito">
-          <input type="checkbox" id="bv-eula-aceito" />
-          Li e aceito o contrato (EULA) da Mojang
-        </label>
-        <div class="acoes">
-          <button type="button" class="principal" id="bv-eula-continuar" disabled>Continuar</button>
-        </div>
-      </div>
-      <div class="config" id="bv-pasta" hidden>
-        <label for="bv-pasta-caminho">Pasta do SabreHosting</label>
-        <div class="linha-pasta">
-          <input type="text" id="bv-pasta-caminho" autocomplete="off" spellcheck="false" />
-          <button type="button" class="secundario" id="bv-pasta-escolher">Escolher…</button>
-        </div>
-        <p class="dica">
-          O servidor e os mundos ficam nesta pasta (em “servidor” e “mundos”). Dá para deixar a
-          sugerida.
-        </p>
-        <div class="acoes">
-          <button type="button" class="principal" id="bv-concluir">Concluir</button>
-        </div>
-      </div>
-      <p class="detalhe" id="bv-status" role="status" hidden></p>
-      <p class="erro" id="bv-erro" role="alert" hidden></p>
-    </main>
+          <div class="config" id="bv-eula" hidden>
+            <p id="bv-eula-texto"></p>
+            <button type="button" class="secundario" id="bv-eula-abrir">
+              Ler o contrato no navegador
+            </button>
+            <label class="opcao" for="bv-eula-aceito">
+              <input type="checkbox" id="bv-eula-aceito" />
+              Li e aceito o contrato (EULA) da Mojang
+            </label>
+            <div class="acoes">
+              <button type="button" class="principal" id="bv-eula-continuar" disabled>
+                Continuar
+              </button>
+            </div>
+          </div>
+          <div class="config" id="bv-pasta" hidden>
+            <label for="bv-pasta-caminho">Pasta do SabreHosting</label>
+            <div class="linha-pasta">
+              <input type="text" id="bv-pasta-caminho" autocomplete="off" spellcheck="false" />
+              <button type="button" class="secundario" id="bv-pasta-escolher">Escolher…</button>
+            </div>
+            <p class="dica">
+              O servidor e os mundos ficam nesta pasta (em “servidor” e “mundos”). Dá para deixar a
+              sugerida.
+            </p>
+            <div class="acoes">
+              <button type="button" class="principal" id="bv-concluir">Concluir</button>
+            </div>
+          </div>
+          <p class="detalhe" id="bv-status" role="status" hidden></p>
+          <p class="erro" id="bv-erro" role="alert" hidden></p>
+        </main>
       </div>
     </div>
     <script type="module" src="tela.js"></script>

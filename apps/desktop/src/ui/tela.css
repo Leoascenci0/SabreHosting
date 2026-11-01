@@ -381,3 +381,132 @@ button.link {
 .barra[hidden] + .conteudo {
   grid-column: 1 / -1;
 }
+
+/* Início como painel de controle (appui-1.2). */
+#cartao {
+  width: min(100%, 640px);
+  gap: var(--espaco-3);
+}
+
+#cartao .topo {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+#cartao .icone {
+  width: 40px;
+  height: 40px;
+}
+
+#cartao h1 {
+  font-size: var(--texto-3);
+}
+
+.estado {
+  --tom: var(--cor-desligado);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-3);
+  padding: var(--espaco-3);
+  text-align: left;
+  border: 2px solid var(--tom);
+  border-radius: var(--raio);
+}
+
+.estado[data-tom="ligado"] {
+  --tom: var(--cor-ligado);
+}
+
+.estado[data-tom="troca"],
+.estado[data-tom="atencao"] {
+  --tom: var(--cor-atencao);
+}
+
+.estado-icone {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  fill: none;
+  stroke: var(--tom);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.estado .marca {
+  display: none;
+}
+
+.estado[data-tom="ligado"] .marca-ligado,
+.estado[data-tom="desligado"] .marca-desligado,
+.estado[data-tom="troca"] .marca-troca,
+.estado[data-tom="atencao"] .marca-atencao {
+  display: inline;
+}
+
+.estado .status {
+  font-size: var(--texto-4);
+  color: var(--tom);
+}
+
+.estado .detalhe {
+  min-height: 0;
+}
+
+.fatos {
+  width: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--espaco-2);
+  text-align: left;
+}
+
+.fato {
+  padding: var(--espaco-2) var(--espaco-3);
+  background: var(--cor-fundo);
+  border-radius: var(--raio);
+  min-width: 0;
+}
+
+.fato dt {
+  font-size: var(--texto-1);
+  color: var(--cor-texto-suave);
+}
+
+.fato dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+button.grande {
+  width: 100%;
+  min-height: 56px;
+  font-size: var(--texto-4);
+}
+
+button.link {
+  min-height: 44px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--cor-destaque);
+  text-decoration: underline;
+}
+
+.acoes.links {
+  gap: var(--espaco-1);
+}
+
+#cartao .aviso,
+#cartao .erro {
+  min-height: 0;
+}
+
+.fato button.link {
+  min-height: 32px;
+  padding: 0;
+  margin-inline-start: var(--espaco-2);
+}
