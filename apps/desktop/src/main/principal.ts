@@ -147,7 +147,7 @@ function mostrarJanela(): void {
 function criarJanela(oculta: boolean): BrowserWindow {
   const nova = new BrowserWindow({
     width: 880,
-    height: 600,
+    height: 640,
     minWidth: 480,
     minHeight: 360,
     show: false,

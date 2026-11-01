@@ -18,7 +18,7 @@ body {
   display: grid;
   justify-items: center;
   gap: var(--espaco-3);
-  padding: var(--espaco-5) var(--espaco-4);
+  padding: var(--espaco-4);
   text-align: center;
   background: var(--cor-superficie);
   border: 1px solid var(--cor-borda);
@@ -26,8 +26,8 @@ body {
 }
 
 .icone {
-  width: 160px;
-  height: 160px;
+  width: 112px;
+  height: 112px;
   border-radius: var(--raio);
 }
 
@@ -77,6 +77,18 @@ h2 {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--espaco-2);
+}
+
+.grade {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--espaco-2);
+}
+
+.grade button {
+  min-width: 0;
+  padding-inline: var(--espaco-2);
 }
 
 button {

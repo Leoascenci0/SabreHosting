@@ -1,4 +1,4 @@
-// Tela Backups › "Importar mundo" (piloto-1.1c). A janela só pede para o main abrir o seletor e confirmar: o caminho do
+// Tela inicial › "Importar mundo" (piloto-1.1c). A janela só pede para o main abrir o seletor e confirmar: o caminho do
 // .zip nunca passa por aqui.
 import type { EscolhaDoZip, PonteSabre } from "./ponte.js";
 
@@ -13,7 +13,7 @@ const $ = <T extends HTMLElement>(id: string): T => {
   if (!el) throw new Error(`falta #${id}`);
   return el as T;
 };
-const tela = $("tela-backups");
+const tela = $("cartao");
 const abrir = $<HTMLButtonElement>("importar-abrir");
 const status = $("importar-status");
 const erro = $("importar-erro");
@@ -24,8 +24,8 @@ const avisos = $("importar-avisos");
 const explica = $("importar-explica");
 const confirmar = $<HTMLButtonElement>("importar-confirmar");
 const cancelar = $<HTMLButtonElement>("importar-cancelar");
-const voltar = $<HTMLButtonElement>("voltar-backups");
-const abrirBackups = $<HTMLButtonElement>("ver-backups");
+const verBackups = $<HTMLButtonElement>("ver-backups");
+const verConfig = $<HTMLButtonElement>("ver-config");
 
 let ocupado = false;
 
@@ -41,8 +41,12 @@ function mostrarErro(texto: string): void {
 
 function ocupar(sim: boolean): void {
   ocupado = sim;
-  abrir.disabled = confirmar.disabled = cancelar.disabled = voltar.disabled = sim;
-  tela.setAttribute("aria-busy", String(sim));
+  abrir.disabled = confirmar.disabled = cancelar.disabled = sim;
+  // Durante a importação o resto da tela inicial também espera (não dá para hospedar nem sair no meio).
+  verBackups.disabled = verConfig.disabled = sim;
+  if (sim) tela.dataset["importando"] = "";
+  else delete tela.dataset["importando"];
+  window.dispatchEvent(new Event("sabre:importacao"));
 }
 
 function fecharPainel(): void {
@@ -162,7 +166,7 @@ confirmar.addEventListener("click", () => {
 });
 
 // Abrir a tela Backups de novo começa limpo (o resultado da última importação não fica pendurado).
-abrirBackups.addEventListener("click", () => {
+verBackups.addEventListener("click", () => {
   if (ocupado) return;
   fecharPainel();
   mostrarErro("");
