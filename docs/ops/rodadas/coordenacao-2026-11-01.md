@@ -52,3 +52,9 @@
 
 - Eliel abriu o instalador novo: o app abre (1.30 confirmado), só viu a boas-vindas e pediu app completo; decidiu modo demonstração (relatado pela Onda 39). Item appmel-1.31 (escrito no ramo da Onda 39, fora da main).
 - Onda 40: appmel-1.31. Sessão: session_012qrjnsN6JQ9ASvPFJpVUfB (base 43088f5, aberta 19:52 UTC). Watchdog 60 min.
+- **Onda 40 FECHADA:** ✅ appmel-1.31 #276 · controle #277 (via relato da onda). Watchdog apagado.
+
+## Onda 41 — redesenho da interface (appui)
+
+- Pedido do Eliel (relatado pela Onda 40): "interface terrível, confusa; crie um roadmap e implemente em outra onda; melhore muito". Roadmap `docs/roadmap-appui.md` (#278), 7 itens em sequência. Sigla `appui` registrada no CLAUDE.md.
+- Onda 41: appui-1.1 → 1.4 (1.5–1.7 na próxima). Sessão preenchida abaixo.
