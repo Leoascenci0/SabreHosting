@@ -19,6 +19,21 @@ let pagina: Page;
 
 const item = (area: string) => pagina.locator(`[data-area="${area}"]`);
 
+/** Telas conferidas: as quatro da barra mais Mods (dentro do Grupo) e Importar (passo 1, a partir do Início). */
+const TELAS = ["inicio", "backups", "grupo", "configuracoes", "mods", "importar"] as const;
+async function abrirTela(nome: (typeof TELAS)[number]): Promise<void> {
+  if (nome === "mods") {
+    await item("grupo").click();
+    await pagina.locator("#ver-mods").click();
+  } else if (nome === "importar") {
+    await item("inicio").click();
+    await pagina.locator("#importar-abrir").click();
+  } else {
+    await item(nome).click();
+  }
+  await pagina.waitForTimeout(100);
+}
+
 beforeAll(async () => {
   app = await electron.launch({
     args: [...semSandbox, `--user-data-dir=${dados}`, pastaApp],
@@ -54,9 +69,8 @@ const semRolagemHorizontal = () =>
 describe("acabamento", () => {
   it.each([720, 1024, 1600])("sem rolagem horizontal nem corte em %i px", async (largura) => {
     await redimensionar(largura);
-    for (const area of ["inicio", "backups", "grupo", "configuracoes"]) {
-      await item(area).click();
-      await pagina.waitForTimeout(100);
+    for (const area of TELAS) {
+      await abrirTela(area);
       expect(await semRolagemHorizontal(), `${area} em ${largura}px`).toBe(true);
       const corte = await pagina.evaluate(() => {
         const tela = [...document.querySelectorAll("main")].find((m) => !(m as HTMLElement).hidden);
@@ -71,9 +85,8 @@ describe("acabamento", () => {
   });
 
   it("cada tela tem um título visível, e a barra marca a tela atual", async () => {
-    for (const area of ["inicio", "backups", "grupo", "configuracoes"]) {
-      await item(area).click();
-      await pagina.waitForTimeout(100);
+    for (const area of TELAS) {
+      await abrirTela(area);
       const titulos = await pagina.evaluate(
         () =>
           [...document.querySelectorAll("main h1, main h2")].filter(
@@ -81,7 +94,8 @@ describe("acabamento", () => {
           ).length,
       );
       expect(titulos, `títulos visíveis em ${area}`).toBeGreaterThanOrEqual(1);
-      await expect(item(area).getAttribute("aria-current")).resolves.toBe("page");
+      const areaDaBarra = area === "mods" ? "grupo" : area === "importar" ? "inicio" : area;
+      await expect(item(areaDaBarra).getAttribute("aria-current")).resolves.toBe("page");
     }
   });
 
@@ -96,18 +110,22 @@ describe("acabamento", () => {
       await alvo.focus();
       const contorno = await alvo.evaluate((e) => {
         const c = getComputedStyle(e);
-        return { estilo: c.outlineStyle, largura: parseFloat(c.outlineWidth) };
+        return {
+          estilo: c.outlineStyle,
+          largura: parseFloat(c.outlineWidth),
+          cor: c.outlineColor,
+        };
       });
       expect(contorno.estilo, seletor).not.toBe("none");
       expect(contorno.largura, seletor).toBeGreaterThan(0);
+      expect(contorno.cor, seletor).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
     }
   });
 
   it("os textos das telas não têm termo técnico", async () => {
     const termos = /\b(hash|token|IPC|jar|SHA-?\d*|JSON|WireGuard|Velocity|cartório)\b/i;
-    for (const area of ["inicio", "backups", "grupo", "configuracoes"]) {
-      await item(area).click();
-      await pagina.waitForTimeout(100);
+    for (const area of TELAS) {
+      await abrirTela(area);
       const texto = await pagina.evaluate(() => {
         const tela = [...document.querySelectorAll("main")].find((m) => !(m as HTMLElement).hidden);
         return (tela as HTMLElement | undefined)?.innerText ?? "";
