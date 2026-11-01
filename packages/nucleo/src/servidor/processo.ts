@@ -8,6 +8,11 @@ import { fileURLToPath } from "node:url";
 import { recuperarTroca } from "../backup/restaurar.js";
 import { gravarAtomico, podeSubir } from "./configurar.js";
 
+/** Empacotado, o Node não roda o vigia de dentro do `app.asar`: o arquivo mora em `app.asar.unpacked` (asarUnpack). */
+export function caminhoDoVigia(caminho: string): string {
+  return caminho.replace(/([\\/])app\.asar(?=[\\/])/, "$1app.asar.unpacked");
+}
+
 export type EstadoServidor = "parado" | "subindo" | "pronto" | "parando" | "caiu";
 
 export interface OpcoesIniciar {
@@ -390,7 +395,9 @@ async function subirServidor(
   const filho = (opcoes.spawnFn ?? spawnPadrao)(
     process.execPath,
     [
-      ...(opcoes.vigiaArgs ?? [fileURLToPath(new URL("./vigia.js", import.meta.url))]),
+      ...(opcoes.vigiaArgs ?? [
+        caminhoDoVigia(fileURLToPath(new URL("./vigia.js", import.meta.url))),
+      ]),
       String(PRAZO_SALVAR_ORFAO_MS),
       String(prazoParadaSemTravaMs),
       String(prazoParadaMs),

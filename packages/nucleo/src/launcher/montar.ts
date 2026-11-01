@@ -1,8 +1,9 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createHash, randomBytes } from "node:crypto";
-import { dirname, join, resolve, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { baixarConferido, type OpcoesDownload } from "../servidor/baixar.js";
 import { hashDoArquivo } from "../integridade/hash.js";
+import { extrairJava } from "./zip.js";
 import { resolverAdoptium } from "../servidor/resolvedores.js";
 import { URL_MANIFESTO, urlAdoptium, buscarPadrao, type Buscar } from "../servidor/versoes.js";
 
@@ -20,9 +21,9 @@ export interface OpcoesMontar {
   cache: string;
   buscar?: Buscar;
   baixar?: Baixar;
-  /** Baixa também o pacote do Java (Adoptium, sha256 conferido). Extrair e apontar o Java é do item que o usa. */
+  /** Baixa o pacote do Java (Adoptium, sha256 conferido), extrai no cache e aponta o `javaw`. */
   java?: boolean;
-  /** Só para teste: libera http em 127.0.0.1 nos downloads. Nunca ligado pelo app. */
+  /** Só para teste: libera http em 127.0.0.1/[::1] nos downloads. Nunca ligado pelo app. */
   permitirHttpLocal?: boolean;
   /** Chamado a cada peça pronta (para a barra de progresso). */
   aoProgredir?: (feitos: number, total: number) => void;
@@ -34,6 +35,8 @@ export interface VersaoMontada {
   assets: number;
   javaMajor: number;
   pacoteJava?: string;
+  /** Caminho do `javaw.exe` extraído (só com `java: true`). */
+  javaw?: string;
   /** Pasta dos assets (`objects` + `indexes`) e id do índice, para a linha de comando do jogo. */
   pastaAssets: string;
   idIndiceAssets: string;
@@ -253,7 +256,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     const vigiado = new URL(p.url);
     if (
       !HOSTS_ARQUIVOS.includes(vigiado.hostname) &&
-      !(permitirHttpLocal && vigiado.hostname === "127.0.0.1")
+      !(permitirHttpLocal && ["127.0.0.1", "[::1]"].includes(vigiado.hostname))
     )
       throw new Error("A Mojang apontou um arquivo para fora dos servidores oficiais; recusei.");
     await mkdir(dirname(p.destino), { recursive: true });
@@ -262,7 +265,9 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
       hashEsperado: { algoritmo: "sha1", valor: p.sha1 },
       destino: p.destino,
       tamanhoMaximo: Math.min(typeof p.tamanho === "number" ? p.tamanho + 1 : TETO_PECA, TETO_PECA),
-      hostsPermitidos: permitirHttpLocal ? [...HOSTS_ARQUIVOS, "127.0.0.1"] : HOSTS_ARQUIVOS,
+      hostsPermitidos: permitirHttpLocal
+        ? [...HOSTS_ARQUIVOS, "127.0.0.1", "[::1]"]
+        : HOSTS_ARQUIVOS,
       permitirHttpLocal,
     });
     opcoes.aoProgredir?.(++feitos, total());
@@ -300,6 +305,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
   await emParalelo(pecas);
 
   let pacoteJava: string | undefined;
+  let javaw: string | undefined;
   if (java) {
     const alvo = resolverAdoptium(JSON.parse(await buscar(urlAdoptium(javaMajor))));
     pacoteJava = join(cache, "java", `jre-${javaMajor}-${alvo.hashEsperado.valor}.zip`);
@@ -311,6 +317,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
       tamanhoMaximo: 512 * 1024 ** 2,
       hostsPermitidos: HOSTS_JAVA, // vale também nos redirecionamentos (baixarConferido confere cada salto)
     });
+    ({ javaw } = await extrairJava(pacoteJava, pacoteJava.replace(/\.zip$/, "")));
   }
 
   // Por último: a versão só conta como montada com tudo conferido.
@@ -320,6 +327,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
       app: "SabreHosting",
       versao,
       javaMajor,
+      javaw: javaw && relative(cache, javaw).split(sep).join("/"),
       assets: assets.length,
       bibliotecas: bibliotecas.length,
     }),
@@ -330,6 +338,7 @@ export async function montarVersao(opcoes: OpcoesMontar): Promise<VersaoMontada>
     assets: assets.length,
     javaMajor,
     pacoteJava,
+    javaw,
     pastaAssets: join(cache, "assets"),
     idIndiceAssets: idAssets,
   };

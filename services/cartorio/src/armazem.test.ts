@@ -392,6 +392,32 @@ describe("rotas do pacote", () => {
     expect(grande.json()).toMatchObject({ motivo: "grande_demais" });
   });
 
+  it("PUT de ~3 MB passa (201, hash conferido) enquanto JSON de 2 MB em outra rota continua 413", async () => {
+    // Se o limite do JSON (4 KB) passasse a valer para o PUT, o pacote de 3 MB seria recusado com 413.
+    const { app, banco, auth, pc } = montarApp();
+    const epoca = pegar(banco, pc.id, 1_000, PRAZO).epoca;
+    registrarVersao(banco, pc.id, epoca, 1_000, {
+      manifestoSha256: "e".repeat(64),
+      arquivos: 1,
+      bytes: 1,
+    });
+    const p = pacote(3 * 1024 * 1024);
+    const r = await app.inject({
+      method: "PUT",
+      url: url(1, epoca, p),
+      headers: { ...auth, "content-type": "application/octet-stream" },
+      payload: p.bytes,
+    });
+    expect(r.statusCode).toBe(201);
+    expect(r.json()).toMatchObject({ sha256: p.sha256, bytes: p.tamanho });
+    const json = await app.inject({
+      method: "POST",
+      url: "/convites/usar",
+      payload: { convite: "x", lixo: "a".repeat(2 * 1024 * 1024) },
+    });
+    expect(json.statusCode).toBe(413);
+  });
+
   it("PUT guarda, GET devolve os mesmos bytes com o sha256 no cabeçalho; sem token ou sem cópia, recusa", async () => {
     const { app, banco, auth, pc } = montarApp();
     const epoca = pegar(banco, pc.id, 1_000, PRAZO).epoca;

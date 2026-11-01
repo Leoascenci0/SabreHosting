@@ -189,6 +189,34 @@ describe("baixarConferido", () => {
     expect(requisicoes).toBe(0);
   });
 
+  it("http em [::1]: passa da validação com permitirHttpLocal e é recusado sem ele; [::2] sempre recusado", async () => {
+    const destino = join(pasta, "a.jar");
+    const ipv6 = (host: string) => `http://[${host}]:9/a.jar`;
+    // sem a opção: recusa por https, antes de tocar a rede
+    await expect(
+      baixarConferido({ url: ipv6("::1"), hashEsperado: hashCerto, destino }),
+    ).rejects.toThrow(/https/);
+    // com a opção: a validação libera; o que falha depois é só a conexão (porta 9 fechada)
+    await expect(
+      baixarConferido({
+        url: ipv6("::1"),
+        hashEsperado: hashCerto,
+        destino,
+        permitirHttpLocal: true,
+      }),
+    ).rejects.not.toThrow(/https/);
+    // outro endereço IPv6 continua recusado, mesmo com a opção
+    await expect(
+      baixarConferido({
+        url: ipv6("::2"),
+        hashEsperado: hashCerto,
+        destino,
+        permitirHttpLocal: true,
+      }),
+    ).rejects.toThrow(/https/);
+    expect(requisicoes).toBe(0);
+  });
+
   it("HTTP de erro: falha em pt-BR sem criar arquivo final", async () => {
     const destino = join(pasta, "a.jar");
     manipulador = (_req, res) => {
