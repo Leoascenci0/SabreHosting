@@ -99,25 +99,6 @@
             <button type="button" class="link" id="parar" hidden>Parar o servidor</button>
             <button type="button" class="link" id="tentar" hidden>Tentar de novo</button>
           </div>
-          <p class="detalhe" id="importar-status" role="status" hidden></p>
-          <p class="erro" id="importar-erro" role="alert" hidden></p>
-          <div
-            class="confirmacao importar"
-            id="importar-painel"
-            role="alertdialog"
-            aria-labelledby="importar-titulo"
-            aria-describedby="importar-explica"
-            hidden
-          >
-            <p class="titulo" id="importar-titulo"></p>
-            <p class="detalhe" id="importar-info"></p>
-            <ul class="avisos" id="importar-avisos"></ul>
-            <p id="importar-explica"></p>
-            <div class="acoes">
-              <button type="button" class="principal" id="importar-confirmar">Importar</button>
-              <button type="button" class="secundario" id="importar-cancelar">Cancelar</button>
-            </div>
-          </div>
           <div
             class="confirmacao"
             id="confirmacao"
@@ -136,14 +117,20 @@
         <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>
           <h2 id="titulo-backups" tabindex="-1">Backups</h2>
           <p class="detalhe" id="backups-detalhe" role="status"></p>
-          <div class="progresso" id="backups-progresso" role="progressbar" aria-label="Restaurando o backup" hidden>
+          <div
+            class="progresso"
+            id="backups-progresso"
+            role="progressbar"
+            aria-label="Restaurando o backup"
+            hidden
+          >
             <span></span>
           </div>
           <div class="vazio" id="backups-vazio" hidden>
             <p><strong>Ainda não há backups neste PC.</strong></p>
             <p class="detalhe">
-              O backup é uma cópia do mundo. O app faz uma sozinho de tempos em tempos enquanto este PC
-              hospeda o servidor; o intervalo muda em Configurações › Backups.
+              O backup é uma cópia do mundo. O app faz uma sozinho de tempos em tempos enquanto este
+              PC hospeda o servidor; o intervalo muda em Configurações › Backups.
             </p>
           </div>
           <p class="erro" id="backups-erro" role="alert" hidden></p>
@@ -703,27 +690,91 @@
         </main>
         <main
           class="cartao"
+          id="tela-importar"
+          aria-labelledby="importar-titulo"
+          aria-busy="false"
+          hidden
+        >
+          <div class="passos">
+            <p class="passo-rotulo" id="importar-passo" role="status"></p>
+            <ol class="passo-bolinhas" id="importar-bolinhas" aria-hidden="true">
+              <li></li>
+              <li></li>
+              <li></li>
+            </ol>
+          </div>
+          <h2 id="importar-titulo" tabindex="-1"></h2>
+          <div class="config passo-tela" id="importar-passo-1">
+            <p>
+              Escolha o arquivo (.zip) com o mundo do seu servidor antigo. Nada é importado ainda:
+              no próximo passo você confere o que foi achado.
+            </p>
+            <div class="acoes">
+              <button type="button" class="principal" id="importar-escolher">
+                Escolher arquivo…
+              </button>
+            </div>
+          </div>
+          <div class="config passo-tela" id="importar-passo-2" hidden>
+            <p class="detalhe" id="importar-info"></p>
+            <ul class="avisos" id="importar-avisos"></ul>
+            <p id="importar-bloqueio" hidden></p>
+            <div class="acoes">
+              <button type="button" class="principal" id="importar-continuar">Continuar</button>
+              <button type="button" class="secundario" id="importar-trocar">
+                Escolher outro arquivo
+              </button>
+            </div>
+          </div>
+          <div class="config passo-tela" id="importar-passo-3" hidden>
+            <p id="importar-explica"></p>
+            <div class="acoes">
+              <button type="button" class="principal" id="importar-confirmar">Importar</button>
+              <button type="button" class="secundario" id="importar-anterior">Voltar</button>
+            </div>
+          </div>
+          <p class="detalhe" id="importar-status" role="status" hidden></p>
+          <p class="erro" id="importar-erro" role="alert" hidden></p>
+          <div class="acoes">
+            <button type="button" class="secundario" id="importar-voltar">Voltar ao Início</button>
+          </div>
+        </main>
+        <main
+          class="cartao"
           id="tela-boas-vindas"
           aria-labelledby="titulo-bv"
           aria-busy="false"
           hidden
         >
-          <h2 id="titulo-bv">Bem-vindo ao SabreHosting</h2>
-          <p class="detalhe" id="bv-passo" role="status"></p>
+          <div class="passos">
+            <p class="passo-rotulo" id="bv-passo" role="status"></p>
+            <ol class="passo-bolinhas" id="bv-bolinhas" aria-hidden="true">
+              <li></li>
+              <li></li>
+              <li></li>
+            </ol>
+          </div>
+          <h2 id="titulo-bv" tabindex="-1">Qual é o seu convite?</h2>
           <div class="config" id="bv-convite">
-            <label for="bv-texto">Cole aqui o convite que você recebeu</label>
-            <input type="text" id="bv-texto" autocomplete="off" spellcheck="false" />
-            <p class="dica">
-              É o texto que o administrador do grupo te enviou. Ele vale por tempo limitado.
-            </p>
-            <div class="acoes">
-              <button type="button" class="principal" id="bv-conferir">Conferir convite</button>
-              <button type="button" class="secundario" id="bv-explorar">Explorar sem grupo</button>
+            <div class="config" id="bv-convite-form">
+              <label for="bv-texto">Cole aqui o convite que você recebeu</label>
+              <input type="text" id="bv-texto" autocomplete="off" spellcheck="false" />
+              <p class="dica">
+                É o texto que o administrador do grupo te enviou. Ele vale por tempo limitado.
+              </p>
+              <div class="acoes">
+                <button type="button" class="principal" id="bv-conferir">Conferir convite</button>
+              </div>
+              <p class="ou" aria-hidden="true">ou</p>
+              <div class="alternativa">
+                <button type="button" class="secundario" id="bv-explorar">
+                  Explorar sem grupo
+                </button>
+                <p class="dica">
+                  Quer só dar uma olhada? Mostra o app com dados de mentira, sem hospedar nada.
+                </p>
+              </div>
             </div>
-            <p class="dica">
-              Quer só dar uma olhada? “Explorar sem grupo” mostra o app com dados de mentira, sem
-              hospedar nada.
-            </p>
             <div
               class="confirmacao"
               id="bv-entrar-caixa"
@@ -738,6 +789,7 @@
               </p>
               <div class="acoes">
                 <button type="button" class="principal" id="bv-entrar">Entrar no grupo</button>
+                <button type="button" class="secundario" id="bv-outro">Usar outro convite</button>
               </div>
             </div>
           </div>

@@ -5,9 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { registrarCaptura } from "./captura.js";
 import { gerarChavesDoPc } from "@sabrehosting/nucleo/rede/wireguard";
 
 const pastaApp = fileURLToPath(new URL("..", import.meta.url));
+const CAPTURAS = join(pastaApp, "..", "..", "docs", "imagens", "appui-1.6");
 const semSandbox = process.getuid?.() === 0 ? ["--no-sandbox"] : [];
 
 let aberto: ElectronApplication | undefined;
@@ -70,6 +72,46 @@ async function conferir(pagina: Page, texto: string): Promise<void> {
 }
 
 describe("assistente de primeira vez", () => {
+  it("passo 1: indicador, uma pergunta no título e 'Explorar sem grupo' visível como alternativa", async () => {
+    const pagina = await abrir();
+    await expect(pagina.locator("#bv-passo").innerText()).resolves.toBe("Passo 1 de 3");
+    await expect(pagina.locator("#titulo-bv").innerText()).resolves.toMatch(/\?$/);
+    expect(await pagina.evaluate(() => document.activeElement?.id)).toBe("titulo-bv");
+    await expect(pagina.locator("#bv-explorar").isVisible()).resolves.toBe(true);
+    await registrarCaptura(pagina, join(CAPTURAS, "boas-vindas-1-convite.png"));
+  });
+
+  it("depois de conferir, a tela só pergunta se entra; 'Usar outro convite' volta ao campo", async () => {
+    const pagina = await abrir();
+    await conferir(pagina, convite());
+    await expect(pagina.locator("#bv-entrar-caixa").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#bv-convite-form").isHidden()).resolves.toBe(true);
+    await expect(pagina.locator("#bv-passo").innerText()).resolves.toBe("Passo 1 de 3");
+    await registrarCaptura(pagina, join(CAPTURAS, "boas-vindas-1b-entrar.png"));
+    await pagina.locator("#bv-outro").click();
+    await expect(pagina.locator("#bv-convite-form").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#bv-entrar-caixa").isHidden()).resolves.toBe(true);
+    expect((await registro()).entradas).toEqual([]);
+  });
+
+  it("os passos 2 e 3 têm indicador e título próprios, com o foco no título", async () => {
+    const pagina = await abrir();
+    await conferir(pagina, convite());
+    await pagina.locator("#bv-entrar").click();
+    await pagina.locator("#bv-eula:not([hidden])").waitFor();
+    await expect(pagina.locator("#bv-passo").innerText()).resolves.toBe("Passo 2 de 3");
+    await expect(pagina.locator("#titulo-bv").innerText()).resolves.toContain("Mojang");
+    expect(await pagina.evaluate(() => document.activeElement?.id)).toBe("titulo-bv");
+    await expect(pagina.locator("#bv-explorar").isHidden()).resolves.toBe(true);
+    await registrarCaptura(pagina, join(CAPTURAS, "boas-vindas-2-contrato.png"));
+    await pagina.locator("#bv-eula-aceito").check();
+    await pagina.locator("#bv-eula-continuar").click();
+    await pagina.locator("#bv-pasta:not([hidden])").waitFor();
+    await expect(pagina.locator("#bv-passo").innerText()).resolves.toBe("Passo 3 de 3");
+    await expect(pagina.locator("#titulo-bv").innerText()).resolves.toContain("pasta");
+    await registrarCaptura(pagina, join(CAPTURAS, "boas-vindas-3-pasta.png"));
+  });
+
   it("a dica do convite não usa termo técnico", async () => {
     const pagina = await abrir();
     const dica = await pagina.locator("#bv-convite .dica").first().innerText();

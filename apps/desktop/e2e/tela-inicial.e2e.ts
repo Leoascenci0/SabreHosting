@@ -60,10 +60,11 @@ describe("tela inicial: os 4 botões sem rolar", () => {
     });
   }
 
-  it("Importar mundo abre o painel de confirmação na própria tela inicial", async () => {
+  it("Importar mundo abre o passo a passo em tela própria (appui-1.6), sem painel no Início", async () => {
     const p = await abrir("ninguem");
     await p.locator("#importar-abrir").click();
-    await p.locator("#importar-painel").waitFor();
-    expect(await p.locator("#cartao").isVisible()).toBe(true);
+    await p.locator("#tela-importar:not([hidden])").waitFor();
+    expect(await p.locator("#cartao").isVisible()).toBe(false);
+    expect(await p.locator("#importar-passo").innerText()).toBe("Passo 1 de 3");
   });
 });
