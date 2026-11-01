@@ -16,6 +16,7 @@
 | 30 | appmel-1.9 · appmel-1.15 · consolidar melhorias #221–#226 | session_012qrjnuGuKVzHMX2SCj7Tsi | 46a3dcb | fechada 18:27 → main d720a63 |
 | 31 | hostmel-3.4 · appmel-1.17–1.20 · lancmel-2.5 | session_012qrjnsTgQ3fB3yh9ujYa3R | d720a63 | fechada 19:01 → main 68cd214 |
 | 32 | appmel-1.21 · drive-1.2 · lanc-2.3 · app-3.1 | session_012qrjnrw8sAVdmfS1nbdKTf | 68cd214 | fechada 19:24 → main 8f80bf8 |
+| 33 | cartmel-2.6 · hostmel-3.5 · lancmel-2.6 · appmel-1.22 · corr-1.2 · lancmel-2.7 | session_012qrjnroSGtRfKRdqBo8QgK | 9750ed4 | fechada 00:05 → main 1ccd1aa |
 
 ## Relatórios
 
@@ -28,3 +29,5 @@
 - **Onda 31** (19:01): ✅ hostmel-3.4 #233 (Opus, qa integridade+segurança) · appmel-1.17 #231 · 1.18 #235 · 1.19 #236 · lancmel-2.5+appmel-1.20 #234 · controle #237. P: provas Windows. Decidi por você: 1.19 prova entre dois Hospedar; 3.4 em Opus (gatilho trava). Ficha S-16 (Vezes 1). main 68cd214 APROVADA. Sugerido: appmel-1.21.
 - **Onda 32** (19:24): ✅ appmel-1.21 #238 · drive-1.2 #239 (texto) · lanc-2.3 #240 (parcial) · app-3.1 #241 (config) · controle #242. P: testes no PC (lanc-2.3, drive-1.2, app-3.1). S-17 sugerida (Vezes 1). main 8f80bf8 APROVADA.
 - **Encerramento 19:25:** fila sem P vazia; domínios ainda 000. Heartbeat e watchdogs apagados. Bastão não passado (7 ondas, sem trabalho útil restante).
+- **Onda 33** (01/11 00:05): ✅ cartmel-2.6 #244 · hostmel-3.5 #245 · lancmel-2.6 #246 · appmel-1.22 #247 · corr-1.2 #248 · lancmel-2.7 #249 · controle #250. ⏸️ appmel-1.23 (precisa GitHub Actions); P: instalador Windows com servidor subindo; javaw real da Adoptium. Decidi por você: lancmel-2.6 reusa yauzl. S-03 ganhou script (CLAUDE.md atualizado pela coordenadora). Tetos: nenhum perto. main 1ccd1aa APROVADA.
+- **Bastão 00:08** (8 ondas: 26–33) → próxima coordenadora (ver abaixo).

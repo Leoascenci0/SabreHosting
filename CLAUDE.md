@@ -196,7 +196,7 @@ o que se repete). No máximo 10 linhas:
 - **S-01** teste passa sozinho e falha com a máquina ocupada (trava, arquivos grandes): é tempo curto demais no teste,
   não no código; folga medida ou prazo explícito só no teste, nunca afrouxar o que ele prova. Não rode 2 vistorias juntas.
 - **S-03** vistoria verde na sessão e check vermelho no GitHub: a sessão roda como root e o CI não. Item que mexe em
-  `infra/` ou `tests/infra/` roda os testes também como usuário comum (`useradd -m teste`; `su teste -c ...`).
+  `infra/` ou `tests/infra/` roda os testes também como usuário comum (`npm run vistoria:comum`, ou `useradd -m teste`; `su teste -c ...`).
 - **S-04** mergear antes da filha terminar o último pedido deixa commit fora da `main` (#128→#138): só mergear depois
   do aviso de "pronto" da filha, e conferir `git log origin/main..origin/<ramo>` vazio depois do merge.
 - **S-05** worktree com `node_modules` em atalho da pasta principal dá `Cannot find module '@sabrehosting/...'`: rode
