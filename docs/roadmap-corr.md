@@ -16,7 +16,7 @@ na fila. Ramos `roadmap/corr-<id>`. Toda correção traz teste que falhava antes
   *Confirmação:* `npx vitest run tests/infra` verde como usuário comum (não root) e como root; check da `main` verde.
   *Depende de:* nada
 
-- [ ] **1.2 — Vistoria local também como usuário comum (S-03)**
+- [x] **1.2 — Vistoria local também como usuário comum (S-03)** (✅ PR #248, 01/11/2026)
   *O que fazer:* a sessão roda como root e o CI não; criar `scripts/vistoria-comum.sh` (e `npm run vistoria:comum`) que copia o repositório limpo para uma pasta temporária, roda `npx vitest run` como usuário sem privilégio (`useradd -m` se faltar; `su`) e devolve o resultado. O PR descreve a linha que a Máxima deve acrescentar à regra do S-03 (a filha não edita `.claude/`).
   *Arquivo:* `scripts/vistoria-comum.sh`, `package.json`
   **Tela no app:** não se aplica.

@@ -124,7 +124,7 @@ Melhorias achadas durante os itens do `docs/roadmap-cart.md` (skill `maxima` ›
   *Confirmação:* teste: versão criada sem pacote não é devolvida por `/versoes/mais-nova`; importador não aparece em `/copias` até ter a cópia.
   *Origem:* piloto-1.1c · PR #189 · qa integridade
 
-- [ ] **2.6 — Teste do PUT do pacote com corpo maior que 1 MB**
+- [x] **2.6 — Teste do PUT do pacote com corpo maior que 1 MB** (✅ PR #244, 01/11/2026)
   *O que fazer:* o servidor limita o corpo JSON (~1 MB), mas o `PUT` do pacote chega como fluxo direto para o disco. Provar com teste que um pacote de ~3 MB passa (201, hash conferido) enquanto um JSON de 2 MB em outra rota continua recusado com 413; se o PUT esbarrar no limite, corrigir o analisador do tipo de conteúdo (sem subir o limite do JSON).
   *Arquivo:* `services/cartorio/src/servidor.ts`, `servidor.test.ts`
   **Tela no app:** não se aplica.

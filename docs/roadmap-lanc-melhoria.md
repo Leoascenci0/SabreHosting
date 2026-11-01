@@ -40,7 +40,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   *Confirmação:* E2E: leitura falhando logo após ação com erro mantém o erro da ação.
   *Origem:* lancmel-2.4 · PR #226 · filha
 
-- [ ] **2.6 — Extrair o Java baixado e apontar o `javaw`**
+- [x] **2.6 — Extrair o Java baixado e apontar o `javaw`** (✅ PR #246, 01/11/2026)
   *O que fazer:* `montar.ts` já baixa o zip do Java com hash conferido, mas não o extrai. Extrair para a pasta do cache (reusar o `yauzl` que já é dependência do núcleo e a regra de caminho de `importar.ts`; **sem dependência nova**), recusando entrada com `..`, caminho absoluto ou link simbólico (zip slip), extraindo para pasta temporária e renomeando só depois (regra 3), e gravar o caminho do `javaw` no marcador da instância.
   *Arquivo:* `packages/nucleo/src/launcher/montar.ts` (e arquivo novo `zip.ts` ao lado, se passar de ~80 linhas)
   **Tela no app:** não se aplica.

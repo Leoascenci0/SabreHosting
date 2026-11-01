@@ -175,7 +175,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: `level-name` muda entre dois Hospedar e restaurar cai no mundo novo (restaurar continua fazendo backup do estado atual antes, regra 4).
   *Origem:* appmel-1.19 · PR #236 · filha + qa (gravidade média-baixa: não corrompe, pode confundir)
 
-- [ ] **1.22 — Vigia fora do `app.asar` (`asarUnpack`)**
+- [x] **1.22 — Vigia fora do `app.asar` (`asarUnpack`)** (✅ PR #247; empacotar de verdade ⏸️ P, 01/11/2026)
   *O que fazer:* `processo.ts` sobe o vigia por `new URL("./vigia.js", import.meta.url)`; empacotado, esse caminho cai dentro do `app.asar`. Resolver o caminho trocando `app.asar` por `app.asar.unpacked` quando existir, e listar o `vigia.js` (e o que ele importa) em `asarUnpack` no `electron-builder.json`. Só entra se der para provar na nuvem (teste da função de caminho + conferência do JSON); empacotar de verdade fica **[P]**.
   *Arquivo:* `packages/nucleo/src/servidor/processo.ts`, `apps/desktop/electron-builder.json`
   **Tela no app:** não se aplica.
