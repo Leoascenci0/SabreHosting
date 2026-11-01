@@ -47,7 +47,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   *Confirmação:* teste com zip falso gerado no teste: extrai, acha o `javaw`, recusa `../fora` e caminho absoluto, e uma falha no meio não deixa pasta pela metade. Versão real do Java no PC **[P: junto do lanc-2.3]**.
   *Origem:* lanc-2.3 · PR #240 · filha
 
-- [ ] **2.7 — Montagem já marcada não relê o hash dos ~3 mil assets**
+- [x] **2.7 — Montagem já marcada não relê o hash dos ~3 mil assets** (✅ PR #249, 01/11/2026; reaproveitamento do Java confere o `javaw`)
   *O que fazer:* quando `.montada.json` existe e confere com a versão pedida, pular a releitura de hash dos assets e das bibliotecas (só conferir que os arquivos existem e têm o tamanho do manifesto); sem o marcador, ou com tamanho diferente, rebaixa/reconfere como hoje. Depende do 2.6 (mesmo arquivo).
   *Arquivo:* `packages/nucleo/src/launcher/montar.ts`
   **Tela no app:** não se aplica.
