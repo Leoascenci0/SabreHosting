@@ -234,7 +234,9 @@ describe("montarVersao", () => {
 
   const libComo = (sha: string, url = "/lib.jar") => ({
     name: "a:b:1",
-    downloads: { artifact: { path: "a/b/1/b-1.jar", url: `${base}${url}`, sha1: sha, size: 1 } },
+    downloads: {
+      artifact: { path: "a/b/1/b-1.jar", url: `${base}${url}`, sha1: sha, size: biblioteca.length },
+    },
   });
 
   it("duas bibliotecas com o mesmo caminho e hash: baixa uma vez só", async () => {
@@ -281,5 +283,81 @@ describe("montarVersao", () => {
       montarVersao({ versao: "1.21.1", cache, buscar, permitirHttpLocal: true }),
     ).rejects.toThrow();
     expect(await existe(join(cache, "versions/1.21.1/.montada.json"))).toBe(false);
+  });
+
+  describe("montagem já marcada (lancmel-2.7)", () => {
+    const opts = () => ({ versao: "1.21.1", cache, permitirHttpLocal: true });
+    const lib = () => join(cache, "libraries/a/b/1/b-1.jar");
+    const objeto1 = () => join(cache, "assets/objects", sha1(asset1).slice(0, 2), sha1(asset1));
+
+    it("com marcador, não relê o hash: arquivo de mesmo tamanho adulterado não é rebaixado", async () => {
+      const buscar = montarMundoFalso();
+      await montarVersao({ ...opts(), buscar });
+      const igual = Buffer.alloc(biblioteca.length, "x");
+      await writeFile(lib(), igual);
+      pedidos.length = 0;
+      await montarVersao({ ...opts(), buscar });
+      expect(pedidos).toEqual([]);
+      expect(await readFile(lib())).toEqual(igual);
+    });
+
+    it("com marcador, arquivo de tamanho trocado volta a ser baixado (biblioteca e asset)", async () => {
+      const buscar = montarMundoFalso();
+      await montarVersao({ ...opts(), buscar });
+      await writeFile(lib(), "curto");
+      await writeFile(objeto1(), "x");
+      pedidos.length = 0;
+      await montarVersao({ ...opts(), buscar });
+      expect(pedidos.sort()).toEqual(
+        ["/lib.jar", `/obj/${sha1(asset1).slice(0, 2)}/${sha1(asset1)}`].sort(),
+      );
+      expect(await readFile(lib())).toEqual(biblioteca);
+      expect(await readFile(objeto1())).toEqual(asset1);
+    });
+
+    it("arquivo sumido volta a ser baixado mesmo com marcador", async () => {
+      const buscar = montarMundoFalso();
+      await montarVersao({ ...opts(), buscar });
+      await rm(lib());
+      await montarVersao({ ...opts(), buscar });
+      expect(await readFile(lib())).toEqual(biblioteca);
+    });
+
+    it("sem marcador, a conferência por hash continua: mesmo tamanho adulterado é rebaixado", async () => {
+      const buscar = montarMundoFalso();
+      await montarVersao({ ...opts(), buscar });
+      await rm(join(cache, "versions/1.21.1/.montada.json"));
+      await writeFile(lib(), Buffer.alloc(biblioteca.length, "x"));
+      await montarVersao({ ...opts(), buscar });
+      expect(await readFile(lib())).toEqual(biblioteca);
+    });
+
+    it("javaw do .java.json apagado: o Java é extraído de novo", async () => {
+      const buscar = montarMundoFalso();
+      const java = montarZip([{ nome: "jdk-21-jre/bin/javaw.exe", dados: Buffer.from("MZ") }]);
+      const comJava = async (url: string): Promise<string> =>
+        url.includes("adoptium")
+          ? JSON.stringify([
+              {
+                binary: {
+                  package: {
+                    link: "https://github.com/x/jre.zip",
+                    checksum: createHash("sha256").update(java).digest("hex"),
+                  },
+                },
+              },
+            ])
+          : buscar(url);
+      const { baixarConferido } = await import("../servidor/baixar.js");
+      const baixar = async (o: Parameters<typeof baixarConferido>[0]) => {
+        if (!o.url.startsWith("https://github.com/")) return baixarConferido(o);
+        await writeFile(o.destino, java);
+        return { caminho: o.destino, doCache: false };
+      };
+      const r1 = await montarVersao({ ...opts(), buscar: comJava, java: true, baixar });
+      await rm(r1.javaw ?? "");
+      const r2 = await montarVersao({ ...opts(), buscar: comJava, java: true, baixar });
+      expect(r2.javaw && (await readFile(r2.javaw, "utf8"))).toBe("MZ");
+    });
   });
 });
