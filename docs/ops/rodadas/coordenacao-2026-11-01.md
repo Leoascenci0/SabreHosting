@@ -58,3 +58,5 @@
 
 - Pedido do Eliel (relatado pela Onda 40): "interface terrível, confusa; crie um roadmap e implemente em outra onda; melhore muito". Roadmap `docs/roadmap-appui.md` (#278), 7 itens em sequência. Sigla `appui` registrada no CLAUDE.md.
 - Onda 41: appui-1.1 → 1.4 (1.5–1.7 na próxima). Sessão preenchida abaixo.
+- **Onda 41 FECHADA:** ✅ appui-1.1 #280 · 1.2 #281 · 1.3 #282 · 1.4 #283 · controle #284 (main aca407d). qa + vistoria + comum APROVADOS. Ensaios: 41347995488, 41350830474, 41352704533, 41356095731. Achados: "visto há quanto tempo" do PC não existe na ponte; e2e instável 1x no 1.1 (vigiar).
+- Onda 42: appui-1.5 → 1.7. Sessão preenchida abaixo.
