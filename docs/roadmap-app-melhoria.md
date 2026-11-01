@@ -231,7 +231,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste no main: hospedar durante importação é recusado.
   *Origem:* appmel-1.27 · PR #267 · filha
 
-- [ ] **1.30 — URGENTE: o instalador instala, mas o app empacotado não abre** (pedido direto do Eliel, ensaio 01/11/2026)
+- [x] **1.30 — URGENTE: o instalador instala, mas o app empacotado não abre** (✅ PR #272, 01/11/2026; pedido direto do Eliel)
   *O que fazer:* (1) `apps/desktop/electron-builder.json` só empacota `dist/**/*` e `package.json`, então `recursos/icone/*.png` (ícones da bandeja e da janela) não entram no `app.asar`; incluir em `files` tudo que o main lê em runtime fora de `dist/`. (2) `criarBandeja()` lança antes de `criarJanela` e a promessa do `whenReady` rejeita, então a janela nunca nasce: tornar bandeja e ícone tolerantes (registra o erro e segue criando a janela). (3) Teste de regressão que falha antes e passa depois (cada arquivo lido em runtime fora de `dist/` coberto por `files`; bandeja que falha não impede a janela) e, se barato, passo de empacotar com `--dir` e abrir sob xvfb no `versao.yml`.
   *Arquivo:* `apps/desktop/electron-builder.json`, `apps/desktop/src/main/principal.ts`, testes
   **Tela no app:** não se aplica (a janela volta a abrir).
