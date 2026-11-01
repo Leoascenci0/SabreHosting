@@ -15,7 +15,7 @@ Tempo: uns 15 minutos.
 ## 1. Baixar
 
 1. Entre no GitHub com a sua conta e abra:
-   https://github.com/Leoascenci0/SabreHosting/actions/runs/41342283125
+   https://github.com/Leoascenci0/SabreHosting/actions/runs/41345330944
 2. No fim da página, em **Artifacts**, clique em **instalador-ensaio** (cerca de 117 MB). Baixa um `.zip`.
 3. Clique com o botão direito no `.zip` › **Extrair tudo**. Dentro está `SabreHosting-Setup-0.0.0.exe`.
 
@@ -30,6 +30,9 @@ Tempo: uns 15 minutos.
 ## 3. O que conferir (anote o que der diferente)
 
 1. O app abre sozinho e mostra a tela de **boas-vindas**, pedindo o convite do grupo.
+   - **Novo:** clique em **Explorar sem grupo**. Abre o app inteiro (Início com os 4 botões, Backups, Configurações)
+     com dados de mentira e uma faixa **Modo demonstração** no alto. Tente **Hospedar**, **Backup** ou **Importar**:
+     deve aparecer "Isso é só uma demonstração" e nada muda. **Sair da demonstração** volta ao convite.
 2. Aparece o ícone do SabreHosting perto do relógio (bandeja do Windows).
 3. Fechar a janela no **X** deixa o ícone na bandeja; **Sair** pelo menu do ícone fecha de vez.
 4. Abrir de novo pelo atalho do menu Iniciar funciona.
@@ -37,7 +40,7 @@ Tempo: uns 15 minutos.
 
 **O que ainda NÃO dá para testar:** entrar no grupo com um convite e o botão "Tentar de novo". Os dois precisam do
 cartório (o serviço do grupo na máquina da nuvem), que ainda não foi instalado lá (item cart-2.2, espera você).
-Até lá, a tela de boas-vindas fica parada no convite, e isso é o esperado.
+Até lá, a tela de boas-vindas fica parada no convite (e o **Explorar sem grupo** mostra como o app é), e isso é o esperado.
 
 ## 4. Me contar
 
