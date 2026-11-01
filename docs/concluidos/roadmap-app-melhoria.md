@@ -119,7 +119,7 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* teste: falha na instalação definitiva, depois sucesso sem novo convite.
   *Origem:* app-1.3b · PR #211 · filha
 
-- [x] **1.14 — Respeitar `level-name` e validar `SABRE_JAVA`/`SABRE_NEOFORGE`** (PR #225, 31/10/2026)
+- [x] **1.14b — Respeitar `level-name` e validar `SABRE_JAVA`/`SABRE_NEOFORGE`** (PR #225, 31/10/2026)
   *O que fazer:* `pastaMundo` em `config-pc.ts` é fixa `servidor/world`, mas `deps-reais.ts` lê `level-name` do `server.properties`: se não for "world", backup e espalhar apontam para a pasta errada (não apaga nada). `SABRE_JAVA`/`SABRE_NEOFORGE` do ambiente viram executável do servidor sem validação em modo normal: validar ou limitar a modo teste.
   *Arquivo:* `apps/desktop/src/main/config-pc.ts`, `deps-reais.ts`
   **Tela no app:** não se aplica.
@@ -189,14 +189,14 @@ Melhorias achadas durante os itens do `docs/roadmap-app.md` (skill `maxima` › 
   *Confirmação:* ensaio no GitHub gera o `.exe` como artefato **[P: rodar o workflow]**.
   *Origem:* app-3.1 · PR #241 · filha
 
-- [ ] **1.24 — Teste do limite exato de 30 min na reemissão do convite**
+- [x] **1.24 — Teste do limite exato de 30 min na reemissão do convite** (✅ PR #261, 01/11/2026)
   *O que fazer:* `convite.test.ts` só prova 29 e 31 min; trocar `>` por `>=` no cartório não seria pego. Acrescentar o caso de 30 min exatos (aceita) e um comentário em `boas-vindas.ts` dizendo que o app usa `>=` (mais estrito que o cartório, de propósito).
   *Arquivo:* `services/cartorio/src/convite.test.ts`, `apps/desktop/src/main/boas-vindas.ts`
   **Tela no app:** não se aplica.
   *Confirmação:* teste novo falha se o operador mudar.
   *Origem:* appmel-1.14 · PR #257 · qa (segurança) · MIÚDO
 
-- [ ] **1.25 — `versao.yml`: `contents: write` só no passo da release**
+- [x] **1.25 — `versao.yml`: `contents: write` só no passo da release** (✅ PR #261, 01/11/2026; ensaio no GitHub segue ⏸️ P)
   *O que fazer:* hoje o `contents: write` vale para o job inteiro, também no disparo manual de ensaio, e o `checkout` grava esse token no `.git`. Usar `persist-credentials: false` no checkout e dar a permissão só ao passo que cria a release (job separado), com teste que fixe isso.
   *Arquivo:* `.github/workflows/versao.yml`, `tests/infra/versao.test.ts`
   **Tela no app:** não se aplica.
