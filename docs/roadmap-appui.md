@@ -27,7 +27,7 @@ Um amigo que nunca viu o app entende em 5 segundos: **o servidor está ligado? p
   **Tela no app:** Início.
   *Confirmação:* e2e por estado (parado, ligado, trocando, erro) conferindo o texto e qual botão aparece; captura antes/depois. Depende de 1.1.
 
-- [ ] **1.3 — Configurações em seções, com campos bem alinhados**
+- [x] **1.3 — Configurações em seções, com campos bem alinhados**
   *O que fazer:* dividir em **abas ou lista lateral interna** (Geral, Servidor, Backups) em vez de uma coluna única; cada campo com rótulo acima, campo de largura padrão, ajuda curta em uma linha (o texto longo vira "Saiba mais" que abre/fecha); campos numéricos com unidade ao lado ("minutos", "MB/s"); barra de salvar **fixa no rodapé**, com "Há alterações não salvas" e Salvar/Descartar; "Padrão" como botão por campo. Mover Grupo e Mods para telas próprias (1.4).
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts`, `index.html`, `tela.css`, testes
   **Tela no app:** Configurações › Geral / Servidor / Backups.
