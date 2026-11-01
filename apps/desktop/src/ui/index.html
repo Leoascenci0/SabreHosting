@@ -134,8 +134,18 @@
           <p class="versao" id="versao"></p>
         </main>
         <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>
-          <h2 id="titulo-backups">Backups</h2>
+          <h2 id="titulo-backups" tabindex="-1">Backups</h2>
           <p class="detalhe" id="backups-detalhe" role="status"></p>
+          <div class="progresso" id="backups-progresso" role="progressbar" aria-label="Restaurando o backup" hidden>
+            <span></span>
+          </div>
+          <div class="vazio" id="backups-vazio" hidden>
+            <p><strong>Ainda não há backups neste PC.</strong></p>
+            <p class="detalhe">
+              O backup é uma cópia do mundo. O app faz uma sozinho de tempos em tempos enquanto este PC
+              hospeda o servidor; o intervalo muda em Configurações › Backups.
+            </p>
+          </div>
           <p class="erro" id="backups-erro" role="alert" hidden></p>
           <p class="detalhe" id="backups-aviso-historico" role="status" hidden></p>
           <ul class="lista-backups" id="lista-backups"></ul>
@@ -155,7 +165,7 @@
               <button type="button" class="secundario" id="backups-cancelar">Cancelar</button>
             </div>
           </div>
-          <button type="button" class="secundario" id="voltar-backups">Voltar</button>
+          <button type="button" class="secundario" id="voltar-backups" hidden>Voltar</button>
         </main>
         <main class="cartao" id="tela-grupo" aria-labelledby="titulo-grupo" aria-busy="true" hidden>
           <h2 id="titulo-grupo">Grupo</h2>
