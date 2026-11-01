@@ -16,6 +16,14 @@
       <span>Modo demonstração: dados de mentira, nada é de verdade.</span>
       <button type="button" class="secundario" id="faixa-demo-sair">Sair da demonstração</button>
     </div>
+    <div class="janela">
+      <nav class="barra" id="barra" aria-label="Áreas do app" hidden>
+        <button type="button" class="item-barra" data-area="inicio"><svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></svg><span>Início</span></button>
+        <button type="button" class="item-barra" data-area="backups"><svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3C7 3 4 4.6 4 6.5v11C4 19.4 7 21 12 21s8-1.6 8-3.5v-11C20 4.6 17 3 12 3zm0 2c3.9 0 6 1 6 1.5S15.9 8 12 8 6 7 6 6.5 8.1 5 12 5zm6 12.5c0 .5-2.1 1.5-6 1.5s-6-1-6-1.5V9.2C7.3 10.1 9.5 10.5 12 10.5s4.7-.4 6-1.3z" /></svg><span>Backups</span></button>
+        <button type="button" class="item-barra" data-area="grupo"><svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm7 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM9 13c-3 0-6 1.5-6 4v3h12v-3c0-2.5-3-4-6-4zm7 .5c-.4 0-.8 0-1.2.1 1.4 1 2.2 2.3 2.2 3.9v2.5h4V17.5c0-2-2.7-4-5-4z" /></svg><span>Grupo</span></button>
+        <button type="button" class="item-barra" data-area="configuracoes"><svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-1.7-1L15 3.3h-4l-.4 2.7a7.5 7.5 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.7 7.7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.7h4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" /></svg><span>Configurações</span></button>
+      </nav>
+      <div class="conteudo">
     <main class="cartao" id="cartao" data-estado="carregando" aria-busy="true">
       <img
         class="icone"
@@ -462,10 +470,13 @@
       <p class="detalhe" id="bv-status" role="status" hidden></p>
       <p class="erro" id="bv-erro" role="alert" hidden></p>
     </main>
+      </div>
+    </div>
     <script type="module" src="tela.js"></script>
     <script type="module" src="configuracoes.js"></script>
     <script type="module" src="backups.js"></script>
     <script type="module" src="importar.js"></script>
     <script type="module" src="boas-vindas.js"></script>
+    <script type="module" src="navegacao.js"></script>
   </body>
 </html>
