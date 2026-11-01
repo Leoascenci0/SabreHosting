@@ -13,6 +13,16 @@ Um app para grupos de amigos jogarem Minecraft **sem pagar hospedagem**:
 Como funciona por dentro: [`docs/arquitetura.md`](docs/arquitetura.md). O que está sendo feito e em que ordem:
 [`docs/MILESTONE.md`](docs/MILESTONE.md) e os `docs/roadmap-*.md`.
 
+## O app
+
+Barra lateral fixa com **Início**, **Backups**, **Grupo** e **Configurações**, nos temas claro e escuro. A janela
+aceita de 720 a 1600 px de largura. Capturas do modo demonstração (dados de mentira):
+
+| Início | Backups |
+|---|---|
+| ![Início, tema claro](docs/imagens/appui-1.7/inicio-claro.png) | ![Backups, tema claro](docs/imagens/appui-1.7/backups-claro.png) |
+| ![Grupo, tema claro](docs/imagens/appui-1.7/grupo-claro.png) | ![Configurações, tema escuro](docs/imagens/appui-1.7/configuracoes-escuro.png) |
+
 ## Estado
 
 Em planejamento. Ainda não há versão para instalar.
