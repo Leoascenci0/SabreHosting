@@ -45,4 +45,4 @@
 ## Onda 39 — instalador não abre (01/11, ~16:20 Brasília)
 
 - Eliel instalou o ensaio do run 41338605522: atalho existe, app não abre. Reproduzi empacotando local (electron-builder --linux --dir) e rodando: `UnhandledPromiseRejection: ENOENT recursos/icone/bandeja-16.png not found in app.asar`. Causa: `electron-builder.json` só inclui `dist/**/*` e `package.json`; `criarBandeja()` (principal.ts:743) lê PNG de `recursos/icone/` e lança antes de `criarJanela` (:744) → nenhuma janela. Nenhuma vistoria cobria o app empacotado.
-- Onda 39: appmel-1.30 (corrigir) — sessão preenchida abaixo.
+- Onda 39: appmel-1.30. Sessão: session_012qrjnu4no5wqTBfnUjCK42 (base 78da1b6, aberta 19:18 UTC). Watchdog 45 min.
