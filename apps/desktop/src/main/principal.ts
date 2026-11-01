@@ -20,6 +20,9 @@ import {
   planoDaVersao,
 } from "@sabrehosting/nucleo/servidor/versoes";
 import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
+import { listarBackups } from "@sabrehosting/nucleo/backup/listar";
+import { list as listarJogadores } from "@sabrehosting/nucleo/servidor/comandos";
+import type { ServidorMinecraft } from "@sabrehosting/nucleo/servidor/processo";
 import { analisarZip, importarNoCartorio } from "@sabrehosting/nucleo/importar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAvisoHistorico } from "./aviso-historico.js";
@@ -156,8 +159,8 @@ function criarJanela(oculta: boolean): BrowserWindow {
   const nova = new BrowserWindow({
     width: 880,
     height: 640,
-    minWidth: 480,
-    minHeight: 360,
+    minWidth: 720,
+    minHeight: 480,
     show: false,
     title: "SabreHosting",
     ...(existsSync(ICONE) ? { icon: ICONE } : {}),
@@ -350,6 +353,20 @@ async function criarInicioDoApp(): Promise<Inicio> {
       atualizando,
       avisoAtualizacao,
       aoServidor: (s) => agendaApp?.observar(s),
+      // Só leitura, para o painel do Início (appui-1.2): o que falhar some da tela.
+      ultimoBackup: async () => {
+        if (!pc.pastaBackups) return undefined;
+        const lista = await listarBackups(pc.pastaBackups);
+        return lista
+          .map((b) => b.criadoEm)
+          .sort()
+          .at(-1);
+      },
+      versaoMundo: async () => (await clienteDoPc(pc)().maisNova())?.numero,
+      jogadores: async (s) => {
+        const srv = s as ServidorMinecraft;
+        return srv.estado === "pronto" ? (await listarJogadores(srv)).nomes : undefined;
+      },
     });
   }
   const { criarDepsE2E } = await import("./fake-e2e.js");
@@ -358,8 +375,12 @@ async function criarInicioDoApp(): Promise<Inicio> {
   const cenario = process.env["SABRE_E2E_CENARIO"] ?? "ninguem";
   const inicio = criarInicio({
     ...criarDepsE2E(cenario as never, espiao),
-    restaurando,
-    trocandoVersao,
+    restaurando: () => restaurando() || process.env["SABRE_E2E_TRABALHO"] === "restaurando",
+    trocandoVersao: () => trocandoVersao() || process.env["SABRE_E2E_TRABALHO"] === "versao",
+    atualizando: () => {
+      const n = Number(process.env["SABRE_E2E_ATUALIZANDO"]);
+      return Number.isFinite(n) && process.env["SABRE_E2E_ATUALIZANDO"] ? n : undefined;
+    },
     aoServidor: (s) => agendaApp?.observar(s),
   });
   if (cenario === "eu") await inicio.hospedar(); // "eu" = este PC já hospeda, pelo caminho normal

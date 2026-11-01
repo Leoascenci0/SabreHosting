@@ -8,22 +8,48 @@ sem fonte ou imagem de internet (o app funciona sem rede).
 
 Tema claro por padrão; o escuro vem pelo tema do sistema (`prefers-color-scheme`). Toda cor existe nos dois temas.
 
-| Token               | Para quê                               | Claro     | Escuro    |
-| ------------------- | -------------------------------------- | --------- | --------- |
-| `--cor-fundo`       | fundo da janela                        | `#f4f7f8` | `#0e171c` |
-| `--cor-superficie`  | cartões                                | `#ffffff` | `#16242b` |
-| `--cor-borda`       | contornos                              | `#cfd9dd` | `#2a3d46` |
-| `--cor-texto`       | texto principal                        | `#14232a` | `#eaf2f4` |
-| `--cor-texto-suave` | apoio (versão, dicas)                  | `#4a5d66` | `#9fb4bd` |
-| `--cor-destaque`    | título e ação principal (cor do ícone) | `#0a6b80` | `#4fd1e8` |
-| `--cor-sobre-destaque` | texto dentro de botão destacado     | `#ffffff` | `#0e171c` |
-| `--cor-erro`        | erro e ação que derruba algo (Parar)   | `#b3261e` | `#ff8a80` |
+| Token                  | Para quê                               | Claro     | Escuro    |
+| ---------------------- | -------------------------------------- | --------- | --------- |
+| `--cor-fundo`          | fundo da janela                        | `#f4f7f8` | `#0e171c` |
+| `--cor-superficie`     | cartões                                | `#ffffff` | `#16242b` |
+| `--cor-borda`          | contornos                              | `#cfd9dd` | `#2a3d46` |
+| `--cor-texto`          | texto principal                        | `#14232a` | `#eaf2f4` |
+| `--cor-texto-suave`    | apoio (versão, dicas)                  | `#4a5d66` | `#9fb4bd` |
+| `--cor-destaque`       | título e ação principal (cor do ícone) | `#0a6b80` | `#4fd1e8` |
+| `--cor-sobre-destaque` | texto dentro de botão destacado        | `#ffffff` | `#0e171c` |
+| `--cor-erro`           | erro e ação que derruba algo (Parar)   | `#b3261e` | `#ff8a80` |
+| `--cor-ligado`         | estado: servidor ligado                | `#1b7a3a` | `#6ee08f` |
+| `--cor-desligado`      | estado: servidor desligado             | `#56676f` | `#9fb4bd` |
+| `--cor-atencao`        | estado: atenção (trocando de host…)    | `#8a5a00` | `#ffc94d` |
 
 Texto sobre fundo ou superfície tem contraste mínimo 4,5:1 (AA); `tokens.test.ts` confere nos dois temas.
 
-## Espaços e forma
+Cor de estado nunca vai sozinha: sempre com ícone ou palavra (quem não distingue cores também entende). Contraste
+AA nos dois temas, conferido em `tokens.test.ts`.
 
-`--espaco-1` a `--espaco-5` = 4, 8, 16, 24, 40 px. `--raio` = 12 px. Fonte do sistema (`--fonte`: Segoe UI no Windows).
+## Espaços, tipografia e forma
+
+`--espaco-1` a `--espaco-6` = 4, 8, 16, 24, 40, 64 px. `--raio` = 12 px. Fonte do sistema (`--fonte`: Segoe UI no Windows).
+Tipografia (`--texto-1` a `--texto-5`): 0,875 / 1 / 1,125 / 1,5 / 2 rem (apoio, corpo, destaque, título de tela, título grande).
+Sombras suaves: `--sombra-1` (cartão, item atual) e `--sombra-2` (o que flutua); mais fortes no tema escuro.
+
+## Estrutura da janela
+
+- **Barra lateral fixa** (`.barra`, `--largura-barra` 220 px): **Início, Backups, Grupo, Configurações**, ícone + nome; o item
+  atual leva `aria-current="page"` e fundo `--cor-destaque`. Sem a barra só na Boas-vindas (primeira vez).
+- **Conteúdo** (`.conteudo`): à direita, centralizado, no máximo `--largura-conteudo` (960 px), rola sozinho; a barra não rola.
+- **Faixa de demonstração** (`.faixa-demo`): por cima de tudo, no fluxo (não cobre nada).
+- Janela com tamanho mínimo 720 x 480 px.
+- Teclado: Tab entra no item atual; setas, Home e End andam pela barra; Enter abre. Navegação em `navegacao.ts`
+  (aperta os botões que cada tela já tem; sem roteador).
+- **Grupo** (appui-1.4) tem tela própria (`#tela-grupo`): lista de PCs com "Tirar do grupo" (com confirmação) e painel
+  "Convidar um PC" (`.painel`). **Mods** é subtela de Grupo (`#tela-mods`, botão "Mods do grupo" e "← Grupo"; sem 5º item
+  da barra): lista com nome, versão e onde vale; "Adicionar mod" em 3 passos curtos, com hash e "onde usar" em
+  "Avançado" (`<details>` recolhido). Só o dono vê PCs, convite e edição de mods; o texto do convite fica só na memória.
+- **Configurações** (appui-1.3): abas internas Geral / Servidor / Backups (`.abas`; trocar só esconde, nada
+  recarrega). Campo = rótulo acima, entrada de largura padrão com unidade ao lado e botão "Padrão" (valor vindo da ponte),
+  ajuda de uma linha + "Saiba mais" (`<details>`). Barra fixa no rodapé (`.barra-salvar`): "Há alterações não salvas",
+  Salvar (só com mudança), Descartar, Voltar. Nenhuma aba passa de 1,5× a altura da janela (testado).
 
 ## Regras de tom (texto na tela)
 

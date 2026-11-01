@@ -1,8 +1,9 @@
 import { isAbsolute } from "node:path";
-import type { CampoComErro, ConfiguracoesDaTela, Resultado } from "../ui/ponte.js";
+import type { CampoComErro, ConfiguracoesDaTela, LeituraDaTela, Resultado } from "../ui/ponte.js";
 import { validarDistancias } from "@sabrehosting/nucleo/servidor/configurar";
 import {
   lerPreferencias,
+  preferenciasPadrao,
   salvarPreferencias,
   validarHistoricoLongo,
   validarIntervaloBackup,
@@ -51,7 +52,7 @@ function lerValor(valor: unknown): ConfiguracoesDaTela | undefined {
 
 export function criarConfiguracoes(deps: DepsConfiguracoes) {
   return {
-    ler: (): ConfiguracoesDaTela => lerPreferencias(deps.pasta),
+    ler: (): LeituraDaTela => ({ ...lerPreferencias(deps.pasta), padroes: preferenciasPadrao() }),
     /** Só devolve caminho absoluto (o resto, inclusive cancelar, vira `undefined`); quem salva valida de novo. */
     async escolherPasta(): Promise<string | undefined> {
       try {

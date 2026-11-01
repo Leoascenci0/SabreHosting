@@ -37,6 +37,12 @@ export interface DepsInicio {
   atualizando?(): number | undefined;
   /** Último aviso de falha da atualização do mundo (syncmel-1.14); `undefined` = nenhum. */
   avisoAtualizacao?(): string | undefined;
+  /** Quando foi o último backup deste PC (ISO); `undefined` = nenhum ou sem pasta. Só leitura. */
+  ultimoBackup?(): Promise<string | undefined>;
+  /** Número da versão do mundo no grupo (cartório); `undefined` = grupo sem mundo ou sem conexão. */
+  versaoMundo?(): Promise<number | undefined>;
+  /** Nomes de quem está jogando neste servidor; `undefined` = ainda não dá para saber (subindo). */
+  jogadores?(servidor: ServidorAtivo): Promise<string[] | undefined>;
   /** Servidor deste PC criado (ainda pode estar subindo): quem agenda o backup passa a ouvir o estado dele. */
   aoServidor?(servidor: ServidorAtivo): void;
 }
@@ -73,11 +79,23 @@ export interface TemposInicio {
   orfaoPrazoMs?: number;
   /** Com a trava livre, quanto esperar o órfão antes de dizer o que fazer. Padrão: 2 min. */
   orfaoTetoMs?: number;
+  /** Quanto guardar a versão do mundo antes de perguntar ao cartório de novo. Padrão: 60 s. */
+  versaoTtlMs?: number;
 }
 
 export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
   const { passoMs = 300, tentativas = 20 } = tempos;
   const { orfaoPassoMs = 1000, orfaoPrazoMs = 30_000, orfaoTetoMs = 120_000 } = tempos;
+  const { versaoTtlMs = 60_000 } = tempos;
+  // A versão do mundo vai ao cartório; o estado é pedido a cada evento da tela, então a resposta (ou a falha) vale por um tempo.
+  let versaoGuardada: { valor: number | undefined; ate: number } | undefined;
+  const lerVersaoMundo = async (): Promise<number | undefined> => {
+    if (!deps.versaoMundo) return undefined;
+    if (versaoGuardada && performance.now() < versaoGuardada.ate) return versaoGuardada.valor;
+    const valor = await deps.versaoMundo().catch(() => undefined);
+    versaoGuardada = { valor, ate: performance.now() + versaoTtlMs };
+    return valor;
+  };
   let ativo: ServidorAtivo | undefined;
   let ocupado = false;
   let parando = false;
@@ -187,6 +205,31 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     }
   }
 
+  /** Dados só de leitura do painel; cada um que falha ou não existe some (a tela não inventa). */
+  async function comPainel(e: EstadoInicio): Promise<EstadoInicio> {
+    if (e.tipo !== "ninguem" && e.tipo !== "outro" && e.tipo !== "eu") return e;
+    const servidor = ativo;
+    const [ultimoBackup, versaoMundo, jogadores] = await Promise.all([
+      deps.ultimoBackup?.().catch(() => undefined),
+      lerVersaoMundo(),
+      e.tipo === "eu" && !e.parando && servidor
+        ? deps.jogadores?.(servidor).catch(() => undefined)
+        : undefined,
+    ]);
+    const trabalho = deps.restaurando?.()
+      ? ("restaurando" as const)
+      : deps.trocandoVersao?.()
+        ? ("trocando-versao" as const)
+        : undefined;
+    return {
+      ...e,
+      ...(trabalho && e.tipo !== "eu" ? { trabalho } : {}),
+      ...(ultimoBackup ? { ultimoBackup } : {}),
+      ...(versaoMundo !== undefined ? { versaoMundo } : {}),
+      ...(jogadores ? { jogadores } : {}),
+    };
+  }
+
   return {
     parar,
 
@@ -219,7 +262,8 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     },
 
     async estado(): Promise<EstadoInicio> {
-      const e = await estadoBase();
+      const base = await estadoBase();
+      const e = await comPainel(base);
       if (e.tipo !== "ninguem" && e.tipo !== "outro") return e;
       const pct = deps.atualizando?.();
       const aviso = deps.avisoAtualizacao?.();

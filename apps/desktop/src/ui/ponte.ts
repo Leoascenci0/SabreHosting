@@ -1,16 +1,34 @@
 // O que a tela enxerga de `window.sabre` (preload.cts expõe exatamente isto).
 export type MotivoSemCartorio = "rede" | "servidor" | "acesso";
 
+/** O que o painel do Início mostra além do estado; campo ausente = sem dado, a tela não mostra a linha. */
+export interface DadosPainel {
+  /** Quando foi o último backup deste PC (ISO). */
+  ultimoBackup?: string;
+  /** Número da versão do mundo que o grupo usa hoje. */
+  versaoMundo?: number;
+  /** Quem está jogando agora; só quando o servidor roda neste PC. */
+  jogadores?: string[];
+  /** Algo mexendo no mundo deste PC agora (Hospedar fica fechado). A atualização vem em `atualizando`. */
+  trabalho?: "restaurando" | "trocando-versao";
+}
+
 export type EstadoInicio =
   | { tipo: "carregando" }
   | { tipo: "sem-cartorio"; motivo: MotivoSemCartorio }
   /** `atualizando`: percentual (0–100) do mundo sendo atualizado neste PC; Hospedar fica fechado, Jogar não.
    *  `aviso`: por que a última atualização falhou (some quando uma nova rodada começa). */
-  | { tipo: "ninguem"; atualizando?: number; aviso?: string }
+  | ({ tipo: "ninguem"; atualizando?: number; aviso?: string } & DadosPainel)
   /** Servidor de uma sessão anterior do app ainda vivo neste PC, sem sair sozinho. */
   | { tipo: "orfao" }
-  | { tipo: "outro"; nomePc: string; endereco: string; atualizando?: number; aviso?: string }
-  | { tipo: "eu"; endereco: string; parando?: boolean };
+  | ({
+      tipo: "outro";
+      nomePc: string;
+      endereco: string;
+      atualizando?: number;
+      aviso?: string;
+    } & DadosPainel)
+  | ({ tipo: "eu"; endereco: string; parando?: boolean } & DadosPainel);
 
 export type CampoComErro =
   "intervalo" | "quantos" | "quantosHistorico" | "distancias" | "historico" | "banda";
@@ -27,6 +45,11 @@ export interface ConfiguracoesDaTela {
   historicoLongoLigado: boolean;
   historicoLongoPasta: string;
   limiteBandaMBs: number;
+}
+
+/** O que `configuracoes.ler()` devolve: os valores de hoje e os padrões de fábrica (botão "Padrão"). */
+export interface LeituraDaTela extends ConfiguracoesDaTela {
+  padroes: ConfiguracoesDaTela;
 }
 
 export interface BackupDaTela {
@@ -146,7 +169,7 @@ export interface PonteSabre {
     definir(ligado: boolean): Promise<boolean>;
   };
   configuracoes: {
-    ler(): Promise<ConfiguracoesDaTela>;
+    ler(): Promise<LeituraDaTela>;
     salvar(valor: ConfiguracoesDaTela): Promise<Resultado>;
     /** Abre o seletor de pasta do Windows; `undefined` se o amigo cancelar. */
     escolherPasta(): Promise<string | undefined>;

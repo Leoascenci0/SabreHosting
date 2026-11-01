@@ -43,6 +43,7 @@ afterEach(() => rmSync(pasta, { recursive: true, force: true }));
 describe("configurações", () => {
   it("sem arquivo, mostra os valores padrão", () => {
     expect(criar().ler()).toEqual({
+      padroes: padrao,
       abrirComWindows: false,
       distanciaVisao: 10,
       distanciaSimulacao: 8,
@@ -53,6 +54,15 @@ describe("configurações", () => {
       historicoLongoLigado: false,
       historicoLongoPasta: "",
     });
+  });
+
+  it("ler devolve os padrões junto (uma fonte só para o botão Padrão), mesmo com valores salvos", () => {
+    const c = criar();
+    expect(c.ler().padroes).toEqual(padrao);
+    c.salvar({ ...padrao, intervaloBackupMin: 30, distanciaVisao: 12 });
+    const lido = c.ler();
+    expect(lido.intervaloBackupMin).toBe(30);
+    expect(lido.padroes).toEqual(padrao);
   });
 
   it("salvar o intervalo grava e avisa o agendador (só depois de gravar)", () => {
