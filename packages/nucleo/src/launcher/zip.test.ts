@@ -84,6 +84,39 @@ describe("extrairJava", () => {
     expect(await sobras()).toEqual([]);
   });
 
+  it("recusa pelo tamanho total declarado, antes de ler", async () => {
+    const destino = join(raiz, "jre-21");
+    const grande: EntradaDeZip = {
+      nome: "jdk/lib/enorme",
+      dados: Buffer.from("x"),
+      tamanhoDeclarado: 2 * 1024 ** 3,
+    };
+    await expect(extrairJava(await zipEm([...javaOk, grande]), destino)).rejects.toThrow(
+      /tamanho total/,
+    );
+    expect(await sobras()).toEqual([]);
+  });
+
+  it("recusa zip com entradas demais (mais de 20 mil)", async () => {
+    const destino = join(raiz, "jre-21");
+    const muitas = Array.from({ length: 20_001 }, (_, i) => f(`jdk/p/${i}`, ""));
+    await expect(extrairJava(await zipEm([...javaOk, ...muitas]), destino)).rejects.toThrow(
+      /entradas demais/,
+    );
+    expect(await sobras()).toEqual([]);
+  });
+
+  it.each([
+    ["igual", "jdk/lib/a", "jdk/lib/a"],
+    ["só na caixa", "jdk/lib/A", "jdk/lib/a"],
+  ])("recusa entrada repetida (%s) em vez de sobrescrever", async (_t, um, outro) => {
+    const destino = join(raiz, "jre-21");
+    await expect(
+      extrairJava(await zipEm([...javaOk, f(um, "1"), f(outro, "2")]), destino),
+    ).rejects.toThrow(/duas vezes/);
+    expect(await sobras()).toEqual([]);
+  });
+
   it("arquivo que não é zip: recusa", async () => {
     const z = join(raiz, "jre.zip");
     await writeFile(z, "isto não é zip");

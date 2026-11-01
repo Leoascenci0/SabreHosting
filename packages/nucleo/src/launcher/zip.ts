@@ -52,9 +52,11 @@ async function extrairPara(zip: string, temp: string): Promise<string> {
     ),
   );
   let javaw: string | undefined;
-  let entradas = 0;
+  const vistos = new Set<string>();
   let bytes = 0;
   try {
+    // O diretório central já diz quantas entradas há: recusa antes de gravar qualquer coisa.
+    if (z.entryCount > MAX_ENTRADAS) throw recusa("entradas demais.");
     await new Promise<void>((fim, falha) => {
       // Erro da própria biblioteca (nome com "..", absoluto, "\\", tamanho que não bate) também vira recusa.
       z.once("error", (e: Error) =>
@@ -67,12 +69,15 @@ async function extrairPara(zip: string, temp: string): Promise<string> {
       z.once("end", fim);
       z.on("entry", (e: Entry) => {
         void (async () => {
-          if (++entradas > MAX_ENTRADAS) throw recusa("entradas demais.");
           if (ehLink(e)) throw recusa(`"${e.fileName}" é um link simbólico.`);
           const dir = e.fileName.endsWith("/");
           const nome = dir ? e.fileName.slice(0, -1) : e.fileName;
           if (!caminhoSeguro(nome))
             throw recusa(`o caminho ${JSON.stringify(e.fileName)} é inseguro.`);
+          // Repetido (inclusive só na caixa: no Windows "A" e "a" são o mesmo arquivo) nunca sobrescreve.
+          const chave = nome.normalize("NFC").toLowerCase();
+          if (vistos.has(chave)) throw recusa(`"${nome}" aparece duas vezes.`);
+          vistos.add(chave);
           const destino = join(temp, ...nome.split("/"));
           if (dir) return void (await mkdir(destino, { recursive: true }));
           bytes += e.uncompressedSize;
