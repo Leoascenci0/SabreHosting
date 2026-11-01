@@ -153,6 +153,7 @@ describe("tela Mods", () => {
     expect(gravada?.map((m) => m.arquivo)).toEqual(["sodium.jar", "lithium.jar"]);
     expect(gravada?.[1]?.lado).toBe("cliente");
     expect(await p.locator("#mods-adicionar").isHidden()).toBe(true); // fechou e limpou
+    expect(await p.locator("#mods-lista button[aria-label]").count()).toBe(0); // texto visível = nome acessível
     expect(await p.locator("#mods-lista li", { hasText: "Lithium" }).textContent()).toContain(
       "só o jogo",
     );

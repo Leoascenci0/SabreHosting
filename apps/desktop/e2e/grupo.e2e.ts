@@ -101,6 +101,8 @@ describe("tela Grupo", () => {
     expect(await p.locator("#grupo-lista li").count()).toBe(2);
     // O foco não se perde: vai ao aviso.
     expect(await p.evaluate(() => document.activeElement?.id)).toBe("grupo-aviso");
+    // O botão não tem aria-label que esconda o texto visível (o PC vem por aria-describedby).
+    expect(await p.locator("#grupo-lista button[aria-label]").count()).toBe(0);
   });
 
   it("convite: dono cria com nome e validade, vê o prazo e copia; nada fica em disco", async () => {
