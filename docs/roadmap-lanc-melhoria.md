@@ -41,7 +41,7 @@ Melhorias achadas durante os itens do `docs/roadmap-lanc.md` (skill `maxima` ›
   *Origem:* lancmel-2.4 · PR #226 · filha
 
 - [ ] **2.6 — Extrair o Java baixado e apontar o `javaw`**
-  *O que fazer:* `montar.ts` já baixa o zip do Java com hash conferido, mas não o extrai. Extrair para a pasta do cache (leitor de zip próprio sobre `node:zlib`, **sem dependência nova**), recusando entrada com `..`, caminho absoluto ou link simbólico (zip slip), extraindo para pasta temporária e renomeando só depois (regra 3), e gravar o caminho do `javaw` no marcador da instância.
+  *O que fazer:* `montar.ts` já baixa o zip do Java com hash conferido, mas não o extrai. Extrair para a pasta do cache (reusar o `yauzl` que já é dependência do núcleo e a regra de caminho de `importar.ts`; **sem dependência nova**), recusando entrada com `..`, caminho absoluto ou link simbólico (zip slip), extraindo para pasta temporária e renomeando só depois (regra 3), e gravar o caminho do `javaw` no marcador da instância.
   *Arquivo:* `packages/nucleo/src/launcher/montar.ts` (e arquivo novo `zip.ts` ao lado, se passar de ~80 linhas)
   **Tela no app:** não se aplica.
   *Confirmação:* teste com zip falso gerado no teste: extrai, acha o `javaw`, recusa `../fora` e caminho absoluto, e uma falha no meio não deixa pasta pela metade. Versão real do Java no PC **[P: junto do lanc-2.3]**.
