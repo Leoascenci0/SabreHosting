@@ -21,3 +21,14 @@
 - Conferência 10:33: repo.papermc.io e maven.neoforged.net seguem sem resposta (bloqueados).
 - Eliel decidiu appmel-1.14a: reemitir o pacote da conexão ao mesmo PC por até 30 min (DECISOES 01/11).
 - Onda 35: appmel-1.14 · appmel-1.23 (só o código; rodar o ensaio no GitHub segue P). hostmel-2.1 fica: precisa de PCs reais.
+
+| Onda | Itens | Sessão | Base | Estado |
+|---|---|---|---|---|
+| 35 | appmel-1.14 · appmel-1.23 | session_012qrjnreFNGDS2rXLqKhF55 | a5cb558 | fechada 14:01 UTC → main 395231e |
+| 36 | appmel-1.24 · appmel-1.25 | session_012qrjnt7dRrsnUP7PuW3eFG | 395231e | fechada 14:37 UTC → main babb9b9 |
+| 37 | corr: fixar a versão do Electron | session_012qrjnvNuW9WaD3boANx3QX (1ª: …vnMdq9o1 arquivada, hash curto + prompt provisório) | babb9b9 | aberta |
+
+- **Onda 35:** ✅ appmel-1.14 #257 (Opus, US$ 2,34) · appmel-1.23 #259 (US$ 0,67) · controle #260. Decidi por você: "Tentar de novo" só com o app aberto (chave só em memória).
+- **Ensaio do versao.yml** (autorizado pelo Eliel, 14:08 UTC): FALHOU — run 41314693757, electron-builder recusa `"electron": "^45.2.0"` (faixa). Pedido mandado à Onda 36 no meio da onda, mas ela fechou sem ele → Onda 37 só para isso.
+- **Onda 36:** ✅ appmel-1.24 + 1.25 #261 · controle #262 (roadmap-app-melhoria → concluidos). Custo não medido.
+- **Erros da coordenadora (fichas):** item extra mandado por mensagem a uma onda em curso se perdeu (pedido novo = onda nova); create_session disparado em paralelo com prompt provisório e hash curto (S-09 de novo: nunca criar sessão antes de ter o hash completo e o prompt final).
