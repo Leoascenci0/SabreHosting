@@ -33,7 +33,7 @@ Um amigo que nunca viu o app entende em 5 segundos: **o servidor está ligado? p
   **Tela no app:** Configurações › Geral / Servidor / Backups.
   *Confirmação:* e2e: trocar de aba mantém o que foi digitado; salvar só habilita com mudança; valor fora do limite mostra o erro no campo; nenhuma tela passa de 1,5 altura da janela. Depende de 1.1.
 
-- [ ] **1.4 — Grupo e Mods: telas próprias, listas limpas**
+- [x] **1.4 — Grupo e Mods: telas próprias, listas limpas**
   *O que fazer:* **Grupo**: lista de PCs com nome, quando foi visto e "Tirar do grupo" (com confirmação); criar convite num painel simples (nome do PC, validade, botão Criar → texto com Copiar). **Mods**: lista com nome, versão e onde vale; "Adicionar mod" abre um formulário em passos curtos (nome, arquivo, link; hash e "onde usar" em "Avançado" recolhido). Visível só ao dono do grupo, como hoje.
   *Arquivo:* `apps/desktop/src/ui/configuracoes.ts` (extrair grupo/mods), novos `grupo.ts`/`mods.ts`, `index.html`, `tela.css`, testes
   **Tela no app:** barra lateral › Grupo (e Grupo › Mods).
