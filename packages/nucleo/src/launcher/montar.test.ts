@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { montarVersao } from "./montar.js";
+import { montarZip } from "../../test/ajuda/zip.js";
 
 const sha1 = (b: Buffer | string) => createHash("sha1").update(b).digest("hex");
 
@@ -183,7 +184,7 @@ describe("montarVersao", () => {
 
   it("baixa o Java com hash conferido no cache compartilhado (download injetado)", async () => {
     const buscar = montarMundoFalso();
-    const java = Buffer.from("zip-do-java");
+    const java = montarZip([{ nome: "jdk-21-jre/bin/javaw.exe", dados: Buffer.from("MZ") }]);
     const chamadas: string[] = [];
     let hostsJava: string[] | undefined;
     const comJava = async (url: string): Promise<string> =>
@@ -224,6 +225,11 @@ describe("montarVersao", () => {
       "release-assets.githubusercontent.com",
     ]);
     expect(r.pacoteJava && (await readFile(r.pacoteJava))).toEqual(java);
+    expect(r.javaw && (await readFile(r.javaw, "utf8"))).toBe("MZ");
+    const marcador = JSON.parse(
+      await readFile(join(cache, "versions", "1.21.1", ".montada.json"), "utf8"),
+    ) as { javaw: string };
+    expect(join(cache, marcador.javaw)).toBe(r.javaw);
   });
 
   const libComo = (sha: string, url = "/lib.jar") => ({
