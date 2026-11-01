@@ -26,9 +26,11 @@
 |---|---|---|---|---|
 | 35 | appmel-1.14 · appmel-1.23 | session_012qrjnreFNGDS2rXLqKhF55 | a5cb558 | fechada 14:01 UTC → main 395231e |
 | 36 | appmel-1.24 · appmel-1.25 | session_012qrjnt7dRrsnUP7PuW3eFG | 395231e | fechada 14:37 UTC → main babb9b9 |
-| 37 | corr: fixar a versão do Electron | session_012qrjnvNuW9WaD3boANx3QX (1ª: …vnMdq9o1 arquivada, hash curto + prompt provisório) | babb9b9 | aberta |
+| 37 | corr: fixar a versão do Electron | session_012qrjnvNuW9WaD3boANx3QX (1ª: …vnMdq9o1 arquivada, hash curto + prompt provisório) | babb9b9 | CANCELADA 14:44 UTC (duplicada; ramos roadmap/onda-2026-11-01-37 e roadmap/corr-1.3 sem PR; custo US$ 0,88) |
 
 - **Onda 35:** ✅ appmel-1.14 #257 (Opus, US$ 2,34) · appmel-1.23 #259 (US$ 0,67) · controle #260. Decidi por você: "Tentar de novo" só com o app aberto (chave só em memória).
 - **Ensaio do versao.yml** (autorizado pelo Eliel, 14:08 UTC): FALHOU — run 41314693757, electron-builder recusa `"electron": "^45.2.0"` (faixa). Pedido mandado à Onda 36 no meio da onda, mas ela fechou sem ele → Onda 37 só para isso.
 - **Onda 36:** ✅ appmel-1.24 + 1.25 #261 · controle #262 (roadmap-app-melhoria → concluidos). Custo não medido.
-- **Erros da coordenadora (fichas):** item extra mandado por mensagem a uma onda em curso se perdeu (pedido novo = onda nova); create_session disparado em paralelo com prompt provisório e hash curto (S-09 de novo: nunca criar sessão antes de ter o hash completo e o prompt final).
+- **Onda 36 adendo:** appmel-1.26 #263 (Electron fixado em 45.2.0 + tests/infra/versao.test.ts), main bdeed18. O pedido chegou depois de ela fechar os itens e ela o fez mesmo assim.
+- **2º ensaio do versao.yml** (run 41317655804, main bdeed18): ✅ SUCESSO; artefato instalador-ensaio 122.254.303 bytes (116,6 MiB) vs teto 120 MiB — folga de ~3 MiB. Expira 08/11. O .exe não foi baixado (proxy da nuvem barra o blob do GitHub).
+- **Erros da coordenadora (fichas):** mandei item extra a uma onda em curso e, sem esperar resposta, abri outra onda para o mesmo item → trabalho duplicado (pedido a uma onda em curso: esperar a resposta dela antes de abrir outra); create_session disparado em paralelo com prompt provisório e hash curto (S-09 de novo: nunca criar sessão antes de ter o hash completo e o prompt final).

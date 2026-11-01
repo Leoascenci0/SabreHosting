@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 36**
+**Próxima onda: 38**
 
-- Onda 35 (01/11) — appmel-1.14 (reemitir por 30 min, decisão do Eliel) · appmel-1.23 (código do ensaio) — sessão: ver docs/ops/rodadas/coordenacao-2026-11-01.md
+_(nenhuma onda aberta; Ondas 35–36 fechadas e 37 cancelada em 01/11 — ver docs/ops/rodadas/coordenacao-2026-11-01.md)_
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
