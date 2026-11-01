@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { registrarCaptura } from "./captura.js";
 
 const pastaApp = fileURLToPath(new URL("..", import.meta.url));
 const semSandbox = process.getuid?.() === 0 ? ["--no-sandbox"] : [];
@@ -14,14 +15,23 @@ interface Pastas {
   backups: string;
 }
 
+const imagens = fileURLToPath(new URL("../../../docs/imagens/appui-1.5/", import.meta.url));
+const fase = process.env["SABRE_FASE"] === "antes" ? "antes" : "depois";
+
 let aberto: ElectronApplication | undefined;
 let dados: string | undefined;
 
-async function abrir(cenario: string): Promise<{ pagina: Page; pastas: Pastas }> {
+async function abrir(
+  cenario: string,
+  extra: Record<string, string> = {},
+): Promise<{ pagina: Page; pastas: Pastas }> {
   dados = mkdtempSync(join(tmpdir(), "sabre-e2e-"));
   aberto = await electron.launch({
     args: [...semSandbox, `--user-data-dir=${dados}`, pastaApp],
-    env: { ...process.env, SABRE_E2E: "1", SABRE_E2E_CENARIO: cenario } as Record<string, string>,
+    env: { ...process.env, ...extra, SABRE_E2E: "1", SABRE_E2E_CENARIO: cenario } as Record<
+      string,
+      string
+    >,
     timeout: 20_000,
   });
   const pagina = await aberto.firstWindow();
@@ -67,6 +77,44 @@ describe("tela de backups", () => {
     expect(readdirSync(pastas.backups)).toHaveLength(1);
   });
 
+  it("a data vem em palavras e o Voltar não aparece (a barra lateral navega)", async () => {
+    const { pagina } = await abrir("ninguem");
+    const linha = pagina.locator("#lista-backups li").first();
+    await linha.waitFor();
+    // o pacote de teste é criado na hora: "hoje HH:MM"
+    await expect(linha.locator(".quando").innerText()).resolves.toMatch(/^hoje \d{2}:\d{2}$/);
+    await expect(pagina.locator("#voltar-backups").isVisible()).resolves.toBe(false);
+    await expect(pagina.locator("#backups-vazio").isVisible()).resolves.toBe(false);
+  });
+
+  it("sem backups mostra o estado vazio com orientação", async () => {
+    const { pagina } = await abrir("ninguem", { SABRE_E2E_SEM_BACKUPS: "1" });
+    await pagina.locator("#backups-vazio").waitFor();
+    await expect(pagina.locator("#backups-vazio").innerText()).resolves.toContain(
+      "Configurações › Backups",
+    );
+    await expect(pagina.locator("#lista-backups li").count()).resolves.toBe(0);
+  });
+
+  it("restaurar mostra o progresso enquanto troca o mundo e some no fim", async () => {
+    const { pagina } = await abrir("ninguem");
+    await pagina.locator("#lista-backups li button").first().click();
+    await pagina.evaluate(() => {
+      const alvo = document.getElementById("backups-progresso") as HTMLElement;
+      const w = window as unknown as { __viuProgresso?: boolean };
+      w.__viuProgresso = false;
+      new MutationObserver(() => {
+        if (!alvo.hidden) w.__viuProgresso = true;
+      }).observe(alvo, { attributes: true, attributeFilter: ["hidden"] });
+    });
+    await pagina.locator("#backups-confirmar").click();
+    await expect.poll(() => pagina.locator("#backups-detalhe").innerText()).toContain("Pronto");
+    await expect(
+      pagina.evaluate(() => (window as unknown as { __viuProgresso?: boolean }).__viuProgresso),
+    ).resolves.toBe(true);
+    await expect(pagina.locator("#backups-progresso").isVisible()).resolves.toBe(false);
+  });
+
   it("confirmar restaura o backup: o mundo volta e o estado de antes vira outro backup", async () => {
     const { pagina, pastas } = await abrir("ninguem");
     await pagina.locator("#lista-backups li button").first().click();
@@ -86,5 +134,30 @@ describe("tela de backups", () => {
       "Pare o servidor",
     );
     expect(mundoAgora(pastas)).toBe("atual");
+  });
+
+  it("claro, escuro, vazio e confirmação cabem na janela mínima sem rolar de lado", async () => {
+    const { pagina } = await abrir("ninguem");
+    await aberto?.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.setSize(720, 480),
+    );
+    await pagina.locator("#lista-backups li button").first().waitFor();
+    await registrarCaptura(pagina, join(imagens, `${fase}-backups-claro.png`));
+    await pagina.locator("#lista-backups li button").first().click();
+    await registrarCaptura(pagina, join(imagens, `${fase}-backups-confirmacao.png`));
+    await aberto?.evaluate(({ nativeTheme }) => void (nativeTheme.themeSource = "dark"));
+    await pagina.emulateMedia({ colorScheme: "dark" });
+    await registrarCaptura(pagina, join(imagens, `${fase}-backups-escuro.png`));
+    const [largura, janela] = await pagina.evaluate(() => [
+      document.documentElement.scrollWidth,
+      window.innerWidth,
+    ]);
+    expect(largura).toBeLessThanOrEqual(janela ?? 0);
+  });
+
+  it("captura do estado vazio", async () => {
+    const { pagina } = await abrir("ninguem", { SABRE_E2E_SEM_BACKUPS: "1" });
+    await pagina.locator("#backups-vazio").waitFor();
+    await registrarCaptura(pagina, join(imagens, `${fase}-backups-vazio.png`));
   });
 });

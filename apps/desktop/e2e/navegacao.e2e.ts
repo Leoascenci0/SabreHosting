@@ -86,7 +86,7 @@ describe("barra lateral", () => {
   it("os botões que já existiam nas telas continuam levando e trazendo (barra acompanha)", async () => {
     await pagina.locator("#ver-backups").click();
     expect(await atual()).toBe("backups");
-    await pagina.locator("#voltar-backups").click();
+    await item("inicio").click();
     expect(await atual()).toBe("inicio");
     await pagina.locator("#ver-config").click();
     expect(await atual()).toBe("configuracoes");
