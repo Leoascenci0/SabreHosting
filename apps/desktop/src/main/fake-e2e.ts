@@ -1,4 +1,4 @@
-// Só entra em cena com SABRE_E2E=1 (principal.ts faz o import dinâmico sob essa guarda).
+// Entra em cena com SABRE_E2E=1 (teste) e no modo demonstração "Explorar sem grupo" (appmel-1.31), que usa só as peças.
 // Cartório falso com estado + servidor Minecraft de mentira: nenhuma porta abre, nenhum mundo é tocado.
 import { EventEmitter } from "node:events";
 import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -177,8 +177,8 @@ export function depsBackupsE2E(servidorRodando: () => boolean): DepsBackups {
  * Grupo do E2E: cartório falso com 3 PCs (o dono, Lucas e Ana). `SABRE_E2E_DONO=1` faz este PC ser o dono;
  * sem isso ele é um PC comum. Os ids tirados ficam em `__sabreE2EGrupo.revogados` para o teste conferir.
  */
-export function depsGrupoE2E(): DepsGrupo {
-  const souDono = process.env["SABRE_E2E_DONO"] === "1";
+export function depsGrupoE2E(dono?: boolean): DepsGrupo {
+  const souDono = dono ?? process.env["SABRE_E2E_DONO"] === "1";
   let pcs = [
     { id: 1, nome: "PC do Eliel", dono: true },
     { id: 2, nome: "PC do Lucas", dono: false },
@@ -214,6 +214,7 @@ export function depsGrupoE2E(): DepsGrupo {
 export function depsImportacaoE2E(
   servidorRodando: () => boolean,
   restaurando: () => boolean,
+  dono?: boolean,
 ): DepsImportacao {
   const versaoNoGrupo = Number(process.env["SABRE_E2E_VERSAO_GRUPO"] ?? "") || null;
   const chamadas: Array<{ zip: string; aceitar: boolean }> = [];
@@ -225,7 +226,10 @@ export function depsImportacaoE2E(
       versaoMinecraft: process.env["SABRE_E2E_VERSAO_MC"] ?? "1.21.1",
       indicios: { plugins: true, mods: false },
     }),
-    situacao: async () => ({ versaoNoGrupo, dono: process.env["SABRE_E2E_DONO"] === "1" }),
+    situacao: async () => ({
+      versaoNoGrupo,
+      dono: dono ?? process.env["SABRE_E2E_DONO"] === "1",
+    }),
     importar: async (zip, aceitar) => {
       chamadas.push({ zip, aceitar });
       await new Promise((ok) => setTimeout(ok, 300)); // dá tempo de a tela mostrar o progresso
@@ -237,8 +241,8 @@ export function depsImportacaoE2E(
 }
 
 /** Versão do grupo falsa para o E2E: só o dono (SABRE_E2E_DONO=1) vê a área; gravações ficam em `__sabreE2EVersao`. */
-export function depsVersaoE2E(servidorRodando: () => boolean): DepsVersao {
-  const souDono = process.env["SABRE_E2E_DONO"] === "1";
+export function depsVersaoE2E(servidorRodando: () => boolean, dono?: boolean): DepsVersao {
+  const souDono = dono ?? process.env["SABRE_E2E_DONO"] === "1";
   let atual = "1.21.1";
   const gravados: string[] = [];
   (globalThis as Record<string, unknown>)["__sabreE2EVersao"] = { gravados };
@@ -261,8 +265,8 @@ export function depsVersaoE2E(servidorRodando: () => boolean): DepsVersao {
 const PASTA_INSTANCIA_FALSA = "/sabre-e2e/instancia/mods";
 
 /** Mods do grupo falsos para o E2E: dono com `SABRE_E2E_DONO=1`; as gravações ficam em `__sabreE2EMods.listas`. */
-export function depsModsE2E(servidorRodando: () => boolean): DepsModsGrupo {
-  const souDono = process.env["SABRE_E2E_DONO"] === "1";
+export function depsModsE2E(servidorRodando: () => boolean, dono?: boolean): DepsModsGrupo {
+  const souDono = dono ?? process.env["SABRE_E2E_DONO"] === "1";
   let lista: ModGrupo[] = [
     {
       nome: "Sodium",

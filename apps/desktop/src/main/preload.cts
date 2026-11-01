@@ -34,6 +34,8 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     escolherPasta: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:bv:escolher-pasta"),
     concluir: (pasta: string): Promise<unknown> =>
       electron.ipcRenderer.invoke("sabre:bv:concluir", pasta),
+    explorar: (): Promise<boolean> => electron.ipcRenderer.invoke("sabre:bv:explorar"),
+    sairDaDemonstracao: (): Promise<void> => electron.ipcRenderer.invoke("sabre:bv:sair-demo"),
   },
   backups: {
     listar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:backups:listar"),

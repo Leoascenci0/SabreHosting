@@ -101,7 +101,8 @@ export type OpcoesDaVersao =
   | { ok: false; mensagem: string };
 
 export type EstadoBoasVindas =
-  | { aberto: false }
+  /** `demonstracao`: o app está em "Explorar sem grupo" (dados de mentira; a tela mostra a faixa). */
+  | { aberto: false; demonstracao?: true }
   | {
       aberto: true;
       passo: "convite" | "eula" | "pasta";
@@ -135,6 +136,9 @@ export interface PonteSabre {
     aceitarEula(aceito: boolean): Promise<Resultado>;
     escolherPasta(): Promise<string | undefined>;
     concluir(pasta: string): Promise<Resultado>;
+    /** "Explorar sem grupo": liga a demonstração (só no assistente de primeira vez); `false` = recusado. */
+    explorar(): Promise<boolean>;
+    sairDaDemonstracao(): Promise<void>;
   };
   versao(): Promise<string>;
   abrirComWindows: {

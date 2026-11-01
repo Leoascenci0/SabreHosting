@@ -33,6 +33,9 @@ const escolher = $<HTMLButtonElement>("bv-pasta-escolher");
 const concluir = $<HTMLButtonElement>("bv-concluir");
 const status = $("bv-status");
 const erro = $("bv-erro");
+const explorar = $<HTMLButtonElement>("bv-explorar");
+const faixa = $("faixa-demo");
+const sairDemo = $<HTMLButtonElement>("faixa-demo-sair");
 
 const ENTRAR = "Entrar no grupo";
 const TENTAR_DE_NOVO = "Tentar de novo";
@@ -58,7 +61,9 @@ function mostrarErro(t: string): void {
 let avisoOcupado = "";
 function ocupar(sim: boolean): void {
   tela.setAttribute("aria-busy", String(sim));
-  for (const b of [conferir, entrar, continuar, escolher, concluir, abrirEula]) b.disabled = sim;
+  for (const b of [conferir, entrar, continuar, escolher, concluir, abrirEula, explorar]) {
+    b.disabled = sim;
+  }
   texto.disabled = caminho.disabled = aceito.disabled = sim;
   if (sim) mostrarStatus(avisoOcupado);
   else {
@@ -105,6 +110,7 @@ async function iniciar(): Promise<void> {
   } catch {
     return; // sem assistente: o app abre normalmente
   }
+  faixa.hidden = !(!e.aberto && e.demonstracao); // a faixa fica fixa em todo o app, em demonstração
   if (e.aberto) await aberto(e);
 }
 
@@ -186,6 +192,22 @@ concluir.addEventListener("click", () => {
     if (!r.ok) return mostrarErro(r.mensagem);
     location.reload(); // o app abre normal, já configurado
   });
+});
+
+explorar.addEventListener("click", () => {
+  rodar("Abrindo a demonstração…", async () => {
+    if (!(await window.sabre.boasVindas.explorar()))
+      return mostrarErro("Não consegui abrir a demonstração.");
+    location.reload(); // o app abre com os dados de mentira e a faixa
+  });
+});
+
+sairDemo.addEventListener("click", () => {
+  sairDemo.disabled = true;
+  void window.sabre.boasVindas
+    .sairDaDemonstracao()
+    .catch(() => undefined)
+    .then(() => location.reload()); // volta ao convite
 });
 
 void iniciar();
