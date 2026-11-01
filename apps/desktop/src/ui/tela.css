@@ -4,17 +4,74 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: var(--espaco-4);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: var(--cor-fundo);
   color: var(--cor-texto);
   font-family: var(--fonte);
 }
 
+/* Estrutura fixa: faixa de demonstração por cima, barra lateral à esquerda, conteúdo à direita. */
+.janela {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.barra {
+  width: var(--largura-barra);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1);
+  padding: var(--espaco-3) var(--espaco-2);
+  background: var(--cor-superficie);
+  border-right: 1px solid var(--cor-borda);
+}
+
+.item-barra {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+  width: 100%;
+  padding: var(--espaco-2) var(--espaco-3);
+  border-color: transparent;
+  background: none;
+  font-size: var(--texto-2);
+  text-align: left;
+}
+
+.item-barra[aria-current="page"] {
+  background: var(--cor-destaque);
+  border-color: var(--cor-destaque);
+  color: var(--cor-sobre-destaque);
+  font-weight: 600;
+  box-shadow: var(--sombra-1);
+}
+
+.icone-nav {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: currentcolor;
+}
+
+.conteudo {
+  width: min(100%, var(--largura-conteudo));
+  min-width: 0;
+  margin-inline: auto;
+  padding: var(--espaco-4);
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+}
+
 .cartao {
   width: min(100%, 420px);
+  box-shadow: var(--sombra-1);
   display: grid;
   justify-items: center;
   gap: var(--espaco-3);
@@ -302,11 +359,8 @@ button.link {
   font-size: 0.875rem;
 }
 
-/* Faixa fixa do modo demonstração (appmel-1.31): sempre visível, no alto, em qualquer tela do app. */
+/* Faixa do modo demonstração (appmel-1.31): no alto da janela, por cima da barra e do conteúdo, em qualquer tela. */
 .faixa-demo {
-  position: fixed;
-  inset: 0 0 auto 0;
-  z-index: 10;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -314,11 +368,16 @@ button.link {
   gap: var(--espaco-3);
   padding: var(--espaco-2) var(--espaco-4);
   background: var(--cor-destaque);
-  color: var(--cor-fundo);
+  color: var(--cor-sobre-destaque);
   font-weight: 600;
 }
 
-/* Abre espaço no alto para a faixa não cobrir o cartão. */
-body:has(.faixa-demo:not([hidden])) {
-  padding-top: calc(var(--espaco-4) + 64px);
+#tela-backups,
+#tela-config {
+  width: min(100%, 640px);
+}
+
+/* Boas-vindas (primeira vez): sem barra, tela inteira para o conteúdo. */
+.barra[hidden] + .conteudo {
+  grid-column: 1 / -1;
 }

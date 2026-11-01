@@ -156,8 +156,8 @@ function criarJanela(oculta: boolean): BrowserWindow {
   const nova = new BrowserWindow({
     width: 880,
     height: 640,
-    minWidth: 480,
-    minHeight: 360,
+    minWidth: 720,
+    minHeight: 480,
     show: false,
     title: "SabreHosting",
     ...(existsSync(ICONE) ? { icon: ICONE } : {}),

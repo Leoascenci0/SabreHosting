@@ -18,12 +18,31 @@ Tema claro por padrão; o escuro vem pelo tema do sistema (`prefers-color-scheme
 | `--cor-destaque`    | título e ação principal (cor do ícone) | `#0a6b80` | `#4fd1e8` |
 | `--cor-sobre-destaque` | texto dentro de botão destacado     | `#ffffff` | `#0e171c` |
 | `--cor-erro`        | erro e ação que derruba algo (Parar)   | `#b3261e` | `#ff8a80` |
+| `--cor-ligado`      | estado: servidor ligado                | `#1b7a3a` | `#6ee08f` |
+| `--cor-desligado`   | estado: servidor desligado             | `#56676f` | `#9fb4bd` |
+| `--cor-atencao`     | estado: atenção (trocando de host…)    | `#8a5a00` | `#ffc94d` |
 
 Texto sobre fundo ou superfície tem contraste mínimo 4,5:1 (AA); `tokens.test.ts` confere nos dois temas.
 
-## Espaços e forma
+Cor de estado nunca vai sozinha: sempre com ícone ou palavra (quem não distingue cores também entende). Contraste
+AA nos dois temas, conferido em `tokens.test.ts`.
 
-`--espaco-1` a `--espaco-5` = 4, 8, 16, 24, 40 px. `--raio` = 12 px. Fonte do sistema (`--fonte`: Segoe UI no Windows).
+## Espaços, tipografia e forma
+
+`--espaco-1` a `--espaco-6` = 4, 8, 16, 24, 40, 64 px. `--raio` = 12 px. Fonte do sistema (`--fonte`: Segoe UI no Windows).
+Tipografia (`--texto-1` a `--texto-5`): 0,875 / 1 / 1,125 / 1,5 / 2 rem (apoio, corpo, destaque, título de tela, título grande).
+Sombras suaves: `--sombra-1` (cartão, item atual) e `--sombra-2` (o que flutua); mais fortes no tema escuro.
+
+## Estrutura da janela
+
+- **Barra lateral fixa** (`.barra`, `--largura-barra` 220 px): **Início, Backups, Grupo, Configurações**, ícone + nome; o item
+  atual leva `aria-current="page"` e fundo `--cor-destaque`. Sem a barra só na Boas-vindas (primeira vez).
+- **Conteúdo** (`.conteudo`): à direita, centralizado, no máximo `--largura-conteudo` (960 px), rola sozinho; a barra não rola.
+- **Faixa de demonstração** (`.faixa-demo`): por cima de tudo, no fluxo (não cobre nada).
+- Janela com tamanho mínimo 720 x 480 px.
+- Teclado: Tab entra no item atual; setas, Home e End andam pela barra; Enter abre. Navegação em `navegacao.ts`
+  (aperta os botões que cada tela já tem; sem roteador).
+- Grupo ainda abre a seção de Grupo dentro de Configurações (tela própria no item 1.4).
 
 ## Regras de tom (texto na tela)
 

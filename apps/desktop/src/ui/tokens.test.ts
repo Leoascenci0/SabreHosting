@@ -66,4 +66,28 @@ describe("tokens", () => {
       4.5,
     );
   });
+
+  it.each([
+    ["claro", claro],
+    ["escuro", escuro],
+  ])("cores de estado (ligado, desligado, atenção) leem bem no tema %s", (_nome, t) => {
+    for (const nome of ["--cor-ligado", "--cor-desligado", "--cor-atencao"]) {
+      expect(cor(t, nome), `${nome} falta`).not.toBe("");
+      expect(contraste(cor(t, nome), cor(t, "--cor-superficie")), nome).toBeGreaterThanOrEqual(4.5);
+      expect(contraste(cor(t, nome), cor(t, "--cor-fundo")), nome).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("tem escala de tipografia, mais espaços e sombras suaves nos dois temas", () => {
+    for (const nome of ["--texto-1", "--texto-2", "--texto-3", "--texto-4", "--texto-5"]) {
+      expect(claro[nome], nome).toMatch(/rem$/);
+    }
+    expect(claro["--espaco-6"]).toBeDefined();
+    expect(claro["--largura-conteudo"]).toBe("960px");
+    expect(claro["--largura-barra"]).toBeDefined();
+    for (const t of [claro, escuro]) {
+      expect(t["--sombra-1"]).toBeDefined();
+      expect(t["--sombra-2"]).toBeDefined();
+    }
+  });
 });
