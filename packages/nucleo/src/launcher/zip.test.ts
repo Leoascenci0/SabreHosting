@@ -40,6 +40,56 @@ describe("extrairJava", () => {
     expect((await stat(b.javaw)).ino).toBe(antes);
   });
 
+  describe("reaproveitamento confere o javaw (lancmel-2.8)", () => {
+    const ORIGINAL = "MZ-original";
+    const zipJava = () =>
+      zipEm([f("jdk-21+7-jre/bin/javaw.exe", ORIGINAL), f("jdk-21+7-jre/lib/modules")]);
+
+    it.each([
+      ["1 byte trocado", async (j: string) => writeFile(j, "MZ-originaX")],
+      ["truncado", async (j: string) => writeFile(j, "MZ-ori")],
+      ["sumido", async (j: string) => rm(j)],
+    ])("javaw %s: extrai de novo e volta ao original", async (_t, estraga) => {
+      const destino = join(raiz, "jre-21");
+      const z = await zipJava();
+      const a = await extrairJava(z, destino);
+      await estraga(a.javaw);
+      const b = await extrairJava(z, destino);
+      expect(b.javaw).toBe(a.javaw);
+      expect(await readFile(b.javaw, "utf8")).toBe(ORIGINAL);
+      expect(await sobras()).toEqual(["jre-21"]);
+    });
+
+    it("marcador antigo (sem tamanho/hash): extrai de novo, mesmo com o javaw trocado", async () => {
+      const destino = join(raiz, "jre-21");
+      const z = await zipJava();
+      const a = await extrairJava(z, destino);
+      await writeFile(
+        join(destino, ".java.json"),
+        JSON.stringify({ javaw: "jdk-21+7-jre/bin/javaw.exe" }),
+      );
+      await writeFile(a.javaw, "TROCADO");
+      const b = await extrairJava(z, destino);
+      expect(await readFile(b.javaw, "utf8")).toBe(ORIGINAL);
+      const m = JSON.parse(await readFile(join(destino, ".java.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(m.tamanho).toBe(Buffer.byteLength(ORIGINAL));
+      expect(m.sha256).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("intacto: não extrai de novo", async () => {
+      const destino = join(raiz, "jre-21");
+      const z = await zipJava();
+      const a = await extrairJava(z, destino);
+      const antes = (await stat(a.javaw)).ino;
+      await rm(z); // sem o zip, só reaproveitando é que não falha
+      const b = await extrairJava(z, destino);
+      expect((await stat(b.javaw)).ino).toBe(antes);
+    });
+  });
+
   it.each([
     ["com ..", "../fora.txt"],
     ["no meio", "jdk/../../fora.txt"],

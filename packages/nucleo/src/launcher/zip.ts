@@ -1,6 +1,6 @@
 import { createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { dirname, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import yauzl, { type Entry, type ZipFile } from "yauzl";
@@ -18,22 +18,34 @@ const MARCADOR = ".java.json";
 const JAVAW = /^[^/]+\/bin\/javaw\.exe$|^bin\/javaw\.exe$/i;
 
 const recusa = (m: string) => new Error(`Zip do Java recusado: ${m} Nada foi extraído.`);
+const sha256 = (d: Buffer) => createHash("sha256").update(d).digest("hex");
 const ehLink = (e: Entry) => ((e.externalFileAttributes >>> 16) & 0o170000) === 0o120000;
 
 export async function extrairJava(zip: string, pasta: string): Promise<{ javaw: string }> {
   try {
-    const { javaw } = JSON.parse(await readFile(join(pasta, MARCADOR), "utf8")) as {
+    const m = JSON.parse(await readFile(join(pasta, MARCADOR), "utf8")) as {
       javaw: unknown;
+      tamanho: unknown;
+      sha256: unknown;
     };
-    if (caminhoSeguro(javaw)) return { javaw: join(pasta, ...javaw.split("/")) };
+    if (caminhoSeguro(m.javaw)) {
+      const caminho = join(pasta, ...m.javaw.split("/"));
+      // O executável é rodado pelo app: só reaproveita se for byte a byte o que foi extraído (marcador antigo, sem hash, extrai de novo).
+      const dados = await readFile(caminho);
+      if (dados.length === m.tamanho && sha256(dados) === m.sha256) return { javaw: caminho };
+    }
   } catch {
-    // ainda não extraído
+    // ainda não extraído, javaw sumido ou marcador ilegível
   }
   const temp = `${pasta}.${process.pid}.${randomBytes(6).toString("hex")}.extraindo`;
   try {
     await mkdir(temp, { recursive: true });
     const relativo = await extrairPara(zip, temp);
-    await writeFile(join(temp, MARCADOR), JSON.stringify({ javaw: relativo }));
+    const dados = await readFile(join(temp, ...relativo.split("/")));
+    await writeFile(
+      join(temp, MARCADOR),
+      JSON.stringify({ javaw: relativo, tamanho: dados.length, sha256: sha256(dados) }),
+    );
     await rm(pasta, { recursive: true, force: true }); // restos de uma extração antiga, sem marcador
     await rename(temp, pasta);
     return { javaw: join(pasta, ...relativo.split("/")) };
