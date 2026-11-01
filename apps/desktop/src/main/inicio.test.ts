@@ -471,6 +471,25 @@ describe("dados do painel do Início (appui-1.2)", () => {
     expect(await criarInicio(deps()).estado()).toEqual({ tipo: "ninguem" });
   });
 
+  it("versão do mundo: duas leituras seguidas = 1 consulta ao cartório; vale por um tempo", async () => {
+    const consulta = vi.fn(async () => 12);
+    const inicio = criarInicio(deps({ versaoMundo: consulta }), { versaoTtlMs: 40 });
+    await inicio.estado();
+    expect(await inicio.estado()).toMatchObject({ versaoMundo: 12 });
+    expect(consulta).toHaveBeenCalledTimes(1);
+    await new Promise((ok) => setTimeout(ok, 60));
+    await inicio.estado();
+    expect(consulta).toHaveBeenCalledTimes(2);
+  });
+
+  it("versão do mundo: falha também é guardada (cartório fora não é martelado) e a linha some", async () => {
+    const consulta = vi.fn(async () => Promise.reject(new Error("sem cartório")));
+    const inicio = criarInicio(deps({ versaoMundo: consulta }));
+    await inicio.estado();
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+    expect(consulta).toHaveBeenCalledTimes(1);
+  });
+
   it("dep que falha não derruba o estado nem inventa dado", async () => {
     const inicio = criarInicio(
       deps({

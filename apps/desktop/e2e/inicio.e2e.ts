@@ -233,7 +233,7 @@ describe("painel de controle do Início (appui-1.2)", () => {
     await expect(texto(p, "status")).resolves.toBe("Ninguém está hospedando");
     await expect(p.locator("#estado").getAttribute("data-tom")).resolves.toBe("desligado");
     await expect(texto(p, "backup-valor")).resolves.toBe("há 3 horas");
-    await expect(texto(p, "versao-mundo-valor")).resolves.toBe("12");
+    await expect(texto(p, "versao-mundo-valor")).resolves.toBe("versão 12 do mundo");
     expect(await aparece(p, "fato-endereco")).toBe(false);
     expect(await aparece(p, "fato-jogadores")).toBe(false);
     expect(await visiveis(p)).toEqual(["Hospedar"]);

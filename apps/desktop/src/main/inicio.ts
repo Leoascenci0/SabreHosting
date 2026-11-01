@@ -79,11 +79,23 @@ export interface TemposInicio {
   orfaoPrazoMs?: number;
   /** Com a trava livre, quanto esperar o órfão antes de dizer o que fazer. Padrão: 2 min. */
   orfaoTetoMs?: number;
+  /** Quanto guardar a versão do mundo antes de perguntar ao cartório de novo. Padrão: 60 s. */
+  versaoTtlMs?: number;
 }
 
 export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
   const { passoMs = 300, tentativas = 20 } = tempos;
   const { orfaoPassoMs = 1000, orfaoPrazoMs = 30_000, orfaoTetoMs = 120_000 } = tempos;
+  const { versaoTtlMs = 60_000 } = tempos;
+  // A versão do mundo vai ao cartório; o estado é pedido a cada evento da tela, então a resposta (ou a falha) vale por um tempo.
+  let versaoGuardada: { valor: number | undefined; ate: number } | undefined;
+  const lerVersaoMundo = async (): Promise<number | undefined> => {
+    if (!deps.versaoMundo) return undefined;
+    if (versaoGuardada && performance.now() < versaoGuardada.ate) return versaoGuardada.valor;
+    const valor = await deps.versaoMundo().catch(() => undefined);
+    versaoGuardada = { valor, ate: performance.now() + versaoTtlMs };
+    return valor;
+  };
   let ativo: ServidorAtivo | undefined;
   let ocupado = false;
   let parando = false;
@@ -199,7 +211,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     const servidor = ativo;
     const [ultimoBackup, versaoMundo, jogadores] = await Promise.all([
       deps.ultimoBackup?.().catch(() => undefined),
-      deps.versaoMundo?.().catch(() => undefined),
+      lerVersaoMundo(),
       e.tipo === "eu" && !e.parando && servidor
         ? deps.jogadores?.(servidor).catch(() => undefined)
         : undefined,

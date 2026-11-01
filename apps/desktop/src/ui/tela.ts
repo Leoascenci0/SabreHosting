@@ -77,7 +77,10 @@ function desenharFatos(e: EstadoInicio): void {
         : undefined,
   );
   texto("backup", painel?.ultimoBackup ? haQuanto(painel.ultimoBackup) : undefined);
-  texto("versao", painel?.versaoMundo !== undefined ? String(painel.versaoMundo) : undefined);
+  texto(
+    "versao",
+    painel?.versaoMundo !== undefined ? `versão ${painel.versaoMundo} do mundo` : undefined,
+  );
 }
 
 function desenhar(): void {
