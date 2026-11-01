@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -50,6 +50,28 @@ describe("verificar.py: marcador de conflito de merge", () => {
 
   it("aprova abertura sem o trio completo", () => {
     const r = verificarStaged("a.md", `${ini} só abre\ntexto\n`);
+    expect(r.status).toBe(0);
+  });
+});
+
+describe("verificar.py: roadmap 100% feito fora de docs/concluidos/", () => {
+  const item = (x: string, n: string) => `- [${x}] **${n} — Item de teste**\n`;
+  function prepararDocs() {
+    mkdirSync(join(repo, "docs", "concluidos"), { recursive: true });
+  }
+
+  it("reprova roadmap com todos os itens marcados em docs/", () => {
+    prepararDocs();
+    const r = verificarStaged("docs/roadmap-xyz.md", `# R\n\n${item("x", "1.1")}${item("x", "1.2")}`);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain("docs/roadmap-xyz.md: roadmap 100% feito");
+  });
+
+  it("aprova roadmap com item aberto, o mesmo em docs/concluidos/ e o roadmap-corr", () => {
+    prepararDocs();
+    verificarStaged("docs/roadmap-abc.md", `# R\n\n${item("x", "1.1")}${item(" ", "1.2")}`);
+    verificarStaged("docs/concluidos/roadmap-xyz.md", `# R\n\n${item("x", "1.1")}`);
+    const r = verificarStaged("docs/roadmap-corr.md", `# R\n\n${item("x", "1.1")}`);
     expect(r.status).toBe(0);
   });
 });

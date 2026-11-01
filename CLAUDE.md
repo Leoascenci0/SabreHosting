@@ -45,7 +45,9 @@ de outro assunto).
 - **Regressão também é processo (regra do Eliel, 31/10/2026):** todo erro que eu descobrir e solucionar (no código, no
   teste ou no meu próprio jeito de trabalhar) vira ficha em `docs/memoria/solucoes.md` **e** uma linha em "Soluções
   conhecidas" abaixo, para eu me guiar e não repetir. E todo **roadmap 100% feito vai para `docs/concluidos/`** no PR de
-  controle que fecha o último item (o `corr` fica: é a lista permanente de correções).
+  controle que fecha o último item (o `corr` fica: é a lista permanente de correções). O verificador reprova roadmap
+  100% feito que ficou em `docs/` (S-18); leva nova num roadmap concluído: `git mv` de volta para `docs/`, nunca
+  um segundo arquivo com o mesmo nome.
 - **Padrões:** imitar o código vizinho; textos, nomes, commits e mensagens do app em pt-BR.
 
 ## Código aberto (decisão do Eliel, 30/10/2026)
@@ -213,6 +215,7 @@ o que se repete). No máximo 10 linhas:
   filha escrever essas duas linhas.
 - **S-11** o gancho barra o comando inteiro se o TEXTO da flag que pula o pre-commit aparece (até num heredoc): não
   escrever essa flag nem em mensagem ou documento; descrevê-la por extenso.
+- **S-18** verificador reprova "roadmap 100% feito": `git mv docs/roadmap-<sigla>.md docs/concluidos/` no mesmo PR.
 
 ## Skills sob demanda
 
