@@ -22,3 +22,6 @@ _Reescrito pela coordenadora da Máxima em 31/10/2026, 19:25 (Ondas 26–33). Es
 - **Fila sem P quase vazia (00:05).** Só sobra appmel-1.23 (precisa do GitHub Actions). Tudo que sobra espera você (appmel-1.14a, D9/app-3.2, lanc-2.2), os domínios bloqueados (rede-2.2, migra-2.x, redemel-2.2/2.3) ou o Windows/nuvem reais.
 
 - **Onda 34 (01/11, madrugada):** lancmel-2.8 #252 — o `javaw` do Java baixado só é reaproveitado se tamanho e sha256 baterem com o extraído. Melhorias dos PRs #244–#250 consolidadas: nenhuma nova além desta. Fila sem P vazia; só sobra appmel-1.23 (precisa rodar o GitHub Actions) e o que espera você.
+
+- **01/11, manhã (Ondas 35–36):** "Tentar de novo" no convite, válido por 30 min no mesmo PC (#257, sua decisão); ensaio do instalador (#259, #261); Electron fixado (#263). **Ensaio do instalador rodou no GitHub com sucesso:** 116,6 MiB, teto 120 MiB (folga de ~3 MiB). Ainda não instalado num Windows.
+  Decidi por você: "Tentar de novo" só com o app aberto (chave só em memória, #257).
