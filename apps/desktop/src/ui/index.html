@@ -157,6 +157,169 @@
           </div>
           <button type="button" class="secundario" id="voltar-backups">Voltar</button>
         </main>
+        <main class="cartao" id="tela-grupo" aria-labelledby="titulo-grupo" aria-busy="true" hidden>
+          <h2 id="titulo-grupo">Grupo</h2>
+          <p class="detalhe" id="grupo-so-dono" hidden>
+            Só o dono do grupo vê os PCs e cria convites. Você pode ver a lista de mods.
+          </p>
+          <div id="grupo-area" hidden>
+            <section class="painel" aria-labelledby="titulo-pcs">
+              <h3 id="titulo-pcs">PCs do grupo</h3>
+              <ul class="lista-backups" id="grupo-lista"></ul>
+              <div
+                class="confirmacao"
+                id="grupo-confirmacao"
+                role="alertdialog"
+                aria-labelledby="grupo-pergunta"
+                hidden
+              >
+                <p id="grupo-pergunta"></p>
+                <p class="detalhe">
+                  O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
+                </p>
+                <div class="acoes">
+                  <button type="button" class="perigo" id="grupo-confirmar">Tirar do grupo</button>
+                  <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
+                </div>
+              </div>
+              <p class="detalhe" id="grupo-aviso" role="status"></p>
+              <p class="erro" id="grupo-erro" role="alert" hidden></p>
+            </section>
+            <section
+              class="painel campo-convite"
+              id="grupo-convite"
+              aria-labelledby="titulo-convite"
+            >
+              <h3 id="titulo-convite">Convidar um PC</h3>
+              <p class="dica">
+                Crie um convite e envie o texto a quem vai usar. Cada convite serve para um PC.
+              </p>
+              <label for="convite-nome">Nome do PC convidado</label>
+              <input
+                id="convite-nome"
+                type="text"
+                maxlength="40"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
+              <label for="convite-validade">Vale por</label>
+              <select id="convite-validade">
+                <option value="1" selected>1 hora</option>
+                <option value="24">1 dia</option>
+                <option value="72">3 dias</option>
+              </select>
+              <div class="acoes">
+                <button type="button" class="principal" id="convite-criar">Criar convite</button>
+              </div>
+              <div id="convite-resultado" hidden>
+                <label for="convite-texto">Texto do convite</label>
+                <input
+                  id="convite-texto"
+                  type="text"
+                  readonly
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <p class="detalhe" id="convite-prazo"></p>
+                <p class="detalhe">
+                  Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se
+                  fechar esta tela, crie outro.
+                </p>
+                <div class="acoes">
+                  <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+                </div>
+                <p class="detalhe" id="convite-copiado" role="status"></p>
+              </div>
+              <p class="erro" id="convite-erro" role="alert" hidden></p>
+            </section>
+          </div>
+          <div class="acoes">
+            <button type="button" class="secundario" id="ver-mods">Mods do grupo</button>
+            <button type="button" class="secundario" id="grupo-voltar">Voltar</button>
+          </div>
+        </main>
+        <main class="cartao" id="tela-mods" aria-labelledby="titulo-mods" hidden>
+          <h2 id="titulo-mods">Mods do grupo</h2>
+          <p class="dica" id="mods-dica">
+            Todos os PCs do grupo usam estes mods. Só o dono do grupo muda a lista.
+          </p>
+          <p class="dica" id="mods-atualizando" role="status" hidden>Atualizando mods…</p>
+          <ul class="lista-backups" id="mods-lista"></ul>
+          <div
+            class="confirmacao"
+            id="mods-confirmacao"
+            role="alertdialog"
+            aria-labelledby="mods-pergunta"
+            hidden
+          >
+            <p id="mods-pergunta"></p>
+            <p class="detalhe">
+              O mod sai da lista e é apagado dos PCs do grupo na próxima atualização. Mods que são
+              seus, fora da lista, não são mexidos.
+            </p>
+            <div class="acoes">
+              <button type="button" class="perigo" id="mods-confirmar">Tirar da lista</button>
+              <button type="button" class="secundario" id="mods-cancelar">Cancelar</button>
+            </div>
+          </div>
+          <div id="mods-dono" hidden>
+            <button type="button" class="principal" id="mods-novo">Adicionar mod</button>
+            <form
+              class="painel"
+              id="mods-adicionar"
+              aria-labelledby="mods-passo-titulo"
+              novalidate
+              hidden
+            >
+              <h3 id="mods-passo-titulo">Adicionar mod</h3>
+              <p class="detalhe" id="mods-passo" aria-live="polite"></p>
+              <div class="passo" data-passo="1">
+                <label for="mods-nome">Nome do mod</label>
+                <input type="text" id="mods-nome" maxlength="100" />
+                <label for="mods-versao">Versão do mod</label>
+                <input type="text" id="mods-versao" maxlength="100" />
+              </div>
+              <div class="passo" data-passo="2" hidden>
+                <label for="mods-arquivo">Nome do arquivo (termina em .jar)</label>
+                <input type="text" id="mods-arquivo" maxlength="128" />
+              </div>
+              <div class="passo" data-passo="3" hidden>
+                <label for="mods-url">Link de download (cdn.modrinth.com)</label>
+                <input type="url" id="mods-url" />
+                <p class="dica">O link aparece na página do arquivo, no Modrinth.</p>
+                <details id="mods-avancado">
+                  <summary>Avançado</summary>
+                  <label for="mods-hash">Código de conferência do arquivo (SHA-512)</label>
+                  <input
+                    type="text"
+                    id="mods-hash"
+                    maxlength="128"
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                  <label for="mods-lado">Onde usar</label>
+                  <select id="mods-lado">
+                    <option value="ambos">No jogo e no servidor</option>
+                    <option value="cliente">Só no jogo (cada amigo)</option>
+                    <option value="servidor">Só no servidor</option>
+                  </select>
+                </details>
+              </div>
+              <div class="acoes">
+                <button type="button" class="secundario" id="mods-anterior">Voltar</button>
+                <button type="button" class="principal" id="mods-proximo">Próximo</button>
+                <button type="submit" class="principal" id="mods-adicionar-botao" hidden>
+                  Adicionar à lista
+                </button>
+                <button type="button" class="secundario" id="mods-descartar">Cancelar</button>
+              </div>
+            </form>
+          </div>
+          <p class="detalhe" id="mods-aviso" role="status"></p>
+          <p class="erro" id="mods-erro" role="alert" hidden></p>
+          <button type="button" class="secundario" id="mods-voltar">← Grupo</button>
+        </main>
         <main class="cartao" id="tela-config" aria-labelledby="titulo-config" hidden>
           <h2 id="titulo-config">Configurações</h2>
           <form class="config" id="config-form" data-aba="geral" novalidate>
@@ -183,26 +346,6 @@
                 tabindex="-1"
               >
                 Backups
-              </button>
-              <button
-                type="button"
-                role="tab"
-                id="aba-grupo"
-                data-ir="grupo"
-                aria-selected="false"
-                tabindex="-1"
-              >
-                Grupo
-              </button>
-              <button
-                type="button"
-                role="tab"
-                id="aba-mods"
-                data-ir="mods"
-                aria-selected="false"
-                tabindex="-1"
-              >
-                Mods
               </button>
             </div>
             <fieldset data-aba="geral" role="tabpanel" aria-labelledby="aba-geral">
@@ -532,131 +675,6 @@
                 </details>
               </div>
             </fieldset>
-            <fieldset
-              id="cfg-grupo"
-              data-aba="grupo"
-              role="tabpanel"
-              aria-labelledby="aba-grupo"
-              hidden
-            >
-              <legend>Grupo</legend>
-              <p class="dica">PCs com acesso ao grupo. Só o dono do grupo vê esta área.</p>
-              <ul class="lista-backups" id="grupo-lista"></ul>
-              <div
-                class="confirmacao"
-                id="grupo-confirmacao"
-                role="alertdialog"
-                aria-labelledby="grupo-pergunta"
-                hidden
-              >
-                <p id="grupo-pergunta"></p>
-                <p class="detalhe">
-                  O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
-                </p>
-                <div class="acoes">
-                  <button type="button" class="perigo" id="grupo-confirmar">Tirar do grupo</button>
-                  <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
-                </div>
-              </div>
-              <div class="campo-convite" id="grupo-convite">
-                <p class="dica">
-                  Para um PC novo entrar no grupo, crie um convite e envie o texto a quem vai usar.
-                </p>
-                <label for="convite-nome">Nome do PC convidado</label>
-                <input
-                  id="convite-nome"
-                  type="text"
-                  maxlength="40"
-                  autocomplete="off"
-                  spellcheck="false"
-                />
-                <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
-                <label for="convite-validade">Vale por</label>
-                <select id="convite-validade">
-                  <option value="1" selected>1 hora</option>
-                  <option value="24">1 dia</option>
-                  <option value="72">3 dias</option>
-                </select>
-                <div class="acoes">
-                  <button type="button" id="convite-criar">Criar convite</button>
-                </div>
-                <div id="convite-resultado" hidden>
-                  <label for="convite-texto">Texto do convite</label>
-                  <input
-                    id="convite-texto"
-                    type="text"
-                    readonly
-                    autocomplete="off"
-                    spellcheck="false"
-                  />
-                  <p class="detalhe" id="convite-prazo"></p>
-                  <p class="detalhe">
-                    Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se
-                    fechar esta tela, crie outro.
-                  </p>
-                  <div class="acoes">
-                    <button type="button" class="secundario" id="convite-copiar">Copiar</button>
-                  </div>
-                  <p class="detalhe" id="convite-copiado" role="status"></p>
-                </div>
-                <p class="erro" id="convite-erro" role="alert" hidden></p>
-              </div>
-              <p class="detalhe" id="grupo-aviso" role="status"></p>
-              <p class="erro" id="grupo-erro" role="alert" hidden></p>
-            </fieldset>
-            <fieldset id="cfg-mods" data-aba="mods" role="tabpanel" aria-labelledby="aba-mods">
-              <legend>Mods do grupo</legend>
-              <p class="dica" id="mods-dica">
-                Todos os PCs do grupo usam estes mods. Só o dono do grupo muda a lista.
-              </p>
-              <p class="dica" id="mods-atualizando" role="status" hidden>Atualizando mods…</p>
-              <ul class="lista-backups" id="mods-lista"></ul>
-              <div
-                class="confirmacao"
-                id="mods-confirmacao"
-                role="alertdialog"
-                aria-labelledby="mods-pergunta"
-                hidden
-              >
-                <p id="mods-pergunta"></p>
-                <p class="detalhe">
-                  O mod sai da lista e é apagado dos PCs do grupo na próxima atualização. Mods que
-                  são seus, fora da lista, não são mexidos.
-                </p>
-                <div class="acoes">
-                  <button type="button" class="perigo" id="mods-confirmar">Tirar da lista</button>
-                  <button type="button" class="secundario" id="mods-cancelar">Cancelar</button>
-                </div>
-              </div>
-              <div id="mods-adicionar" hidden>
-                <label for="mods-nome">Nome do mod</label>
-                <input type="text" id="mods-nome" maxlength="100" />
-                <label for="mods-versao">Versão do mod</label>
-                <input type="text" id="mods-versao" maxlength="100" />
-                <label for="mods-arquivo">Nome do arquivo (termina em .jar)</label>
-                <input type="text" id="mods-arquivo" maxlength="128" />
-                <label for="mods-url">Link de download (cdn.modrinth.com)</label>
-                <input type="url" id="mods-url" />
-                <label for="mods-hash">Hash SHA-512 do arquivo</label>
-                <input
-                  type="text"
-                  id="mods-hash"
-                  maxlength="128"
-                  autocomplete="off"
-                  spellcheck="false"
-                />
-                <label for="mods-lado">Onde usar</label>
-                <select id="mods-lado">
-                  <option value="ambos">No jogo e no servidor</option>
-                  <option value="cliente">Só no jogo (cada amigo)</option>
-                  <option value="servidor">Só no servidor</option>
-                </select>
-                <p class="dica">O link e o hash aparecem na página do arquivo, no Modrinth.</p>
-                <button type="button" id="mods-adicionar-botao">Adicionar à lista</button>
-              </div>
-              <p class="detalhe" id="mods-aviso" role="status"></p>
-              <p class="erro" id="mods-erro" role="alert" hidden></p>
-            </fieldset>
             <div class="barra-salvar">
               <p class="detalhe" id="config-pendente" role="status" hidden>
                 Há alterações não salvas
@@ -750,6 +768,8 @@
     <script type="module" src="tela.js"></script>
     <script type="module" src="configuracoes.js"></script>
     <script type="module" src="backups.js"></script>
+    <script type="module" src="grupo.js"></script>
+    <script type="module" src="mods.js"></script>
     <script type="module" src="importar.js"></script>
     <script type="module" src="boas-vindas.js"></script>
     <script type="module" src="navegacao.js"></script>

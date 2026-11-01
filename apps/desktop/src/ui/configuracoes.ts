@@ -1,5 +1,4 @@
-import type { CampoComErro, LeituraDaTela, ModDaTela, PcDaTela, PonteSabre } from "./ponte.js";
-import { nomeNaRede } from "./nome-na-rede.js";
+import type { CampoComErro, LeituraDaTela, PonteSabre } from "./ponte.js";
 import { rotuloConfirmarVersao } from "./rotulo-versao.js";
 
 declare global {
@@ -38,26 +37,6 @@ const abrir = $<HTMLButtonElement>("ver-config");
 
 const areaEndereco = $("cfg-endereco");
 const campoEndereco = $<HTMLInputElement>("grupo-endereco");
-const areaGrupo = $("cfg-grupo");
-const listaGrupo = $("grupo-lista");
-const confGrupo = $("grupo-confirmacao");
-const perguntaGrupo = $("grupo-pergunta");
-const confirmarGrupo = $<HTMLButtonElement>("grupo-confirmar");
-const cancelarGrupo = $<HTMLButtonElement>("grupo-cancelar");
-const conviteNome = $<HTMLInputElement>("convite-nome");
-const conviteNomeFicou = $("convite-nome-ficou");
-const conviteValidade = $<HTMLSelectElement>("convite-validade");
-const conviteCriar = $<HTMLButtonElement>("convite-criar");
-const conviteResultado = $("convite-resultado");
-const conviteTexto = $<HTMLInputElement>("convite-texto");
-const convitePrazo = $("convite-prazo");
-const conviteCopiar = $<HTMLButtonElement>("convite-copiar");
-const conviteCopiado = $("convite-copiado");
-let anuncioCopia: ReturnType<typeof setTimeout> | undefined; // reescreve "Convite copiado." 100 ms depois de copiar
-const conviteErro = $("convite-erro");
-const avisoGrupo = $("grupo-aviso");
-const erroGrupo = $("grupo-erro");
-
 const areaPasta = $("cfg-pasta-area");
 const campoPasta = $<HTMLInputElement>("cfg-pasta");
 const trocarPasta = $<HTMLButtonElement>("cfg-pasta-trocar");
@@ -79,38 +58,11 @@ const cancelarVersao = $<HTMLButtonElement>("cfg-versao-cancelar");
 const erroVersao = $("cfg-versao-erro");
 const avisoVersao = $("cfg-versao-aviso");
 
-const listaMods = $("mods-lista");
-const atualizandoMods = $("mods-atualizando");
-const dicaMods = $("mods-dica");
-const confMods = $("mods-confirmacao");
-const perguntaMods = $("mods-pergunta");
-const confirmarMods = $<HTMLButtonElement>("mods-confirmar");
-const cancelarMods = $<HTMLButtonElement>("mods-cancelar");
-const formMods = $("mods-adicionar");
-const adicionarMods = $<HTMLButtonElement>("mods-adicionar-botao");
-const avisoMods = $("mods-aviso");
-const erroMods = $("mods-erro");
-const camposMod = {
-  nome: $<HTMLInputElement>("mods-nome"),
-  versao: $<HTMLInputElement>("mods-versao"),
-  arquivo: $<HTMLInputElement>("mods-arquivo"),
-  url: $<HTMLInputElement>("mods-url"),
-  sha512: $<HTMLInputElement>("mods-hash"),
-  lado: $<HTMLSelectElement>("mods-lado"),
-};
-const LADO_MOD = { ambos: "jogo e servidor", cliente: "só o jogo", servidor: "só o servidor" };
-let tirandoMod: ModDaTela | undefined;
-let botaoDoMod: HTMLElement | undefined;
-let consultaMods = 0;
-let aguardaMods: ReturnType<typeof setTimeout> | undefined;
-
 let versaoAtual = "";
 /** Cada seleção ganha um número: resposta atrasada de uma versão já trocada é descartada. */
 let consulta = 0;
 
 let emCurso = false;
-let tirando: PcDaTela | undefined;
-let botaoDoTirado: HTMLElement | undefined;
 
 let campoComErro: CampoComErro | undefined;
 
@@ -225,290 +177,16 @@ function ocupar(ocupado: boolean): void {
   atualizarBarra();
 }
 
-function mostrarErroGrupo(texto: string): void {
-  erroGrupo.textContent = texto;
-  erroGrupo.hidden = texto === "";
-}
-
-function ocuparGrupo(ocupado: boolean): void {
-  for (const b of areaGrupo.querySelectorAll("button")) b.disabled = ocupado;
-  confirmarGrupo.textContent = ocupado ? "Tirando…" : "Tirar do grupo";
-}
-
-function desenharGrupo(pcs: PcDaTela[]): void {
-  listaGrupo.replaceChildren(
-    ...pcs.map((pc) => {
-      const li = document.createElement("li");
-      const nome = document.createElement("span");
-      nome.textContent = pc.dono ? `${pc.nome} (dono do grupo)` : pc.nome;
-      li.append(nome);
-      // O PC do dono não pode ser tirado (o cartório recusa): nem oferece o botão.
-      if (!pc.dono) {
-        const botao = document.createElement("button");
-        botao.type = "button";
-        botao.className = "secundario";
-        botao.textContent = "Tirar PC do grupo";
-        // Sem aria-label: o nome acessível é o texto visível; o PC é o do item da lista.
-        botao.addEventListener("click", () => {
-          tirando = pc;
-          botaoDoTirado = botao;
-          perguntaGrupo.textContent = `Tirar "${pc.nome}" do grupo?`;
-          confGrupo.hidden = false;
-          cancelarGrupo.focus();
-        });
-        li.append(botao);
-      }
-      return li;
-    }),
-  );
-}
-
-/** O texto do convite é credencial: só vive nesta tela e some ao sair, recarregar ou criar outro. */
-function limparConvite(): void {
-  conviteTexto.value = "";
-  convitePrazo.textContent = "";
-  conviteResultado.hidden = true;
-  conviteCopiar.textContent = "Copiar";
-  clearTimeout(anuncioCopia);
-  conviteCopiado.textContent = "";
-}
-
-function mostrarErroConvite(texto: string): void {
-  conviteErro.textContent = texto;
-  conviteErro.hidden = texto === "";
-}
-
-conviteNome.addEventListener("input", () => {
-  const ficou = nomeNaRede(conviteNome.value);
-  conviteNomeFicou.textContent = ficou ? `Vai ficar como: ${ficou}` : "";
-});
-
-const FORMATO_PRAZO = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
-
-conviteCriar.addEventListener("click", () => {
-  if (conviteCriar.disabled) return;
-  limparConvite();
-  mostrarErroConvite("");
-  if (!nomeNaRede(conviteNome.value)) {
-    mostrarErroConvite("Digite o nome do PC convidado (letras ou números).");
-    conviteNome.focus();
-    return;
-  }
-  conviteCriar.disabled = true;
-  conviteCriar.textContent = "Criando…";
-  window.sabre.grupo
-    .criarConvite(conviteNome.value, Number(conviteValidade.value))
-    .then((r) => {
-      if (!r.ok) return mostrarErroConvite(r.mensagem);
-      conviteTexto.value = r.convite;
-      convitePrazo.textContent = `Para o PC "${r.nomeNaRede}". Vale até ${FORMATO_PRAZO.format(r.venceEm)}.`;
-      conviteResultado.hidden = false;
-      conviteNome.value = "";
-      conviteNomeFicou.textContent = "";
-      conviteTexto.focus();
-      conviteTexto.select();
-    })
-    .catch(() =>
-      mostrarErroConvite("Não consegui criar o convite agora. Nenhum convite foi criado."),
-    )
-    .finally(() => {
-      conviteCriar.disabled = false;
-      conviteCriar.textContent = "Criar convite";
-    });
-});
-
-conviteCopiar.addEventListener("click", () => {
-  navigator.clipboard
-    .writeText(conviteTexto.value)
-    .then(() => {
-      conviteCopiar.textContent = "Copiado";
-      // Região role="status": o leitor de tela anuncia. Limpa e reescreve a cada cópia, para uma segunda cópia
-      // seguida (mesmo texto) também mudar a região.
-      clearTimeout(anuncioCopia); // cópia seguida: só o anúncio mais novo fica
-      conviteCopiado.textContent = "";
-      anuncioCopia = setTimeout(() => {
-        conviteCopiado.textContent = "Convite copiado.";
-      }, 100);
-    })
-    .catch(() => {
-      conviteTexto.select(); // sem permissão para copiar: o texto fica selecionado para Ctrl+C
-      mostrarErroConvite("Não consegui copiar sozinho. O texto está selecionado: use Ctrl+C.");
-    });
-});
-
-async function carregarGrupo(): Promise<void> {
-  confGrupo.hidden = true;
-  tirando = undefined;
-  mostrarErroGrupo("");
+/** O endereço vem do estado do grupo; sem resposta do cartório, some em vez de mostrar campo vazio. */
+async function carregarEndereco(): Promise<void> {
   try {
     const g = await window.sabre.grupo.estado();
     campoEndereco.value = g.endereco ?? "";
-    areaEndereco.hidden = !g.endereco; // sem resposta do cartório, some em vez de mostrar campo vazio
-    areaGrupo.hidden = !g.dono;
-    if (g.dono) {
-      desenharGrupo(g.pcs);
-      if (g.erro) mostrarErroGrupo(g.erro);
-    }
+    areaEndereco.hidden = !g.endereco;
   } catch {
     areaEndereco.hidden = true;
-    areaGrupo.hidden = true; // sem resposta do app: não mostra uma área que talvez não valha
   }
 }
-
-cancelarGrupo.addEventListener("click", () => {
-  confGrupo.hidden = true;
-  tirando = undefined;
-  botaoDoTirado?.focus();
-});
-confirmarGrupo.addEventListener("click", () => {
-  const alvo = tirando;
-  if (!alvo) return;
-  ocuparGrupo(true);
-  mostrarErroGrupo("");
-  avisoGrupo.textContent = "";
-  window.sabre.grupo
-    .tirar(alvo.id)
-    .then(async (r) => {
-      confGrupo.hidden = true;
-      tirando = undefined;
-      await carregarGrupo();
-      if (r.ok) {
-        avisoGrupo.textContent = `${alvo.nome} saiu do grupo. Para voltar, precisa de um novo convite.`;
-        // O botão clicado sumiu com o redesenho: leva o foco ao aviso.
-        avisoGrupo.tabIndex = -1;
-        avisoGrupo.focus();
-      } else mostrarErroGrupo(r.mensagem);
-    })
-    .catch(() => mostrarErroGrupo("Não consegui tirar o PC agora. Atualize a lista para conferir."))
-    .finally(() => ocuparGrupo(false));
-});
-
-function mostrarErroMods(texto: string): void {
-  erroMods.textContent = texto;
-  erroMods.hidden = texto === "";
-}
-
-function ocuparMods(ocupado: boolean): void {
-  for (const b of [adicionarMods, confirmarMods, cancelarMods]) b.disabled = ocupado;
-  for (const b of listaMods.querySelectorAll("button")) b.disabled = ocupado;
-  adicionarMods.textContent = ocupado ? "Adicionando…" : "Adicionar à lista";
-  confirmarMods.textContent = ocupado ? "Tirando…" : "Tirar da lista";
-}
-
-function desenharMods(mods: ModDaTela[], dono: boolean): void {
-  if (mods.length === 0) {
-    const vazio = document.createElement("li");
-    vazio.textContent = "Nenhum mod na lista ainda.";
-    listaMods.replaceChildren(vazio);
-    return;
-  }
-  listaMods.replaceChildren(
-    ...mods.map((m) => {
-      const li = document.createElement("li");
-      const nome = document.createElement("span");
-      nome.textContent = `${m.nome} ${m.versao} (${LADO_MOD[m.lado]})`;
-      li.append(nome);
-      if (dono) {
-        const botao = document.createElement("button");
-        botao.type = "button";
-        botao.className = "secundario";
-        botao.textContent = "Tirar da lista";
-        botao.addEventListener("click", () => {
-          tirandoMod = m;
-          botaoDoMod = botao;
-          perguntaMods.textContent = `Tirar "${m.nome}" da lista de mods do grupo?`;
-          confMods.hidden = false;
-          cancelarMods.focus();
-        });
-        li.append(botao);
-      }
-      return li;
-    }),
-  );
-}
-
-// `preservarMensagens`: true quando a leitura vem de uma ação (adicionar/tirar) ou da espera de "atualizando";
-// nesses casos o aviso e o erro da ação que acabou de rodar não podem sumir.
-async function carregarMods(preservarMensagens = false): Promise<void> {
-  const minha = ++consultaMods;
-  clearTimeout(aguardaMods);
-  try {
-    const e = await window.sabre.mods.estado();
-    if (minha !== consultaMods) return; // resposta de uma consulta já substituída
-    formMods.hidden = !e.dono;
-    dicaMods.hidden = false;
-    atualizandoMods.hidden = !e.atualizando;
-    desenharMods(e.mods, e.dono);
-    // Leitura de tela: o que sobrou de antes (aviso que o problema já resolveu, erro de leitura) sai.
-    if (!preservarMensagens) {
-      mostrarErroMods("");
-      avisoMods.textContent = "";
-    }
-    // Erro da ação que acabou de rodar não sai para dar lugar à falha de leitura que veio logo depois.
-    if (e.erro && !(preservarMensagens && !erroMods.hidden)) mostrarErroMods(e.erro);
-    if (e.aviso) avisoMods.textContent = e.aviso;
-    // Atualizando no arranque: olha de novo até acabar, para o amigo ver o resultado.
-    if (e.atualizando) aguardaMods = setTimeout(() => void carregarMods(true), 1500);
-  } catch {
-    // Só o erro de ação visível é preservado: releitura depois de ação bem-sucedida, ou da espera de "atualizando",
-    // mostra a falha de leitura em vez de ficar em silêncio com a lista velha.
-    if (!preservarMensagens || erroMods.hidden)
-      mostrarErroMods("Não consegui ler a lista de mods agora.");
-  }
-}
-
-cancelarMods.addEventListener("click", () => {
-  confMods.hidden = true;
-  tirandoMod = undefined;
-  botaoDoMod?.focus();
-});
-confirmarMods.addEventListener("click", () => {
-  const alvo = tirandoMod;
-  if (!alvo) return;
-  ocuparMods(true);
-  mostrarErroMods("");
-  avisoMods.textContent = "";
-  atualizandoMods.hidden = false;
-  window.sabre.mods
-    .tirar(alvo.arquivo)
-    .then(async (r) => {
-      confMods.hidden = true;
-      tirandoMod = undefined;
-      if (r.ok) avisoMods.textContent = r.aviso ?? `${alvo.nome} saiu da lista de mods.`;
-      else mostrarErroMods(r.mensagem);
-    })
-    .catch(() => mostrarErroMods("Não consegui tirar o mod agora. Atualize a lista para conferir."))
-    .finally(() => {
-      ocuparMods(false);
-      void carregarMods(true);
-    });
-});
-adicionarMods.addEventListener("click", () => {
-  ocuparMods(true);
-  mostrarErroMods("");
-  avisoMods.textContent = "";
-  atualizandoMods.hidden = false;
-  window.sabre.mods
-    .adicionar({
-      nome: camposMod.nome.value,
-      versao: camposMod.versao.value,
-      arquivo: camposMod.arquivo.value,
-      url: camposMod.url.value,
-      sha512: camposMod.sha512.value,
-      lado: camposMod.lado.value as ModDaTela["lado"],
-    })
-    .then((r) => {
-      if (r.ok) {
-        for (const c of Object.values(camposMod)) if (c !== camposMod.lado) c.value = "";
-        avisoMods.textContent = r.aviso ?? "Mod adicionado e atualizado neste PC.";
-      } else mostrarErroMods(r.mensagem);
-    })
-    .catch(() => mostrarErroMods("Não consegui adicionar o mod agora. Nada foi alterado."))
-    .finally(() => {
-      ocuparMods(false);
-      void carregarMods(true);
-    });
-});
 
 function mostrarErroVersao(texto: string): void {
   erroVersao.textContent = texto;
@@ -623,10 +301,8 @@ async function carregarConfig(): Promise<void> {
 }
 
 async function carregar(): Promise<void> {
-  limparConvite();
-  void carregarGrupo();
+  void carregarEndereco();
   void carregarVersao();
-  void carregarMods();
   await carregarConfig();
 }
 
@@ -725,7 +401,6 @@ abrir.addEventListener("click", () => {
   windows.focus();
 });
 voltar.addEventListener("click", () => {
-  limparConvite();
   tela.hidden = true;
   inicio.hidden = false;
   abrir.focus();

@@ -7,15 +7,16 @@ describe("barra lateral: regras", () => {
   });
 
   it("cada tela vira a sua área; Boas-vindas fica sem barra", () => {
-    expect(areaDeTela("cartao", undefined)).toBe("inicio");
-    expect(areaDeTela("tela-backups", "inicio")).toBe("backups");
-    expect(areaDeTela("tela-config", undefined)).toBe("configuracoes");
-    expect(areaDeTela("tela-boas-vindas", "inicio")).toBeUndefined();
+    expect(areaDeTela("cartao")).toBe("inicio");
+    expect(areaDeTela("tela-backups")).toBe("backups");
+    expect(areaDeTela("tela-grupo")).toBe("grupo");
+    expect(areaDeTela("tela-config")).toBe("configuracoes");
+    expect(areaDeTela("tela-boas-vindas")).toBeUndefined();
   });
 
-  it("Grupo e Configurações dividem a tela: vale por onde o amigo entrou", () => {
-    expect(areaDeTela("tela-config", "grupo")).toBe("grupo");
-    expect(areaDeTela("tela-config", "backups")).toBe("configuracoes");
+  it("Mods é subtela de Grupo: marca Grupo e não vira item da barra", () => {
+    expect(areaDeTela("tela-mods")).toBe("grupo");
+    expect(AREAS).not.toContain("mods");
   });
 
   it("setas dão a volta; Home e End vão às pontas; outra tecla é ignorada", () => {

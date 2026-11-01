@@ -2,16 +2,18 @@
 export const AREAS = ["inicio", "backups", "grupo", "configuracoes"] as const;
 export type Area = (typeof AREAS)[number];
 
-// Grupo ainda divide a tela de Configurações (a tela própria vem no item 1.4): se o amigo
-// chegou por "Grupo" e a tela continua a mesma, o item atual continua sendo "Grupo".
-export function areaDeTela(idTela: string, anterior: Area | undefined): Area | undefined {
+// Grupo e Mods têm tela própria (Mods é subtela de Grupo, sem item na barra): os dois marcam "Grupo".
+export function areaDeTela(idTela: string): Area | undefined {
   switch (idTela) {
     case "cartao":
       return "inicio";
     case "tela-backups":
       return "backups";
+    case "tela-grupo":
+    case "tela-mods":
+      return "grupo";
     case "tela-config":
-      return anterior === "grupo" ? "grupo" : "configuracoes";
+      return "configuracoes";
     default:
       return undefined; // Boas-vindas: primeira vez, sem barra
   }

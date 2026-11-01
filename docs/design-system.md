@@ -42,8 +42,11 @@ Sombras suaves: `--sombra-1` (cartão, item atual) e `--sombra-2` (o que flutua)
 - Janela com tamanho mínimo 720 x 480 px.
 - Teclado: Tab entra no item atual; setas, Home e End andam pela barra; Enter abre. Navegação em `navegacao.ts`
   (aperta os botões que cada tela já tem; sem roteador).
-- Grupo ainda abre a seção de Grupo dentro de Configurações (tela própria no item 1.4).
-- **Configurações** (appui-1.3): abas internas Geral / Servidor / Backups / Grupo / Mods (`.abas`; trocar só esconde, nada
+- **Grupo** (appui-1.4) tem tela própria (`#tela-grupo`): lista de PCs com "Tirar do grupo" (com confirmação) e painel
+  "Convidar um PC" (`.painel`). **Mods** é subtela de Grupo (`#tela-mods`, botão "Mods do grupo" e "← Grupo"; sem 5º item
+  da barra): lista com nome, versão e onde vale; "Adicionar mod" em 3 passos curtos, com hash e "onde usar" em
+  "Avançado" (`<details>` recolhido). Só o dono vê PCs, convite e edição de mods; o texto do convite fica só na memória.
+- **Configurações** (appui-1.3): abas internas Geral / Servidor / Backups (`.abas`; trocar só esconde, nada
   recarrega). Campo = rótulo acima, entrada de largura padrão com unidade ao lado e botão "Padrão" (valor vindo da ponte),
   ajuda de uma linha + "Saiba mais" (`<details>`). Barra fixa no rodapé (`.barra-salvar`): "Há alterações não salvas",
   Salvar (só com mudança), Descartar, Voltar. Nenhuma aba passa de 1,5× a altura da janela (testado).
