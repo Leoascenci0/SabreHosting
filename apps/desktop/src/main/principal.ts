@@ -11,7 +11,7 @@ import {
   Tray,
 } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -47,6 +47,7 @@ import {
 import { criarCofreSeguro, ARQUIVO_COFRE } from "./cofre.js";
 import { clienteDoPc, depsReais, pastaModsDaInstancia } from "./deps-reais.js";
 import { registrarBoasVindas } from "./boas-vindas-app.js";
+import { tentar } from "./tolerante.js";
 import { criarGrupo, type Grupo } from "./grupo.js";
 import { criarModsGrupo, type ModsGrupo } from "./mods-grupo.js";
 import { sincronizarMods } from "@sabrehosting/nucleo/launcher/mods";
@@ -158,7 +159,7 @@ function criarJanela(oculta: boolean): BrowserWindow {
     minHeight: 360,
     show: false,
     title: "SabreHosting",
-    icon: ICONE,
+    ...(existsSync(ICONE) ? { icon: ICONE } : {}),
     autoHideMenuBar: true,
     webPreferences: {
       preload: aqui("./preload.cjs"),
@@ -740,7 +741,7 @@ if (!app.requestSingleInstanceLock()) {
         }, 1500);
       },
     });
-    bandeja = criarBandeja();
+    bandeja = tentar("a bandeja do Windows", criarBandeja) ?? null;
     janela = criarJanela(process.argv.includes(INICIO_OCULTO));
     if (process.env["SABRE_E2E"] === "1") {
       (globalThis as Record<string, unknown>)["__sabreE2E"] = {
