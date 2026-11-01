@@ -22,3 +22,11 @@ na fila. Ramos `roadmap/corr-<id>`. Toda correção traz teste que falhava antes
   **Tela no app:** não se aplica.
   *Confirmação:* o script falha num teste que só passa como root (criado no teste do próprio script) e passa na `main`.
   *Origem:* corr-1.1 · S-03 · Backlog do milestone · máxima
+
+- [ ] **1.3 — Fixar a versão do Electron para o electron-builder**
+  *O que fazer:* o ensaio do `versao.yml` (https://github.com/Leoascenci0/SabreHosting/actions/runs/41314693757) falhou: electron-builder recusa `"electron": "^45.2.0"` ("is a range, not a fixed version… Cannot compute electron version from installed node modules", pois o electron fica no `node_modules` da raiz do workspace). Fixar `"electron": "45.2.0"` (versão exata; o Dependabot continua atualizando) em `apps/desktop/package.json`; teste ou regra do `scripts/verificar.py` que barre faixa (`^`/`~`) nesse campo, falhando antes e passando depois. Reproduzir antes e provar depois com `npx electron-builder --dir --linux --publish never` (sem publicar).
+  *Arquivo:* `apps/desktop/package.json`, `package-lock.json`, `scripts/verificar.py` (ou teste em `tests/`)
+  **Tela no app:** não se aplica.
+  *Confirmação:* empacotamento local passa; a regra reprova `^45.2.0` e aprova `45.2.0`.
+  *Origem:* ensaio do versao.yml · Onda 37 · máxima
+
