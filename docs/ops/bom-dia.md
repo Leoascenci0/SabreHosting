@@ -25,3 +25,5 @@ _Reescrito pela coordenadora da Máxima em 31/10/2026, 19:25 (Ondas 26–33). Es
 
 - **01/11, manhã (Ondas 35–36):** "Tentar de novo" no convite, válido por 30 min no mesmo PC (#257, sua decisão); ensaio do instalador (#259, #261); Electron fixado (#263). **Ensaio do instalador rodou no GitHub com sucesso:** 116,6 MiB, teto 120 MiB (folga de ~3 MiB). Ainda não instalado num Windows.
   Decidi por você: "Tentar de novo" só com o app aberto (chave só em memória, #257).
+
+- **01/11, tarde (Onda 38):** tela inicial agora mostra Hospedar, Importar mundo, Backups e Configurações em grade 2×2, sem rolar (#267); aviso falso "Atenção com o mundo" corrigido (#268). **Teste:** instale o instalador NOVO (tutorial `docs/tutoriais/2026-11-01-ensaio-instalador.md`). Não visto num Windows de verdade. Backlog: appmel-1.29.

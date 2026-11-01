@@ -18,7 +18,7 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 **Próxima onda: 39**
 
-- Onda 38 (01/11, tarde) — appmel-1.27: tela inicial do app (janela maior; Hospedar, Importar mundo, Backups e Configurações visíveis sem rolar) — sessão: ver docs/ops/rodadas/coordenacao-2026-11-01.md
+_(nenhuma onda aberta; Onda 38 fechada em 01/11 — ver docs/ops/rodadas/coordenacao-2026-11-01.md)_
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -70,6 +70,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 01/11/2026 (tarde) — Onda 38: appmel-1.27 #267 (tela inicial em grade 2×2 sem rolar), appmel-1.28 #268 (aviso falso "Atenção com o mundo" no instalador de ensaio), controle #269. Aberto: appmel-1.29 (main recusar hospedar durante importação).
 
 - 01/11/2026 (madrugada) — Onda 34: lancmel-2.8 #252 (`javaw` reaproveitado confere tamanho e sha256), controle. Backlog de código sem P esgotado (achados menores já feitos na Onda 33).
 
