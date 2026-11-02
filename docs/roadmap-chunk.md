@@ -38,7 +38,7 @@ backup antes.
   *Confirmação:* testes (mundo de teste com regiões parciais; arquivo torto é ignorado, não quebra; nada lido além do cabeçalho).
   *Depende de:* nada
 
-- [ ] **1.2 — Núcleo: planejar o reset (prévia, sem apagar nada)**
+- [x] **1.2 — Núcleo: planejar o reset (prévia, sem apagar nada)**
   *O que fazer:* a partir de dimensão + área (retângulo em coordenadas de chunk, ou ponto + raio em blocos), devolver o
   **plano**: quantos chunks existem na área, quantas regiões são tocadas, quanto espaço libera, quais arquivos mudam,
   e avisos ("a área inclui o ponto de nascimento", "há regiões inteiras"). Valida limites e rejeita área gigante sem
