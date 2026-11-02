@@ -48,6 +48,8 @@ export type EstadoMundo =
       nome: string;
       /** Servidor deste PC no ar (ou de uma sessão anterior ainda vivo): a tela desliga as ações. */
       servidorLigado: boolean;
+      /** Quando foi feito o backup "antes de resetar" mais novo (ISO); ausente = não há reset para desfazer. */
+      ultimoReset?: string;
       aviso?: string;
     };
 
@@ -191,7 +193,20 @@ export function criarMundo(o: OpcoesMundo) {
       } catch {
         /* sem pasta configurada: a tela mostra o texto de "configure a pasta" ao tentar */
       }
-      const base = { dono: true as const, nome, servidorLigado };
+      let ultimoReset: string | undefined;
+      try {
+        ultimoReset = (await listarBackups((await pastas()).backups)).find(
+          (b) => b.origem === "antes-de-resetar",
+        )?.criadoEm; // lista: mais novo primeiro
+      } catch {
+        /* sem lista: a tela mostra "ainda não há reset para desfazer" e o main recusa de qualquer forma */
+      }
+      const base = {
+        dono: true as const,
+        nome,
+        servidorLigado,
+        ...(ultimoReset === undefined ? {} : { ultimoReset }),
+      };
       try {
         if (!(await haAviso())) return { ...base, pendencia: "nenhuma" };
         return { ...base, pendencia: conflito ? "conflito" : "aguardando" };

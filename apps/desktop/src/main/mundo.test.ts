@@ -431,6 +431,18 @@ describe("mundo: o que a tela Mundo lê (chunk-1.6)", () => {
     expect(await c.m.estado()).toMatchObject({ servidorLigado: true });
   });
 
+  it("estado traz a data do último reset (só depois de um reset) para a tela mostrar o Desfazer", async () => {
+    const c = cenario();
+    expect((await c.m.estado()) as object).not.toHaveProperty("ultimoReset");
+    const r = await c.m.resetar("overworld", AREA);
+    expect(r).toMatchObject({ ok: true });
+    const e = await c.m.estado();
+    expect(e).toMatchObject({
+      dono: true,
+      ultimoReset: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    });
+  });
+
   it("quem não é dono não recebe nome nem controles; demonstração avisa para a tela mostrar a recusa", async () => {
     const outro = cenario({ dono: false });
     expect(await outro.m.estado()).toEqual({ dono: false });

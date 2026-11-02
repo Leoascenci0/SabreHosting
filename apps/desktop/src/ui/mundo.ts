@@ -1,6 +1,5 @@
 import type {
   AreaDoResetDaTela,
-  BackupDaTela,
   EstadoMundo,
   PlanoDoResetDaTela,
   PonteSabre,
@@ -84,7 +83,6 @@ type Confirmando = "resetar" | "desfazer" | "desfazer-forte" | "descartar";
 
 let estado: EstadoMundo | undefined;
 let regioes: RegiaoDaTela[] = [];
-let ultimoReset: BackupDaTela | undefined;
 let tamanhoMundo: number | undefined;
 let previa: Previa | undefined;
 let confirmando: Confirmando | undefined;
@@ -94,6 +92,8 @@ let emCurso = false;
 let geracao = 0; // resposta atrasada de uma leitura antiga não sobrescreve a mais nova (S-06)
 const marcadas = new Map<string, RegiaoDaTela>();
 
+const ultimoReset = (): string | undefined =>
+  estado?.dono === true ? estado.ultimoReset : undefined;
 const nome = (): string => (estado?.dono === true ? estado.nome : "");
 const emDemonstracao = (): boolean => situacaoDaTela(estado).demonstracao === true;
 const modo = (): ModoDaArea =>
@@ -132,11 +132,11 @@ function atualizar(): void {
       : previa?.podeResetar
         ? ""
         : "Veja a prévia antes de resetar.");
-  desfazer.disabled = emCurso || (!demo && (motivo !== undefined || ultimoReset === undefined));
+  desfazer.disabled = emCurso || (!demo && (motivo !== undefined || ultimoReset() === undefined));
   desfazerInfo.textContent =
     motivo ??
-    (ultimoReset
-      ? `Último reset: backup “Antes de resetar” de ${dataEmPalavras(ultimoReset.criadoEm) ?? "data desconhecida"}.`
+    (ultimoReset()
+      ? `Último reset: backup “Antes de resetar” de ${dataEmPalavras(ultimoReset() ?? "") ?? "data desconhecida"}.`
       : demo
         ? ""
         : "Ainda não há reset para desfazer.");
@@ -247,12 +247,7 @@ async function carregar(): Promise<void> {
     estado = novo;
     atualizar();
     if (situacaoDaTela(novo).visao !== "controles") return;
-    const [, backups] = await Promise.all([
-      carregarRegioes(),
-      window.sabre.backups.listar().catch(() => undefined),
-    ]);
-    const resets = (backups?.itens ?? []).filter((b) => b.origem === "antes-de-resetar");
-    ultimoReset = resets.sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0];
+    await carregarRegioes();
   } catch {
     mostrarErro("Não consegui ler o estado do mundo agora.");
   }
@@ -387,11 +382,11 @@ resetar.addEventListener("click", () => {
 desfazer.addEventListener("click", () => {
   if (emCurso) return;
   if (emDemonstracao()) return void tentarNaDemonstracao("desfazer");
-  if (!ultimoReset) return;
+  if (!ultimoReset()) return;
   // A 1ª confirmação é sempre da tela: o núcleo só devolve o plano (sem trocar nada) quando há jogo depois do reset.
   abrirConfirmacao(
     "desfazer",
-    `Desfazer o último reset? O mundo “${nome()}” volta ao backup de ${dataEmPalavras(ultimoReset.criadoEm) ?? "data desconhecida"} (feito antes de resetar). O estado de agora é guardado num backup antes da troca.`,
+    `Desfazer o último reset? O mundo “${nome()}” volta ao backup de ${dataEmPalavras(ultimoReset() ?? "") ?? "data desconhecida"} (feito antes de resetar). O estado de agora é guardado num backup antes da troca.`,
     "Desfazer o reset",
     undefined,
     desfazer,
@@ -525,6 +520,10 @@ new MutationObserver(() => {
   void carregar();
   titulo.focus();
 }).observe(tela, { attributes: true, attributeFilter: ["hidden"] });
+$("ver-mundo").addEventListener("click", () => {
+  $("cartao").hidden = true;
+  tela.hidden = false;
+});
 voltar.addEventListener("click", () => {
   tela.hidden = true;
   $("cartao").hidden = false;

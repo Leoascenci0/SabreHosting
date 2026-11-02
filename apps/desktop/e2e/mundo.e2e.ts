@@ -115,16 +115,22 @@ describe("aba Mundo", () => {
     await expect(pagina.locator("#mundo-x2").inputValue()).resolves.toBe("1023");
     await expect(pagina.locator("#mundo-z2").inputValue()).resolves.toBe("511");
     await pagina.locator("#mundo-ver-previa").click();
-    await expect(pagina.locator("#mundo-previa-titulo").innerText()).resolves.toBe(
-      "Vai apagar 10 chunks.",
-    );
+    await expect
+      .poll(() => pagina.locator("#mundo-previa-titulo").innerText())
+      .toBe("Vai apagar 10 chunks.");
 
     // Região 0,0 marcada junto: o retângulo que contém as duas (74 chunks existem lá).
     await pagina.locator("#mundo-grade button", { hasText: "0, 0" }).click();
     await pagina.locator("#mundo-ver-previa").click();
-    await expect(pagina.locator("#mundo-previa-titulo").innerText()).resolves.toBe(
-      "Vai apagar 74 chunks.",
+    // 2 regiões lado a lado = 2.048 chunks: acima de 1.024 pergunta antes, mostrando o número.
+    await pagina.locator("#mundo-grande:not([hidden])").waitFor();
+    await expect(pagina.locator("#mundo-grande-texto").innerText()).resolves.toContain(
+      "2.048 chunks",
     );
+    await pagina.locator("#mundo-grande-sim").click();
+    await expect
+      .poll(() => pagina.locator("#mundo-previa-titulo").innerText())
+      .toBe("Vai apagar 74 chunks.");
     const linhas = await pagina.locator("#mundo-previa-linhas").innerText();
     expect(linhas).toMatch(/Libera cerca de .* de .* no mundo todo\./);
     expect(linhas).toContain("Um backup é feito antes.");
@@ -147,9 +153,9 @@ describe("aba Mundo", () => {
     await pagina.locator("#mundo-x").fill("0");
     await pagina.locator("#mundo-raio").fill("100");
     await pagina.locator("#mundo-ver-previa").click();
-    await expect(pagina.locator("#mundo-previa-titulo").innerText()).resolves.toBe(
-      "Vai apagar 64 chunks.", // só a quina da região 0,0 tem chunks dentro do círculo? o plano diz
-    );
+    await expect
+      .poll(() => pagina.locator("#mundo-previa-titulo").innerText())
+      .toBe("Vai apagar 14 chunks."); // 7 x 2 chunks dentro do círculo de 100 blocos
     await expect(pagina.locator("#mundo-erro").isHidden()).resolves.toBe(true);
 
     await pagina.locator("#mundo-raio").fill("5000");
@@ -161,9 +167,9 @@ describe("aba Mundo", () => {
     await expect(pagina.locator("#mundo-previa").isHidden()).resolves.toBe(true);
     await pagina.locator("#mundo-grande-sim").click();
     await pagina.locator("#mundo-previa:not([hidden])").waitFor();
-    await expect(pagina.locator("#mundo-previa-titulo").innerText()).resolves.toBe(
-      "Vai apagar 75 chunks.",
-    );
+    await expect
+      .poll(() => pagina.locator("#mundo-previa-titulo").innerText())
+      .toBe("Vai apagar 75 chunks.");
     expect(existsSync(regiao(pastas))).toBe(true);
   });
 
@@ -215,7 +221,7 @@ describe("aba Mundo", () => {
     await expect(pagina.locator("#mundo-grade button").count()).resolves.toBe(2);
 
     // Desfazer: pede nome e data; devolve a região.
-    await expect(pagina.locator("#mundo-desfazer").isEnabled()).resolves.toBe(true);
+    await expect.poll(() => pagina.locator("#mundo-desfazer").isEnabled()).toBe(true);
     await expect(pagina.locator("#mundo-desfazer-info").innerText()).resolves.toMatch(
       /Último reset: backup “Antes de resetar” de hoje \d{2}:\d{2}\./,
     );
@@ -256,9 +262,9 @@ describe("aba Mundo", () => {
     await registrarCaptura(pagina, join(imagens, "desfazer-aviso-claro.png"));
     await confirmarComNome(pagina); // 2ª confirmação
     await expect.poll(() => existsSync(regiao(pastas)), { timeout: 15_000 }).toBe(true);
-    await expect(pagina.locator("#mundo-resultado").innerText()).resolves.toContain(
-      "Antes de restaurar",
-    );
+    await expect
+      .poll(() => pagina.locator("#mundo-resultado").innerText())
+      .toContain("Antes de restaurar");
   });
 
   it("teclado: dá para ver a prévia, resetar e confirmar sem o mouse", async () => {

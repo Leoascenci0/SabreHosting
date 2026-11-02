@@ -157,6 +157,8 @@ export type EstadoMundo =
       pendencia: "nenhuma" | "aguardando" | "conflito";
       nome: string;
       servidorLigado: boolean;
+      /** Data (ISO) do backup "antes de resetar" mais novo; ausente = nada para desfazer. */
+      ultimoReset?: string;
     };
 
 export interface PlanoDoDesfazerDaTela {
