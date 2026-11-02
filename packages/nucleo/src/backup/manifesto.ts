@@ -15,9 +15,14 @@ export interface ArquivoDoManifesto {
   sha256: string;
 }
 
-/** De onde veio o backup: relógio do app, botão "Fazer backup agora" ou cópia de segurança feita antes de restaurar. */
-export type OrigemBackup = "automatico" | "manual" | "antes-de-restaurar";
-const ORIGENS: readonly OrigemBackup[] = ["automatico", "manual", "antes-de-restaurar"];
+/** De onde veio o backup: relógio do app, botão "Fazer backup agora" ou cópia de segurança feita antes de restaurar/resetar. */
+export type OrigemBackup = "automatico" | "manual" | "antes-de-restaurar" | "antes-de-resetar";
+const ORIGENS: readonly OrigemBackup[] = [
+  "automatico",
+  "manual",
+  "antes-de-restaurar",
+  "antes-de-resetar",
+];
 
 export interface Manifesto {
   formato: 1;

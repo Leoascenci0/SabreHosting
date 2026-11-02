@@ -70,7 +70,7 @@ export interface BackupDaTela {
   tamanho: number;
   dePc: string;
   /** Ausente em backup antigo (a tela mostra "Automático"). */
-  origem?: "automatico" | "manual" | "antes-de-restaurar";
+  origem?: "automatico" | "manual" | "antes-de-restaurar" | "antes-de-resetar";
 }
 
 export interface EstadoBackups {

@@ -5,7 +5,7 @@ export interface BackupItem {
   criadoEm: string;
   tamanho: number;
   /** Quem fez: relógio, botão ou cópia de segurança antes de restaurar (ausente = automático). */
-  origem?: "automatico" | "manual" | "antes-de-restaurar";
+  origem?: "automatico" | "manual" | "antes-de-restaurar" | "antes-de-resetar";
 }
 
 export interface DepsBackups {
