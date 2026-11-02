@@ -76,7 +76,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   claro e escuro em `docs/imagens/appuimel-2.4/`.
   *Depende de:* 2.2, 2.3
 
-- [ ] **2.5 — Seção recolhível padrão e Backups v2**
+- [x] **2.5 — Seção recolhível padrão e Backups v2**
   *O que fazer:* criar o componente **seção** (cabeçalho com título, atalho "Ver tudo →" e seta de recolher; lembra
   aberta/fechada por tela, só preferência local) e aplicar em Backups: resumo no topo (quantos, o último há quanto
   tempo, espaço usado, próximo automático) e a lista abaixo; "Fazer backup agora" e "Restaurar" mantidos como estão.
@@ -84,6 +84,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   **Tela no app:** Backups (resumo e seção da lista).
   *Confirmação:* e2e (recolher/abrir, resumo bate com a lista, restaurar continua pedindo confirmação).
   *Depende de:* 2.2
+  *Feito:* PR #301, 02/11/2026.
 
 - [ ] **2.6 — Grupo, Mods e Configurações na casca nova**
   *O que fazer:* levar Grupo (PCs, convite), Mods e Configurações (abas Geral/Servidor/Backups) para o mesmo vocabulário:
