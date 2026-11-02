@@ -18,7 +18,10 @@ function montar(intervalo = 10) {
     intervaloMin: () => min,
     iniciar: async (_s, m) => {
       eventos.push(`liga ${m}`);
-      return { parar: async () => void eventos.push(`para ${m}`) };
+      return {
+        parar: async () => void eventos.push(`para ${m}`),
+        fazerAgora: async () => void eventos.push(`manual ${m}`),
+      } as never;
     },
     aoAvisar: (t) => void eventos.push(`aviso: ${t}`),
   });
@@ -26,6 +29,23 @@ function montar(intervalo = 10) {
 }
 
 describe("agenda de backups", () => {
+  it("backup manual (appuimel-1.1): só pronta com servidor pronto e agenda ligada; usa a agenda ligada", async () => {
+    const { agenda, eventos } = montar();
+    await expect(agenda.fazerAgora()).rejects.toThrow(/pronto/);
+    const s = new Falso();
+    agenda.observar(s);
+    expect(agenda.pronta()).toBe(false);
+    s.mudar("pronto");
+    await vazio();
+    expect(agenda.pronta()).toBe(true);
+    await agenda.fazerAgora();
+    expect(eventos).toContain("manual 10");
+    s.mudar("parando");
+    await vazio();
+    expect(agenda.pronta()).toBe(false);
+    await expect(agenda.fazerAgora()).rejects.toThrow(/pronto/);
+  });
+
   it("só liga quando o servidor fica pronto, com o intervalo salvo", async () => {
     const { agenda, eventos } = montar(15);
     const s = new Falso();
@@ -81,7 +101,10 @@ describe("agenda de backups", () => {
       intervaloMin: () => 10,
       iniciar: async () => {
         await new Promise<void>((ok) => (liberar = ok));
-        return { parar: async () => void eventos.push("para") };
+        return {
+          parar: async () => void eventos.push("para"),
+          fazerAgora: async () => undefined,
+        } as never;
       },
     });
     const s = new Falso();
@@ -107,6 +130,7 @@ describe("agenda de backups", () => {
         const id = ++n;
         vivos.add(id);
         return {
+          fazerAgora: async () => undefined as never,
           parar: () =>
             new Promise<void>((ok) => {
               // O backup em curso demora para terminar; só então o relógio morre.

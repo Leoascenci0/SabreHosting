@@ -178,6 +178,16 @@ export function depsBackupsE2E(servidorRodando: () => boolean): DepsBackups {
       estadoTrava: async () => ({ epoca: 1 }),
     },
     servidorRodando,
+    // Servidor "pronto" de mentira (SABRE_E2E_SERVIDOR_PRONTO=1): o pacote é de verdade, o save-off/flush é coberto no núcleo.
+    servidorPronto: () => process.env["SABRE_E2E_SERVIDOR_PRONTO"] === "1",
+    fazerBackup: async () => {
+      await pronto;
+      await criarPacote(mundo, join(backups, nomeDoBackup(new Date(), 8)), {
+        versao: 8,
+        epoca: 1,
+        origem: "manual",
+      });
+    },
   });
   return {
     ...real,

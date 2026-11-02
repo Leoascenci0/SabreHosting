@@ -125,6 +125,33 @@ describe("tela de backups", () => {
     expect(readdirSync(pastas.backups).filter((n) => n.endsWith(".tar.gz"))).toHaveLength(2);
   });
 
+  it("Fazer backup agora: desligado sem servidor pronto; a lista mostra a origem em palavras", async () => {
+    const { pagina, pastas } = await abrir("ninguem");
+    await pagina.locator("#lista-backups li").first().waitFor();
+    await expect(pagina.locator("#backups-fazer").isDisabled()).resolves.toBe(true);
+    await expect(pagina.locator("#backups-fazer-dica").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#lista-backups li").first().innerText()).resolves.toContain(
+      "Automático",
+    );
+    expect(readdirSync(pastas.backups).filter((n) => n.endsWith(".tar.gz"))).toHaveLength(1);
+  });
+
+  it("Fazer backup agora: com servidor pronto liga, mostra 'Backup feito' e a linha nova é 'Manual'", async () => {
+    const { pagina, pastas } = await abrir("ninguem", { SABRE_E2E_SERVIDOR_PRONTO: "1" });
+    await pagina.locator("#lista-backups li").first().waitFor();
+    const botao = pagina.locator("#backups-fazer");
+    await expect(botao.isDisabled()).resolves.toBe(false);
+    await botao.click();
+    await expect
+      .poll(() => pagina.locator("#backups-detalhe").innerText())
+      .toContain("Backup feito");
+    await expect.poll(() => pagina.locator("#lista-backups li").count()).toBe(2);
+    await expect(pagina.locator("#lista-backups").innerText()).resolves.toContain("Manual");
+    await expect(pagina.locator("#backups-erro").isVisible()).resolves.toBe(false);
+    await expect(botao.isDisabled()).resolves.toBe(false);
+    expect(readdirSync(pastas.backups).filter((n) => n.endsWith(".tar.gz"))).toHaveLength(2);
+  });
+
   it("com o servidor rodando os botões de restaurar ficam desligados", async () => {
     const { pagina, pastas } = await abrir("eu");
     await pagina.locator("#lista-backups li button").first().waitFor();

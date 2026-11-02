@@ -6,7 +6,7 @@ import { createReadStream } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { Parser } from "tar";
-import { validarManifesto } from "./manifesto.js";
+import { origemDoManifesto, validarManifesto, type OrigemBackup } from "./manifesto.js";
 
 export interface BackupListado {
   /** Nome do arquivo na pasta de backups (`<data>-v<versao>.tar.gz`). */
@@ -16,6 +16,8 @@ export interface BackupListado {
   versao: number;
   /** Soma dos arquivos do mundo dentro do pacote, em bytes. */
   tamanho: number;
+  /** Quem fez: relógio, botão ou a cópia de segurança antes de restaurar (antigo sem campo = automático). */
+  origem: OrigemBackup;
 }
 
 const MAX_MANIFESTO = 64 * 1024 * 1024;
@@ -66,7 +68,14 @@ export async function listarBackups(pastaBackups: string): Promise<BackupListado
     try {
       const m = await lerManifesto(caminho);
       const tamanho = m.arquivos.reduce((soma, a) => soma + a.tamanho, 0);
-      lista.push({ nome, caminho, criadoEm: m.criadoEm, versao: m.versao, tamanho });
+      lista.push({
+        nome,
+        caminho,
+        criadoEm: m.criadoEm,
+        versao: m.versao,
+        tamanho,
+        origem: origemDoManifesto(m),
+      });
     } catch {
       // pacote ilegível: fica de fora da lista, intacto no disco
     }

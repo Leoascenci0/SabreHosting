@@ -192,3 +192,26 @@ describe("falha de leitura não é backup ruim (drive-1.1b)", () => {
     expect(r.apagados).toEqual([]);
   });
 });
+
+describe("backup manual na rotação (appuimel-1.1)", () => {
+  it("manual conta como qualquer outro: apagado quando passa do limite, e o mínimo garantido nunca cai", async () => {
+    const mundo = gerarMundo({ tamanho: "1MB" });
+    const manual = join(raiz, "manual.tar.gz");
+    const feito = await criarPacote(mundo, manual, { versao: 1, epoca: 1, origem: "manual" });
+    rmSync(mundo, { recursive: true, force: true });
+    // 6 backups manuais velhos (fora dos 7 dias) e nenhum automático: o botão não fura a regra.
+    const nomes = Array.from({ length: 6 }, (_, i) => nomeEm(20 + i));
+    const pasta = mkdtempSync(join(raiz, "m-")) + "/backups";
+    mkdirSync(pasta);
+    for (const n of nomes) {
+      copyFileSync(manual, join(pasta, n));
+      marcarBackup(pasta, n, "bom", feito.sha256);
+    }
+    const r = await rotacionarPasta(pasta, { recentes: 2, agora: AGORA });
+    expect(r.falhas).toEqual([]);
+    expect(restantes(pasta).filter((n) => n.endsWith(".tar.gz"))).toEqual(nomes.slice(0, 2).sort());
+    // limite 1: ainda sobra o último bom, nunca zero
+    await rotacionarPasta(pasta, { recentes: 1, agora: AGORA });
+    expect(restantes(pasta).filter((n) => n.endsWith(".tar.gz"))).toEqual([nomes[0]]);
+  });
+});

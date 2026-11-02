@@ -8,6 +8,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { salvarSeguro } from "../servidor/comandos.js";
 import type { ServidorMinecraft } from "../servidor/processo.js";
+import type { OrigemBackup } from "./manifesto.js";
 import { PacoteDescartado, criarPacote, type PacoteCriado } from "./pacote.js";
 
 export interface OpcoesBackup {
@@ -16,6 +17,8 @@ export interface OpcoesBackup {
   pastaBackups: string;
   versao: number;
   epoca: number;
+  /** Quem pediu o backup (padrão `automatico`); vai no manifesto do pacote. */
+  origem?: OrigemBackup;
   /** Relógio injetado (testes); o nome do arquivo sai dele. */
   agora?: () => Date;
   /** Prazo para o servidor confirmar o `save-all flush`. */
@@ -35,7 +38,7 @@ export function nomeDoBackup(data: Date, versao: number): string {
 
 /** Um backup agora. Devolve o pacote já conferido e fechado em `<pastaBackups>/<data>-v<versao>.tar.gz`. */
 export async function fazerBackup(opcoes: OpcoesBackup): Promise<BackupFeito> {
-  const { servidor, pastaDoMundo, pastaBackups, versao, epoca } = opcoes;
+  const { servidor, pastaDoMundo, pastaBackups, versao, epoca, origem } = opcoes;
   const destino = join(pastaBackups, nomeDoBackup((opcoes.agora ?? (() => new Date()))(), versao));
   // Regra 4: o rename do pacote trocaria um backup bom que tenha o mesmo nome; recusa antes de mexer no servidor.
   if (existsSync(destino)) {
@@ -48,6 +51,7 @@ export async function fazerBackup(opcoes: OpcoesBackup): Promise<BackupFeito> {
       criarPacote(pastaDoMundo, destino, {
         versao,
         epoca,
+        ...(origem ? { origem } : {}),
         sinal,
         confirmar: () => servidor.estado === "pronto",
       }).catch((erro: unknown) => {
@@ -79,6 +83,11 @@ export interface OpcoesAgenda extends OpcoesBackup {
 export interface Agenda {
   /** Cancela o relógio e espera o backup em curso terminar; depois disso nenhum backup começa. */
   parar(): Promise<void>;
+  /**
+   * Backup manual agora (botão "Fazer backup agora"): o MESMO `fazerBackup` do relógio, com origem `manual`, e a mesma
+   * vez (um backup por vez). Recusa, em pt-BR, se a agenda parou, o servidor não está pronto ou há backup em curso.
+   */
+  fazerAgora(): Promise<BackupFeito>;
 }
 
 /** Um backup por vez, só com o servidor "pronto". Falha de um backup é informada e o próximo tenta de novo. */
@@ -111,6 +120,26 @@ export function agendarBackups(opcoes: OpcoesAgenda): Agenda {
   timer.unref?.();
 
   return {
+    fazerAgora() {
+      if (parado) return Promise.reject(new Error("O backup parou junto com o servidor."));
+      if (opcoes.servidor.estado !== "pronto") {
+        return Promise.reject(new Error("O servidor ainda não está pronto para um backup."));
+      }
+      if (emCurso !== undefined) return Promise.reject(new Error("Já tem um backup em andamento."));
+      const resultado = fazerBackup({ ...opcoes, origem: "manual" }).then((feito) => {
+        aoConcluir?.(feito); // rotação e cópia do histórico, como em qualquer backup bom
+        return feito;
+      });
+      emCurso = resultado
+        .then(
+          () => undefined,
+          () => undefined,
+        )
+        .finally(() => {
+          emCurso = undefined;
+        });
+      return resultado;
+    },
     async parar() {
       if (!parado) {
         parado = true;

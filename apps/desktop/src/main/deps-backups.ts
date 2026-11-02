@@ -22,6 +22,10 @@ export interface OpcoesDepsBackups {
     estadoTrava(): Promise<{ epoca: number }>;
   };
   servidorRodando: () => boolean;
+  /** Servidor pronto com a agenda de backup ligada (sem isso o botão "Fazer backup agora" fica desligado). */
+  servidorPronto?: () => boolean;
+  /** Backup manual: a agenda do app chama o `fazerBackup` do núcleo (save-off + flush). */
+  fazerBackup?: () => Promise<void>;
   /** Servidor de sessão anterior ainda vivo na pasta? (Pode não saber: erro conta como vivo.) */
   servidorOrfao?: () => Promise<boolean>;
 }
@@ -39,13 +43,20 @@ export function depsBackups(o: OpcoesDepsBackups): DepsBackups {
   };
   return {
     listar: async () =>
-      (await listar()).map(({ nome, criadoEm, tamanho, versao }) => ({
+      (await listar()).map(({ nome, criadoEm, tamanho, versao, origem }) => ({
         nome,
         criadoEm,
         tamanho,
         versao,
+        origem,
       })),
     servidorRodando: o.servidorRodando,
+    servidorPronto: o.servidorPronto ?? (() => false),
+    fazerBackup:
+      o.fazerBackup ??
+      (async () => {
+        throw new Error("Backup manual não está ligado neste PC.");
+      }),
     restaurar: async (nome) => {
       const { pastaBackups } = o;
       const pastaDoMundo = (await o.mundoAgora?.()) ?? o.pastaDoMundo; // o `level-name` pode ter mudado (appmel-1.21)
@@ -120,6 +131,7 @@ export function depsBackupsReais(
   servidorRodando: () => boolean,
   servidorOrfao?: () => Promise<boolean>,
   mundoAgora?: () => Promise<string | undefined>,
+  manual?: { servidorPronto: () => boolean; fazerBackup: () => Promise<void> },
 ): DepsBackups {
   const { SABRE_CARTORIO_URL: url, SABRE_CARTORIO_TOKEN: token } = env;
   const semGrupo = (): never => {
@@ -140,6 +152,7 @@ export function depsBackupsReais(
       estadoTrava: semGrupo,
     },
     servidorRodando,
+    ...(manual ?? {}),
     ...(servidorOrfao ? { servidorOrfao } : {}),
     ...(mundoAgora ? { mundoAgora } : {}),
   });

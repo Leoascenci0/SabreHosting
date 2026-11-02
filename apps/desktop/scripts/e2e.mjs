@@ -7,7 +7,9 @@ const executa = (comando, args) =>
 
 if (executa("npm", ["run", "build"]) !== 0) process.exit(1);
 
-const vitest = ["npx", "vitest", "run", "--config", "vitest.e2e.config.ts"];
+// `npm run test:e2e -w apps/desktop -- backups` roda só os arquivos que casam (o filtro vai direto ao vitest).
+const filtros = process.argv.slice(2);
+const vitest = ["npx", "vitest", "run", "--config", "vitest.e2e.config.ts", ...filtros];
 if (process.env.DISPLAY) process.exit(executa(vitest[0], vitest.slice(1)));
 
 if (spawnSync("which", ["xvfb-run"]).status === 0) {
