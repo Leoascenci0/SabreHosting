@@ -117,11 +117,25 @@
         <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>
           <h2 id="titulo-backups" tabindex="-1">Backups</h2>
           <p class="detalhe" id="backups-detalhe" role="status"></p>
+          <div class="acoes">
+            <button
+              type="button"
+              class="secundario"
+              id="backups-fazer"
+              aria-describedby="backups-fazer-dica"
+              disabled
+            >
+              Fazer backup agora
+            </button>
+          </div>
+          <p class="detalhe" id="backups-fazer-dica">
+            Dá para fazer um backup agora quando o servidor deste PC estiver ligado e pronto.
+          </p>
           <div
             class="progresso"
             id="backups-progresso"
             role="progressbar"
-            aria-label="Restaurando o backup"
+            aria-label="Backup em andamento"
             hidden
           >
             <span></span>

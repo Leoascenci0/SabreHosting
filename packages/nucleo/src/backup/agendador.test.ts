@@ -369,7 +369,7 @@ describe("backup manual (appuimel-1.1)", () => {
       await expect(agenda.fazerAgora()).rejects.toThrow(/andamento/);
       await primeiro;
       expect(eventos.filter((e) => e === "enviar:save-off")).toHaveLength(1);
-      s.estado = "iniciando";
+      s.estado = "subindo";
       await expect(agenda.fazerAgora()).rejects.toThrow(/pronto/);
       s.estado = "pronto";
       await agenda.parar();

@@ -27,12 +27,22 @@ const titulo = $("titulo-backups");
 const progresso = $("backups-progresso");
 const vazio = $("backups-vazio");
 const abrir = $<HTMLButtonElement>("ver-backups");
+const fazer = $<HTMLButtonElement>("backups-fazer");
+const dicaFazer = $("backups-fazer-dica");
 
 let escolhido: BackupDaTela | undefined;
 let emCurso = false;
 let bloqueado = false;
+let pronto = false; // servidor pronto: o main manda no estado e recusa de novo ao clicar
 let botaoDoEscolhido: HTMLElement | undefined;
 let resultado = ""; // "Pronto…" fica na tela até a próxima ação; a lista recarregada não o apaga
+
+const ORIGENS = {
+  automatico: "Automático",
+  manual: "Manual",
+  "antes-de-restaurar": "Antes de restaurar",
+} as const;
+const origemDe = (b: BackupDaTela): string => ORIGENS[b.origem ?? "automatico"];
 
 const dataDe = (iso: string): string => dataEmPalavras(iso) ?? "data desconhecida";
 
@@ -51,6 +61,8 @@ function mostrarErro(texto: string): void {
 function atualizarBotoes(): void {
   for (const b of lista.querySelectorAll("button")) b.disabled = bloqueado || emCurso;
   confirmar.disabled = cancelar.disabled = voltar.disabled = emCurso;
+  fazer.disabled = !pronto || emCurso;
+  dicaFazer.hidden = pronto;
 }
 
 function desenhar(itens: BackupDaTela[]): void {
@@ -64,7 +76,7 @@ function desenhar(itens: BackupDaTela[]): void {
       texto.append(quando);
       const meta = document.createElement("span");
       meta.className = "meta";
-      meta.textContent = `${tamanhoDe(b.tamanho)} · ${b.dePc}`;
+      meta.textContent = `${tamanhoDe(b.tamanho)} · ${origemDe(b)} · ${b.dePc}`;
       texto.append(meta);
       const botao = document.createElement("button");
       botao.type = "button";
@@ -89,14 +101,18 @@ async function carregar(): Promise<void> {
   try {
     const estado = await window.sabre.backups.listar();
     bloqueado = estado.bloqueado;
+    pronto = estado.prontoParaBackup;
     desenhar(estado.itens);
     mostrarErro(estado.erro ?? "");
     avisoHistorico.textContent = estado.avisoHistorico ?? "";
     avisoHistorico.hidden = estado.avisoHistorico === undefined;
     vazio.hidden = estado.itens.length > 0 || Boolean(estado.erro);
-    detalhe.textContent = estado.bloqueado
-      ? "Pare o servidor para poder restaurar um backup."
-      : resultado;
+    detalhe.textContent = [
+      resultado,
+      estado.bloqueado ? "Pare o servidor para poder restaurar um backup." : "",
+    ]
+      .filter((t) => t !== "")
+      .join(" ");
   } catch {
     mostrarErro("Não consegui ler a lista de backups.");
   }
@@ -128,6 +144,7 @@ confirmar.addEventListener("click", () => {
   resultado = "";
   confirmacao.hidden = true;
   detalhe.textContent = "Restaurando o backup… não feche o app.";
+  progresso.setAttribute("aria-label", "Restaurando o backup");
   progresso.hidden = false;
   tela.setAttribute("aria-busy", "true");
   atualizarBotoes();
@@ -145,6 +162,32 @@ confirmar.addEventListener("click", () => {
       emCurso = false;
       escolhido = undefined;
       progresso.hidden = true;
+      tela.setAttribute("aria-busy", "false");
+      void carregar();
+    });
+});
+fazer.addEventListener("click", () => {
+  if (emCurso || !pronto) return;
+  emCurso = true;
+  mostrarErro("");
+  resultado = "";
+  detalhe.textContent = "Fazendo o backup… pode continuar jogando.";
+  progresso.setAttribute("aria-label", "Backup em andamento");
+  progresso.hidden = false;
+  tela.setAttribute("aria-busy", "true");
+  fazer.textContent = "Fazendo backup…";
+  atualizarBotoes();
+  window.sabre.backups
+    .fazer()
+    .then((r) => {
+      if (r.ok) resultado = "Backup feito.";
+      else mostrarErro(r.mensagem);
+    })
+    .catch(() => mostrarErro("Não consegui fazer o backup agora. O mundo continua como estava."))
+    .finally(() => {
+      emCurso = false;
+      progresso.hidden = true;
+      fazer.textContent = "Fazer backup agora";
       tela.setAttribute("aria-busy", "false");
       void carregar();
     });

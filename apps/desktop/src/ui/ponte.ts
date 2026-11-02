@@ -57,11 +57,15 @@ export interface BackupDaTela {
   criadoEm: string;
   tamanho: number;
   dePc: string;
+  /** Ausente em backup antigo (a tela mostra "Automático"). */
+  origem?: "automatico" | "manual" | "antes-de-restaurar";
 }
 
 export interface EstadoBackups {
   itens: BackupDaTela[];
   bloqueado: boolean;
+  /** Servidor pronto: o botão "Fazer backup agora" liga. */
+  prontoParaBackup: boolean;
   erro?: string;
   avisoHistorico?: string;
 }
@@ -176,6 +180,8 @@ export interface PonteSabre {
   };
   backups: {
     listar(): Promise<EstadoBackups>;
+    /** Backup agora, pelo mesmo caminho do automático; o main recusa se não der. */
+    fazer(): Promise<Resultado>;
     restaurar(nome: string): Promise<Resultado>;
   };
   importar: {

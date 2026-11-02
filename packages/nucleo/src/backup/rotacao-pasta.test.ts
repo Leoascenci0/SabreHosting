@@ -215,4 +215,3 @@ describe("backup manual na rotação (appuimel-1.1)", () => {
     expect(restantes(pasta).filter((n) => n.endsWith(".tar.gz"))).toEqual([nomes[0]]);
   });
 });
-

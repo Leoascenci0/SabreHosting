@@ -103,7 +103,13 @@ async function lerArquivo(caminho: string, completo: string): Promise<ArquivoDoM
 
 export async function gerarManifesto(
   pastaDoMundo: string,
-  { versao, epoca, origem = "automatico", agora = new Date(), aviso = () => undefined }: OpcoesManifesto,
+  {
+    versao,
+    epoca,
+    origem = "automatico",
+    agora = new Date(),
+    aviso = () => undefined,
+  }: OpcoesManifesto,
 ): Promise<Manifesto> {
   const arquivos: ArquivoDoManifesto[] = [];
   for await (const caminho of percorrer(pastaDoMundo, "", aviso)) {

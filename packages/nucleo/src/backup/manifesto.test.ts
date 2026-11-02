@@ -326,7 +326,13 @@ describe("validarManifesto", () => {
 });
 
 describe("origem do backup (appuimel-1.1)", () => {
-  const base = { formato: 1, versao: 1, epoca: 1, criadoEm: "2026-10-30T12:00:00.000Z", arquivos: [] };
+  const base = {
+    formato: 1,
+    versao: 1,
+    epoca: 1,
+    criadoEm: "2026-10-30T12:00:00.000Z",
+    arquivos: [],
+  };
 
   it("gerar grava a origem pedida e, sem pedir, grava 'automatico'", async () => {
     const pasta = mundo();
@@ -351,4 +357,3 @@ describe("origem do backup (appuimel-1.1)", () => {
     }
   });
 });
-

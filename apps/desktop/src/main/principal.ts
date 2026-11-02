@@ -426,6 +426,14 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
         servidorRodando,
         () => inicio.temOrfao(),
         () => pastaDoMundoAgora(pc.pastaServidor),
+        // Backup manual: o MESMO fazerBackup da agenda (save-off + flush), só com servidor pronto e agenda ligada.
+        {
+          servidorPronto: () => agendaApp?.pronta() ?? false,
+          fazerBackup: async () => {
+            if (!agendaApp) throw new Error("agenda de backup desligada");
+            await agendaApp.fazerAgora();
+          },
+        },
       ),
       avisoHistorico: avisoHistorico.ler,
     });
@@ -653,6 +661,11 @@ function registrarPonte(
     (evento) => (permitir(evento), de("backups", backups).estado()),
   );
   // Em demonstração as escritas abaixo são recusadas AQUI, no main (não só escondidas na tela).
+  const fazerBackup = protegerEscrita(demo, () => backups.fazer());
+  ipcMain.handle("sabre:backups:fazer", (evento) => {
+    permitir(evento);
+    return fazerBackup(); // o main recusa sem servidor pronto, com backup ou restauração em andamento
+  });
   const restaurar = protegerEscrita(demo, (nome: unknown) => backups.restaurar(nome));
   ipcMain.handle("sabre:backups:restaurar", (evento, nome: unknown) => {
     permitir(evento);

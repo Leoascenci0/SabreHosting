@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { protegerEscrita } from "./demonstracao.js";
 import { criarBackups, type BackupItem, type DepsBackups } from "./backups.js";
 
 const item = (nome: string, extra: Partial<BackupItem> = {}): BackupItem => ({
@@ -10,13 +11,15 @@ const item = (nome: string, extra: Partial<BackupItem> = {}): BackupItem => ({
 
 function deps(
   extra: Partial<DepsBackups> = {},
-): DepsBackups & { restaurar: ReturnType<typeof vi.fn> } {
+): DepsBackups & { restaurar: ReturnType<typeof vi.fn>; fazerBackup: ReturnType<typeof vi.fn> } {
   return {
     listar: async () => [item("a.tar.gz"), item("b.tar.gz")],
     restaurar: vi.fn(async () => undefined),
     servidorRodando: () => false,
+    servidorPronto: () => true,
+    fazerBackup: vi.fn(async () => undefined),
     ...extra,
-  } as DepsBackups & { restaurar: ReturnType<typeof vi.fn> };
+  } as DepsBackups & { restaurar: ReturnType<typeof vi.fn>; fazerBackup: ReturnType<typeof vi.fn> };
 }
 
 describe("backups (cola da tela)", () => {
@@ -99,5 +102,85 @@ describe("backups (cola da tela)", () => {
       ok: false,
       mensagem: "Sem a trava.",
     });
+  });
+});
+
+describe("backup manual (appuimel-1.1)", () => {
+  it("o estado diz se dá para fazer backup agora e leva a origem de cada linha", async () => {
+    const pronto = await criarBackups(
+      deps({ listar: async () => [item("a.tar.gz", { origem: "manual" })] }),
+    ).estado();
+    expect(pronto.prontoParaBackup).toBe(true);
+    expect(pronto.itens[0]).toMatchObject({ origem: "manual", dePc: "Este PC" });
+    expect(
+      (await criarBackups(deps({ servidorPronto: () => false })).estado()).prontoParaBackup,
+    ).toBe(false);
+  });
+
+  it("faz o backup pelo caminho único, uma vez", async () => {
+    const d = deps();
+    expect(await criarBackups(d).fazer()).toEqual({ ok: true });
+    expect(d.fazerBackup).toHaveBeenCalledTimes(1);
+  });
+
+  it("recusa sem servidor pronto, com mensagem clara, sem tocar no mundo", async () => {
+    const d = deps({ servidorPronto: () => false });
+    const r = await criarBackups(d).fazer();
+    expect(r).toMatchObject({ ok: false, mensagem: expect.stringMatching(/servidor/i) });
+    expect(d.fazerBackup).not.toHaveBeenCalled();
+  });
+
+  it("recusa com backup em andamento (um por vez) e deixa o seguinte rodar depois", async () => {
+    let liberar: () => void = () => undefined;
+    const d = deps();
+    d.fazerBackup.mockImplementationOnce(() => new Promise<void>((ok) => (liberar = ok)));
+    const b = criarBackups(d);
+    const primeiro = b.fazer();
+    expect(await b.fazer()).toMatchObject({
+      ok: false,
+      mensagem: expect.stringMatching(/andamento/i),
+    });
+    liberar();
+    expect(await primeiro).toEqual({ ok: true });
+    expect(d.fazerBackup).toHaveBeenCalledTimes(1);
+    expect((await b.fazer()).ok).toBe(true);
+  });
+
+  it("recusa durante a restauração, e a restauração recusa durante o backup", async () => {
+    let liberar: () => void = () => undefined;
+    const d = deps({ restaurar: vi.fn(() => new Promise<void>((ok) => (liberar = ok))) });
+    const b = criarBackups(d);
+    const restaurando = b.restaurar("a.tar.gz");
+    expect((await b.fazer()).ok).toBe(false);
+    expect(d.fazerBackup).not.toHaveBeenCalled();
+    liberar();
+    await restaurando;
+    let soltar: () => void = () => undefined;
+    const d2 = deps({ fazerBackup: vi.fn(() => new Promise<void>((ok) => (soltar = ok))) });
+    const b2 = criarBackups(d2);
+    const fazendo = b2.fazer();
+    expect((await b2.restaurar("a.tar.gz")).ok).toBe(false);
+    expect(d2.restaurar).not.toHaveBeenCalled();
+    soltar();
+    await fazendo;
+  });
+
+  it("em demonstração a escrita é recusada no main e nada é chamado", async () => {
+    const d = deps();
+    const fazer = protegerEscrita({ ativa: () => true }, () => criarBackups(d).fazer());
+    expect((await fazer()).ok).toBe(false);
+    expect(d.fazerBackup).not.toHaveBeenCalled();
+  });
+
+  it("falha do núcleo vira texto fixo seguro, sem caminho cru, e libera o próximo", async () => {
+    const d = deps({
+      fazerBackup: vi.fn(async () => Promise.reject(new Error("EACCES: C:\\Users\\Eliel\\mundo"))),
+    });
+    const b = criarBackups(d);
+    const r = await b.fazer();
+    expect(r).toMatchObject({ ok: false });
+    expect(JSON.stringify(r)).not.toMatch(/Users|EACCES|\\/);
+    expect((await b.fazer()).ok).toBe(false);
+    expect(d.fazerBackup).toHaveBeenCalledTimes(2);
   });
 });

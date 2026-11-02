@@ -79,6 +79,13 @@ export function criarAgendaBackups<S extends ServidorObservado>(deps: DepsAgenda
     /** Espera o backup em curso terminar. */
     parar: desligar,
     ativa: (): boolean => agenda !== undefined,
+    /** Botão "Fazer backup agora": só com servidor pronto E agenda ligada (é ela que sabe as pastas e a época). */
+    pronta: (): boolean => agenda !== undefined && servidor?.estado === "pronto",
+    /** Backup manual pelo MESMO caminho da agenda (um por vez com o do relógio). */
+    async fazerAgora(): Promise<void> {
+      if (!agenda) throw new Error("O servidor ainda não está pronto para um backup.");
+      await agenda.fazerAgora();
+    },
   };
 }
 
