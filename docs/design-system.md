@@ -36,12 +36,15 @@ Sombras suaves: `--sombra-1` (cartão, item atual) e `--sombra-2` (o que flutua)
 
 ## Estrutura da janela
 
-- **Barra lateral fixa** (`.barra`, `--largura-barra` 220 px): **Início, Backups, Grupo, Configurações**, ícone + nome; o item
-  atual leva `aria-current="page"` e fundo `--cor-destaque`. Sem a barra só na Boas-vindas (primeira vez).
-- **Conteúdo** (`.conteudo`): à direita, centralizado, no máximo `--largura-conteudo` (960 px), rola sozinho; a barra não rola.
+- **Barra superior fixa** (`.barra`, appuimel-2.2): nome do app, abas **Início, Backups, Grupo, Configurações** (ícone + nome;
+  abaixo de 840 px só o ícone, o nome segue para leitor de tela) e, à direita, o **chip de estado** (`#chip-estado`: cor +
+  ícone + palavra: "Desligado", "Ligando…", "N online", "<nome> hospeda", "Sem cartório"); clicar nele abre o Início.
+  A aba atual leva `aria-current="page"` e fundo `--cor-destaque`. Sem barra e sem rodapé só na Boas-vindas.
+- **Rodapé fino** (`.rodape`): versão do app, nome do grupo ("—" enquanto o app não expõe esse dado à tela) e estado do cartório.
+- **Conteúdo** (`.conteudo`): entre a barra e o rodapé, centralizado, no máximo `--largura-conteudo` (960 px), rola sozinho; barra e rodapé não rolam.
 - **Faixa de demonstração** (`.faixa-demo`): por cima de tudo, no fluxo (não cobre nada).
 - Janela com tamanho mínimo 720 x 480 px.
-- Teclado: Tab entra no item atual; setas, Home e End andam pela barra; Enter abre. Navegação em `navegacao.ts`
+- Teclado: Tab entra no item atual; setas, Home e End andam pelas abas; Enter abre. Navegação em `navegacao.ts`
   (aperta os botões que cada tela já tem; sem roteador).
 - **Grupo** (appui-1.4) tem tela própria (`#tela-grupo`): lista de PCs com "Tirar do grupo" (com confirmação) e painel
   "Convidar um PC" (`.painel`). **Mods** é subtela de Grupo (`#tela-mods`, botão "Mods do grupo" e "← Grupo"; sem 5º item
