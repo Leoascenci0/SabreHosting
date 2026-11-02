@@ -34,7 +34,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
 - **Sem mapa do mundo** neste bloco (exige mod ou servidor de mapa): fica no backlog; a aba **Mundo** (roadmap `chunk`)
   traz a grade de regiões.
 
-- [ ] **2.1 — Direção v2 documentada e tokens novos**
+- [x] **2.1 — Direção v2 documentada e tokens novos**
   *O que fazer:* escrever a seção "Direção v2" em `docs/design-system.md` (abas no topo, chip de estado, cartão principal,
   peças de estado, grade de números, seção recolhível, rodapé; o que é "original" e o que não se faz) e acrescentar em
   `tokens.css` só o que falta (camadas de superfície, borda por estado, numerais tabulares, tamanhos de número grande).
@@ -44,7 +44,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   *Confirmação:* teste de contraste dos tokens novos nos dois temas; `impeccable` `document` conferido.
   *Origem:* Eliel · 02/11/2026
 
-- [ ] **2.2 — Casca nova: barra superior com abas e chip de estado, rodapé de estado**
+- [x] **2.2 — Casca nova: barra superior com abas e chip de estado, rodapé de estado**
   *O que fazer:* trocar a barra lateral por **barra superior**: nome do app, abas **Início, Backups, Grupo, Configurações**
   (a aba atual marcada), e à direita um **chip de estado** sempre visível ("Desligado", "Ligando…", "2 online") que abre
   o Início ao clicar. Rodapé fino: versão do app, nome do grupo e estado do cartório. Janela mínima 720 x 480: abas viram
@@ -54,7 +54,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   *Confirmação:* e2e: abas levam a cada tela; chip muda com o estado do servidor falso; teclado percorre as abas.
   *Depende de:* 2.1
 
-- [ ] **2.3 — Dados do Início na ponte: jogadores, tempo ligado, RAM, tamanho do mundo**
+- [x] **2.3 — Dados do Início na ponte: jogadores, tempo ligado, RAM, tamanho do mundo**
   *O que fazer:* o main passa a entregar para a tela, pela ponte e já pronto para mostrar: jogadores online (número e nomes),
   tempo ligado, memória usada pelo servidor (quando ligado), tamanho do mundo no disco (leitura barata, sem ler o mundo
   inteiro na RAM) e quantidade/último backup. Dado que não existe volta `null` (a tela mostra "—"). Atualização por
@@ -64,7 +64,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   *Confirmação:* teste de unidade do main (cada campo, ausente = `null`); mundo de teste inventado.
   *Depende de:* nada
 
-- [ ] **2.4 — Início v2: cartão principal, peças de estado, grade de números, coluna do grupo**
+- [x] **2.4 — Início v2: cartão principal, peças de estado, grade de números, coluna do grupo**
   *O que fazer:* refazer o Início na estrutura da referência: (1) **cartão principal** com a frase de estado, versão do
   Minecraft, tempo ligado e jogadores; (2) **três peças** pequenas com borda de estado: "Este PC", "Servidor", "Grupo"
   (cartório); (3) **ações** (Jogar, Hospedar, Parar…) logo abaixo, uma principal por vez; (4) **grade de números**
