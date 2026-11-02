@@ -114,6 +114,7 @@ describe("tela de backups", () => {
     await expect(pagina.locator("#lista-backups").isVisible()).resolves.toBe(false);
     // O resumo continua à mostra e o "Fazer backup agora" não some.
     await expect(pagina.locator("#backups-resumo").isVisible()).resolves.toBe(true);
+    await pagina.waitForTimeout(300); // fim da transição da seta (só para a captura)
     await registrarCaptura(pagina, join(imagensV2, "backups-recolhida-escuro.png"));
     await pagina.emulateMedia({ colorScheme: "light" });
     await registrarCaptura(pagina, join(imagensV2, "backups-recolhida-claro.png"));
