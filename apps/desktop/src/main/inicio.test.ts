@@ -632,6 +632,26 @@ describe("dados do painel na ponte (appuimel-2.3)", () => {
     expect(e).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565", ligadoSegundos: 0 });
   });
 
+  it("versão do Minecraft e RAM total do PC: aparecem quando existem; ausentes, o campo não existe", async () => {
+    const com = criarInicio(
+      deps({
+        versaoMinecraft: async () => "1.21.1",
+        totalMemMb: () => 16384,
+        ramReservadaMb: () => 4096,
+      }),
+    );
+    expect(await com.estado()).toEqual({ tipo: "ninguem", versaoMinecraft: "1.21.1" });
+    await com.hospedar();
+    expect(await com.estado()).toMatchObject({
+      tipo: "eu",
+      versaoMinecraft: "1.21.1",
+      ramReservadaMb: 4096,
+      totalMemMb: 16384,
+    });
+    const sem = criarInicio(deps({ versaoMinecraft: async () => Promise.reject(new Error("x")) }));
+    expect(await sem.estado()).toEqual({ tipo: "ninguem" });
+  });
+
   it("parando: o tempo ligado e a RAM somem; ao parar e hospedar de novo, o relógio recomeça", async () => {
     let agora = 0;
     const inicio = criarInicio(deps({ ramReservadaMb: () => 2048 }), {

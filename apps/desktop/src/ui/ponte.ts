@@ -17,6 +17,10 @@ export interface DadosPainel {
   ligadoSegundos?: number;
   /** Memória (MB) que o app reservou ao servidor deste PC; é a reservada, não a medida. Só quando este PC hospeda. */
   ramReservadaMb?: number;
+  /** Versão do Minecraft que o grupo usa (ex.: "1.21.1"); ausente = sem conexão com o grupo. */
+  versaoMinecraft?: string;
+  /** Memória total (MB) deste PC, só para dar contexto à RAM reservada; só quando este PC hospeda. */
+  totalMemMb?: number;
   /** Algo mexendo no mundo deste PC agora (Hospedar fica fechado). A atualização vem em `atualizando`. */
   trabalho?: "restaurando" | "trocando-versao";
 }

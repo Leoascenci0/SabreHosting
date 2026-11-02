@@ -100,6 +100,10 @@ servidor padrão não tem).
 referência; arrastar ou reordenar seções; mapa do mundo (backlog, aba Mundo do roadmap `chunk`); fonte ou imagem de internet.
 Mantém tema claro e escuro, azul-petróleo, fonte do sistema, tudo empacotado, janela mínima 720 x 480.
 
+**Início v2 (appuimel-2.4):** `inicio-regras.ts` decide o que cada peça e cada número mostra (testado sem tela). Sem
+valor anterior real, a comparação é contexto verdadeiro ("reservada, de 16 GB do PC", "7 backups guardados") ou "—" com a razão
+no `title`. Duas colunas que quebram sozinhas (`flex-wrap`): principal e grupo. Atualiza a cada 15 s só com o Início à vista.
+
 **Tokens novos** (`tokens.css`): `--cor-camada-2` (nos dois temas), `--borda-estado-ligado|desligado|atencao|erro`
 (2 px + cor de estado, que já muda com o tema), `--numero-1|2|3` (1,5 / 2 / 2,75 rem), `--numeros-tabulares` e `.numero`.
 Contraste AA (4,5:1 texto, 3:1 borda e ícone) conferido nos dois temas em `tokens.test.ts`.
