@@ -86,7 +86,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   *Depende de:* 2.2
   *Feito:* PR #301, 02/11/2026.
 
-- [ ] **2.6 — Grupo, Mods e Configurações na casca nova**
+- [x] **2.6 — Grupo, Mods e Configurações na casca nova**
   *O que fazer:* levar Grupo (PCs, convite), Mods e Configurações (abas Geral/Servidor/Backups) para o mesmo vocabulário:
   seções recolhíveis, peças de estado nos PCs ("online", "visto há…"), barra de salvar no rodapé dentro do novo rodapé.
   Nenhuma regra muda (só o dono vê convite e mods; confirmações iguais).
