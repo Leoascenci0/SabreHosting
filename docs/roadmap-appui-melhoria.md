@@ -64,7 +64,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   *Confirmação:* teste de unidade do main (cada campo, ausente = `null`); mundo de teste inventado.
   *Depende de:* nada
 
-- [ ] **2.4 — Início v2: cartão principal, peças de estado, grade de números, coluna do grupo**
+- [x] **2.4 — Início v2: cartão principal, peças de estado, grade de números, coluna do grupo**
   *O que fazer:* refazer o Início na estrutura da referência: (1) **cartão principal** com a frase de estado, versão do
   Minecraft, tempo ligado e jogadores; (2) **três peças** pequenas com borda de estado: "Este PC", "Servidor", "Grupo"
   (cartório); (3) **ações** (Jogar, Hospedar, Parar…) logo abaixo, uma principal por vez; (4) **grade de números**
