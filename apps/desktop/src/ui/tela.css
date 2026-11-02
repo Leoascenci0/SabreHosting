@@ -985,6 +985,34 @@ button.link {
   font-size: 1.125rem;
 }
 
+/* Seção recolhível dentro de painel: o corpo continua uma coluna com o mesmo respiro. */
+.painel .secao-corpo:not([hidden]) {
+  display: grid;
+  gap: var(--espaco-2);
+}
+
+/* Peças de estado de cada PC do grupo: texto + borda de estado (nunca só cor). */
+.lista-backups .estados-pc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1);
+  margin-top: var(--espaco-1);
+}
+
+.estado-pc {
+  padding: 0 var(--espaco-2);
+  background: var(--cor-camada-2);
+  border: var(--borda-estado-desligado);
+  border-radius: var(--raio);
+  font-size: var(--texto-1);
+  color: var(--cor-texto-suave);
+}
+
+.estado-pc[data-tom="ligado"] {
+  border: var(--borda-estado-ligado);
+  color: var(--cor-texto);
+}
+
 .painel .dica,
 #tela-mods .dica {
   margin: 0;

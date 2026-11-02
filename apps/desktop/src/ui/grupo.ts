@@ -1,5 +1,6 @@
 import type { PcDaTela, PonteSabre } from "./ponte.js";
 import { nomeNaRede } from "./nome-na-rede.js";
+import { ligarSecao } from "./secao.js";
 
 declare global {
   interface Window {
@@ -34,6 +35,18 @@ const convitePrazo = $("convite-prazo");
 const conviteCopiar = $<HTMLButtonElement>("convite-copiar");
 const conviteCopiado = $("convite-copiado");
 const conviteErro = $("convite-erro");
+ligarSecao(
+  $<HTMLButtonElement>("secao-pcs-seta"),
+  $("secao-pcs-corpo"),
+  "sabre:secao:grupo-pcs",
+  "a lista de PCs",
+);
+ligarSecao(
+  $<HTMLButtonElement>("secao-convite-seta"),
+  $("secao-convite-corpo"),
+  "sabre:secao:grupo-convite",
+  "o convite",
+);
 let anuncioCopia: ReturnType<typeof setTimeout> | undefined; // reescreve "Convite copiado." 100 ms depois de copiar
 
 let tirando: PcDaTela | undefined;
@@ -59,7 +72,21 @@ function desenhar(pcs: PcDaTela[]): void {
       const nome = document.createElement("span");
       nome.id = `grupo-pc-${i}`;
       nome.textContent = pc.dono ? `${pc.nome} (dono do grupo)` : pc.nome;
-      li.append(nome);
+      // Peças de estado: papel e "Visto". O cartório (/pcs) não informa online nem última vez visto: "—" com a razão.
+      const estados = document.createElement("span");
+      estados.className = "estados-pc";
+      const papel = document.createElement("span");
+      papel.className = "estado-pc";
+      papel.textContent = pc.dono ? "Dono do grupo" : "Amigo";
+      if (pc.dono) papel.dataset["tom"] = "ligado";
+      const visto = document.createElement("span");
+      visto.className = "estado-pc";
+      visto.textContent = "Visto: —";
+      visto.title = "O cartório ainda não informa quando este PC esteve online.";
+      estados.append(papel, visto);
+      const bloco = document.createElement("span");
+      bloco.append(nome, estados);
+      li.append(bloco);
       // O PC do dono não pode ser tirado (o cartório recusa): nem oferece o botão.
       if (!pc.dono) {
         const botao = document.createElement("button");

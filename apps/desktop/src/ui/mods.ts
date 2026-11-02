@@ -1,4 +1,5 @@
 import type { ModDaTela, PonteSabre } from "./ponte.js";
+import { ligarSecao } from "./secao.js";
 
 declare global {
   interface Window {
@@ -30,6 +31,12 @@ const proximo = $<HTMLButtonElement>("mods-proximo");
 const enviar = $<HTMLButtonElement>("mods-adicionar-botao");
 const descartar = $<HTMLButtonElement>("mods-descartar");
 const avancado = $<HTMLDetailsElement>("mods-avancado");
+ligarSecao(
+  $<HTMLButtonElement>("secao-mods-lista-seta"),
+  $("secao-mods-lista-corpo"),
+  "sabre:secao:mods",
+  "a lista de mods",
+);
 const aviso = $("mods-aviso");
 const erro = $("mods-erro");
 const campos = {

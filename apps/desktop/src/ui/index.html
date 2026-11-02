@@ -241,75 +241,108 @@
             Só o dono do grupo vê os PCs e cria convites. Você pode ver a lista de mods.
           </p>
           <div id="grupo-area" hidden>
-            <section class="painel" aria-labelledby="titulo-pcs">
-              <h3 id="titulo-pcs">PCs do grupo</h3>
-              <ul class="lista-backups" id="grupo-lista"></ul>
-              <div
-                class="confirmacao"
-                id="grupo-confirmacao"
-                role="alertdialog"
-                aria-labelledby="grupo-pergunta"
-                hidden
-              >
-                <p id="grupo-pergunta"></p>
-                <p class="detalhe">
-                  O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
-                </p>
-                <div class="acoes">
-                  <button type="button" class="perigo" id="grupo-confirmar">Tirar do grupo</button>
-                  <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
+            <section class="painel secao" id="secao-pcs" aria-labelledby="titulo-pcs">
+              <header class="secao-cabecalho">
+                <h3 id="titulo-pcs">PCs do grupo</h3>
+                <button
+                  type="button"
+                  class="secao-seta"
+                  id="secao-pcs-seta"
+                  aria-expanded="true"
+                  aria-controls="secao-pcs-corpo"
+                  aria-label="Recolher a lista de PCs"
+                >
+                  <span aria-hidden="true">▾</span>
+                </button>
+              </header>
+              <div class="secao-corpo" id="secao-pcs-corpo">
+                <ul class="lista-backups" id="grupo-lista"></ul>
+                <div
+                  class="confirmacao"
+                  id="grupo-confirmacao"
+                  role="alertdialog"
+                  aria-labelledby="grupo-pergunta"
+                  hidden
+                >
+                  <p id="grupo-pergunta"></p>
+                  <p class="detalhe">
+                    O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
+                  </p>
+                  <div class="acoes">
+                    <button type="button" class="perigo" id="grupo-confirmar">
+                      Tirar do grupo
+                    </button>
+                    <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
+                  </div>
                 </div>
+                <p class="dica" id="grupo-visto-dica">
+                  “Visto” aparece quando o cartório informar quando cada PC esteve online.
+                </p>
+                <p class="detalhe" id="grupo-aviso" role="status"></p>
+                <p class="erro" id="grupo-erro" role="alert" hidden></p>
               </div>
-              <p class="detalhe" id="grupo-aviso" role="status"></p>
-              <p class="erro" id="grupo-erro" role="alert" hidden></p>
             </section>
             <section
-              class="painel campo-convite"
+              class="painel campo-convite secao"
               id="grupo-convite"
               aria-labelledby="titulo-convite"
             >
-              <h3 id="titulo-convite">Convidar um PC</h3>
-              <p class="dica">
-                Crie um convite e envie o texto a quem vai usar. Cada convite serve para um PC.
-              </p>
-              <label for="convite-nome">Nome do PC convidado</label>
-              <input
-                id="convite-nome"
-                type="text"
-                maxlength="40"
-                autocomplete="off"
-                spellcheck="false"
-              />
-              <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
-              <label for="convite-validade">Vale por</label>
-              <select id="convite-validade">
-                <option value="1" selected>1 hora</option>
-                <option value="24">1 dia</option>
-                <option value="72">3 dias</option>
-              </select>
-              <div class="acoes">
-                <button type="button" class="principal" id="convite-criar">Criar convite</button>
-              </div>
-              <div id="convite-resultado" hidden>
-                <label for="convite-texto">Texto do convite</label>
+              <header class="secao-cabecalho">
+                <h3 id="titulo-convite">Convidar um PC</h3>
+                <button
+                  type="button"
+                  class="secao-seta"
+                  id="secao-convite-seta"
+                  aria-expanded="true"
+                  aria-controls="secao-convite-corpo"
+                  aria-label="Recolher o convite"
+                >
+                  <span aria-hidden="true">▾</span>
+                </button>
+              </header>
+              <div class="secao-corpo" id="secao-convite-corpo">
+                <p class="dica">
+                  Crie um convite e envie o texto a quem vai usar. Cada convite serve para um PC.
+                </p>
+                <label for="convite-nome">Nome do PC convidado</label>
                 <input
-                  id="convite-texto"
+                  id="convite-nome"
                   type="text"
-                  readonly
+                  maxlength="40"
                   autocomplete="off"
                   spellcheck="false"
                 />
-                <p class="detalhe" id="convite-prazo"></p>
-                <p class="detalhe">
-                  Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se
-                  fechar esta tela, crie outro.
-                </p>
+                <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
+                <label for="convite-validade">Vale por</label>
+                <select id="convite-validade">
+                  <option value="1" selected>1 hora</option>
+                  <option value="24">1 dia</option>
+                  <option value="72">3 dias</option>
+                </select>
                 <div class="acoes">
-                  <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+                  <button type="button" class="principal" id="convite-criar">Criar convite</button>
                 </div>
-                <p class="detalhe" id="convite-copiado" role="status"></p>
+                <div id="convite-resultado" hidden>
+                  <label for="convite-texto">Texto do convite</label>
+                  <input
+                    id="convite-texto"
+                    type="text"
+                    readonly
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                  <p class="detalhe" id="convite-prazo"></p>
+                  <p class="detalhe">
+                    Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se
+                    fechar esta tela, crie outro.
+                  </p>
+                  <div class="acoes">
+                    <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+                  </div>
+                  <p class="detalhe" id="convite-copiado" role="status"></p>
+                </div>
+                <p class="erro" id="convite-erro" role="alert" hidden></p>
               </div>
-              <p class="erro" id="convite-erro" role="alert" hidden></p>
             </section>
           </div>
           <div class="acoes">
@@ -323,7 +356,24 @@
             Todos os PCs do grupo usam estes mods. Só o dono do grupo muda a lista.
           </p>
           <p class="dica" id="mods-atualizando" role="status" hidden>Atualizando mods…</p>
-          <ul class="lista-backups" id="mods-lista"></ul>
+          <section class="secao" id="secao-mods-lista" aria-labelledby="titulo-mods-lista">
+            <header class="secao-cabecalho">
+              <h3 id="titulo-mods-lista">Mods da lista</h3>
+              <button
+                type="button"
+                class="secao-seta"
+                id="secao-mods-lista-seta"
+                aria-expanded="true"
+                aria-controls="secao-mods-lista-corpo"
+                aria-label="Recolher a lista de mods"
+              >
+                <span aria-hidden="true">▾</span>
+              </button>
+            </header>
+            <div class="secao-corpo" id="secao-mods-lista-corpo">
+              <ul class="lista-backups" id="mods-lista"></ul>
+            </div>
+          </section>
           <div
             class="confirmacao"
             id="mods-confirmacao"
