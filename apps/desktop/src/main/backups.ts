@@ -19,6 +19,8 @@ export interface DepsBackups {
   fazerBackup(): Promise<void>;
   /** Último problema da cópia para o histórico longo (texto pronto para a tela). */
   avisoHistorico?(): string | undefined;
+  /** Configurações › Backups › Intervalo, em minutos (só para o resumo da tela). */
+  intervaloMin?(): number;
 }
 
 export interface EstadoBackups {
@@ -27,6 +29,7 @@ export interface EstadoBackups {
   bloqueado: boolean;
   /** O botão "Fazer backup agora" pode ligar (a recusa de verdade fica no `fazer`). */
   prontoParaBackup: boolean;
+  intervaloMin?: number;
   erro?: string;
   /** A cópia para a pasta do histórico longo falhou: a tela mostra, em pt-BR, que o backup deste PC está salvo. */
   avisoHistorico?: string;
@@ -46,7 +49,11 @@ export function criarBackups(deps: DepsBackups) {
     async estado(): Promise<EstadoBackups> {
       const bloqueado = deps.servidorRodando();
       const aviso = deps.avisoHistorico?.();
-      const comAviso = aviso === undefined ? {} : { avisoHistorico: aviso };
+      const intervalo = deps.intervaloMin?.();
+      const comAviso = {
+        ...(aviso === undefined ? {} : { avisoHistorico: aviso }),
+        ...(intervalo === undefined ? {} : { intervaloMin: intervalo }),
+      };
       try {
         return {
           itens: (await deps.listar()).map((b) => ({ ...b, dePc: ESTE_PC })),

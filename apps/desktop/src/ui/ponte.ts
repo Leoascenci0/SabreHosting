@@ -78,6 +78,8 @@ export interface EstadoBackups {
   bloqueado: boolean;
   /** Servidor pronto: o botão "Fazer backup agora" liga. */
   prontoParaBackup: boolean;
+  /** Configurações › Backups › Intervalo (minutos); ausente = a tela mostra "—". */
+  intervaloMin?: number;
   erro?: string;
   avisoHistorico?: string;
 }
