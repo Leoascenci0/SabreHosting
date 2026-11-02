@@ -60,6 +60,39 @@ export function areaDosCampos(modo: ModoDaArea, c: CamposDaArea): AreaLida {
   };
 }
 
+/** Tetos "sem perguntar" do núcleo (um teste confere que são os mesmos); a tela só os cita em texto. */
+export const TETO_CHUNKS = 1024;
+export const TETO_RAIO = 1000;
+/** Acima disso a grade vira aviso: centenas de botões travam a tela e ninguém clica em todos. */
+export const TETO_BOTOES_DA_GRADE = 300;
+
+/** Regiões do disco que o retângulo das marcadas cobre sem terem sido clicadas (também serão apagadas). */
+export function regioesCobertas<T extends { x: number; z: number }>(
+  marcadas: ReadonlyArray<{ x: number; z: number }>,
+  todas: ReadonlyArray<T>,
+): T[] {
+  if (marcadas.length === 0) return [];
+  const xs = marcadas.map((r) => r.x);
+  const zs = marcadas.map((r) => r.z);
+  const [x1, x2, z1, z2] = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)];
+  return todas.filter(
+    (r) =>
+      r.x >= x1 &&
+      r.x <= x2 &&
+      r.z >= z1 &&
+      r.z <= z2 &&
+      !marcadas.some((m) => m.x === r.x && m.z === r.z),
+  );
+}
+
+/** Por que "confirmar" está desligado (vazio quando está ligado). */
+export function dicaDaConfirmacao(digitado: string, nome: string): string {
+  if (nome === "")
+    return "Não consegui ler o nome do mundo, então não dá para confirmar. Feche e abra a aba Mundo.";
+  if (digitado.trim() === nome) return "";
+  return `O botão liga quando o texto ficar igual a “${nome}” (maiúsculas contam).`;
+}
+
 /** Regiões clicadas na grade → campos do retângulo (em blocos): o menor retângulo que contém todas. */
 export function camposDasRegioes(
   marcadas: ReadonlyArray<{ x: number; z: number }>,
@@ -122,6 +155,9 @@ export function textoDoPlano(
     linhas.push(
       `${p.regioesApagadasInteiras} ${p.regioesApagadasInteiras === 1 ? "região sai inteira" : "regiões saem inteiras"} (${tamanhoCurto(p.bytesLiberados)}).`,
     );
+  linhas.push(
+    `Atinge ${p.regioesTocadas} ${p.regioesTocadas === 1 ? "região" : "regiões"}${p.regioesTocadas === 1 ? "." : " (tudo o que o retângulo cobre, inclusive as que você não clicou)."}`,
+  );
   linhas.push("Um backup é feito antes.");
   return { titulo: `Vai apagar ${chunks(p.chunksExistentes)}.`, linhas, podeResetar: true };
 }
@@ -164,6 +200,10 @@ const SEM_TERMO = {
     "O mundo daqui e o do grupo divergiram: o grupo recebeu mudanças que este PC não tem. Nada é apagado: o backup “Antes de resetar” continua na lista de Backups. Para voltar a hospedar, descarte este aviso; este PC passa a seguir a versão mais nova do grupo e o reset feito aqui pode ser substituído por ela.",
 } as const;
 
+/** O aviso do núcleo já diz o que houve; aqui só o que fazer (sem repetir "a versão não foi enviada"). */
+const PENDENTE_O_QUE_FAZER =
+  "Para enviar agora: deixe o app aberto com internet e clique em Hospedar. Até lá, ninguém hospeda daqui e não dá para resetar de novo.";
+
 export const textoPendencia = (p: "aguardando" | "conflito"): string => SEM_TERMO[p];
 
 /** Resultado de um reset (ou de desfazer) em palavras; `aviso` vem do main, em texto fixo. */
@@ -179,7 +219,6 @@ export function textoDaPublicacao(
       : `Pronto neste PC: ${chunks(chunksApagados)} apagados.`;
   if (pub.estado === "publicada")
     return `${feito} A versão ${pub.versao} do mundo já foi enviada ao grupo. O backup de antes está na lista de Backups (“${backupDeAntes}”).`;
-  if (pub.estado === "pendente")
-    return `${feito} Falta enviar a versão ao grupo: ${pub.aviso} ${SEM_TERMO.aguardando}`;
+  if (pub.estado === "pendente") return `${feito} ${pub.aviso} ${PENDENTE_O_QUE_FAZER}`;
   return `${feito} ${SEM_TERMO.conflito}`;
 }

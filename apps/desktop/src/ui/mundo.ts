@@ -10,6 +10,12 @@ import {
   areaDosCampos,
   camposDasRegioes,
   confirmaNome,
+  DICA_SERVIDOR_LIGADO,
+  TETO_BOTOES_DA_GRADE,
+  TETO_CHUNKS,
+  TETO_RAIO,
+  dicaDaConfirmacao,
+  regioesCobertas,
   situacaoDaTela,
   tamanhoCurto,
   textoDaPublicacao,
@@ -41,6 +47,9 @@ const area = $("mundo-area");
 const pendencia = $("mundo-pendencia");
 const pendenciaTexto = $("mundo-pendencia-texto");
 const descartar = $<HTMLButtonElement>("mundo-descartar");
+const descartarDica = $("mundo-descartar-dica");
+const gradeAviso = $("mundo-grade-aviso");
+const confirmarDica = $("mundo-confirmar-dica");
 const dimensao = $<HTMLSelectElement>("mundo-dimensao");
 const camposRetangulo = $("mundo-campos-retangulo");
 const camposRaio = $("mundo-campos-raio");
@@ -121,7 +130,9 @@ function atualizar(): void {
     pendenciaTexto.textContent = textoPendencia(pend);
   // Descartar só existe no conflito; com o servidor ligado fica desligado (o main também recusa).
   descartar.hidden = pend !== "conflito";
-  descartar.disabled = emCurso || (estado?.dono === true && estado.servidorLigado);
+  const servidorLigado = estado?.dono === true && estado.servidorLigado;
+  descartar.disabled = emCurso || servidorLigado;
+  descartarDica.textContent = servidorLigado ? DICA_SERVIDOR_LIGADO : "";
   const demo = sit.demonstracao === true;
   // Em demonstração os botões ligam de propósito: o clique mostra a recusa do main (que nunca escreve).
   resetar.disabled = emCurso || (!demo && (motivo !== undefined || !previa?.podeResetar));
@@ -145,13 +156,18 @@ function atualizar(): void {
   for (const k of CAMPOS) campo(`mundo-${k}`).disabled = emCurso;
   for (const b of grade.querySelectorAll("button")) b.disabled = emCurso;
   confirmar.disabled = emCurso || !confirmaNome(nomeDigitado.value, nome());
+  confirmarDica.textContent = dicaDaConfirmacao(nomeDigitado.value, nome());
   cancelar.disabled = emCurso;
   tela.setAttribute("aria-busy", String(emCurso));
   progresso.hidden = !emCurso;
 }
 
 function desenharGrade(): void {
-  const lista = regioes;
+  const todas = regioes;
+  const lista = todas.slice(0, TETO_BOTOES_DA_GRADE);
+  const cobertas = new Set(
+    regioesCobertas([...marcadas.values()], todas).map((r) => `${r.x},${r.z}`),
+  );
   const xs = lista.map((r) => r.x);
   const zs = lista.map((r) => r.z);
   const largura = lista.length ? Math.max(...xs) - Math.min(...xs) + 1 : 0;
@@ -166,34 +182,50 @@ function desenharGrade(): void {
       b.type = "button";
       b.className = "regiao";
       const chave = `${r.x},${r.z}`;
-      b.setAttribute("aria-pressed", String(marcadas.has(chave)));
+      const coberta = cobertas.has(chave);
+      b.setAttribute("aria-pressed", String(marcadas.has(chave) || coberta));
+      b.classList.toggle("coberta", coberta);
       b.setAttribute(
         "aria-label",
-        `Região ${r.x}, ${r.z}, com ${r.chunks.toLocaleString("pt-BR")} ${r.chunks === 1 ? "chunk" : "chunks"}`,
+        `Região ${r.x}, ${r.z}, com ${r.chunks.toLocaleString("pt-BR")} ${r.chunks === 1 ? "chunk" : "chunks"}${coberta ? "; será apagada junto, está no meio das que você marcou" : ""}`,
       );
       b.textContent = `${r.x}, ${r.z}`;
       if (espacial) {
         b.style.gridColumn = String(r.x - Math.min(...xs) + 1);
         b.style.gridRow = String(r.z - Math.min(...zs) + 1);
       }
-      b.addEventListener("click", () => marcar(r, b));
+      b.addEventListener("click", () => {
+        marcar(r);
+        // A grade foi redesenhada: o foco volta ao mesmo quadrado (teclado não se perde).
+        for (const n of grade.querySelectorAll("button"))
+          if (n.textContent === `${r.x}, ${r.z}`) n.focus();
+      });
       return b;
     }),
   );
   gradeInfo.hidden = false;
   gradeInfo.textContent =
-    lista.length === 0
+    todas.length === 0
       ? "Ainda não há regiões salvas nesta dimensão."
-      : `${lista.length} ${lista.length === 1 ? "região salva" : "regiões salvas"}${
+      : `${todas.length} ${todas.length === 1 ? "região salva" : "regiões salvas"}${
           tamanhoMundo === undefined ? "" : `; o mundo todo tem ${tamanhoCurto(tamanhoMundo)}`
-        }.`;
+        }.${
+          todas.length > lista.length
+            ? ` Só as ${lista.length} primeiras aparecem aqui; para as outras, digite a área nos campos acima.`
+            : ""
+        }`;
+  gradeAviso.hidden = cobertas.size === 0;
+  gradeAviso.textContent =
+    cobertas.size === 0
+      ? ""
+      : `Atenção: ${cobertas.size} ${cobertas.size === 1 ? "região que você não marcou também será apagada" : "regiões que você não marcou também serão apagadas"} (contorno tracejado), porque ficam dentro do retângulo das marcadas.`;
 }
 
-function marcar(r: RegiaoDaTela, botao: HTMLElement): void {
+function marcar(r: RegiaoDaTela): void {
   const chave = `${r.x},${r.z}`;
   if (marcadas.has(chave)) marcadas.delete(chave);
   else marcadas.set(chave, r);
-  botao.setAttribute("aria-pressed", String(marcadas.has(chave)));
+  desenharGrade();
   if (marcadas.size > 0) {
     const c = camposDasRegioes([...marcadas.values()]);
     $<HTMLInputElement>("mundo-modo-retangulo").checked = true;
@@ -298,7 +330,7 @@ async function pedirPrevia(confirmouGrande: boolean): Promise<void> {
     } else if (r.chunksNaArea !== undefined && !confirmouGrande) {
       // Área acima do teto sem confirmar (1.024 chunks / raio de 1.000 blocos): pergunta, mostrando o número.
       pedindoGrande = { dimensao: dim, area: lida.area };
-      grandeTexto.textContent = `Essa área é grande: cobre ${r.chunksNaArea.toLocaleString("pt-BR")} chunks (sem perguntar, vale até 1.024 chunks ou raio de 1.000 blocos). Quer ver a prévia mesmo assim?`;
+      grandeTexto.textContent = `Essa área é grande: cobre ${r.chunksNaArea.toLocaleString("pt-BR")} chunks (sem perguntar, vale até ${TETO_CHUNKS.toLocaleString("pt-BR")} chunks ou raio de ${TETO_RAIO.toLocaleString("pt-BR")} blocos). Quer ver a prévia mesmo assim?`;
       grande.hidden = false;
       grandeSim.focus();
     } else mostrarErro(r.mensagem);
@@ -312,6 +344,12 @@ grandeSim.addEventListener("click", () => {
   const pedido = pedindoGrande;
   if (!pedido || emCurso) return;
   void pedirPrevia(true);
+});
+grande.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !emCurso) {
+    e.preventDefault();
+    grandeNao.click();
+  }
 });
 grandeNao.addEventListener("click", () => {
   grande.hidden = true;
@@ -422,6 +460,7 @@ confirmar.addEventListener("click", () => {
   const tipo = confirmando;
   if (!tipo || emCurso || !confirmaNome(nomeDigitado.value, nome())) return;
   fecharConfirmacao(false);
+  titulo.focus(); // o bloco sumiu: o foco não pode ficar no vazio (o desfazer-forte o pega de volta ao reabrir)
   if (tipo === "resetar") void fazerReset();
   else if (tipo === "descartar") void fazerDescartar();
   else void fazerDesfazer(tipo === "desfazer-forte");
@@ -459,7 +498,7 @@ async function fazerDesfazer(forte: boolean): Promise<void> {
         "desfazer-forte",
         `Desfazer o último reset do mundo “${nome()}”?`,
         "Desfazer mesmo assim",
-        "Atenção: o mundo foi jogado depois desse reset. Desfazer faz o que foi jogado desde então sumir do mundo (fica guardado num backup “Antes de restaurar”).",
+        `Atenção: o mundo foi jogado depois desse reset. Desfazer faz o que foi jogado desde então sumir do mundo (fica guardado num backup “Antes de restaurar”). O mundo volta ao backup de ${dataEmPalavras(ultimoReset() ?? "") ?? "data desconhecida"}.`,
         desfazer,
       );
       return;
@@ -491,7 +530,7 @@ async function fazerDescartar(): Promise<void> {
 for (const k of CAMPOS)
   campo(`mundo-${k}`).addEventListener("input", () => {
     marcadas.clear();
-    for (const b of grade.querySelectorAll("button")) b.setAttribute("aria-pressed", "false");
+    desenharGrade();
     areaMudou();
   });
 for (const id of ["mundo-modo-retangulo", "mundo-modo-raio"])
@@ -532,3 +571,5 @@ window.sabre.inicio.aoProgresso(() => {
   if (!tela.hidden && !emCurso) void carregar();
 });
 trocarModo();
+$("mundo-teto-dica").textContent +=
+  ` Sem aviso, vale até ${TETO_CHUNKS.toLocaleString("pt-BR")} chunks ou raio de ${TETO_RAIO.toLocaleString("pt-BR")} blocos.`;
