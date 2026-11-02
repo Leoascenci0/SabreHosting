@@ -69,32 +69,71 @@ export function depsBackups(o: OpcoesDepsBackups): DepsBackups {
           "O servidor deste PC ainda está no ar. Pare o servidor (e feche o Java, se sobrou) antes de restaurar.",
         );
       }
-      const renovador = new Renovador({ cliente: o.cliente, aoPerder: () => undefined });
-      // Só solta a vez que ESTA restauração pegou: se o `pegar` falhar, nada foi pego e nada é solto.
-      await renovador.pegar().catch((erro: unknown) => {
-        throw new Error(
-          "Não consegui pegar a vez de hospedar para restaurar. Confira a conexão com o grupo ou espere o outro PC terminar.",
-          { cause: erro },
-        );
-      });
-      try {
-        const { epoca } = await o.cliente.estadoTrava();
-        await restaurarBackup({
-          pacote: alvo.caminho,
-          sha256: await hashDoArquivo(alvo.caminho),
-          pastaDoMundo,
-          pastaBackups,
-          ...(o.pastaDoServidor ? { pastaDoServidor: o.pastaDoServidor } : {}),
-          temTrava: () => renovador.temTrava(),
-          servidorParado: () => !o.servidorRodando(),
-          versao: Math.max(0, ...lista.map((b) => b.versao)),
-          epoca,
-        });
-      } finally {
-        await renovador.soltar().catch(() => undefined);
-      }
+      await comVez(o, (vez) => restaurarNaVez(o, alvo.nome, vez));
     },
   };
+}
+
+/** A vez de hospedar já pega por este PC: época e conferência (o núcleo recusa trocar o mundo sem ela). */
+export interface VezDeHospedar {
+  epoca: number;
+  temTrava: () => Promise<boolean>;
+  renovarAgora: () => Promise<boolean>;
+}
+
+/** Não deu para pegar a vez (cartório fora ou outro PC hospedando). */
+export class SemVez extends Error {}
+
+/**
+ * Pega a vez (e a renova enquanto `fn` roda) e solta sempre. Só solta a vez que ESTA operação pegou: se o `pegar`
+ * falhar, nada foi pego e nada é solto.
+ */
+export async function comVez<T>(
+  o: Pick<OpcoesDepsBackups, "cliente">,
+  fn: (vez: VezDeHospedar) => Promise<T>,
+): Promise<T> {
+  const renovador = new Renovador({ cliente: o.cliente, aoPerder: () => undefined });
+  await renovador.pegar().catch((erro: unknown) => {
+    throw new SemVez(
+      "Não consegui pegar a vez de hospedar para restaurar. Confira a conexão com o grupo ou espere o outro PC terminar.",
+      { cause: erro },
+    );
+  });
+  try {
+    const { epoca } = await o.cliente.estadoTrava();
+    return await fn({
+      epoca,
+      temTrava: () => renovador.temTrava(),
+      renovarAgora: () => renovador.renovarAgora(),
+    });
+  } finally {
+    await renovador.soltar().catch(() => undefined);
+  }
+}
+
+/** Restaura o backup `nome` com a vez já pega (o resto das conferências é do `restaurarBackup`). */
+export async function restaurarNaVez(
+  o: OpcoesDepsBackups,
+  nome: string,
+  vez: VezDeHospedar,
+): Promise<void> {
+  const { pastaBackups } = o;
+  const pastaDoMundo = (await o.mundoAgora?.()) ?? o.pastaDoMundo;
+  if (!pastaBackups || !pastaDoMundo) throw new Error(SEM_PASTA);
+  const lista = await listarBackups(pastaBackups);
+  const alvo = lista.find((b) => b.nome === nome);
+  if (!alvo) throw new Error("Esse backup não está mais na lista.");
+  await restaurarBackup({
+    pacote: alvo.caminho,
+    sha256: await hashDoArquivo(alvo.caminho),
+    pastaDoMundo,
+    pastaBackups,
+    ...(o.pastaDoServidor ? { pastaDoServidor: o.pastaDoServidor } : {}),
+    temTrava: vez.temTrava,
+    servidorParado: () => !o.servidorRodando(),
+    versao: Math.max(0, ...lista.map((b) => b.versao)),
+    epoca: vez.epoca,
+  });
 }
 
 /**
