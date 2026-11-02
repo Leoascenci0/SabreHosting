@@ -64,3 +64,4 @@
 - **Onda 42 · appui-1.5** #286 (main decbf47), ensaio run 41360854583 (122.572.843 B). Decisão do Eliel (balão): fazer o backup manual + origem → backlog (appuimel), onda depois da 42.
 - **Onda 42 FECHADA:** ✅ appui-1.5 #286 · 1.6 #288 · 1.7 #291 · controle #292 (main 51f0f24). qa + vistoria + comum APROVADOS. Ensaios: 41360854583, 41362329976, 41365051546 (122.575.142 B). S-19/S-20 promovidas ao CLAUDE.md.
 - Onda 43: appuimel (backup manual + origem). Sessão preenchida abaixo.
+- Onda 43: appuimel. Sessão: session_012qrjnuvdhTA97r4zP9QzqN (base efc71b7, aberta 00:07 UTC de 02/11). Watchdog 60 min.
