@@ -30,9 +30,21 @@ Tempo: uns 15 minutos.
 ## 3. O que conferir (anote o que der diferente)
 
 1. O app abre sozinho e mostra a tela de **boas-vindas**, pedindo o convite do grupo.
-   - **Novo:** clique em **Explorar sem grupo**. Abre o app inteiro (Início com os 4 botões, Backups, Configurações)
-     com dados de mentira e uma faixa **Modo demonstração** no alto. Tente **Hospedar**, **Backup** ou **Importar**:
-     deve aparecer "Isso é só uma demonstração" e nada muda. **Sair da demonstração** volta ao convite.
+   - **Novo:** clique em **Explorar sem grupo**. Abre o app inteiro, com dados de mentira e uma faixa
+     **Modo demonstração** no alto. Confira:
+     - **Barra lateral** à esquerda com Início, Backups, Grupo e Configurações; a tela atual fica destacada.
+       Setas do teclado trocam de item.
+     - **Início** é um painel: estado do servidor (grande, com cor), endereço com **Copiar**, quem está jogando,
+       último backup e um botão principal. Tente **Hospedar** ou **Importar mundo**: deve aparecer "Isso é só uma
+       demonstração" e nada muda.
+     - **Backups** lista os backups com data em palavras; **Restaurar** pede confirmação.
+     - **Grupo** mostra os PCs e o convite; **Configurações** tem abas Geral, Servidor e Backups, com barra de
+       salvar no rodapé.
+     - Troque o tamanho da janela (bem estreita e bem larga) e o tema do Windows (claro e escuro): nada pode
+       ficar cortado ou ilegível. **Sair da demonstração** volta ao convite.
+     - No convite, apertar **Enter** no campo confere o convite, como o botão.
+     Capturas de referência: ![Início](../imagens/appui-1.7/inicio-claro.png)
+     ![Configurações](../imagens/appui-1.7/configuracoes-claro.png)
 2. Aparece o ícone do SabreHosting perto do relógio (bandeja do Windows).
 3. Fechar a janela no **X** deixa o ícone na bandeja; **Sair** pelo menu do ícone fecha de vez.
 4. Abrir de novo pelo atalho do menu Iniciar funciona.

@@ -80,6 +80,10 @@ describe("tela de configurações", () => {
     await p.locator("#cfg-simulacao").fill("6");
     await p.locator("#config-salvar").click();
     await esperarTexto(p, "#config-aviso", "Salvo.");
+    // appui-1.7: voltou a editar, o "Salvo." some.
+    await p.locator("#cfg-simulacao").fill("7");
+    await expect(p.locator("#config-aviso").innerText()).resolves.toBe("");
+    await p.locator("#cfg-simulacao").fill("6");
     const salvo = JSON.parse(readFileSync(arquivo(), "utf8")) as Record<string, number>;
     expect(salvo).toMatchObject({ distanciaVisao: 12, distanciaSimulacao: 6 });
     const texto = gerarPropriedades({

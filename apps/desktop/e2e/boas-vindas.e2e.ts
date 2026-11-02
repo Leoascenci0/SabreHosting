@@ -81,6 +81,13 @@ describe("assistente de primeira vez", () => {
     await registrarCaptura(pagina, join(CAPTURAS, "boas-vindas-1-convite.png"));
   });
 
+  it("Enter no campo do convite confere, como o botão (appui-1.7)", async () => {
+    const pagina = await abrir();
+    await pagina.locator("#bv-texto").fill(convite());
+    await pagina.locator("#bv-texto").press("Enter");
+    await expect(pagina.locator("#bv-entrar-caixa").isVisible()).resolves.toBe(true);
+  });
+
   it("depois de conferir, a tela só pergunta se entra; 'Usar outro convite' volta ao campo", async () => {
     const pagina = await abrir();
     await conferir(pagina, convite());

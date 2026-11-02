@@ -118,8 +118,12 @@ function atualizarBarra(): void {
   salvar.disabled = emCurso || !mudou;
   descartar.disabled = emCurso || !mudou;
 }
-form.addEventListener("input", atualizarBarra);
-form.addEventListener("change", atualizarBarra);
+function editou(): void {
+  if (aviso.textContent === "Salvo.") aviso.textContent = ""; // voltou a editar: o "Salvo." já não vale
+  atualizarBarra();
+}
+form.addEventListener("input", editou);
+form.addEventListener("change", editou);
 
 for (const b of botoesPadrao) {
   b.addEventListener("click", () => {

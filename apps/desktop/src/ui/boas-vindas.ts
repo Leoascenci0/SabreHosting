@@ -20,7 +20,7 @@ const passoTexto = $("bv-passo");
 const bolinhas = $("bv-bolinhas");
 const titulo = $("titulo-bv");
 const convite = $("bv-convite");
-const formConvite = $("bv-convite-form");
+const formConvite = $<HTMLFormElement>("bv-convite-form");
 const outro = $<HTMLButtonElement>("bv-outro");
 const texto = $<HTMLInputElement>("bv-texto");
 const conferir = $<HTMLButtonElement>("bv-conferir");
@@ -133,7 +133,8 @@ function mostrarContrato(q: { texto: string; link: string }): void {
   eulaTexto.textContent = q.texto;
 }
 
-conferir.addEventListener("click", () => {
+formConvite.addEventListener("submit", (evento) => {
+  evento.preventDefault(); // Enter no campo confere, como o botão
   rodar("Conferindo o convite…", async () => {
     mostrarConferido(false);
     rotularEntrar(false);
