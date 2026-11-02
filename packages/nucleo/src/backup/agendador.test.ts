@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo } from "../../test/ajuda/mundos.js";
 import type { ServidorMinecraft } from "../servidor/processo.js";
 import { agendarBackups, fazerBackup } from "./agendador.js";
+import { listarBackups } from "./listar.js";
 import { rename } from "node:fs/promises";
 import * as pacote from "./pacote.js";
 
@@ -319,6 +320,61 @@ describe("agendarBackups", () => {
       expect(eventos.at(-1)).toBe("enviar:save-on");
       await ag.parar(); // idempotente
       expect(r.limpou).toBe(1);
+    },
+    PRAZO,
+  );
+});
+
+describe("backup manual (appuimel-1.1)", () => {
+  it(
+    "fazerAgora usa o MESMO fluxo (save-off, flush, save-on, uma vez) e grava origem 'manual'",
+    async () => {
+      const o = base(servidorFalso());
+      const agenda = agendarBackups({ ...o, relogio: relogioFalso() });
+      const feito = await agenda.fazerAgora();
+      expect(eventos.filter((e) => e.startsWith("enviar:"))).toEqual([
+        "enviar:save-off",
+        "enviar:save-all flush",
+        "enviar:save-on",
+      ]);
+      expect((await listarBackups(o.pastaBackups)).map((b) => b.origem)).toEqual(["manual"]);
+      expect(feito.caminho).toContain(o.pastaBackups);
+      await agenda.parar();
+    },
+    PRAZO,
+  );
+
+  it(
+    "o backup do relógio grava 'automatico'",
+    async () => {
+      const o = base(servidorFalso());
+      const relogio = relogioFalso();
+      const concluiu = new Promise<void>((ok) => {
+        agendarBackups({ ...o, relogio, aoConcluir: () => ok() });
+      });
+      relogio.disparar();
+      await concluiu;
+      expect((await listarBackups(o.pastaBackups)).map((b) => b.origem)).toEqual(["automatico"]);
+    },
+    PRAZO,
+  );
+
+  it(
+    "recusa com backup em curso (um por vez), servidor fora de 'pronto' e agenda parada; nada de save-off a mais",
+    async () => {
+      const s = servidorFalso();
+      const o = base(s);
+      const agenda = agendarBackups({ ...o, relogio: relogioFalso() });
+      const primeiro = agenda.fazerAgora();
+      await expect(agenda.fazerAgora()).rejects.toThrow(/andamento/);
+      await primeiro;
+      expect(eventos.filter((e) => e === "enviar:save-off")).toHaveLength(1);
+      s.estado = "iniciando";
+      await expect(agenda.fazerAgora()).rejects.toThrow(/pronto/);
+      s.estado = "pronto";
+      await agenda.parar();
+      await expect(agenda.fazerAgora()).rejects.toThrow(/parou/);
+      expect(eventos.filter((e) => e === "enviar:save-off")).toHaveLength(1);
     },
     PRAZO,
   );

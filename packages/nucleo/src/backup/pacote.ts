@@ -14,7 +14,13 @@ import { dirname, join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { Parser, type ReadEntry } from "tar";
 import { hashComTamanho } from "../integridade/hash.js";
-import { MUDOU, gerarManifesto, validarManifesto, type Manifesto } from "./manifesto.js";
+import {
+  MUDOU,
+  gerarManifesto,
+  validarManifesto,
+  type Manifesto,
+  type OrigemBackup,
+} from "./manifesto.js";
 
 export interface PacoteCriado {
   caminho: string;
@@ -102,6 +108,8 @@ export async function criarPacote(
   opcoes: {
     versao: number;
     epoca: number;
+    /** Padrão `automatico`. */
+    origem?: OrigemBackup;
     confirmar?: () => boolean;
     sinal?: AbortSignal;
   },

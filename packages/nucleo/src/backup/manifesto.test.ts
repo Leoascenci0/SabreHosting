@@ -12,7 +12,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { gerarMundo, hashesDoMundo, mudarRegioes } from "../../test/ajuda/mundos.js";
-import { compararManifestos, gerarManifesto, validarManifesto } from "./manifesto.js";
+import {
+  compararManifestos,
+  gerarManifesto,
+  origemDoManifesto,
+  validarManifesto,
+} from "./manifesto.js";
 
 const pastas: string[] = [];
 const leituras: Array<{ pedaco: number; abertos: number }> = [];
@@ -319,3 +324,31 @@ describe("validarManifesto", () => {
     expect(Object.keys(m.arquivos[0] as object).sort()).toEqual(["caminho", "sha256", "tamanho"]);
   });
 });
+
+describe("origem do backup (appuimel-1.1)", () => {
+  const base = { formato: 1, versao: 1, epoca: 1, criadoEm: "2026-10-30T12:00:00.000Z", arquivos: [] };
+
+  it("gerar grava a origem pedida e, sem pedir, grava 'automatico'", async () => {
+    const pasta = mundo();
+    expect((await gerarManifesto(pasta, { ...opcoes, origem: "manual" })).origem).toBe("manual");
+    expect((await gerarManifesto(pasta, opcoes)).origem).toBe("automatico");
+  });
+
+  it("a origem sobrevive a validarManifesto (ida e volta pelo JSON)", async () => {
+    for (const o of ["automatico", "manual", "antes-de-restaurar"] as const) {
+      const m = await gerarManifesto(mundo(), { ...opcoes, origem: o });
+      expect(validarManifesto(JSON.parse(JSON.stringify(m))).origem).toBe(o);
+    }
+  });
+
+  it("ausente ou torta vira 'automatico' ao ler, sem inventar campo (o JSON antigo não muda)", () => {
+    expect(origemDoManifesto(validarManifesto(base))).toBe("automatico");
+    expect("origem" in validarManifesto(base)).toBe(false);
+    for (const torta of ["root", 7, null, {}, "MANUAL"]) {
+      const m = validarManifesto({ ...base, origem: torta });
+      expect(origemDoManifesto(m)).toBe("automatico");
+      expect("origem" in m).toBe(false);
+    }
+  });
+});
+

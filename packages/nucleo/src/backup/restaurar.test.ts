@@ -20,6 +20,7 @@ import * as pacoteMod from "./pacote.js";
 import { abrirPacote, criarPacote } from "./pacote.js";
 import { podeSubir } from "../servidor/configurar.js";
 import { restaurarBackup } from "./restaurar.js";
+import { listarBackups } from "./listar.js";
 
 // Passa direto para o real; um teste corrompe o backup do atual logo depois de gravado.
 vi.mock("./pacote.js", async (original) => {
@@ -65,6 +66,18 @@ function sobras(base: string): string[] {
 }
 
 describe("restaurarBackup", () => {
+  it(
+    "o backup do estado atual sai com origem 'antes-de-restaurar' (appuimel-1.1)",
+    async () => {
+      const { o } = await cenario();
+      await restaurarBackup(o);
+      expect((await listarBackups(o.pastaBackups)).map((b) => b.origem)).toEqual([
+        "antes-de-restaurar",
+      ]);
+    },
+    PRAZO,
+  );
+
   it(
     "troca o mundo pelo backup, guarda o estado atual e apaga o .antigo",
     async () => {

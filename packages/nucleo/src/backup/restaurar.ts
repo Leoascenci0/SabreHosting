@@ -98,7 +98,11 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
   // O mundo está parado, então o pacote é consistente. Falhou: o mundo nem foi tocado.
   let backupDoAtual: PacoteCriado | undefined;
   if (haMundoAtual) {
-    backupDoAtual = await criarPacote(mundo, destinoBackup, { versao: o.versao, epoca: o.epoca });
+    backupDoAtual = await criarPacote(mundo, destinoBackup, {
+      versao: o.versao,
+      epoca: o.epoca,
+      origem: "antes-de-restaurar",
+    });
     try {
       // Reabre o que acabou de gravar: backup que não abre não protege nada.
       await abrirPacote(backupDoAtual.caminho, backupDoAtual.sha256, conferindo);

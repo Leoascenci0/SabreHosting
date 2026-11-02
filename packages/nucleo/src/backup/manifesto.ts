@@ -15,17 +15,30 @@ export interface ArquivoDoManifesto {
   sha256: string;
 }
 
+/** De onde veio o backup: relógio do app, botão "Fazer backup agora" ou cópia de segurança feita antes de restaurar. */
+export type OrigemBackup = "automatico" | "manual" | "antes-de-restaurar";
+const ORIGENS: readonly OrigemBackup[] = ["automatico", "manual", "antes-de-restaurar"];
+
 export interface Manifesto {
   formato: 1;
   versao: number;
   epoca: number;
   criadoEm: string;
+  /** Ausente em backup antigo (vale `automatico`, sem migração: o pacote já gravado nunca é reescrito). */
+  origem?: OrigemBackup;
   arquivos: ArquivoDoManifesto[];
+}
+
+/** A origem de um manifesto lido: ausente ou desconhecida vale `automatico`. */
+export function origemDoManifesto(m: Pick<Manifesto, "origem">): OrigemBackup {
+  return m.origem ?? "automatico";
 }
 
 export interface OpcoesManifesto {
   versao: number;
   epoca: number;
+  /** Padrão `automatico`. */
+  origem?: OrigemBackup;
   agora?: Date;
   /** Recebe os avisos (ex.: link simbólico ignorado). */
   aviso?: (texto: string) => void;
@@ -90,7 +103,7 @@ async function lerArquivo(caminho: string, completo: string): Promise<ArquivoDoM
 
 export async function gerarManifesto(
   pastaDoMundo: string,
-  { versao, epoca, agora = new Date(), aviso = () => undefined }: OpcoesManifesto,
+  { versao, epoca, origem = "automatico", agora = new Date(), aviso = () => undefined }: OpcoesManifesto,
 ): Promise<Manifesto> {
   const arquivos: ArquivoDoManifesto[] = [];
   for await (const caminho of percorrer(pastaDoMundo, "", aviso)) {
@@ -103,7 +116,14 @@ export async function gerarManifesto(
     arquivos.push(await lerArquivo(caminho, completo));
   }
   arquivos.sort((a, b) => (a.caminho < b.caminho ? -1 : a.caminho > b.caminho ? 1 : 0));
-  return validarManifesto({ formato: 1, versao, epoca, criadoEm: agora.toISOString(), arquivos });
+  return validarManifesto({
+    formato: 1,
+    versao,
+    epoca,
+    criadoEm: agora.toISOString(),
+    origem,
+    arquivos,
+  });
 }
 
 /** Caminho que qualquer PC (Windows incluso) consegue extrair sem escapar da pasta do mundo. */
@@ -193,11 +213,14 @@ export function validarManifesto(bruto: unknown): Manifesto {
     }
     arquivos.push({ caminho: a.caminho, tamanho: a.tamanho as number, sha256: a.sha256 });
   }
+  // Origem de fora (disco, rede) é entrada não confiável: só os 3 valores conhecidos passam; o resto é descartado.
+  const origem = ORIGENS.find((o) => o === m.origem);
   return {
     formato: 1,
     versao: m.versao as number,
     epoca: m.epoca as number,
     criadoEm: m.criadoEm as string,
+    ...(origem === undefined ? {} : { origem }),
     arquivos,
   };
 }
