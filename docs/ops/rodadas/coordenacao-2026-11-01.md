@@ -64,3 +64,10 @@
 - **Onda 42 · appui-1.5** #286 (main decbf47), ensaio run 41360854583 (122.572.843 B). Decisão do Eliel (balão): fazer o backup manual + origem → backlog (appuimel), onda depois da 42.
 - **Onda 42 FECHADA:** ✅ appui-1.5 #286 · 1.6 #288 · 1.7 #291 · controle #292 (main 51f0f24). qa + vistoria + comum APROVADOS. Ensaios: 41360854583, 41362329976, 41365051546 (122.575.142 B). S-19/S-20 promovidas ao CLAUDE.md.
 - Onda 43: appuimel (backup manual + origem). Sessão preenchida abaixo.
+
+## 6º bastão — dia (02/11, 20:30 Brasília)
+
+- Coordenadora: sessão do ramo `claude/charming-lovelace-nklrk2`. Turno: dia. Encontrou Ondas 43–47 fechadas por outra coordenadora (session_012qrjnuvdhTA97r4zP9QzqN) sem registro neste arquivo; `MILESTONE` e `bom-dia` atrasados.
+- **Ondas 44–47:** ✅ appuimel-2.1 a 2.7 (#296–#303, controles #300/#304) · chunk-1.1 a 1.7 (#305–#309, #311, #312, controle #310/#313). Main `ee5bf8c`. Fila sem P vazia.
+- Pendente: PRs antigos #208 (controle app-3.1, já superado) e #222 (roadmap `bibl`, nunca mergeado) abertos desde 31/10.
+- Erro de processo (ficha): coordenadora anterior não gravou 44–47 no estado nem no MILESTONE; a próxima confere `git log --merges` contra o estado ao retomar.
