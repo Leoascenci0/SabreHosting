@@ -596,6 +596,22 @@ describe("dados do painel na ponte (appuimel-2.3)", () => {
     expect(await inicio.estado()).toEqual({ tipo: "ninguem", tamanhoMundoBytes: 10 });
   });
 
+  it("tamanho do mundo: pedidos simultâneos dividem uma única leitura em andamento", async () => {
+    let chamadas = 0;
+    let liberar: (n: number) => void = () => undefined;
+    const leitura = vi.fn(() => {
+      chamadas++;
+      return new Promise<number>((r) => (liberar = r));
+    });
+    const inicio = criarInicio(deps({ tamanhoMundo: leitura }), { tamanhoTtlMs: 40 });
+    const [a, b] = [inicio.estado(), inicio.estado()];
+    await vi.waitFor(() => expect(chamadas).toBe(1));
+    liberar(77);
+    expect(await a).toMatchObject({ tamanhoMundoBytes: 77 });
+    expect(await b).toMatchObject({ tamanhoMundoBytes: 77 });
+    expect(chamadas).toBe(1);
+  });
+
   it("tamanho do mundo: leitura barata, guardada por um tempo (o estado é pedido a cada evento)", async () => {
     const leitura = vi.fn(async () => 99);
     const inicio = criarInicio(deps({ tamanhoMundo: leitura }), { tamanhoTtlMs: 40 });

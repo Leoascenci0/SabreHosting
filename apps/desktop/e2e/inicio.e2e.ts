@@ -249,6 +249,20 @@ describe("painel de controle do Início (appui-1.2)", () => {
     await capturar(p, "painel-ligado");
   });
 
+  it("com o Início aberto, a lista de quem joga se atualiza sozinha a cada 15 s (nem antes)", async () => {
+    const p = await abrir("eu");
+    await p.clock.install();
+    await p.reload();
+    await p.locator('#cartao[data-estado="eu"]').waitFor();
+    await expect(texto(p, "jogadores-valor")).resolves.toBe("Ana, Lucas");
+    // Lucas sai: a mudança acontece no servidor, a tela só fica sabendo no próximo refresco.
+    await viva().evaluate(() => void (process.env["SABRE_E2E_JOGADORES"] = "Ana"));
+    await p.clock.runFor(13_000);
+    await expect(texto(p, "jogadores-valor")).resolves.toBe("Ana, Lucas"); // antes dos 15 s: nada muda
+    await p.clock.runFor(7_000); // 20 s no total: o refresco é de 15 s e a tela só o arma depois de carregar
+    await expect.poll(() => texto(p, "jogadores-valor"), { timeout: 15_000 }).toBe("Ana");
+  });
+
   it("ligado sem ninguém: diz 'Ninguém por enquanto'", async () => {
     const p = await abrir("eu", { SABRE_E2E_JOGADORES: "" });
     await expect(texto(p, "jogadores-valor")).resolves.toBe("Ninguém por enquanto");

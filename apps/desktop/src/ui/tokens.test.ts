@@ -134,6 +134,27 @@ describe("tokens", () => {
     }
   });
 
+  it.each([
+    ["claro", claro],
+    ["escuro", escuro],
+  ])(
+    "direção v2: a cor de cada borda de estado tem 3:1 contra fundo, cartão e peça no tema %s",
+    (_n, t) => {
+      for (const estado of ["ligado", "desligado", "atencao", "erro"]) {
+        // A cor vem da própria borda (`2px solid var(--cor-x)`), não de uma lista paralela.
+        const usada =
+          /var\((--cor-[\w-]+)\)/.exec(claro[`--borda-estado-${estado}`] ?? "")?.[1] ?? "";
+        expect(usada, `borda ${estado} sem cor`).not.toBe("");
+        for (const base of ["--cor-fundo", "--cor-superficie", "--cor-camada-2"]) {
+          expect(
+            contraste(cor(t, usada), cor(t, base)),
+            `${usada} sobre ${base}`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+      }
+    },
+  );
+
   it("direção v2: número grande tem escala própria e numerais tabulares", () => {
     for (const nome of ["--numero-1", "--numero-2", "--numero-3"]) {
       expect(claro[nome], nome).toMatch(/rem$/);
