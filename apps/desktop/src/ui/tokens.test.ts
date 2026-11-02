@@ -97,7 +97,6 @@ describe("tokens", () => {
     }
     expect(claro["--espaco-6"]).toBeDefined();
     expect(claro["--largura-conteudo"]).toBe("960px");
-    expect(claro["--largura-barra"]).toBeDefined();
     for (const t of [claro, escuro]) {
       expect(t["--sombra-1"]).toBeDefined();
       expect(t["--sombra-2"]).toBeDefined();

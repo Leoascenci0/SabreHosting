@@ -287,4 +287,23 @@ describe("painel de controle do Início (appui-1.2)", () => {
     expect(await visiveis(p)).toEqual(["Tentar de novo"]);
     expect(await aparece(p, "principal")).toBe(false);
   });
+
+  // appuimel-2.2: o chip da barra superior acompanha o estado do servidor falso, com cor (tom) + palavra.
+  it.each([
+    ["ninguem", {}, "ninguem", "Desligado", "desligado"],
+    ["ninguem", { SABRE_E2E_ATUALIZANDO: "40" }, "ninguem", "Ligando…", "troca"],
+    ["eu", {}, "eu", "2 online", "ligado"],
+    ["outro", {}, "outro", "Lucas hospeda", "ligado"],
+    ["sem-cartorio", {}, "sem-cartorio", "Sem cartório", "atencao"],
+  ] as const)(
+    "chip de estado: cenário %s %j mostra %s",
+    async (cenario, env, estado, palavra, tom) => {
+      const p = await abrir(cenario, env, estado);
+      await expect(p.locator("#chip-texto").innerText()).resolves.toBe(palavra);
+      await expect(p.locator("#chip-estado").getAttribute("data-tom")).resolves.toBe(tom);
+      await p.locator('[data-area="backups"]').click();
+      await p.locator("#chip-estado").click();
+      await expect(p.locator("#cartao").isVisible()).resolves.toBe(true);
+    },
+  );
 });

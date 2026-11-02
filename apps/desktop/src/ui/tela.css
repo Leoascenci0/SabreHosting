@@ -13,34 +13,48 @@ body {
   font-family: var(--fonte);
 }
 
-/* Estrutura fixa: faixa de demonstração por cima, barra lateral à esquerda, conteúdo à direita. */
+/* Estrutura fixa: faixa de demonstração por cima; barra superior, conteúdo e rodapé fino em linhas nomeadas. */
 .janela {
   flex: 1;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "barra" "conteudo" "rodape";
   min-height: 0;
 }
 
 .barra {
-  width: var(--largura-barra);
+  grid-area: barra;
   display: flex;
-  flex-direction: column;
-  gap: var(--espaco-1);
-  padding: var(--espaco-3) var(--espaco-2);
+  align-items: center;
+  gap: var(--espaco-3);
+  padding: var(--espaco-2) var(--espaco-3);
   background: var(--cor-superficie);
-  border-right: 1px solid var(--cor-borda);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.marca-app {
+  flex: none;
+  font-weight: 700;
+  font-size: var(--texto-2);
+}
+
+.abas {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: var(--espaco-1);
 }
 
 .item-barra {
   display: flex;
   align-items: center;
   gap: var(--espaco-2);
-  width: 100%;
   padding: var(--espaco-2) var(--espaco-3);
   border-color: transparent;
   background: none;
-  font-size: var(--texto-2);
-  text-align: left;
+  font-size: var(--texto-1);
+  white-space: nowrap;
 }
 
 .item-barra[aria-current="page"] {
@@ -51,6 +65,89 @@ body {
   box-shadow: var(--sombra-1);
 }
 
+/* Chip de estado: cor + ícone + palavra, sempre visível; clicar abre o Início. */
+.chip-estado {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-1);
+  padding: var(--espaco-1) var(--espaco-3);
+  border: 2px solid var(--tom);
+  border-radius: 999px;
+  background: var(--cor-camada-2);
+  color: var(--cor-texto);
+  font-size: var(--texto-1);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip-estado[data-tom="ligado"] {
+  --tom: var(--cor-ligado);
+}
+
+.chip-estado[data-tom="desligado"] {
+  --tom: var(--cor-desligado);
+}
+
+.chip-estado[data-tom="troca"],
+.chip-estado[data-tom="atencao"] {
+  --tom: var(--cor-atencao);
+}
+
+.chip-icone {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--tom);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chip-estado .marca {
+  display: none;
+}
+
+.chip-estado[data-tom="ligado"] .marca-ligado,
+.chip-estado[data-tom="desligado"] .marca-desligado,
+.chip-estado[data-tom="troca"] .marca-troca,
+.chip-estado[data-tom="atencao"] .marca-atencao {
+  display: inline;
+}
+
+.rodape {
+  grid-area: rodape;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1) var(--espaco-4);
+  padding: var(--espaco-1) var(--espaco-3);
+  background: var(--cor-superficie);
+  border-top: 1px solid var(--cor-borda);
+  color: var(--cor-texto-suave);
+  font-size: var(--texto-1);
+}
+
+.rodape[hidden] {
+  display: none;
+}
+
+/* Abaixo de 840 px as abas ficam só com o ícone (o nome continua para o leitor de tela). */
+@media (max-width: 839px) {
+  .item-barra span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .marca-app {
+    display: none;
+  }
+}
+
 .icone-nav {
   flex: none;
   width: 22px;
@@ -59,6 +156,7 @@ body {
 }
 
 .conteudo {
+  grid-area: conteudo;
   width: min(100%, var(--largura-conteudo));
   min-width: 0;
   margin-inline: auto;
@@ -537,11 +635,6 @@ button.link {
 #tela-mods,
 #tela-config {
   width: min(100%, 640px);
-}
-
-/* Boas-vindas (primeira vez): sem barra, tela inteira para o conteúdo. */
-.barra[hidden] + .conteudo {
-  grid-column: 1 / -1;
 }
 
 /* Início como painel de controle (appui-1.2). */
