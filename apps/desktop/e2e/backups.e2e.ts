@@ -16,6 +16,7 @@ interface Pastas {
 }
 
 const imagens = fileURLToPath(new URL("../../../docs/imagens/appui-1.5/", import.meta.url));
+const imagensV2 = fileURLToPath(new URL("../../../docs/imagens/appuimel-2.5/", import.meta.url));
 const fase = process.env["SABRE_FASE"] === "antes" ? "antes" : "depois";
 
 let aberto: ElectronApplication | undefined;
@@ -85,6 +86,49 @@ describe("tela de backups", () => {
     await expect(linha.locator(".quando").innerText()).resolves.toMatch(/^hoje \d{2}:\d{2}$/);
     await expect(pagina.locator("#voltar-backups").isVisible()).resolves.toBe(false);
     await expect(pagina.locator("#backups-vazio").isVisible()).resolves.toBe(false);
+  });
+
+  it("resumo no topo bate com a lista; a seção recolhe, abre e lembra", async () => {
+    const { pagina } = await abrir("ninguem");
+    await pagina.locator("#lista-backups li").first().waitFor();
+    const linhas = await pagina.locator("#lista-backups li").count();
+    await expect(pagina.locator("#resumo-quantos").innerText()).resolves.toBe(String(linhas));
+    await expect(pagina.locator("#resumo-ultimo").innerText()).resolves.toMatch(/^há /);
+    await expect(pagina.locator("#resumo-espaco").innerText()).resolves.toMatch(/KB|MB/);
+    await expect(pagina.locator("#resumo-proximo").innerText()).resolves.toMatch(
+      /^a cada \d+ min$/,
+    );
+    await expect(pagina.locator("#secao-backups-ver-tudo").isVisible()).resolves.toBe(false);
+    for (const [esquema, nome] of [
+      ["light", "claro"],
+      ["dark", "escuro"],
+    ] as const) {
+      await pagina.emulateMedia({ colorScheme: esquema });
+      await registrarCaptura(pagina, join(imagensV2, `backups-${nome}.png`));
+    }
+
+    const seta = pagina.locator("#secao-backups-seta");
+    await expect(seta.getAttribute("aria-expanded")).resolves.toBe("true");
+    await seta.click();
+    await expect(seta.getAttribute("aria-expanded")).resolves.toBe("false");
+    await expect(pagina.locator("#lista-backups").isVisible()).resolves.toBe(false);
+    // O resumo continua à mostra e o "Fazer backup agora" não some.
+    await expect(pagina.locator("#backups-resumo").isVisible()).resolves.toBe(true);
+    await pagina.waitForTimeout(300); // fim da transição da seta (só para a captura)
+    await registrarCaptura(pagina, join(imagensV2, "backups-recolhida-escuro.png"));
+    await pagina.emulateMedia({ colorScheme: "light" });
+    await registrarCaptura(pagina, join(imagensV2, "backups-recolhida-claro.png"));
+    await pagina.reload();
+    await pagina.locator("#cartao:not([data-estado=carregando])").waitFor();
+    await pagina.locator("#ver-backups").click();
+    await expect(pagina.locator("#secao-backups-seta").getAttribute("aria-expanded")).resolves.toBe(
+      "false",
+    );
+    await pagina.locator("#secao-backups-seta").click();
+    await expect(pagina.locator("#lista-backups li").first().isVisible()).resolves.toBe(true);
+    // Restaurar continua pedindo confirmação e não troca nada antes dela.
+    await pagina.locator("#lista-backups li button").first().click();
+    await expect(pagina.locator("#backups-confirmacao").isVisible()).resolves.toBe(true);
   });
 
   it("sem backups mostra o estado vazio com orientação", async () => {

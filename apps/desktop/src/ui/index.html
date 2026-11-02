@@ -146,6 +146,26 @@
         <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>
           <h2 id="titulo-backups" tabindex="-1">Backups</h2>
           <p class="detalhe" id="backups-detalhe" role="status"></p>
+          <dl class="numeros" id="backups-resumo" aria-label="Resumo dos backups">
+            <div>
+              <dt>Backups</dt>
+              <dd class="valor" id="resumo-quantos">—</dd>
+            </div>
+            <div>
+              <dt>Último</dt>
+              <dd class="valor" id="resumo-ultimo">—</dd>
+              <dd class="comparacao" id="resumo-ultimo-razao" hidden></dd>
+            </div>
+            <div>
+              <dt>Espaço usado</dt>
+              <dd class="valor" id="resumo-espaco">—</dd>
+            </div>
+            <div>
+              <dt>Próximo automático</dt>
+              <dd class="valor" id="resumo-proximo">—</dd>
+              <dd class="comparacao" id="resumo-proximo-razao" hidden></dd>
+            </div>
+          </dl>
           <div class="acoes">
             <button
               type="button"
@@ -178,7 +198,25 @@
           </div>
           <p class="erro" id="backups-erro" role="alert" hidden></p>
           <p class="detalhe" id="backups-aviso-historico" role="status" hidden></p>
-          <ul class="lista-backups" id="lista-backups"></ul>
+          <section class="secao" id="secao-backups" aria-labelledby="secao-backups-titulo">
+            <header class="secao-cabecalho">
+              <h3 id="secao-backups-titulo">Lista de backups</h3>
+              <a class="secao-ver-tudo" href="#" id="secao-backups-ver-tudo" hidden>Ver tudo →</a>
+              <button
+                type="button"
+                class="secao-seta"
+                id="secao-backups-seta"
+                aria-expanded="true"
+                aria-controls="secao-backups-corpo"
+                aria-label="Recolher a lista de backups"
+              >
+                <span aria-hidden="true">▾</span>
+              </button>
+            </header>
+            <div class="secao-corpo" id="secao-backups-corpo">
+              <ul class="lista-backups" id="lista-backups"></ul>
+            </div>
+          </section>
           <div
             class="confirmacao"
             id="backups-confirmacao"

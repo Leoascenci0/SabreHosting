@@ -451,10 +451,11 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
         },
       ),
       avisoHistorico: avisoHistorico.ler,
+      intervaloMin: intervaloBackupMin,
     });
   }
   const { depsBackupsE2E } = await import("./fake-e2e.js");
-  return criarBackups(depsBackupsE2E(servidorRodando));
+  return criarBackups({ ...depsBackupsE2E(servidorRodando), intervaloMin: intervaloBackupMin });
 }
 
 const RELER_REDE_MS = 60_000;

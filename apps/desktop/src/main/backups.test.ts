@@ -39,6 +39,11 @@ describe("backups (cola da tela)", () => {
     expect((await criarBackups(deps()).estado()).avisoHistorico).toBeUndefined();
   });
 
+  it("passa o intervalo do backup automático ao resumo da tela (ausente = nada inventado)", async () => {
+    expect((await criarBackups(deps({ intervaloMin: () => 15 })).estado()).intervaloMin).toBe(15);
+    expect((await criarBackups(deps()).estado()).intervaloMin).toBeUndefined();
+  });
+
   it("lista que não carrega vira mensagem em pt-BR, sem estourar", async () => {
     const r = await criarBackups(
       deps({ listar: async () => Promise.reject(new Error("x")) }),

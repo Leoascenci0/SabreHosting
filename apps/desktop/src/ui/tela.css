@@ -354,6 +354,61 @@ button.link {
   font-weight: 600;
 }
 
+/* Seção recolhível padrão: cabeçalho (título, atalho opcional, seta) e corpo. */
+.secao {
+  width: 100%;
+  text-align: left;
+}
+
+.secao-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-3);
+}
+
+.secao-cabecalho h3 {
+  flex: 1;
+  margin: 0;
+  font-size: var(--texto-2);
+}
+
+.secao-ver-tudo {
+  color: var(--cor-destaque);
+}
+
+.secao-seta {
+  min-width: 44px;
+  min-height: 44px;
+  background: none;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.secao-seta span {
+  display: inline-block;
+  transition: transform 0.15s;
+}
+
+.secao-seta[aria-expanded="false"] span {
+  transform: rotate(-90deg);
+}
+
+.secao-seta:focus-visible,
+.secao-ver-tudo:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+.secao-corpo {
+  margin-top: var(--espaco-2);
+}
+
+.secao-corpo[hidden] {
+  display: none;
+}
+
 .progresso {
   width: 100%;
   height: 6px;
@@ -377,6 +432,10 @@ button.link {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .secao-seta span {
+    transition: none;
+  }
+
   .progresso span {
     width: 100%;
     animation: none;
