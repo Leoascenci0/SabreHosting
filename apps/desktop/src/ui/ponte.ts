@@ -9,6 +9,14 @@ export interface DadosPainel {
   versaoMundo?: number;
   /** Quem está jogando agora; só quando o servidor roda neste PC. */
   jogadores?: string[];
+  /** Quantos backups há neste PC. */
+  quantidadeBackups?: number;
+  /** Tamanho do mundo no disco deste PC, em bytes (soma dos arquivos; nada é lido). */
+  tamanhoMundoBytes?: number;
+  /** Há quanto tempo (segundos) este PC está com o servidor ligado; só quando este PC hospeda. */
+  ligadoSegundos?: number;
+  /** Memória (MB) que o app reservou ao servidor deste PC; é a reservada, não a medida. Só quando este PC hospeda. */
+  ramReservadaMb?: number;
   /** Algo mexendo no mundo deste PC agora (Hospedar fica fechado). A atualização vem em `atualizando`. */
   trabalho?: "restaurando" | "trocando-versao";
 }
