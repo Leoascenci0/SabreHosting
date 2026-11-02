@@ -39,19 +39,19 @@ Um amigo que nunca viu o app entende em 5 segundos: **o servidor está ligado? p
   **Tela no app:** barra lateral › Grupo (e Grupo › Mods).
   *Confirmação:* e2e: criar convite, tirar PC (com confirmação), adicionar e tirar mod. Depende de 1.3.
 
-- [ ] **1.5 — Backups: lista legível e ações claras**
+- [x] **1.5 — Backups: lista legível e ações claras** (PR #286)
   *O que fazer:* linhas com data em palavras ("hoje 14:32", "ontem"), tamanho e origem (automático / manual / antes de restaurar); **Fazer backup agora** em destaque; **Restaurar** com confirmação que explica que o estado atual é salvo antes; estado vazio com orientação; indicador de progresso e de "cópia na pasta extra" quando houver.
   *Arquivo:* `apps/desktop/src/ui/backups.ts`, `index.html`, `tela.css`, testes
   **Tela no app:** Backups.
   *Confirmação:* e2e: lista, estado vazio, restaurar pede confirmação e mostra progresso. Depende de 1.1.
 
-- [ ] **1.6 — Boas-vindas e Importar como passo a passo**
+- [x] **1.6 — Boas-vindas e Importar como passo a passo** (PR #288)
   *O que fazer:* o convite vira passo a passo com indicador ("Passo 1 de 3"), uma pergunta por tela, "Explorar sem grupo" visível como alternativa, mensagens de erro com o que fazer; **Importar mundo** vira o mesmo padrão (escolher pasta → conferir o que foi achado → confirmar) em vez de painéis que aparecem no Início.
   *Arquivo:* `apps/desktop/src/ui/boas-vindas.ts`, `importar.ts`, `index.html`, `tela.css`, testes
   **Tela no app:** Boas-vindas › Passos; Início › Importar mundo.
   *Confirmação:* e2e dos fluxos existentes continuam passando; captura de cada passo. Depende de 1.2.
 
-- [ ] **1.7 — Acabamento: estados, texto, acessibilidade e capturas**
+- [x] **1.7 — Acabamento: estados, texto, acessibilidade e capturas** (PR #291)
   *O que fazer:* estados de carregando/vazio/erro em todas as telas com o mesmo visual; revisão de textos (nada de termo técnico; frases curtas); contraste e foco visível nos dois temas; redimensionar a janela de 720 a 1600 px sem quebrar; `impeccable audit` final com a lista de pendências zerada; capturas novas no README e no tutorial de teste.
   *Arquivo:* `apps/desktop/src/ui/*`, `README.md`, `docs/tutoriais/`, testes
   **Tela no app:** todas.
