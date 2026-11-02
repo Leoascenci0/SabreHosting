@@ -68,63 +68,79 @@
             />
             <h1>SabreHosting</h1>
           </header>
-          <section class="estado" id="estado" data-tom="neutro" aria-label="Estado do servidor">
-            <svg class="estado-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <div class="inicio-colunas">
+            <div class="coluna-principal">
+              <section class="estado" id="estado" data-tom="neutro" aria-label="Estado do servidor">
+                <svg class="estado-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="9" />
+                  <path class="marca marca-ligado" d="m8 12.5 3 3 5-6" />
+                  <path class="marca marca-desligado" d="M9 9h6v6H9z" />
+                  <path class="marca marca-troca" d="M12 7v5l3 2" />
+                  <path class="marca marca-atencao" d="M12 7v6m0 3v.5" />
+                </svg>
+                <div class="estado-texto">
+                  <p class="status" id="status" role="status">Verificando o servidor…</p>
+                  <p class="detalhe" id="detalhe"></p>
+                  <p class="meta" id="meta"></p>
+                </div>
+              </section>
+              <ul class="pecas" id="pecas" aria-label="Estado das peças"></ul>
+              <p class="aviso" id="aviso" role="status"></p>
+              <p class="erro" id="erro" role="alert" hidden></p>
+              <button type="button" class="principal grande" id="principal" hidden></button>
+              <div class="acoes links">
+                <button type="button" class="link" id="importar-abrir">Importar mundo</button>
+                <button type="button" class="link" id="ver-backups">Backups</button>
+                <button type="button" class="link" id="ver-config">Configurações</button>
+                <button type="button" class="link" id="parar" hidden>Parar o servidor</button>
+                <button type="button" class="link" id="tentar" hidden>Tentar de novo</button>
+              </div>
+              <div
+                class="confirmacao"
+                id="confirmacao"
+                role="alertdialog"
+                aria-labelledby="pergunta"
+                hidden
+              >
+                <p id="pergunta">Os amigos conectados vão cair. Parar o servidor?</p>
+                <div class="acoes">
+                  <button type="button" class="perigo" id="confirmar-parar">Parar</button>
+                  <button type="button" class="secundario" id="cancelar-parar">Cancelar</button>
+                </div>
+              </div>
+              <dl class="numeros" id="numeros"></dl>
+              <dl class="fatos">
+                <div class="fato" id="fato-versao" hidden>
+                  <dt>Versão do mundo</dt>
+                  <dd id="versao-mundo-valor"></dd>
+                </div>
+              </dl>
+            </div>
+            <aside class="coluna-grupo" aria-label="O grupo">
+              <dl class="fatos">
+                <div class="fato" id="fato-jogadores" hidden>
+                  <dt>Quem está online</dt>
+                  <dd id="jogadores-valor"></dd>
+                </div>
+                <div class="fato" id="fato-endereco" hidden>
+                  <dt>Endereço para os amigos</dt>
+                  <dd>
+                    <span id="endereco-valor"></span>
+                    <button type="button" class="link" id="copiar-endereco">Copiar</button>
+                  </dd>
+                </div>
+              </dl>
+            </aside>
+          </div>
+          <template id="modelo-icone-peca">
+            <svg class="peca-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <circle cx="12" cy="12" r="9" />
               <path class="marca marca-ligado" d="m8 12.5 3 3 5-6" />
               <path class="marca marca-desligado" d="M9 9h6v6H9z" />
               <path class="marca marca-troca" d="M12 7v5l3 2" />
               <path class="marca marca-atencao" d="M12 7v6m0 3v.5" />
             </svg>
-            <div class="estado-texto">
-              <p class="status" id="status" role="status">Verificando o servidor…</p>
-              <p class="detalhe" id="detalhe"></p>
-            </div>
-          </section>
-          <dl class="fatos" id="fatos">
-            <div class="fato" id="fato-endereco" hidden>
-              <dt>Endereço para os amigos</dt>
-              <dd>
-                <span id="endereco-valor"></span>
-                <button type="button" class="link" id="copiar-endereco">Copiar</button>
-              </dd>
-            </div>
-            <div class="fato" id="fato-jogadores" hidden>
-              <dt>Quem está jogando</dt>
-              <dd id="jogadores-valor"></dd>
-            </div>
-            <div class="fato" id="fato-backup" hidden>
-              <dt>Último backup</dt>
-              <dd id="backup-valor"></dd>
-            </div>
-            <div class="fato" id="fato-versao" hidden>
-              <dt>Versão do mundo</dt>
-              <dd id="versao-mundo-valor"></dd>
-            </div>
-          </dl>
-          <p class="aviso" id="aviso" role="status"></p>
-          <p class="erro" id="erro" role="alert" hidden></p>
-          <button type="button" class="principal grande" id="principal" hidden></button>
-          <div class="acoes links">
-            <button type="button" class="link" id="importar-abrir">Importar mundo</button>
-            <button type="button" class="link" id="ver-backups">Backups</button>
-            <button type="button" class="link" id="ver-config">Configurações</button>
-            <button type="button" class="link" id="parar" hidden>Parar o servidor</button>
-            <button type="button" class="link" id="tentar" hidden>Tentar de novo</button>
-          </div>
-          <div
-            class="confirmacao"
-            id="confirmacao"
-            role="alertdialog"
-            aria-labelledby="pergunta"
-            hidden
-          >
-            <p id="pergunta">Os amigos conectados vão cair. Parar o servidor?</p>
-            <div class="acoes">
-              <button type="button" class="perigo" id="confirmar-parar">Parar</button>
-              <button type="button" class="secundario" id="cancelar-parar">Cancelar</button>
-            </div>
-          </div>
+          </template>
           <p class="versao" id="versao"></p>
         </main>
         <main class="cartao" id="tela-backups" aria-labelledby="titulo-backups" hidden>

@@ -69,6 +69,16 @@ describe("modo demonstração (Explorar sem grupo)", () => {
       await expect(pagina.locator(`#${id}`).isVisible()).resolves.toBe(true);
     }
 
+    // Início v2: as três peças e a grade existem, sem rolagem horizontal; nada de número fora do que o app sabe.
+    await expect(pagina.locator("#pecas .peca").count()).resolves.toBe(3);
+    await expect(pagina.locator("#numeros > div").count()).resolves.toBe(6);
+    await expect(pagina.locator("#tempo-valor").innerText()).resolves.toBe("—");
+    await expect(
+      pagina.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).resolves.toBeLessThanOrEqual(0);
+
     // Hospedar pela tela: recusado no main.
     await pagina.locator("#principal").click();
     await expect.poll(() => pagina.locator("#erro").innerText()).toContain(RECUSA);

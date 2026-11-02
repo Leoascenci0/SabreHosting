@@ -47,6 +47,10 @@ export interface DepsInicio {
   tamanhoMundo?(): Promise<number | undefined>;
   /** RAM (MB) reservada ao servidor deste PC; `undefined` = não sei. */
   ramReservadaMb?(): number | undefined;
+  /** Versão do Minecraft do grupo (cartório); `undefined` = sem dado. */
+  versaoMinecraft?(): Promise<string | undefined>;
+  /** Memória total (MB) deste PC; `undefined` = não sei. */
+  totalMemMb?(): number | undefined;
   /** Nomes de quem está jogando neste servidor; `undefined` = ainda não dá para saber (subindo). */
   jogadores?(servidor: ServidorAtivo): Promise<string[] | undefined>;
   /** Servidor deste PC criado (ainda pode estar subindo): quem agenda o backup passa a ouvir o estado dele. */
@@ -230,15 +234,23 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     if (e.tipo !== "ninguem" && e.tipo !== "outro" && e.tipo !== "eu") return e;
     const servidor = ativo;
     const meu = e.tipo === "eu" && !e.parando && servidor !== undefined;
-    const [ultimoBackup, versaoMundo, quantidadeBackups, tamanhoMundoBytes, jogadores] =
-      await Promise.all([
-        deps.ultimoBackup?.().catch(() => undefined),
-        lerVersaoMundo(),
-        deps.quantidadeBackups?.().catch(() => undefined),
-        lerTamanhoMundo(),
-        meu ? deps.jogadores?.(servidor).catch(() => undefined) : undefined,
-      ]);
+    const [
+      ultimoBackup,
+      versaoMundo,
+      quantidadeBackups,
+      tamanhoMundoBytes,
+      jogadores,
+      versaoMinecraft,
+    ] = await Promise.all([
+      deps.ultimoBackup?.().catch(() => undefined),
+      lerVersaoMundo(),
+      deps.quantidadeBackups?.().catch(() => undefined),
+      lerTamanhoMundo(),
+      meu ? deps.jogadores?.(servidor).catch(() => undefined) : undefined,
+      deps.versaoMinecraft?.().catch(() => undefined),
+    ]);
     const ramReservadaMb = meu ? deps.ramReservadaMb?.() : undefined;
+    const totalMemMb = ramReservadaMb !== undefined ? deps.totalMemMb?.() : undefined;
     const trabalho = deps.restaurando?.()
       ? ("restaurando" as const)
       : deps.trocandoVersao?.()
@@ -256,6 +268,8 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
         ? { ligadoSegundos: Math.max(0, Math.floor((agora() - ligadoDesde) / 1000)) }
         : {}),
       ...(ramReservadaMb !== undefined ? { ramReservadaMb } : {}),
+      ...(totalMemMb !== undefined ? { totalMemMb } : {}),
+      ...(versaoMinecraft ? { versaoMinecraft } : {}),
     };
   }
 

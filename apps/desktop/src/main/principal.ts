@@ -375,6 +375,8 @@ async function criarInicioDoApp(): Promise<Inicio> {
       tamanhoMundo: () => tamanhoDoMundo(pc.pastaMundo),
       // A RAM que o app reserva ao servidor (a medida do processo fica para depois).
       ramReservadaMb: () => ramAutomaticaMb(totalmem()),
+      totalMemMb: () => Math.round(totalmem() / 1_048_576),
+      versaoMinecraft: async () => (await clienteDoPc(pc)().lerConfigGrupo()).versaoMinecraft,
       versaoMundo: async () => (await clienteDoPc(pc)().maisNova())?.numero,
       jogadores: async (s) => {
         const srv = s as ServidorMinecraft;

@@ -264,9 +264,12 @@ describe("painel de controle do Início (appui-1.2)", () => {
 
   it("sem dado (grupo sem backup nem versão): as linhas não aparecem", async () => {
     const p = await abrir("ninguem", { SABRE_E2E_SEM_DADOS: "1" });
-    for (const id of ["fato-backup", "fato-versao", "fato-jogadores", "fato-endereco"]) {
+    for (const id of ["fato-versao", "fato-jogadores", "fato-endereco"]) {
       expect(await aparece(p, id), id).toBe(false);
     }
+    // Início v2: a grade não some, mostra "—" (nunca um número inventado).
+    await expect(texto(p, "backup-valor")).resolves.toBe("—");
+    await expect(texto(p, "backups-valor")).resolves.toBe("—");
   });
 
   it.each([
@@ -306,4 +309,103 @@ describe("painel de controle do Início (appui-1.2)", () => {
       await expect(p.locator("#cartao").isVisible()).resolves.toBe(true);
     },
   );
+});
+
+// appuimel-2.4: Início v2 (cartão principal, três peças, grade de números, coluna do grupo).
+describe("Início v2 (appuimel-2.4)", () => {
+  const texto = (p: Page, id: string) => p.locator(`#${id}`).innerText();
+  const sobra = (p: Page) =>
+    p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+
+  async function capturarV2(p: Page, nome: string): Promise<void> {
+    for (const [tema, nome2] of [
+      ["light", "claro"],
+      ["dark", "escuro"],
+    ] as const) {
+      await viva().evaluate(({ nativeTheme }, t) => void (nativeTheme.themeSource = t), tema);
+      await p.emulateMedia({ colorScheme: tema });
+      await p.waitForTimeout(200);
+      await registrarCaptura(p, join(imagens, `appuimel-2.4/${nome}-${nome2}.png`));
+    }
+  }
+
+  const pecas = (p: Page) =>
+    p.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("#pecas .peca")].map((li) => [
+        li.id,
+        li.dataset["tom"],
+        li.querySelector("b")?.textContent,
+      ]),
+    );
+
+  it("eu hospedo: versão, tempo, jogadores, RAM com contexto, coluna do grupo e Copiar", async () => {
+    const p = await abrir("eu");
+    await p.setViewportSize({ width: 720, height: 480 });
+    await expect(texto(p, "meta")).resolves.toMatch(
+      /^Minecraft 1\.21\.1 · ligado: .+ · jogadores: 2$/,
+    );
+    await expect(texto(p, "ram-valor")).resolves.toBe("4 GB");
+    await expect(texto(p, "num-ram")).resolves.toContain("reservada, de 16 GB do PC");
+    await expect(texto(p, "jogadores-valor")).resolves.toBe("Ana, Lucas");
+    await expect(texto(p, "backups-valor")).resolves.toBe("7");
+    await expect(texto(p, "mundo-valor")).resolves.toBe("1,2 GB");
+    await expect(pecas(p)).resolves.toEqual([
+      ["peca-pc", "ligado", "Hospedando"],
+      ["peca-servidor", "ligado", "Ligado"],
+      ["peca-grupo", "ligado", "Conectado"],
+    ]);
+    await p.locator("#copiar-endereco").click();
+    await expect.poll(() => texto(p, "aviso")).toBe("Endereço copiado.");
+    expect(await sobra(p)).toBeLessThanOrEqual(0);
+    await capturarV2(p, "eu");
+  });
+
+  it("ninguém hospeda: servidor desligado, ação Hospedar, tempo e jogadores com dica", async () => {
+    const p = await abrir("ninguem");
+    await p.setViewportSize({ width: 720, height: 480 });
+    await expect(pecas(p)).resolves.toEqual([
+      ["peca-pc", "desligado", "Pode hospedar"],
+      ["peca-servidor", "desligado", "Desligado"],
+      ["peca-grupo", "ligado", "Conectado"],
+    ]);
+    await expect(texto(p, "tempo-valor")).resolves.toBe("—");
+    await expect(p.locator("#num-tempo").getAttribute("title")).resolves.toBe(
+      "só quem hospeda sabe",
+    );
+    await expect(texto(p, "backup-valor")).resolves.toBe("há 3 horas");
+    expect(await visiveis(p)).toEqual(["Hospedar"]);
+    expect(await sobra(p)).toBeLessThanOrEqual(0);
+    await capturarV2(p, "ninguem");
+  });
+
+  it("outro PC hospeda: servidor ligado no PC dele; RAM e tempo '—' (só quem hospeda sabe)", async () => {
+    const p = await abrir("outro");
+    await p.setViewportSize({ width: 720, height: 480 });
+    await expect(pecas(p)).resolves.toEqual([
+      ["peca-pc", "desligado", "Só joga"],
+      ["peca-servidor", "ligado", "Ligado"],
+      ["peca-grupo", "ligado", "Conectado"],
+    ]);
+    await expect(texto(p, "ram-valor")).resolves.toBe("—");
+    await expect(texto(p, "tempo-valor")).resolves.toBe("—");
+    await expect(texto(p, "endereco-valor")).resolves.toBe("mundo.exemplo.net");
+    expect(await sobra(p)).toBeLessThanOrEqual(0);
+    await capturarV2(p, "outro");
+  });
+
+  it("sem cartório: grupo e este PC em atenção; grade toda '—'; sem endereço", async () => {
+    const p = await abrir("sem-cartorio");
+    await p.setViewportSize({ width: 720, height: 480 });
+    await expect(pecas(p)).resolves.toEqual([
+      ["peca-pc", "atencao", "Sem conexão"],
+      ["peca-servidor", "atencao", "Sem informação"],
+      ["peca-grupo", "atencao", "Sem resposta"],
+    ]);
+    for (const id of ["numero-jogadores", "tempo", "ram", "mundo", "backups", "backup"]) {
+      await expect(texto(p, `${id}-valor`), id).resolves.toBe("—");
+    }
+    expect(await p.locator("#fato-endereco").isVisible()).toBe(false);
+    expect(await sobra(p)).toBeLessThanOrEqual(0);
+    await capturarV2(p, "sem-cartorio");
+  });
 });
