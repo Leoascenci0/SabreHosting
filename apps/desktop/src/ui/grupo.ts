@@ -71,7 +71,7 @@ function desenhar(pcs: PcDaTela[]): void {
       const li = document.createElement("li");
       const nome = document.createElement("span");
       nome.id = `grupo-pc-${i}`;
-      nome.textContent = pc.dono ? `${pc.nome} (dono do grupo)` : pc.nome;
+      nome.textContent = pc.nome; // o papel aparece na peça de estado, logo abaixo
       // Peças de estado: papel e "Visto". O cartório (/pcs) não informa online nem última vez visto: "—" com a razão.
       const estados = document.createElement("span");
       estados.className = "estados-pc";
@@ -82,7 +82,7 @@ function desenhar(pcs: PcDaTela[]): void {
       const visto = document.createElement("span");
       visto.className = "estado-pc";
       visto.textContent = "Visto: —";
-      visto.title = "O cartório ainda não informa quando este PC esteve online.";
+      visto.title = "O app ainda não sabe quando este PC esteve online.";
       estados.append(papel, visto);
       const bloco = document.createElement("span");
       bloco.append(nome, estados);

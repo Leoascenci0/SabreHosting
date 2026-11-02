@@ -642,38 +642,57 @@ button.link {
   margin: 0 0 var(--espaco-2);
 }
 
-.config .barra-salvar {
-  position: sticky;
-  bottom: calc(-1 * var(--espaco-4));
+/* Barra de salvar: mora no rodapé (appuimel-2.6) e só aparece com a tela Configurações à vista. */
+.barra-salvar {
   display: flex;
+  flex: 1 1 100%;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--espaco-1) var(--espaco-3);
-  margin-inline: calc(-1 * var(--espaco-2));
-  padding: var(--espaco-2);
-  border-top: 1px solid var(--cor-borda);
-  background: var(--cor-fundo);
+  padding-bottom: var(--espaco-1);
+  border-bottom: 1px solid var(--cor-borda);
 }
 
-.config .barra-salvar p {
+.barra-salvar[hidden] {
+  display: none;
+}
+
+.barra-salvar p {
   flex: 1 1 12rem;
   margin: 0;
 }
 
-.config .barra-salvar p:empty {
+.barra-salvar p:empty {
   display: none;
 }
 
-.config .barra-salvar .erro {
+.barra-salvar .erro {
   flex-basis: 100%;
 }
 
-.config .barra-salvar .acoes {
+.barra-salvar .acoes {
   margin-left: auto;
 }
 
-.config .barra-salvar button.principal {
+.barra-salvar button.principal {
   min-width: 0;
+}
+
+/* Seções das abas de Configurações: a seta fica no canto da moldura (fora da legenda, que segue só texto). */
+.config fieldset {
+  position: relative;
+}
+
+.config fieldset > .secao-seta {
+  position: absolute;
+  top: -33px; /* centrada na linha da moldura, ao lado da legenda (a legenda empurra o início da área interna) */
+  right: var(--espaco-2);
+  background: var(--cor-fundo);
+}
+
+.config .secao-corpo:not([hidden]) {
+  display: grid;
+  gap: var(--espaco-2);
 }
 
 /* Faixa do modo demonstração (appmel-1.31): no alto da janela, por cima da barra e do conteúdo, em qualquer tela. */

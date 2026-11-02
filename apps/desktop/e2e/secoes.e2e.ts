@@ -125,4 +125,43 @@ describe("seções recolhíveis", () => {
     await p.locator("#mods-lista li").first().waitFor();
     expect(await p.locator("#mods-novo").isVisible()).toBe(false);
   });
+  it("Configurações: seções recolhem e são lembradas; a barra de salvar mora no rodapé só nesta tela", async () => {
+    const p = await abrir(false);
+    expect(await p.locator("#config-barra").isVisible()).toBe(false);
+    await p.locator('[data-area="configuracoes"]').click();
+    await p.locator("#tela-config:not([hidden])").waitFor();
+    // A barra está dentro do rodapé (não do formulário) e o Salvar continua ligado ao formulário.
+    expect(await p.locator("#rodape #config-barra").count()).toBe(1);
+    expect(await p.locator("#config-form #config-barra").count()).toBe(0);
+    expect(await p.locator("#config-barra").isVisible()).toBe(true);
+    for (const [esquema, nome] of [
+      ["light", "claro"],
+      ["dark", "escuro"],
+    ] as const) {
+      await p.emulateMedia({ colorScheme: esquema });
+      await registrarCaptura(p, join(imagens, `configuracoes-${nome}.png`));
+    }
+    // Editar acende "Há alterações não salvas" e libera o Salvar, que fica fora do formulário.
+    await p.locator("#cfg-windows").click();
+    expect(await p.locator("#config-pendente").isVisible()).toBe(true);
+    expect(await p.locator("#config-salvar").isEnabled()).toBe(true);
+    await p.locator("#config-descartar").click();
+    expect(await p.locator("#config-salvar").isEnabled()).toBe(false);
+    // Recolher a seção Geral esconde a opção; reabrir a mostra; o estado sobrevive ao recarregar.
+    await p.locator("#secao-config-geral-seta").click();
+    expect(await expandida(p, "secao-config-geral-seta")).toBe("false");
+    expect(await p.locator("#cfg-windows").isVisible()).toBe(false);
+    await p.reload();
+    await p.locator("#cartao:not([data-estado=carregando])").waitFor();
+    await p.locator('[data-area="configuracoes"]').click();
+    await p.locator("#tela-config:not([hidden])").waitFor();
+    expect(await expandida(p, "secao-config-geral-seta")).toBe("false");
+    await p.emulateMedia({ colorScheme: "dark" });
+    await registrarCaptura(p, join(imagens, "configuracoes-recolhida-escuro.png"));
+    await p.locator("#secao-config-geral-seta").click();
+    expect(await p.locator("#cfg-windows").isVisible()).toBe(true);
+    // Sair da tela some a barra do rodapé.
+    await p.locator("#config-voltar").click();
+    expect(await p.locator("#config-barra").isVisible()).toBe(false);
+  });
 });
