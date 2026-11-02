@@ -62,6 +62,7 @@ const ORIGENS = {
   automatico: "Automático",
   manual: "Manual",
   "antes-de-restaurar": "Antes de restaurar",
+  "antes-de-resetar": "Antes de resetar",
 } as const;
 const origemDe = (b: BackupDaTela): string => ORIGENS[b.origem ?? "automatico"];
 

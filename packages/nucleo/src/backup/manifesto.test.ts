@@ -341,7 +341,7 @@ describe("origem do backup (appuimel-1.1)", () => {
   });
 
   it("a origem sobrevive a validarManifesto (ida e volta pelo JSON)", async () => {
-    for (const o of ["automatico", "manual", "antes-de-restaurar"] as const) {
+    for (const o of ["automatico", "manual", "antes-de-restaurar", "antes-de-resetar"] as const) {
       const m = await gerarManifesto(mundo(), { ...opcoes, origem: o });
       expect(validarManifesto(JSON.parse(JSON.stringify(m))).origem).toBe(o);
     }
@@ -350,7 +350,7 @@ describe("origem do backup (appuimel-1.1)", () => {
   it("ausente ou torta vira 'automatico' ao ler, sem inventar campo (o JSON antigo não muda)", () => {
     expect(origemDoManifesto(validarManifesto(base))).toBe("automatico");
     expect("origem" in validarManifesto(base)).toBe(false);
-    for (const torta of ["root", 7, null, {}, "MANUAL"]) {
+    for (const torta of ["root", 7, null, {}, "MANUAL", "antes-de-resetar "]) {
       const m = validarManifesto({ ...base, origem: torta });
       expect(origemDoManifesto(m)).toBe("automatico");
       expect("origem" in m).toBe(false);

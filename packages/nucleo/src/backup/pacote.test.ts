@@ -93,6 +93,22 @@ describe("criarPacote / abrirPacote", () => {
     expect(manifesto.arquivos.length).toBe(Object.keys(hashesDoMundo(mundo)).length);
   }, 30_000);
 
+  it("regressão: mundo pequeno e muito compressível abre inteiro, 15 vezes seguidas (o close do arquivo não pode encerrar antes do parser)", async () => {
+    const base = pasta();
+    const mundo = join(base, "mundo");
+    mkdirSync(join(mundo, "region"), { recursive: true });
+    writeFileSync(join(mundo, "level.dat"), "x");
+    for (const n of ["r.0.0.mca", "r.1.0.mca", "r.2.0.mca"]) {
+      writeFileSync(join(mundo, "region", n), Buffer.alloc(300_000, 0x5a)); // compressível: o .tar.gz fica minúsculo
+    }
+    const criado = await criarPacote(mundo, join(base, "p.tar.gz"), opcoes);
+    for (let i = 0; i < 15; i++) {
+      const temp = join(base, `temp${i}`);
+      await abrirPacote(criado.caminho, criado.sha256, temp);
+      expect(hashesDoMundo(temp)).toEqual(hashesDoMundo(mundo));
+    }
+  });
+
   it("devolve o hash e os totais do manifesto.json exato que entrou no pacote (piloto-1.1c)", async () => {
     const base = pasta();
     const mundo = join(base, "mundo");
