@@ -29,3 +29,7 @@ _Reescrito pela coordenadora da Máxima em 31/10/2026, 19:25 (Ondas 26–33). Es
 - **01/11, tarde (Onda 38):** tela inicial agora mostra Hospedar, Importar mundo, Backups e Configurações em grade 2×2, sem rolar (#267); aviso falso "Atenção com o mundo" corrigido (#268). **Teste:** instale o instalador NOVO (tutorial `docs/tutoriais/2026-11-01-ensaio-instalador.md`). Não visto num Windows de verdade. Backlog: appmel-1.29.
 
 - **01/11, noite (Onda 39):** o instalador de ensaio instalava mas não abria (ícones da bandeja fora do pacote; o erro matava o arranque). Corrigido e testado empacotando e abrindo (#272). **Instalador novo:** https://github.com/Leoascenci0/SabreHosting/actions/runs/41342283125 (artefato `instalador-ensaio`, ~117 MB; tutorial `docs/tutoriais/2026-11-01-ensaio-instalador.md`). Só visto em Linux; falta o seu teste no Windows.
+
+- **02/11 (Ondas 43–47):** backup manual com "origem" (#294); interface v2 em 7 passos — barra superior com abas, cartão principal, seções recolhíveis (#296–#303); **resetar chunks pelo app** (#305–#312): só o dono, só no PC com a trava, servidor parado, backup antes, "Desfazer". Instalador novo: run 41484008283 (artefato `instalador-ensaio`, ~117 MB). Só visto em Linux.
+  **Esperando você:** testar o reset de chunks no Windows em mundo de TESTE (`docs/tutoriais/chunk-resetar.md`); decidir os PRs antigos #208 e #222 (roadmap `bibl`); liberar `repo.papermc.io` e `maven.neoforged.net`; provas no Windows; D9.
+  **Não verificado:** nada rodou num Windows real nem com servidor Minecraft real.

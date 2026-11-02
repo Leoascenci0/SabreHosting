@@ -1,7 +1,7 @@
 # MILESTONE — o plano geral
 
 A Máxima só executa o que está aqui. Alimentado por todos os `docs/roadmap-*.md` e pelo Backlog. Uma onda = até 3
-itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. Atualizado em 30/10/2026.
+itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. Atualizado em 02/11/2026 (20:30).
 
 ## Marcos (o que o grupo ganha em cada um)
 
@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 44**
+**Próxima onda: 48**
 
-- Onda 43 (02/11) — appuimel: backup manual e origem do backup (decidido pelo Eliel) — sessão: ver docs/ops/rodadas/coordenacao-2026-11-01.md
+Nenhuma onda aberta. Fila sem P vazia (Ondas 43–47 fechadas, main `ee5bf8c`).
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -59,8 +59,6 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 
 ## Backlog
 
-- **appuimel — Backup manual e origem** (decidido pelo Eliel 01/11; vem na onda seguinte à 42, mesma tela Backups): campo `origem` no manifesto + botão "Fazer backup agora" (só com servidor pronto). Detalhe no PR #286. Também: `npm run test:e2e -- <arquivo>` ignora o filtro (repassar argumentos ao vitest).
-
 - Melhorias: quase tudo feito na madrugada de 31/10. Abertos: appmel-1.4 (vai com o app-1.3); lancmel-1.1 parte
   "marcador da instância" (vai com o lanc-1.3); redemel-2.1 (com o rede-2.2), 2.2 e 2.3 [P: internet]; cartmel-1.1 (destravado: só o dono, pelo app — próximo da fila);
   hostmel-2.1 [P: PCs reais].
@@ -72,6 +70,9 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 02/11/2026 (dia) — Ondas 44–47: appuimel-2.1 #297, 2.3 #296, 2.2 #298, 2.4 #299 (controle #300), 2.5 #301, 2.6 #302, 2.7 #303 (controle #304) · chunk-1.1 #305 a 1.5 #309 (controle #310), 1.6 #311, 1.7 #312 (controle #313). Roadmaps `appuimel` e `chunk` em docs/concluidos/. Pendente do Eliel: testar o reset de chunks no Windows com mundo de TESTE (`docs/tutoriais/chunk-resetar.md`). Último ensaio: run 41484008283.
+- 02/11/2026 (madrugada) — Onda 43: appuimel-1.1 #294 (backup manual + origem), controle #295.
 
 - 01/11/2026 (noite) — Onda 42: appui-1.5 #286 (Backups), 1.6 #288 (boas-vindas e Importar em passo a passo), 1.7 #291 (acabamento), controle #292. Roadmap `appui` 100% em docs/concluidos/. Último ensaio: run 41365051546. Backlog novo: "visto há quanto tempo" do PC (ponte+main); contraste de borda de campo; leitor de tela real/Windows.
 
