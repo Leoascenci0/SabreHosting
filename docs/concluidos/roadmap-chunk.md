@@ -79,7 +79,7 @@ backup antes.
   *Confirmação:* testes do main (cada recusa; uma chamada de backup antes do reset; demonstração nunca escreve).
   *Depende de:* 1.4
 
-- [ ] **1.6 — Tela Mundo: escolher a área, ver a prévia, confirmar, resetar, desfazer**
+- [x] **1.6 — Tela Mundo: escolher a área, ver a prévia, confirmar, resetar, desfazer**
   *O que fazer:* nova aba **Mundo** na casca do `appuimel` bloco 2: (1) escolher a dimensão; (2) escolher a área
   **por coordenadas** (campos com unidade e "Raio em blocos ao redor de um ponto") e, ao lado, uma **grade de regiões** do
   que existe no disco para clicar e selecionar (sem mapa de terreno); (3) **prévia**: "Vai apagar 64 chunks (4,2 MB, era
@@ -91,7 +91,7 @@ backup antes.
   resetar e desfazer num mundo de teste); capturas claro e escuro; leitura por teclado.
   *Depende de:* 1.5 e do `appuimel` 2.2
 
-- [ ] **1.7 — Acabamento e tutorial de teste**
+- [x] **1.7 — Acabamento e tutorial de teste**
   *O que fazer:* `impeccable` `audit`/`polish` na aba Mundo; tutorial passo a passo em `docs/tutoriais/chunk-resetar.md`
   (como testar com um mundo de teste, nunca o real) e linha no tutorial do ensaio do instalador.
   *Arquivo:* `apps/desktop/src/ui/mundo.ts`, `docs/tutoriais/chunk-resetar.md`, testes
