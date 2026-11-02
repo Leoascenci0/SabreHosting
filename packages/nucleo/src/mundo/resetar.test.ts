@@ -49,6 +49,7 @@ function cenario() {
   const servidor = join(base, "servidor");
   const mundo = join(servidor, "mundo");
   mkdirSync(join(mundo, "playerdata"), { recursive: true });
+  writeFileSync(join(servidor, "server.properties"), "level-name=mundo\n");
   writeFileSync(join(mundo, "level.dat"), "level-falso");
   writeFileSync(join(mundo, "playerdata", "abc.dat"), "jogador-falso");
   for (const t of ["region", "entities", "poi"]) {
@@ -210,22 +211,57 @@ describe("resetarMundo — falha no meio (mundo byte a byte como estava)", () =>
     expect(sobras(mundo)).toEqual([]);
   });
 
-  it("app morre entre renames: servidor não sobe e recuperarTroca devolve os hashes", async () => {
-    const { mundo, servidor, o, antes } = cenario();
+  // Queda em CADA ponto de rename e, depois, falha também DENTRO da recuperação: sempre volta byte a byte.
+  const quedas = [1, 2, 3, 4, 5, 6];
+  const falhasNaRecuperacao = [0, 1, 2, 3, 4];
+  const cruzado = quedas.flatMap((k) => falhasNaRecuperacao.map((r) => [k, r] as const));
+  it.each(cruzado)(
+    "app morre no rename %i (e a recuperação falha no rename %i, 0 = não falha): hashes voltam iguais",
+    async (k, r) => {
+      const { mundo, servidor, o, antes } = cenario();
+      let n = 0;
+      await expect(
+        resetarMundo({
+          ...o,
+          aposRename: () => {
+            if (++n === k) throw new Error("morreu");
+          },
+        }),
+      ).rejects.toThrow();
+      expect((await podeSubir(servidor)).pode).toBe(false);
+      if (r > 0) {
+        let m = 0;
+        const falha = async (de: string, para: string) => {
+          if (++m === r) throw new Error("antivírus");
+          await rename(de, para);
+        };
+        await recuperarTroca(servidor, falha).catch(() => undefined);
+        // Se a recuperação falhou no meio, o marcador continua e o servidor continua sem subir.
+        if (existsSync(join(servidor, MARCADOR_TROCA))) {
+          expect((await podeSubir(servidor)).pode).toBe(false);
+        }
+      }
+      await recuperarTroca(servidor);
+      expect(hashesDoMundo(mundo)).toEqual(antes);
+      expect(sobras(mundo)).toEqual([]);
+      expect(await recuperarTroca(servidor)).toBe("nada");
+    },
+  );
+
+  it("desistir sem conseguir desfazer: texto fixo, sem caminho do backup nem do mundo", async () => {
+    const { mundo, o } = cenario();
     let n = 0;
-    await expect(
-      resetarMundo({
-        ...o,
-        aposRename: () => {
-          if (++n === 3) throw new Error("morreu");
-        },
-      }),
-    ).rejects.toThrow();
-    expect((await podeSubir(servidor)).pode).toBe(false);
-    expect(await recuperarTroca(servidor)).toBe("desfez");
-    expect(hashesDoMundo(mundo)).toEqual(antes);
-    expect(sobras(mundo)).toEqual([]);
-    expect(await recuperarTroca(servidor)).toBe("nada");
+    const renomear = async (de: string, para: string) => {
+      n++;
+      if (n >= 2) throw new Error("antivírus /c/segredo"); // 2º rename falha e o desfazer também
+      await rename(de, para);
+    };
+    const erro = (await resetarMundo({ ...o, renomear }).catch((e: unknown) => e)) as Error;
+    expect(erro.message).toMatch(/não consegui desfazer/);
+    expect(erro.message).not.toContain(o.pastaBackups);
+    expect(erro.message).not.toContain(mundo);
+    expect(erro.message).not.toContain("/c/segredo");
+    await recuperarTroca(join(mundo, ".."));
   });
 
   it("app morre com região apagada na lista: recuperação devolve o arquivo", async () => {

@@ -211,6 +211,8 @@ export const apagarMarcadorTroca = (mundo: string) => apagar(join(dirname(mundo)
 export async function recuperarTroca(
   pastaDoServidor: string,
   renomear: (de: string, para: string) => Promise<void> = rename,
+  /** Nome da pasta do mundo configurado; sem ele vale o `level-name` do `server.properties` (padrão `world`). */
+  nomeDoMundo?: string,
 ): Promise<"nada" | "limpou" | "desfez"> {
   const arquivo = join(pastaDoServidor, MARCADOR_TROCA);
   let texto: string;
@@ -227,7 +229,10 @@ export async function recuperarTroca(
       return undefined;
     }
   })();
-  if (ehMarcadorDeReset(bruto)) return recuperarReset(bruto, pastaDoServidor, renomear);
+  if (ehMarcadorDeReset(bruto)) {
+    const nome = nomeDoMundo ?? (await levelName(pastaDoServidor));
+    return recuperarReset(bruto, pastaDoServidor, nome, renomear);
+  }
   const c = lerMarcadorTroca(texto, pastaDoServidor);
   if (await haMundo(c.mundo)) {
     // O segundo rename (ou o desfazer) aconteceu; só sobrou o aviso e a temporária.
@@ -249,6 +254,13 @@ export async function recuperarTroca(
   await apagar(c.temp);
   await rm(arquivo, { force: true });
   return "desfez";
+}
+
+/** `level-name` do `server.properties` (padrão `world`); arquivo e valor são entrada não confiável (sem barra). */
+async function levelName(pasta: string): Promise<string> {
+  const props = await readFile(join(pasta, "server.properties"), "utf8").catch(() => "");
+  const nome = /^level-name=(.*)$/m.exec(props)?.[1]?.trim() ?? "";
+  return nome === "" || /[\\/]/.test(nome) || nome === "." || nome === ".." ? "world" : nome;
 }
 
 /** Marcador ilegível ou apontando para fora da pasta do servidor não é obedecido: trava e pede mão humana. */

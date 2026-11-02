@@ -20,6 +20,9 @@ function base() {
   writeFileSync(join(mundo, "level.dat"), "vivo");
   writeFileSync(join(mundo, "region", "r.0.0.mca"), "regiao");
   writeFileSync(join(servidor, "importante.txt"), "fora do mundo");
+  writeFileSync(join(servidor, "server.properties"), "level-name=mundo\n");
+  mkdirSync(join(servidor, "mods", "region"), { recursive: true });
+  writeFileSync(join(servidor, "mods", "region", "r.0.0.mca"), "nao-e-mundo");
   return { raiz, servidor, mundo };
 }
 const marcar = (servidor: string, m: unknown) =>
@@ -98,6 +101,33 @@ describe("marcador de reset adulterado (S-07): não apaga nada", () => {
       expect(Object.keys(apos)).toEqual(expect.arrayContaining(Object.keys(antes)));
     });
   }
+
+  it("mundo forjado: outra pasta filha do servidor (mods) não é obedecida; nada é renomeado nem apagado", async () => {
+    const { servidor } = base();
+    const mods = join(servidor, "mods");
+    const antes = hashesDoMundo(servidor);
+    for (const fase of ["trocando", "concluido"]) {
+      marcar(servidor, {
+        tipo: "reset",
+        mundo: mods,
+        sufixo: "2026",
+        fase,
+        arquivos: [{ rel: "region/r.0.0.mca", apagar: true }],
+      });
+      await expect(recuperarTroca(servidor)).rejects.toThrow(/aviso da troca/);
+    }
+    const depois = Object.fromEntries(
+      Object.entries(hashesDoMundo(servidor)).filter(([c]) => c !== MARCADOR_TROCA),
+    );
+    expect(depois).toEqual(antes);
+  });
+
+  it("level-name do server.properties com barra ou ponto vira 'world' (mundo de nome mundo é recusado)", async () => {
+    const { servidor, mundo } = base();
+    writeFileSync(join(servidor, "server.properties"), "level-name=../mundo\n");
+    marcar(servidor, { tipo: "reset", mundo, sufixo: "2026", fase: "concluido", arquivos: [] });
+    await expect(recuperarTroca(servidor)).rejects.toThrow(/aviso da troca/);
+  });
 
   it("marcador legítimo sem mundo nem .antigo: erro, nada apagado", async () => {
     const { servidor, mundo } = base();

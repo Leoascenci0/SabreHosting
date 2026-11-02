@@ -290,7 +290,7 @@ export async function resetarMundo(o: OpcoesResetar): Promise<Resetado> {
     } catch (falha) {
       throw new Error(
         "O reset parou no meio e não consegui desfazer. O servidor não sobe até o app recuperar o mundo: " +
-          `feche e abra o SabreHosting. O backup antes de resetar está em "${backup.caminho}".`,
+          "feche e abra o SabreHosting. O backup antes de resetar foi guardado na pasta de backups.",
         { cause: [erro, falha] },
       );
     }

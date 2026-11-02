@@ -6,7 +6,7 @@
  * Não importa `restaurar.ts` (que chama `recuperarReset`), para não haver ciclo.
  */
 import { lstat, rename, rm } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { MARCADOR_TROCA, gravarAtomico } from "../servidor/configurar.js";
 
 export interface ItemDoReset {
@@ -53,7 +53,11 @@ export const ehMarcadorDeReset = (j: unknown): boolean =>
   typeof j === "object" && j !== null && (j as { tipo?: unknown }).tipo === "reset";
 
 /** Valida o que veio do disco; qualquer desvio vira erro fixo (sem repetir o conteúdo). */
-export function lerMarcadorReset(j: unknown, pastaDoServidor: string): MarcadorDoReset {
+export function lerMarcadorReset(
+  j: unknown,
+  pastaDoServidor: string,
+  nomeDoMundo: string,
+): MarcadorDoReset {
   const m = (j ?? {}) as Record<string, unknown>;
   const { mundo, sufixo, fase, arquivos } = m;
   if (typeof mundo !== "string" || resolve(mundo) !== mundo) throw ruim();
@@ -62,6 +66,8 @@ export function lerMarcadorReset(j: unknown, pastaDoServidor: string): MarcadorD
     mundo === dirname(mundo)
   )
     throw ruim();
+  // Só o mundo configurado: marcador forjado apontando para outra pasta do servidor (mods, libraries…) não é obedecido.
+  if (basename(mundo) !== nomeDoMundo) throw ruim();
   if (typeof sufixo !== "string" || !SUFIXO.test(sufixo)) throw ruim();
   if (fase !== "trocando" && fase !== "concluido") throw ruim();
   if (!Array.isArray(arquivos) || arquivos.length > MAX_ITENS) throw ruim();
@@ -127,9 +133,10 @@ export async function limparReset(m: MarcadorDoReset): Promise<void> {
 export async function recuperarReset(
   j: unknown,
   pastaDoServidor: string,
+  nomeDoMundo: string,
   renomear?: (de: string, para: string) => Promise<void>,
 ): Promise<"limpou" | "desfez"> {
-  const m = lerMarcadorReset(j, pastaDoServidor);
+  const m = lerMarcadorReset(j, pastaDoServidor, nomeDoMundo);
   const desfeito = m.fase === "trocando";
   if (desfeito) await desfazerReset(m, renomear);
   else await limparReset(m);
