@@ -1,7 +1,7 @@
 # Tutorial — instalar o SabreHosting de teste no seu PC (Windows)
 
 Primeira prova do **instalador** de verdade, o arquivo `.exe` que um amigo vai baixar. É uma versão de **ensaio**:
-ninguém mais recebe, ela some do GitHub em **08/11/2026** e não mexe em nada do Minecraft que você já tenha.
+ninguém mais recebe, ela some do GitHub em **09/11/2026** e não mexe em nada do Minecraft que você já tenha.
 Tempo: uns 15 minutos.
 
 **Termos usados aqui**
@@ -15,8 +15,8 @@ Tempo: uns 15 minutos.
 ## 1. Baixar
 
 1. Entre no GitHub com a sua conta e abra:
-   https://github.com/Leoascenci0/SabreHosting/actions/runs/41451399539
-2. No fim da página, em **Artifacts**, clique em **instalador-ensaio** (cerca de 117 MB (122 581 030 bytes no último ensaio)). Baixa um `.zip`.
+   https://github.com/Leoascenci0/SabreHosting/actions/runs/41472529340
+2. No fim da página, em **Artifacts**, clique em **instalador-ensaio** (cerca de 117 MB (122 655 381 bytes no último ensaio)). Baixa um `.zip`.
 3. Clique com o botão direito no `.zip` › **Extrair tudo**. Dentro está `SabreHosting-Setup-0.0.0.exe`.
 
 ## 2. Instalar

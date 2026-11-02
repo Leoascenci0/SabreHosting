@@ -29,7 +29,7 @@ backup antes.
 
 ## Itens (ordem de execução)
 
-- [ ] **1.1 — Núcleo: ler o que existe no mundo (só leitura)**
+- [x] **1.1 — Núcleo: ler o que existe no mundo (só leitura)**
   *O que fazer:* função que, dada a pasta do mundo e a dimensão (`overworld`, `nether`, `end`), lista as regiões e, pelo
   cabeçalho de cada `.mca`, quais chunks existem (e o tamanho em disco), incluindo `entities/` e `poi/` quando houver.
   Só lê; não escreve; ignora link simbólico e arquivo fora do padrão `r.<x>.<z>.mca`.
@@ -38,7 +38,7 @@ backup antes.
   *Confirmação:* testes (mundo de teste com regiões parciais; arquivo torto é ignorado, não quebra; nada lido além do cabeçalho).
   *Depende de:* nada
 
-- [ ] **1.2 — Núcleo: planejar o reset (prévia, sem apagar nada)**
+- [x] **1.2 — Núcleo: planejar o reset (prévia, sem apagar nada)**
   *O que fazer:* a partir de dimensão + área (retângulo em coordenadas de chunk, ou ponto + raio em blocos), devolver o
   **plano**: quantos chunks existem na área, quantas regiões são tocadas, quanto espaço libera, quais arquivos mudam,
   e avisos ("a área inclui o ponto de nascimento", "há regiões inteiras"). Valida limites e rejeita área gigante sem
@@ -48,7 +48,7 @@ backup antes.
   *Confirmação:* testes (área vazia, parcial, região inteira, coordenada negativa, valor torto recusado).
   *Depende de:* 1.1
 
-- [ ] **1.3 — Núcleo: executar o reset com troca atômica**
+- [x] **1.3 — Núcleo: executar o reset com troca atômica**
   *O que fazer:* aplicar o plano: para cada região tocada, copiar o `.mca` para pasta temporária, **zerar no cabeçalho** as
   entradas dos chunks escolhidos (posição e data) em `region`, `entities` e `poi`, conferir o hash do que sobrou, e só
   então trocar por rename; região que fica vazia é apagada. Pré-condições recusadas com texto claro: servidor parado
@@ -60,7 +60,7 @@ backup antes.
   (mundo intacto), servidor rodando recusado, sem backup não reseta; `level.dat` e `playerdata` com o mesmo hash depois.
   *Depende de:* 1.2 e do `appuimel-1.1` (já no ar)
 
-- [ ] **1.4 — Nova versão do mundo e "Desfazer"**
+- [x] **1.4 — Nova versão do mundo e "Desfazer"**
   *O que fazer:* depois do reset, subir a versão do mundo no cartório (como o fim de uma hospedagem) para os outros PCs
   atualizarem; "Desfazer o último reset" restaura o backup `antes-de-resetar` pelo restaurar de hoje (que já faz backup do
   estado atual antes). Só o último reset é desfeito de um clique; os mais antigos pela lista de Backups.
@@ -70,7 +70,7 @@ backup antes.
   local e avisa que a versão ainda não foi espalhada).
   *Depende de:* 1.3
 
-- [ ] **1.5 — Main e ponte: `mundo:planejar` e `mundo:resetar` com todas as recusas**
+- [x] **1.5 — Main e ponte: `mundo:planejar` e `mundo:resetar` com todas as recusas**
   *O que fazer:* as duas ações no processo principal (e na ponte), com as recusas **no main**, não só na tela:
   demonstração ("Isso é só uma demonstração"), servidor rodando, sem trava, backup/restauração em andamento, PC que não
   pode resetar, outro reset em andamento. Erros em texto fixo seguro (sem caminho cru, S-14). Quem pode: só o dono (decidido).
