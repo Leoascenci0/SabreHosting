@@ -698,3 +698,17 @@ describe("dados do painel na ponte (appuimel-2.3)", () => {
     expect(e).not.toHaveProperty("ramReservadaMb");
   });
 });
+
+describe("hospedar durante um reset do mundo", () => {
+  it("é recusado enquanto o reset roda, e volta a valer depois", async () => {
+    let resetando = true;
+    const hospedar = vi.fn(async () => ({ servidor: servidorFalso() }));
+    const inicio = criarInicio(deps({ hospedar, mundoOcupado: () => resetando }));
+    const r = await inicio.hospedar();
+    expect(r).toMatchObject({ ok: false });
+    expect(r.ok ? "" : r.mensagem).toMatch(/mundo está sendo mexido/);
+    expect(hospedar).not.toHaveBeenCalled();
+    resetando = false;
+    expect(await inicio.hospedar()).toEqual({ ok: true });
+  });
+});

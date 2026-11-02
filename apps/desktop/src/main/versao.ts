@@ -24,6 +24,8 @@ export interface DepsVersao {
   gravar(versao: string, sha1: string): Promise<void>;
   /** Servidor rodando (ou sobra dele) neste PC. */
   servidorRodando(): boolean;
+  /** Reset (ou desfazer) do mundo em curso: o backup antes da troca copiaria o mundo no meio dos renames (chunk-1.5). */
+  mundoOcupado?(): boolean;
 }
 
 export type EstadoVersao =
@@ -38,6 +40,7 @@ export type OpcoesDaTela =
 const GENERICA = "Não consegui falar com o cartório agora. A versão não foi alterada.";
 const SO_DONO = "Só o dono do grupo pode trocar a versão do Minecraft.";
 const RODANDO = "Pare o servidor antes de trocar a versão do Minecraft.";
+const RESETANDO = "Espere o reset do mundo terminar antes de trocar a versão do Minecraft.";
 /** O NeoForge da 1.20.1 ainda não tem o hash do instalador conferido pelo grupo (3.1d): só sem mods. */
 const SEM_HASH_MODS = new Set(["1.20.1"]);
 
@@ -108,6 +111,7 @@ export function criarVersao(deps: DepsVersao) {
       try {
         if (!(await ehDono())) return { ok: false, mensagem: SO_DONO };
         if (deps.servidorRodando()) return { ok: false, mensagem: RODANDO };
+        if (deps.mundoOcupado?.()) return { ok: false, mensagem: RESETANDO };
         const v = await naLista(versao);
         if (!v) return { ok: false, mensagem: "Essa versão não está na lista oficial." };
         const sha1 = await deps.sha1Do(v);

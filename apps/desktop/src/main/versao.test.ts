@@ -188,3 +188,17 @@ describe("versão do Minecraft (main)", () => {
     expect(gravados).toEqual([]);
   });
 });
+
+describe("trocar a versão durante um reset do mundo", () => {
+  it("recusa sem fazer backup nem gravar, e volta a valer depois", async () => {
+    let resetando = true;
+    const { versao, gravados, ordem } = montar({ mundoOcupado: () => resetando });
+    const r = await versao.gravar("1.20.4");
+    expect(r).toMatchObject({ ok: false, mensagem: expect.stringMatching(/reset do mundo/) });
+    expect(ordem).toEqual([]);
+    expect(gravados).toEqual([]);
+    expect(versao.trocando()).toBe(false);
+    resetando = false;
+    expect(await versao.gravar("1.20.4")).toEqual({ ok: true });
+  });
+});

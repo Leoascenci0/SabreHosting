@@ -30,20 +30,30 @@ export function criarAgendaBackups<S extends ServidorObservado>(deps: DepsAgenda
   let servidor: S | undefined;
   let agenda: Agenda | undefined;
   let geracao = 0;
+  /** Quantos backups em curso ainda estão sendo esperados (parar ou religar a agenda espera o backup terminar). */
+  let parando = 0;
+  const esperarParar = async (antiga: Agenda | undefined): Promise<void> => {
+    parando++;
+    try {
+      await antiga?.parar();
+    } finally {
+      parando--;
+    }
+  };
 
   // A geração é tomada ANTES de qualquer await: duas chamadas seguidas nunca compartilham o mesmo número.
   async function desligar(): Promise<void> {
     geracao++;
     const antiga = agenda;
     agenda = undefined;
-    await antiga?.parar();
+    await esperarParar(antiga);
   }
 
   async function ligar(): Promise<void> {
     const meu = ++geracao;
     const antiga = agenda;
     agenda = undefined;
-    await antiga?.parar(); // com backup em curso, espera ele terminar
+    await esperarParar(antiga); // com backup em curso, espera ele terminar
     if (meu !== geracao) return; // outra chamada (reagendar, parar) chegou depois e manda
     const alvo = servidor;
     if (!alvo || alvo.estado !== "pronto") return;
@@ -79,6 +89,8 @@ export function criarAgendaBackups<S extends ServidorObservado>(deps: DepsAgenda
     /** Espera o backup em curso terminar. */
     parar: desligar,
     ativa: (): boolean => agenda !== undefined,
+    /** Um backup ainda termina depois de a agenda parar: o reset do mundo espera (regra de ouro 2). */
+    ocupada: (): boolean => parando > 0,
     /** Botão "Fazer backup agora": só com servidor pronto E agenda ligada (é ela que sabe as pastas e a época). */
     pronta: (): boolean => agenda !== undefined && servidor?.estado === "pronto",
     /** Backup manual pelo MESMO caminho da agenda (um por vez com o do relógio). */

@@ -13,6 +13,8 @@ export interface DepsImportacao {
   importar(zip: string, aceitarVersaoNova: boolean): Promise<{ versao: number }>;
   servidorRodando(): boolean;
   restaurando(): boolean;
+  /** Reset (ou desfazer) do mundo em curso: importar trocaria o mundo junto (chunk-1.5). */
+  mundoOcupado?(): boolean;
 }
 
 export type EscolhaDoZip =
@@ -90,6 +92,9 @@ export function criarImportacao(deps: DepsImportacao) {
           ok: false,
           mensagem: "Espere a restauração do backup terminar antes de importar.",
         };
+      }
+      if (deps.mundoOcupado?.()) {
+        return { ok: false, mensagem: "Espere o reset do mundo terminar antes de importar." };
       }
       const alvo = escolhido;
       if (!alvo) return { ok: false, mensagem: ESCOLHA_DE_NOVO };
