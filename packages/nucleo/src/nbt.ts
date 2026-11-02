@@ -39,6 +39,11 @@ class Leitor {
   i32() {
     return this.b.readInt32BE(this.pegar(4));
   }
+  /** Lê um array de ints que tenha exatamente `esperado` elementos; outro tamanho é recusado. */
+  intArray(esperado: number): number[] {
+    if (this.i32() !== esperado) throw new NbtInvalido("array");
+    return Array.from({ length: esperado }, () => this.i32());
+  }
   pular(n: number) {
     this.pegar(n);
   }
@@ -118,6 +123,46 @@ export function lerVersaoDoLevelDat(
       return true;
     });
     return nome !== undefined && id !== undefined ? { nome, id } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Devolve o ponto de nascimento (X e Z em blocos) do level.dat (gzip): formato novo `Data.spawn.pos` (int[3]) ou
+ * antigo `Data.SpawnX`/`SpawnZ`. `null` se ausente ou ilegível. Nunca lança.
+ */
+export function lerSpawnDoLevelDat(
+  gz: Buffer,
+  limites: Partial<LimitesDoNbt> = {},
+): { x: number; z: number } | null {
+  try {
+    const { maxBytes } = { ...PADRAO, ...limites };
+    const l = new Leitor(gunzipSync(gz, { maxOutputLength: maxBytes }));
+    if (l.u8() !== 10) return null;
+    l.texto();
+    let antigoX: number | undefined;
+    let antigoZ: number | undefined;
+    let novo: { x: number; z: number } | undefined;
+    filhos(l, 0, (n1, t1) => {
+      if (n1 !== "Data" || t1 !== 10) return false;
+      filhos(l, 1, (n2, t2) => {
+        if (n2 === "SpawnX" && t2 === 3) antigoX = l.i32();
+        else if (n2 === "SpawnZ" && t2 === 3) antigoZ = l.i32();
+        else if (n2 === "spawn" && t2 === 10)
+          filhos(l, 2, (n3, t3) => {
+            if (n3 !== "pos" || t3 !== 11) return false;
+            const [x, , z] = l.intArray(3);
+            novo = { x: x as number, z: z as number };
+            return true;
+          });
+        else return false;
+        return true;
+      });
+      return true;
+    });
+    if (novo) return novo;
+    return antigoX !== undefined && antigoZ !== undefined ? { x: antigoX, z: antigoZ } : null;
   } catch {
     return null;
   }

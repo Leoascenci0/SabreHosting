@@ -1,7 +1,7 @@
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { levelDat, nbtCompound, nbtString } from "../test/ajuda/nbt.js";
-import { lerVersaoDoLevelDat } from "./nbt.js";
+import { levelDat, levelDatComSpawn, nbtCompound, nbtString } from "../test/ajuda/nbt.js";
+import { lerSpawnDoLevelDat, lerVersaoDoLevelDat } from "./nbt.js";
 
 describe("lerVersaoDoLevelDat", () => {
   it("lê Data.Version.Name e Id de um level.dat válido", () => {
@@ -46,5 +46,25 @@ describe("lerVersaoDoLevelDat", () => {
     expect(
       lerVersaoDoLevelDat(gzipSync(Buffer.concat([Buffer.from([10, 0, 0]), abre]))),
     ).toBeNull();
+  });
+});
+
+describe("lerSpawnDoLevelDat", () => {
+  it("lê o formato antigo (Data.SpawnX/SpawnZ), com negativos", () => {
+    expect(lerSpawnDoLevelDat(levelDatComSpawn("antigo", -37, 64, 1001))).toEqual({
+      x: -37,
+      z: 1001,
+    });
+  });
+
+  it("lê o formato novo (Data.spawn.pos)", () => {
+    expect(lerSpawnDoLevelDat(levelDatComSpawn("novo", 8, 70, -250))).toEqual({ x: 8, z: -250 });
+  });
+
+  it("sem spawn, lixo ou bomba gzip vira null, sem lançar", () => {
+    expect(lerSpawnDoLevelDat(levelDat("1.21.4", 4189))).toBeNull();
+    expect(lerSpawnDoLevelDat(Buffer.from("lixo"))).toBeNull();
+    const bomba = gzipSync(Buffer.alloc(64 * 1024 * 1024));
+    expect(lerSpawnDoLevelDat(bomba, { maxBytes: 1024 * 1024 })).toBeNull();
   });
 });
