@@ -59,6 +59,7 @@ import { sincronizarMods } from "@sabrehosting/nucleo/launcher/mods";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
 import { criarEncaixeInicio } from "./encaixe-inicio.js";
+import { algoMexendoNoMundo, criarMundo, type Mundo } from "./mundo.js";
 import { criarPastaBase } from "./pasta-base.js";
 import { tamanhoDoMundo } from "./tamanho-mundo.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
@@ -230,6 +231,8 @@ function criarBandeja(): Tray {
 const avisoHistorico = criarAvisoHistorico();
 let backupsApp: Backups | undefined;
 let versaoApp: Versao | undefined;
+let mundoApp: Mundo | undefined;
+let importacaoApp: Importacao | undefined;
 let agendaApp: AgendaBackups | undefined;
 const intervaloBackupMin = (): number =>
   lerPreferencias(app.getPath("userData")).intervaloBackupMin;
@@ -331,6 +334,8 @@ async function criarAgendaDoApp(): Promise<AgendaBackups> {
 }
 const restaurando = (): boolean => backupsApp?.restaurando() ?? false;
 const trocandoVersao = (): boolean => versaoApp?.trocando() ?? false;
+/** Reset ou desfazer do mundo em curso (chunk-1.5): Hospedar, backup e restauração esperam. */
+const mundoOcupado = (): boolean => mundoApp?.ocupado() ?? false;
 /** Percentual da atualização do mundo em curso (sync-2.2); `undefined` = nenhuma. */
 let atualizandoMundo: number | undefined;
 const atualizando = (): number | undefined => atualizandoMundo;
@@ -361,6 +366,7 @@ async function criarInicioDoApp(): Promise<Inicio> {
       },
       restaurando,
       trocandoVersao,
+      mundoOcupado,
       atualizando,
       avisoAtualizacao,
       aoServidor: (s) => agendaApp?.observar(s),
@@ -392,6 +398,7 @@ async function criarInicioDoApp(): Promise<Inicio> {
     ...criarDepsE2E(cenario as never, espiao),
     restaurando: () => restaurando() || process.env["SABRE_E2E_TRABALHO"] === "restaurando",
     trocandoVersao: () => trocandoVersao() || process.env["SABRE_E2E_TRABALHO"] === "versao",
+    mundoOcupado,
     atualizando: () => {
       const n = Number(process.env["SABRE_E2E_ATUALIZANDO"]);
       return Number.isFinite(n) && process.env["SABRE_E2E_ATUALIZANDO"] ? n : undefined;
@@ -452,10 +459,15 @@ async function criarBackupsDoApp(inicio: Inicio): Promise<Backups> {
       ),
       avisoHistorico: avisoHistorico.ler,
       intervaloMin: intervaloBackupMin,
+      mundoOcupado,
     });
   }
   const { depsBackupsE2E } = await import("./fake-e2e.js");
-  return criarBackups({ ...depsBackupsE2E(servidorRodando), intervaloMin: intervaloBackupMin });
+  return criarBackups({
+    ...depsBackupsE2E(servidorRodando),
+    intervaloMin: intervaloBackupMin,
+    mundoOcupado,
+  });
 }
 
 const RELER_REDE_MS = 60_000;
@@ -496,7 +508,7 @@ async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
   const servidorRodando = (): boolean => inicio.ativo();
   if (process.env["SABRE_E2E"] === "1") {
     const { depsImportacaoE2E } = await import("./fake-e2e.js");
-    return criarImportacao(depsImportacaoE2E(servidorRodando, restaurando));
+    return criarImportacao({ ...depsImportacaoE2E(servidorRodando, restaurando), mundoOcupado });
   }
   const exigir = clienteDoPc(pc);
   return criarImportacao({
@@ -525,6 +537,7 @@ async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
     },
     servidorRodando,
     restaurando,
+    mundoOcupado,
   });
 }
 
@@ -573,10 +586,50 @@ async function criarVersaoDoApp(
       sha1Do: async (v) => (await planoDaVersao(v)).jar.hashEsperado.valor,
       gravar: async (v, sha1) => void (await exigir().gravarConfigGrupo(v, sha1)),
       servidorRodando,
+      mundoOcupado,
     });
   }
   const { depsVersaoE2E } = await import("./fake-e2e.js");
-  return criarVersao(depsVersaoE2E(servidorRodando));
+  return criarVersao({ ...depsVersaoE2E(servidorRodando), mundoOcupado });
+}
+
+/** `mundo:*` (chunk-1.5): as recusas todas moram em `mundo.ts`; aqui só se ligam as peças reais ou as falsas. */
+async function criarMundoDoApp(inicio: Inicio): Promise<Mundo> {
+  const ocupado = (): boolean =>
+    algoMexendoNoMundo({
+      restaurando,
+      trocandoVersao,
+      fazendoBackup: () => backupsApp?.fazendo() ?? false,
+      importando: () => importacaoApp?.importando() ?? false,
+      atualizando: () => atualizando() !== undefined,
+      agendaOcupada: () => (agendaApp?.ativa() || agendaApp?.ocupada()) ?? false,
+    });
+  if (process.env["SABRE_E2E"] !== "1") {
+    const exigir = clienteDoPc(pc);
+    // O cartório só é montado na hora de usar: sem grupo, cada ação recusa com o texto de sempre.
+    const cliente = new Proxy({} as ReturnType<typeof exigir>, {
+      get:
+        (_, nome) =>
+        async (...args: unknown[]) => {
+          const c = exigir();
+          return (Reflect.get(c, nome) as (...a: unknown[]) => unknown).apply(c, args);
+        },
+    });
+    return criarMundo({
+      demo,
+      eu: () => cliente.eu(),
+      ocupado,
+      pastaBackups: pc.pastaBackups,
+      pastaDoMundo: pc.pastaMundo,
+      pastaDoServidor: pc.pastaServidor,
+      mundoAgora: () => pastaDoMundoAgora(pc.pastaServidor),
+      cliente,
+      servidorRodando: () => inicio.ativo(),
+      servidorOrfao: () => inicio.temOrfao(),
+    });
+  }
+  const { opcoesMundoE2E } = await import("./fake-e2e.js");
+  return criarMundo({ ...opcoesMundoE2E(() => inicio.ativo()), demo, ocupado });
 }
 
 async function criarModsDoApp(servidorRodando: () => boolean): Promise<ModsGrupo> {
@@ -605,6 +658,7 @@ function registrarPonte(
   versao: Versao,
   mods: ModsGrupo,
   importacao: Importacao,
+  mundo: Mundo,
 ): void {
   const configuracoes = criarConfiguracoes({
     pasta: app.getPath("userData"),
@@ -657,7 +711,11 @@ function registrarPonte(
     jogar: () => inicio.jogar(),
     hospedar: () => inicio.hospedar(),
   });
-  const hospedar = protegerEscrita(demo, () => encaixe.hospedar());
+  // Antes de subir: termina a versão pendente de um reset; reset em curso ou pendência que não fecha barra aqui.
+  const hospedar = protegerEscrita(
+    demo,
+    async () => (await mundo.antesDeHospedar()) ?? encaixe.hospedar(),
+  );
   const parar = protegerEscrita(demo, () => inicio.parar());
   ipcMain.handle("sabre:inicio:jogar", (evento) => {
     permitir(evento);
@@ -730,6 +788,35 @@ function registrarPonte(
   ipcMain.handle("sabre:versoes:gravar", (evento, v: unknown) => {
     permitir(evento);
     return gravarVersao(v); // dono, servidor parado e lista oficial são revalidados aqui
+  });
+  // Mundo (chunk-1.5): demonstração, dono, servidor, trava, ocupado, outro reset e pendência são recusados em `mundo.ts`.
+  const aposMexer = <R extends { ok: boolean }>(r: R): R => {
+    listaGuardada = undefined; // a lista de backups do Início ganhou o do reset
+    inicio.mudou();
+    return r;
+  };
+  ipcMain.handle("sabre:mundo:estado", (evento) => (permitir(evento), mundo.estado()));
+  ipcMain.handle(
+    "sabre:mundo:planejar",
+    (evento, dimensao: unknown, area: unknown, ok: unknown) => {
+      permitir(evento);
+      return mundo.planejar(dimensao, area, ok);
+    },
+  );
+  ipcMain.handle(
+    "sabre:mundo:resetar",
+    async (evento, dimensao: unknown, area: unknown, ok: unknown) => {
+      permitir(evento);
+      return aposMexer(await mundo.resetar(dimensao, area, ok));
+    },
+  );
+  ipcMain.handle("sabre:mundo:desfazer", async (evento, ok: unknown) => {
+    permitir(evento);
+    return aposMexer(await mundo.desfazer(ok));
+  });
+  ipcMain.handle("sabre:mundo:descartar-pendencia", async (evento, ok: unknown) => {
+    permitir(evento);
+    return aposMexer(await mundo.descartar(ok));
   });
   ipcMain.handle("sabre:config:ler", (evento) => (permitir(evento), configuracoes.ler()));
   const salvarConfig = protegerEscrita(demo, (valor: unknown) => configuracoes.salvar(valor));
@@ -830,6 +917,12 @@ if (!app.requestSingleInstanceLock()) {
       () => inicioPronto.ativo(),
       () => inicioPronto.temOrfao(),
     );
+    importacaoApp = await criarImportacaoDoApp(inicioPronto);
+    mundoApp = await criarMundoDoApp(inicioPronto);
+    // Reset que parou antes de espalhar a versão: termina agora (depois do recuperarTroca acima). Não segura a janela.
+    void mundoApp.retomar().then((r) => {
+      if (!r.ok) console.warn("[mundo] retomar:", r.mensagem);
+    });
     const modsApp = await criarModsDoApp(() => inicioPronto.ativo());
     registrarPonte(
       inicioApp,
@@ -837,7 +930,8 @@ if (!app.requestSingleInstanceLock()) {
       await criarGrupoDoApp(),
       versaoApp,
       modsApp,
-      await criarImportacaoDoApp(inicioApp),
+      importacaoApp,
+      mundoApp,
     );
     void modsApp.sincronizar(); // não segura a janela; o estado "Atualizando mods…" aparece em Configurações
     await registrarBoasVindas({

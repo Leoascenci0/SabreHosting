@@ -189,3 +189,29 @@ describe("backup manual (appuimel-1.1)", () => {
     expect(d.fazerBackup).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("backups durante um reset do mundo", () => {
+  it("backup manual e restauração recusam, sem chamar o núcleo, e voltam depois", async () => {
+    let resetando = true;
+    const d = deps({ mundoOcupado: () => resetando });
+    const b = criarBackups(d);
+    expect(await b.fazer()).toMatchObject({ ok: false, mensagem: expect.stringMatching(/reset/) });
+    expect(await b.restaurar("a.tar.gz")).toMatchObject({ ok: false });
+    expect(d.fazerBackup).not.toHaveBeenCalled();
+    expect(d.restaurar).not.toHaveBeenCalled();
+    resetando = false;
+    expect(await b.fazer()).toEqual({ ok: true });
+  });
+
+  it("`fazendo()` vale durante o backup manual e solta no fim", async () => {
+    let liberar: () => void = () => undefined;
+    const d = deps({ fazerBackup: vi.fn(() => new Promise<void>((ok) => (liberar = ok))) });
+    const b = criarBackups(d);
+    expect(b.fazendo()).toBe(false);
+    const feito = b.fazer();
+    expect(b.fazendo()).toBe(true);
+    liberar();
+    await feito;
+    expect(b.fazendo()).toBe(false);
+  });
+});

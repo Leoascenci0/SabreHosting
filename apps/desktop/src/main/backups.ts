@@ -21,6 +21,8 @@ export interface DepsBackups {
   avisoHistorico?(): string | undefined;
   /** Configurações › Backups › Intervalo, em minutos (só para o resumo da tela). */
   intervaloMin?(): number;
+  /** Reset do mundo em curso (chunk-1.5): backup e restauração esperam, senão copiariam o mundo no meio da troca. */
+  mundoOcupado?(): boolean;
 }
 
 export interface EstadoBackups {
@@ -38,6 +40,7 @@ export interface EstadoBackups {
 const GENERICA = "Não consegui restaurar agora. O mundo continua como estava.";
 // O manifesto não guarda autor; backup recebido de outro PC (sync) entra depois.
 const ESTE_PC = "Este PC";
+const RESETANDO = "Espere o reset do mundo terminar para mexer nos backups.";
 const GENERICA_BACKUP = "Não consegui fazer o backup agora. O mundo continua como estava.";
 
 export function criarBackups(deps: DepsBackups) {
@@ -46,6 +49,8 @@ export function criarBackups(deps: DepsBackups) {
   return {
     /** Restauração em andamento: o Hospedar espera (corrida entre trocar o mundo e subir o servidor). */
     restaurando: (): boolean => restaurando,
+    /** Backup manual em andamento: o reset do mundo recusa (regra de ouro 2). */
+    fazendo: (): boolean => fazendo,
     async estado(): Promise<EstadoBackups> {
       const bloqueado = deps.servidorRodando();
       const aviso = deps.avisoHistorico?.();
@@ -74,6 +79,7 @@ export function criarBackups(deps: DepsBackups) {
 
     /** Botão "Fazer backup agora": recusa aqui (não só na tela). Texto de erro sempre fixo: nada de caminho cru. */
     async fazer(): Promise<Resultado> {
+      if (deps.mundoOcupado?.()) return { ok: false, mensagem: RESETANDO };
       if (restaurando) {
         return { ok: false, mensagem: "Espere a restauração terminar para fazer um backup." };
       }
@@ -96,6 +102,7 @@ export function criarBackups(deps: DepsBackups) {
     },
 
     async restaurar(nome: unknown): Promise<Resultado> {
+      if (deps.mundoOcupado?.()) return { ok: false, mensagem: RESETANDO };
       if (restaurando) return { ok: false, mensagem: "Já tem uma restauração em andamento." };
       if (fazendo) return { ok: false, mensagem: "Espere o backup terminar para restaurar." };
       if (deps.servidorRodando()) {

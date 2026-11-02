@@ -136,3 +136,17 @@ describe("importar mundo (cola da tela)", () => {
     expect(importar).not.toHaveBeenCalled();
   });
 });
+
+describe("importar durante um reset do mundo", () => {
+  it("recusa com texto fixo, sem importar, e volta a valer depois", async () => {
+    let resetando = true;
+    const { d, importar } = deps({ mundoOcupado: () => resetando });
+    const i = criarImportacao(d);
+    await i.escolher();
+    const r = await i.executar(true);
+    expect(r).toMatchObject({ ok: false, mensagem: expect.stringMatching(/reset do mundo/) });
+    expect(importar).not.toHaveBeenCalled();
+    resetando = false;
+    expect(await i.executar(true)).toMatchObject({ ok: true });
+  });
+});

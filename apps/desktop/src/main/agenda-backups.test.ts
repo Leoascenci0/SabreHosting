@@ -337,3 +337,28 @@ describe("histórico longo no backup agendado (drive-1.1a)", () => {
     rmSync(raiz, { recursive: true, force: true });
   });
 });
+
+describe("agenda de backups: ocupada", () => {
+  it("fica ocupada enquanto o backup em curso termina depois de o servidor parar", async () => {
+    let terminar: () => void = () => undefined;
+    const agenda = criarAgendaBackups<Falso>({
+      intervaloMin: () => 10,
+      iniciar: async () =>
+        ({
+          parar: () => new Promise<void>((ok) => (terminar = ok)),
+          fazerAgora: async () => undefined,
+        }) as never,
+    });
+    const s = new Falso();
+    agenda.observar(s);
+    s.mudar("pronto");
+    await vazio();
+    expect(agenda.ocupada()).toBe(false);
+    s.mudar("parando"); // o backup em curso ainda não terminou
+    await vazio();
+    expect(agenda.ocupada()).toBe(true);
+    terminar();
+    await vazio();
+    expect(agenda.ocupada()).toBe(false);
+  });
+});
