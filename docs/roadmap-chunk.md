@@ -60,7 +60,7 @@ backup antes.
   (mundo intacto), servidor rodando recusado, sem backup não reseta; `level.dat` e `playerdata` com o mesmo hash depois.
   *Depende de:* 1.2 e do `appuimel-1.1` (já no ar)
 
-- [ ] **1.4 — Nova versão do mundo e "Desfazer"**
+- [x] **1.4 — Nova versão do mundo e "Desfazer"**
   *O que fazer:* depois do reset, subir a versão do mundo no cartório (como o fim de uma hospedagem) para os outros PCs
   atualizarem; "Desfazer o último reset" restaura o backup `antes-de-resetar` pelo restaurar de hoje (que já faz backup do
   estado atual antes). Só o último reset é desfeito de um clique; os mais antigos pela lista de Backups.
