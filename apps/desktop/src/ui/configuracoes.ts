@@ -1,5 +1,6 @@
 import type { CampoComErro, LeituraDaTela, PonteSabre } from "./ponte.js";
 import { rotuloConfirmarVersao } from "./rotulo-versao.js";
+import { ligarSecao, type SecaoLigada } from "./secao.js";
 
 declare global {
   interface Window {
@@ -30,6 +31,7 @@ const erro = $("config-erro");
 const salvar = $<HTMLButtonElement>("config-salvar");
 const descartar = $<HTMLButtonElement>("config-descartar");
 const pendente = $("config-pendente");
+const barra = $("config-barra");
 const abas = [...form.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
 const botoesPadrao = [...form.querySelectorAll<HTMLButtonElement>("button.padrao")];
 const voltar = $<HTMLButtonElement>("config-voltar");
@@ -75,6 +77,26 @@ const ABA_DO_CAMPO: Record<CampoComErro, string> = {
   historico: "backups",
   quantosHistorico: "backups",
 };
+
+/** Cada aba tem as suas seções recolhíveis; lembradas neste PC, uma chave por seção. */
+const SECOES: Array<[aba: string, id: string, nome: string]> = [
+  ["geral", "geral", "as opções gerais"],
+  ["servidor", "servidor", "as opções do servidor"],
+  ["servidor", "endereco", "o endereço do servidor"],
+  ["backups", "backups", "as opções de backups"],
+];
+const secoesDaAba = new Map<string, SecaoLigada[]>();
+for (const [aba, id, nome] of SECOES) {
+  const ligada = ligarSecao(
+    $<HTMLButtonElement>(`secao-config-${id}-seta`),
+    $(`secao-config-${id}-corpo`),
+    `sabre:secao:config-${id}`,
+    nome,
+  );
+  secoesDaAba.set(aba, [...(secoesDaAba.get(aba) ?? []), ligada]);
+}
+/** Campo com erro dentro de uma seção recolhida: abre antes de levar o foco. */
+const abrirSecoesDaAba = (aba: string): void => secoesDaAba.get(aba)?.forEach((s) => s.abrir());
 
 /** Trocar de aba só mostra outra parte da mesma tela: o que foi digitado fica e nada é relido. */
 function irParaAba(nome: string, focar = false): void {
@@ -395,6 +417,11 @@ confirmarPasta.addEventListener("click", () => {
     });
 });
 
+// A barra de salvar vive no rodapé: acompanha a tela Configurações.
+new MutationObserver(() => {
+  barra.hidden = tela.hidden;
+}).observe(tela, { attributes: true, attributeFilter: ["hidden"] });
+
 abrir.addEventListener("click", () => {
   inicio.hidden = true;
   tela.hidden = false;
@@ -440,7 +467,10 @@ form.addEventListener("submit", (evento) => {
         foto = valores();
       } else {
         mostrarErro(r.mensagem, r.campo);
-        if (r.campo) irParaAba(ABA_DO_CAMPO[r.campo]);
+        if (r.campo) {
+          irParaAba(ABA_DO_CAMPO[r.campo]);
+          abrirSecoesDaAba(ABA_DO_CAMPO[r.campo]);
+        }
       }
     })
     .catch(() => mostrarErro("Não consegui salvar agora. Nada foi alterado."))

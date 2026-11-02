@@ -1,6 +1,7 @@
 import type { BackupDaTela, PonteSabre } from "./ponte.js";
 import { dataEmPalavras } from "./ha-quanto.js";
 import { resumoDeBackups, tamanhoDe } from "./backups-resumo.js";
+import { ligarSecao } from "./secao.js";
 
 declare global {
   interface Window {
@@ -33,31 +34,7 @@ const dicaFazer = $("backups-fazer-dica");
 const seta = $<HTMLButtonElement>("secao-backups-seta");
 const corpoSecao = $("secao-backups-corpo");
 
-// Seção recolhível: lembra aberta/fechada só neste PC (preferência local; sem localStorage, abre sempre).
-const CHAVE_SECAO = "sabre:secao:backups";
-function lembrarSecao(aberta?: boolean): boolean {
-  try {
-    if (aberta === undefined) return localStorage.getItem(CHAVE_SECAO) !== "fechada";
-    localStorage.setItem(CHAVE_SECAO, aberta ? "aberta" : "fechada");
-  } catch {
-    /* sem armazenamento local: segue sem lembrar */
-  }
-  return aberta ?? true;
-}
-function aplicarSecao(aberta: boolean): void {
-  corpoSecao.hidden = !aberta;
-  seta.setAttribute("aria-expanded", String(aberta));
-  seta.setAttribute(
-    "aria-label",
-    aberta ? "Recolher a lista de backups" : "Abrir a lista de backups",
-  );
-}
-aplicarSecao(lembrarSecao());
-seta.addEventListener("click", () => {
-  const aberta = seta.getAttribute("aria-expanded") !== "true";
-  aplicarSecao(aberta);
-  lembrarSecao(aberta);
-});
+ligarSecao(seta, corpoSecao, "sabre:secao:backups", "a lista de backups");
 
 function desenharResumo(itens: BackupDaTela[], intervaloMin: number | undefined): void {
   const r = resumoDeBackups(itens, Date.now(), intervaloMin);

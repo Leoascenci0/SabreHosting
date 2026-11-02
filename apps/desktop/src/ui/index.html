@@ -241,75 +241,108 @@
             Só o dono do grupo vê os PCs e cria convites. Você pode ver a lista de mods.
           </p>
           <div id="grupo-area" hidden>
-            <section class="painel" aria-labelledby="titulo-pcs">
-              <h3 id="titulo-pcs">PCs do grupo</h3>
-              <ul class="lista-backups" id="grupo-lista"></ul>
-              <div
-                class="confirmacao"
-                id="grupo-confirmacao"
-                role="alertdialog"
-                aria-labelledby="grupo-pergunta"
-                hidden
-              >
-                <p id="grupo-pergunta"></p>
-                <p class="detalhe">
-                  O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
-                </p>
-                <div class="acoes">
-                  <button type="button" class="perigo" id="grupo-confirmar">Tirar do grupo</button>
-                  <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
+            <section class="painel secao" id="secao-pcs" aria-labelledby="titulo-pcs">
+              <header class="secao-cabecalho">
+                <h3 id="titulo-pcs">PCs do grupo</h3>
+                <button
+                  type="button"
+                  class="secao-seta"
+                  id="secao-pcs-seta"
+                  aria-expanded="true"
+                  aria-controls="secao-pcs-corpo"
+                  aria-label="Recolher a lista de PCs"
+                >
+                  <span aria-hidden="true">▾</span>
+                </button>
+              </header>
+              <div class="secao-corpo" id="secao-pcs-corpo">
+                <ul class="lista-backups" id="grupo-lista"></ul>
+                <div
+                  class="confirmacao"
+                  id="grupo-confirmacao"
+                  role="alertdialog"
+                  aria-labelledby="grupo-pergunta"
+                  hidden
+                >
+                  <p id="grupo-pergunta"></p>
+                  <p class="detalhe">
+                    O PC tirado perde o acesso e precisa de um novo convite para voltar ao grupo.
+                  </p>
+                  <div class="acoes">
+                    <button type="button" class="perigo" id="grupo-confirmar">
+                      Tirar do grupo
+                    </button>
+                    <button type="button" class="secundario" id="grupo-cancelar">Cancelar</button>
+                  </div>
                 </div>
+                <p class="dica" id="grupo-visto-dica">
+                  “Visto” aparece quando o app souber quando cada PC esteve online.
+                </p>
+                <p class="detalhe" id="grupo-aviso" role="status"></p>
+                <p class="erro" id="grupo-erro" role="alert" hidden></p>
               </div>
-              <p class="detalhe" id="grupo-aviso" role="status"></p>
-              <p class="erro" id="grupo-erro" role="alert" hidden></p>
             </section>
             <section
-              class="painel campo-convite"
+              class="painel campo-convite secao"
               id="grupo-convite"
               aria-labelledby="titulo-convite"
             >
-              <h3 id="titulo-convite">Convidar um PC</h3>
-              <p class="dica">
-                Crie um convite e envie o texto a quem vai usar. Cada convite serve para um PC.
-              </p>
-              <label for="convite-nome">Nome do PC convidado</label>
-              <input
-                id="convite-nome"
-                type="text"
-                maxlength="40"
-                autocomplete="off"
-                spellcheck="false"
-              />
-              <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
-              <label for="convite-validade">Vale por</label>
-              <select id="convite-validade">
-                <option value="1" selected>1 hora</option>
-                <option value="24">1 dia</option>
-                <option value="72">3 dias</option>
-              </select>
-              <div class="acoes">
-                <button type="button" class="principal" id="convite-criar">Criar convite</button>
-              </div>
-              <div id="convite-resultado" hidden>
-                <label for="convite-texto">Texto do convite</label>
+              <header class="secao-cabecalho">
+                <h3 id="titulo-convite">Convidar um PC</h3>
+                <button
+                  type="button"
+                  class="secao-seta"
+                  id="secao-convite-seta"
+                  aria-expanded="true"
+                  aria-controls="secao-convite-corpo"
+                  aria-label="Recolher o convite"
+                >
+                  <span aria-hidden="true">▾</span>
+                </button>
+              </header>
+              <div class="secao-corpo" id="secao-convite-corpo">
+                <p class="dica">
+                  Crie um convite e envie o texto a quem vai usar. Cada convite serve para um PC.
+                </p>
+                <label for="convite-nome">Nome do PC convidado</label>
                 <input
-                  id="convite-texto"
+                  id="convite-nome"
                   type="text"
-                  readonly
+                  maxlength="40"
                   autocomplete="off"
                   spellcheck="false"
                 />
-                <p class="detalhe" id="convite-prazo"></p>
-                <p class="detalhe">
-                  Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se
-                  fechar esta tela, crie outro.
-                </p>
+                <p class="detalhe" id="convite-nome-ficou" aria-live="polite"></p>
+                <label for="convite-validade">Vale por</label>
+                <select id="convite-validade">
+                  <option value="1" selected>1 hora</option>
+                  <option value="24">1 dia</option>
+                  <option value="72">3 dias</option>
+                </select>
                 <div class="acoes">
-                  <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+                  <button type="button" class="principal" id="convite-criar">Criar convite</button>
                 </div>
-                <p class="detalhe" id="convite-copiado" role="status"></p>
+                <div id="convite-resultado" hidden>
+                  <label for="convite-texto">Texto do convite</label>
+                  <input
+                    id="convite-texto"
+                    type="text"
+                    readonly
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                  <p class="detalhe" id="convite-prazo"></p>
+                  <p class="detalhe">
+                    Envie este texto só para quem vai usar. Ele vale uma vez e não fica salvo: se
+                    fechar esta tela, crie outro.
+                  </p>
+                  <div class="acoes">
+                    <button type="button" class="secundario" id="convite-copiar">Copiar</button>
+                  </div>
+                  <p class="detalhe" id="convite-copiado" role="status"></p>
+                </div>
+                <p class="erro" id="convite-erro" role="alert" hidden></p>
               </div>
-              <p class="erro" id="convite-erro" role="alert" hidden></p>
             </section>
           </div>
           <div class="acoes">
@@ -323,7 +356,24 @@
             Todos os PCs do grupo usam estes mods. Só o dono do grupo muda a lista.
           </p>
           <p class="dica" id="mods-atualizando" role="status" hidden>Atualizando mods…</p>
-          <ul class="lista-backups" id="mods-lista"></ul>
+          <section class="secao" id="secao-mods-lista" aria-labelledby="titulo-mods-lista">
+            <header class="secao-cabecalho">
+              <h3 id="titulo-mods-lista">Mods da lista</h3>
+              <button
+                type="button"
+                class="secao-seta"
+                id="secao-mods-lista-seta"
+                aria-expanded="true"
+                aria-controls="secao-mods-lista-corpo"
+                aria-label="Recolher a lista de mods"
+              >
+                <span aria-hidden="true">▾</span>
+              </button>
+            </header>
+            <div class="secao-corpo" id="secao-mods-lista-corpo">
+              <ul class="lista-backups" id="mods-lista"></ul>
+            </div>
+          </section>
           <div
             class="confirmacao"
             id="mods-confirmacao"
@@ -428,151 +478,175 @@
             </div>
             <fieldset data-aba="geral" role="tabpanel" aria-labelledby="aba-geral">
               <legend>Geral</legend>
-              <label class="opcao">
-                <input type="checkbox" id="cfg-windows" />
-                Abrir o SabreHosting quando o Windows ligar
-              </label>
-              <div id="cfg-pasta-area" hidden>
-                <label for="cfg-pasta">Pasta do SabreHosting</label>
-                <input
-                  type="text"
-                  id="cfg-pasta"
-                  readonly
-                  aria-describedby="cfg-pasta-dica cfg-pasta-erro"
-                />
-                <p class="dica" id="cfg-pasta-dica">
-                  Onde ficam o servidor, o mundo e os backups. Só dá para trocar com o servidor
-                  parado.
-                </p>
-                <button type="button" class="secundario" id="cfg-pasta-trocar">
-                  Trocar pasta…
-                </button>
-                <div
-                  id="cfg-pasta-confirmacao"
-                  role="alertdialog"
-                  aria-labelledby="cfg-pasta-pergunta"
-                  hidden
-                >
-                  <p id="cfg-pasta-pergunta"></p>
-                  <p class="detalhe">
-                    O mundo e os backups atuais NÃO são movidos: continuam na pasta de hoje. O
-                    SabreHosting reinicia para usar a nova.
+              <button
+                type="button"
+                class="secao-seta"
+                id="secao-config-geral-seta"
+                aria-expanded="true"
+                aria-controls="secao-config-geral-corpo"
+                aria-label="Recolher as opções gerais"
+              >
+                <span aria-hidden="true">▾</span>
+              </button>
+              <div class="secao-corpo" id="secao-config-geral-corpo">
+                <label class="opcao">
+                  <input type="checkbox" id="cfg-windows" />
+                  Abrir o SabreHosting quando o Windows ligar
+                </label>
+                <div id="cfg-pasta-area" hidden>
+                  <label for="cfg-pasta">Pasta do SabreHosting</label>
+                  <input
+                    type="text"
+                    id="cfg-pasta"
+                    readonly
+                    aria-describedby="cfg-pasta-dica cfg-pasta-erro"
+                  />
+                  <p class="dica" id="cfg-pasta-dica">
+                    Onde ficam o servidor, o mundo e os backups. Só dá para trocar com o servidor
+                    parado.
                   </p>
-                  <div class="acoes">
-                    <button type="button" class="principal" id="cfg-pasta-confirmar">
-                      Usar esta pasta
-                    </button>
-                    <button type="button" class="secundario" id="cfg-pasta-cancelar">
-                      Cancelar
-                    </button>
+                  <button type="button" class="secundario" id="cfg-pasta-trocar">
+                    Trocar pasta…
+                  </button>
+                  <div
+                    id="cfg-pasta-confirmacao"
+                    role="alertdialog"
+                    aria-labelledby="cfg-pasta-pergunta"
+                    hidden
+                  >
+                    <p id="cfg-pasta-pergunta"></p>
+                    <p class="detalhe">
+                      O mundo e os backups atuais NÃO são movidos: continuam na pasta de hoje. O
+                      SabreHosting reinicia para usar a nova.
+                    </p>
+                    <div class="acoes">
+                      <button type="button" class="principal" id="cfg-pasta-confirmar">
+                        Usar esta pasta
+                      </button>
+                      <button type="button" class="secundario" id="cfg-pasta-cancelar">
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
+                  <p class="erro" id="cfg-pasta-erro" role="alert" hidden></p>
+                  <p class="dica" id="cfg-pasta-aviso" aria-live="polite" hidden></p>
                 </div>
-                <p class="erro" id="cfg-pasta-erro" role="alert" hidden></p>
-                <p class="dica" id="cfg-pasta-aviso" aria-live="polite" hidden></p>
               </div>
             </fieldset>
             <fieldset data-aba="servidor" role="tabpanel" aria-labelledby="aba-servidor">
               <legend>Servidor</legend>
-              <div class="campo">
-                <label for="cfg-visao">Distância de visão</label>
-                <div class="entrada">
-                  <input
-                    type="number"
-                    id="cfg-visao"
-                    inputmode="numeric"
-                    min="3"
-                    max="32"
-                    step="1"
-                    aria-describedby="cfg-visao-dica"
-                  />
-                  <span class="unidade">pedaços</span>
-                  <button
-                    type="button"
-                    class="secundario padrao"
-                    data-padrao="distanciaVisao"
-                    data-campo="cfg-visao"
-                  >
-                    Padrão
-                  </button>
-                </div>
-                <p class="dica" id="cfg-visao-dica">De 3 a 32. Quanto maior, mais pesado.</p>
-                <details>
-                  <summary>Saiba mais</summary>
-                  <p class="detalhe">
-                    Cada pedaço é um quadrado de 16 blocos do mapa. É até onde cada jogador enxerga.
-                    Vale na próxima vez que o servidor for ligado.
-                  </p>
-                </details>
-              </div>
-              <div class="campo">
-                <label for="cfg-simulacao">Distância de simulação</label>
-                <div class="entrada">
-                  <input
-                    type="number"
-                    id="cfg-simulacao"
-                    inputmode="numeric"
-                    min="5"
-                    max="32"
-                    step="1"
-                    aria-describedby="cfg-simulacao-dica"
-                  />
-                  <span class="unidade">pedaços</span>
-                  <button
-                    type="button"
-                    class="secundario padrao"
-                    data-padrao="distanciaSimulacao"
-                    data-campo="cfg-simulacao"
-                  >
-                    Padrão
-                  </button>
-                </div>
-                <p class="dica" id="cfg-simulacao-dica">
-                  De 5 a 32, e menor que a distância de visão.
-                </p>
-                <details>
-                  <summary>Saiba mais</summary>
-                  <p class="detalhe">
-                    É até onde o mundo “anda” em volta do jogador (plantas crescem, bichos se
-                    mexem). Vale na próxima vez que o servidor for ligado.
-                  </p>
-                </details>
-              </div>
-              <div id="cfg-versao-area" hidden>
-                <label for="cfg-versao"
-                  >Versão do Minecraft (todos os PCs do grupo usam a mesma)</label
-                >
-                <div class="entrada">
-                  <select
-                    id="cfg-versao"
-                    aria-describedby="cfg-versao-dica cfg-versao-erro"
-                  ></select>
-                  <button type="button" id="cfg-versao-trocar" disabled>Trocar a versão</button>
-                </div>
-                <p class="dica" id="cfg-versao-dica" aria-live="polite"></p>
-                <details>
-                  <summary>Saiba mais</summary>
-                  <p class="detalhe">
-                    Só dá para trocar com o servidor parado. Convém ter um backup recente antes de
-                    trocar.
-                  </p>
-                </details>
-                <div
-                  id="cfg-versao-confirmacao"
-                  role="alertdialog"
-                  aria-labelledby="cfg-versao-pergunta"
-                  hidden
-                >
-                  <p id="cfg-versao-pergunta"></p>
-                  <p class="detalhe">Todos os PCs do grupo passam a usar esta versão.</p>
-                  <div class="acoes">
-                    <button type="button" class="perigo" id="cfg-versao-confirmar">Trocar</button>
-                    <button type="button" class="secundario" id="cfg-versao-cancelar">
-                      Cancelar
+              <button
+                type="button"
+                class="secao-seta"
+                id="secao-config-servidor-seta"
+                aria-expanded="true"
+                aria-controls="secao-config-servidor-corpo"
+                aria-label="Recolher as opções do servidor"
+              >
+                <span aria-hidden="true">▾</span>
+              </button>
+              <div class="secao-corpo" id="secao-config-servidor-corpo">
+                <div class="campo">
+                  <label for="cfg-visao">Distância de visão</label>
+                  <div class="entrada">
+                    <input
+                      type="number"
+                      id="cfg-visao"
+                      inputmode="numeric"
+                      min="3"
+                      max="32"
+                      step="1"
+                      aria-describedby="cfg-visao-dica"
+                    />
+                    <span class="unidade">pedaços</span>
+                    <button
+                      type="button"
+                      class="secundario padrao"
+                      data-padrao="distanciaVisao"
+                      data-campo="cfg-visao"
+                    >
+                      Padrão
                     </button>
                   </div>
+                  <p class="dica" id="cfg-visao-dica">De 3 a 32. Quanto maior, mais pesado.</p>
+                  <details>
+                    <summary>Saiba mais</summary>
+                    <p class="detalhe">
+                      Cada pedaço é um quadrado de 16 blocos do mapa. É até onde cada jogador
+                      enxerga. Vale na próxima vez que o servidor for ligado.
+                    </p>
+                  </details>
                 </div>
-                <p class="erro" id="cfg-versao-erro" role="alert" hidden></p>
-                <p class="dica" id="cfg-versao-aviso" role="status"></p>
+                <div class="campo">
+                  <label for="cfg-simulacao">Distância de simulação</label>
+                  <div class="entrada">
+                    <input
+                      type="number"
+                      id="cfg-simulacao"
+                      inputmode="numeric"
+                      min="5"
+                      max="32"
+                      step="1"
+                      aria-describedby="cfg-simulacao-dica"
+                    />
+                    <span class="unidade">pedaços</span>
+                    <button
+                      type="button"
+                      class="secundario padrao"
+                      data-padrao="distanciaSimulacao"
+                      data-campo="cfg-simulacao"
+                    >
+                      Padrão
+                    </button>
+                  </div>
+                  <p class="dica" id="cfg-simulacao-dica">
+                    De 5 a 32, e menor que a distância de visão.
+                  </p>
+                  <details>
+                    <summary>Saiba mais</summary>
+                    <p class="detalhe">
+                      É até onde o mundo “anda” em volta do jogador (plantas crescem, bichos se
+                      mexem). Vale na próxima vez que o servidor for ligado.
+                    </p>
+                  </details>
+                </div>
+                <div id="cfg-versao-area" hidden>
+                  <label for="cfg-versao"
+                    >Versão do Minecraft (todos os PCs do grupo usam a mesma)</label
+                  >
+                  <div class="entrada">
+                    <select
+                      id="cfg-versao"
+                      aria-describedby="cfg-versao-dica cfg-versao-erro"
+                    ></select>
+                    <button type="button" id="cfg-versao-trocar" disabled>Trocar a versão</button>
+                  </div>
+                  <p class="dica" id="cfg-versao-dica" aria-live="polite"></p>
+                  <details>
+                    <summary>Saiba mais</summary>
+                    <p class="detalhe">
+                      Só dá para trocar com o servidor parado. Convém ter um backup recente antes de
+                      trocar.
+                    </p>
+                  </details>
+                  <div
+                    id="cfg-versao-confirmacao"
+                    role="alertdialog"
+                    aria-labelledby="cfg-versao-pergunta"
+                    hidden
+                  >
+                    <p id="cfg-versao-pergunta"></p>
+                    <p class="detalhe">Todos os PCs do grupo passam a usar esta versão.</p>
+                    <div class="acoes">
+                      <button type="button" class="perigo" id="cfg-versao-confirmar">Trocar</button>
+                      <button type="button" class="secundario" id="cfg-versao-cancelar">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                  <p class="erro" id="cfg-versao-erro" role="alert" hidden></p>
+                  <p class="dica" id="cfg-versao-aviso" role="status"></p>
+                </div>
               </div>
             </fieldset>
             <fieldset
@@ -583,190 +657,204 @@
               hidden
             >
               <legend>Endereço do servidor</legend>
-              <label for="grupo-endereco">Endereço do servidor</label>
-              <input
-                type="text"
-                id="grupo-endereco"
-                readonly
-                autocomplete="off"
-                aria-describedby="grupo-endereco-dica"
-              />
-              <p class="dica" id="grupo-endereco-dica">
-                O endereço que os amigos usam no Minecraft. Vem do grupo.
-              </p>
+              <button
+                type="button"
+                class="secao-seta"
+                id="secao-config-endereco-seta"
+                aria-expanded="true"
+                aria-controls="secao-config-endereco-corpo"
+                aria-label="Recolher o endereço do servidor"
+              >
+                <span aria-hidden="true">▾</span>
+              </button>
+              <div class="secao-corpo" id="secao-config-endereco-corpo">
+                <label for="grupo-endereco">Endereço do servidor</label>
+                <input
+                  type="text"
+                  id="grupo-endereco"
+                  readonly
+                  autocomplete="off"
+                  aria-describedby="grupo-endereco-dica"
+                />
+                <p class="dica" id="grupo-endereco-dica">
+                  O endereço que os amigos usam no Minecraft. Vem do grupo.
+                </p>
+              </div>
             </fieldset>
             <fieldset data-aba="backups" role="tabpanel" aria-labelledby="aba-backups">
               <legend>Backups</legend>
-              <div class="campo">
-                <label for="cfg-intervalo">Intervalo entre backups</label>
-                <div class="entrada">
-                  <input
-                    type="number"
-                    id="cfg-intervalo"
-                    inputmode="numeric"
-                    min="1"
-                    max="1440"
-                    step="1"
-                    aria-describedby="cfg-intervalo-dica"
-                  />
-                  <span class="unidade">minutos</span>
-                  <button
-                    type="button"
-                    class="secundario padrao"
-                    data-padrao="intervaloBackupMin"
-                    data-campo="cfg-intervalo"
-                  >
-                    Padrão
-                  </button>
-                </div>
-                <p class="dica" id="cfg-intervalo-dica">
-                  De 1 a 1440. Vale já, com o servidor no ar.
-                </p>
-              </div>
-              <div class="campo">
-                <label for="cfg-quantos">Quantos guardar</label>
-                <div class="entrada">
-                  <input
-                    type="number"
-                    id="cfg-quantos"
-                    inputmode="numeric"
-                    min="1"
-                    max="1000"
-                    step="1"
-                    aria-describedby="cfg-quantos-dica"
-                  />
-                  <span class="unidade">backups</span>
-                  <button
-                    type="button"
-                    class="secundario padrao"
-                    data-padrao="quantosGuardar"
-                    data-campo="cfg-quantos"
-                  >
-                    Padrão
-                  </button>
-                </div>
-                <p class="dica" id="cfg-quantos-dica">Os mais novos que ficam guardados.</p>
-                <details>
-                  <summary>Saiba mais</summary>
-                  <p class="detalhe">
-                    Os backups dos últimos 7 dias sempre ficam, além destes. Os mais antigos são
-                    apagados sozinhos.
-                  </p>
-                </details>
-              </div>
-              <div class="campo">
-                <label for="cfg-banda">Limite de banda para atualizar o mundo</label>
-                <div class="entrada">
-                  <input
-                    type="number"
-                    id="cfg-banda"
-                    inputmode="numeric"
-                    min="1"
-                    max="1000"
-                    step="1"
-                    aria-describedby="cfg-banda-dica"
-                  />
-                  <span class="unidade">MB/s</span>
-                  <button
-                    type="button"
-                    class="secundario padrao"
-                    data-padrao="limiteBandaMBs"
-                    data-campo="cfg-banda"
-                  >
-                    Padrão
-                  </button>
-                </div>
-                <p class="dica" id="cfg-banda-dica">
-                  Velocidade máxima para baixar o mundo novo dos outros PCs.
-                </p>
-                <details>
-                  <summary>Saiba mais</summary>
-                  <p class="detalhe">
-                    É em megabytes por segundo. Menor deixa a internet livre para jogar; maior
-                    atualiza mais rápido. Vale já a partir do próximo arquivo baixado.
-                  </p>
-                </details>
-              </div>
-              <label class="opcao"
-                ><input type="checkbox" id="cfg-historico" aria-describedby="cfg-historico-dica" />
-                Copiar também os backups para uma pasta (Drive, OneDrive…)</label
+              <button
+                type="button"
+                class="secao-seta"
+                id="secao-config-backups-seta"
+                aria-expanded="true"
+                aria-controls="secao-config-backups-corpo"
+                aria-label="Recolher as opções de backups"
               >
-              <div class="campo">
-                <label for="cfg-historico-pasta">Pasta do histórico longo</label>
-                <div class="linha-pasta">
-                  <input
-                    type="text"
-                    id="cfg-historico-pasta"
-                    readonly
-                    disabled
-                    autocomplete="off"
+                <span aria-hidden="true">▾</span>
+              </button>
+              <div class="secao-corpo" id="secao-config-backups-corpo">
+                <div class="campo">
+                  <label for="cfg-intervalo">Intervalo entre backups</label>
+                  <div class="entrada">
+                    <input
+                      type="number"
+                      id="cfg-intervalo"
+                      inputmode="numeric"
+                      min="1"
+                      max="1440"
+                      step="1"
+                      aria-describedby="cfg-intervalo-dica"
+                    />
+                    <span class="unidade">minutos</span>
+                    <button
+                      type="button"
+                      class="secundario padrao"
+                      data-padrao="intervaloBackupMin"
+                      data-campo="cfg-intervalo"
+                    >
+                      Padrão
+                    </button>
+                  </div>
+                  <p class="dica" id="cfg-intervalo-dica">
+                    De 1 a 1440. Vale já, com o servidor no ar.
+                  </p>
+                </div>
+                <div class="campo">
+                  <label for="cfg-quantos">Quantos guardar</label>
+                  <div class="entrada">
+                    <input
+                      type="number"
+                      id="cfg-quantos"
+                      inputmode="numeric"
+                      min="1"
+                      max="1000"
+                      step="1"
+                      aria-describedby="cfg-quantos-dica"
+                    />
+                    <span class="unidade">backups</span>
+                    <button
+                      type="button"
+                      class="secundario padrao"
+                      data-padrao="quantosGuardar"
+                      data-campo="cfg-quantos"
+                    >
+                      Padrão
+                    </button>
+                  </div>
+                  <p class="dica" id="cfg-quantos-dica">Os mais novos que ficam guardados.</p>
+                  <details>
+                    <summary>Saiba mais</summary>
+                    <p class="detalhe">
+                      Os backups dos últimos 7 dias sempre ficam, além destes. Os mais antigos são
+                      apagados sozinhos.
+                    </p>
+                  </details>
+                </div>
+                <div class="campo">
+                  <label for="cfg-banda">Limite de banda para atualizar o mundo</label>
+                  <div class="entrada">
+                    <input
+                      type="number"
+                      id="cfg-banda"
+                      inputmode="numeric"
+                      min="1"
+                      max="1000"
+                      step="1"
+                      aria-describedby="cfg-banda-dica"
+                    />
+                    <span class="unidade">MB/s</span>
+                    <button
+                      type="button"
+                      class="secundario padrao"
+                      data-padrao="limiteBandaMBs"
+                      data-campo="cfg-banda"
+                    >
+                      Padrão
+                    </button>
+                  </div>
+                  <p class="dica" id="cfg-banda-dica">
+                    Velocidade máxima para baixar o mundo novo dos outros PCs.
+                  </p>
+                  <details>
+                    <summary>Saiba mais</summary>
+                    <p class="detalhe">
+                      É em megabytes por segundo. Menor deixa a internet livre para jogar; maior
+                      atualiza mais rápido. Vale já a partir do próximo arquivo baixado.
+                    </p>
+                  </details>
+                </div>
+                <label class="opcao"
+                  ><input
+                    type="checkbox"
+                    id="cfg-historico"
                     aria-describedby="cfg-historico-dica"
-                    placeholder="Nenhuma pasta escolhida"
                   />
-                  <button type="button" class="secundario" id="cfg-historico-escolher" disabled>
-                    Escolher pasta…
-                  </button>
-                </div>
-                <p class="dica" id="cfg-historico-dica">
-                  Cada backup novo também vai para a pasta escolhida.
-                </p>
-                <details>
-                  <summary>Saiba mais</summary>
-                  <p class="detalhe">
-                    Use a pasta do Drive, OneDrive ou Dropbox no seu PC. Se a pasta sumir, o backup
-                    deste PC continua normal.
+                  Copiar também os backups para uma pasta (Drive, OneDrive…)</label
+                >
+                <div class="campo">
+                  <label for="cfg-historico-pasta">Pasta do histórico longo</label>
+                  <div class="linha-pasta">
+                    <input
+                      type="text"
+                      id="cfg-historico-pasta"
+                      readonly
+                      disabled
+                      autocomplete="off"
+                      aria-describedby="cfg-historico-dica"
+                      placeholder="Nenhuma pasta escolhida"
+                    />
+                    <button type="button" class="secundario" id="cfg-historico-escolher" disabled>
+                      Escolher pasta…
+                    </button>
+                  </div>
+                  <p class="dica" id="cfg-historico-dica">
+                    Cada backup novo também vai para a pasta escolhida.
                   </p>
-                </details>
-              </div>
-              <div class="campo">
-                <label for="cfg-historico-quantos">Quantos guardar nesta pasta</label>
-                <div class="entrada">
-                  <input
-                    type="number"
-                    id="cfg-historico-quantos"
-                    inputmode="numeric"
-                    min="1"
-                    max="1000"
-                    step="1"
-                    disabled
-                    aria-describedby="cfg-historico-quantos-dica"
-                  />
-                  <span class="unidade">backups</span>
-                  <button
-                    type="button"
-                    class="secundario padrao"
-                    data-padrao="quantosGuardarHistorico"
-                    data-campo="cfg-historico-quantos"
-                  >
-                    Padrão
-                  </button>
+                  <details>
+                    <summary>Saiba mais</summary>
+                    <p class="detalhe">
+                      Use a pasta do Drive, OneDrive ou Dropbox no seu PC. Se a pasta sumir, o
+                      backup deste PC continua normal.
+                    </p>
+                  </details>
                 </div>
-                <p class="dica" id="cfg-historico-quantos-dica">
-                  Além dos últimos 7 dias, que sempre ficam.
-                </p>
-                <details>
-                  <summary>Saiba mais</summary>
-                  <p class="detalhe">
-                    Os mais antigos são apagados da pasta sozinhos, e apagar na pasta também apaga
-                    na nuvem do serviço sincronizado.
+                <div class="campo">
+                  <label for="cfg-historico-quantos">Quantos guardar nesta pasta</label>
+                  <div class="entrada">
+                    <input
+                      type="number"
+                      id="cfg-historico-quantos"
+                      inputmode="numeric"
+                      min="1"
+                      max="1000"
+                      step="1"
+                      disabled
+                      aria-describedby="cfg-historico-quantos-dica"
+                    />
+                    <span class="unidade">backups</span>
+                    <button
+                      type="button"
+                      class="secundario padrao"
+                      data-padrao="quantosGuardarHistorico"
+                      data-campo="cfg-historico-quantos"
+                    >
+                      Padrão
+                    </button>
+                  </div>
+                  <p class="dica" id="cfg-historico-quantos-dica">
+                    Além dos últimos 7 dias, que sempre ficam.
                   </p>
-                </details>
+                  <details>
+                    <summary>Saiba mais</summary>
+                    <p class="detalhe">
+                      Os mais antigos são apagados da pasta sozinhos, e apagar na pasta também apaga
+                      na nuvem do serviço sincronizado.
+                    </p>
+                  </details>
+                </div>
               </div>
             </fieldset>
-            <div class="barra-salvar">
-              <p class="detalhe" id="config-pendente" role="status" hidden>
-                Há alterações não salvas
-              </p>
-              <p class="detalhe" id="config-aviso" role="status"></p>
-              <p class="erro" id="config-erro" role="alert" hidden></p>
-              <div class="acoes">
-                <button type="submit" class="principal" id="config-salvar" disabled>Salvar</button>
-                <button type="button" class="secundario" id="config-descartar" disabled>
-                  Descartar
-                </button>
-                <button type="button" class="secundario" id="config-voltar">Voltar</button>
-              </div>
-            </div>
           </form>
         </main>
         <main
@@ -908,6 +996,20 @@
         </main>
       </div>
       <footer class="rodape" id="rodape" hidden>
+        <div class="barra-salvar" id="config-barra" hidden>
+          <p class="detalhe" id="config-pendente" role="status" hidden>Há alterações não salvas</p>
+          <p class="detalhe" id="config-aviso" role="status"></p>
+          <p class="erro" id="config-erro" role="alert" hidden></p>
+          <div class="acoes">
+            <button type="submit" form="config-form" class="principal" id="config-salvar" disabled>
+              Salvar
+            </button>
+            <button type="button" class="secundario" id="config-descartar" disabled>
+              Descartar
+            </button>
+            <button type="button" class="secundario" id="config-voltar">Voltar</button>
+          </div>
+        </div>
         <span id="rodape-versao">Versão —</span>
         <span id="rodape-grupo">Grupo: —</span>
         <span id="rodape-cartorio">Cartório: verificando…</span>
