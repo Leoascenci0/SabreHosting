@@ -216,6 +216,8 @@ o que se repete). No máximo 10 linhas:
 - **S-11** o gancho barra o comando inteiro se o TEXTO da flag que pula o pre-commit aparece (até num heredoc): não
   escrever essa flag nem em mensagem ou documento; descrevê-la por extenso.
 - **S-18** verificador reprova "roadmap 100% feito": `git mv docs/roadmap-<sigla>.md docs/concluidos/` no mesmo PR.
+- **S-19** instalador instala e o app não abre: arquivo lido em runtime fora de `dist/` (ícones) tem que estar em `files` do `electron-builder.json`; empacotar com `--dir` e abrir antes de acusar o CI.
+- **S-20** efeito "ao editar" (limpar aviso) pendura-se no evento do usuário, não em função de redesenho; e2e solto precisa de `npm run build` antes.
 
 ## Skills sob demanda
 

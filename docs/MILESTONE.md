@@ -16,9 +16,9 @@ itens compatíveis (skill `maxima` §3), cada item num chat/sessão própria. At
 
 ## Em curso
 
-**Próxima onda: 43**
+**Próxima onda: 44**
 
-- Onda 42 (01/11, noite) — appui-1.5 → 1.6 → 1.7 (Backups, boas-vindas/Importar, acabamento; em sequência) — sessão: ver docs/ops/rodadas/coordenacao-2026-11-01.md
+- Onda 43 (02/11) — appuimel: backup manual e origem do backup (decidido pelo Eliel) — sessão: ver docs/ops/rodadas/coordenacao-2026-11-01.md
 
 ⏸️ rede-2.2 [P: liberar `repo.papermc.io` na rede do ambiente]
 
@@ -72,6 +72,8 @@ Cada uma vira um balão (uma por vez) quando a fila chegar nela. Recomendação 
 - Painel web simples na nuvem com o status do servidor.
 
 ## Feito
+
+- 01/11/2026 (noite) — Onda 42: appui-1.5 #286 (Backups), 1.6 #288 (boas-vindas e Importar em passo a passo), 1.7 #291 (acabamento), controle #292. Roadmap `appui` 100% em docs/concluidos/. Último ensaio: run 41365051546. Backlog novo: "visto há quanto tempo" do PC (ponte+main); contraste de borda de campo; leitor de tela real/Windows.
 
 - 01/11/2026 (noite) — Onda 41: appui-1.1 #280 (barra lateral), 1.2 #281 (Início painel), 1.3 #282 (Configurações em abas), 1.4 #283 (Grupo e Mods), controle #284. Último ensaio: run 41356095731.
 
