@@ -48,7 +48,7 @@ backup antes.
   *Confirmação:* testes (área vazia, parcial, região inteira, coordenada negativa, valor torto recusado).
   *Depende de:* 1.1
 
-- [ ] **1.3 — Núcleo: executar o reset com troca atômica**
+- [x] **1.3 — Núcleo: executar o reset com troca atômica**
   *O que fazer:* aplicar o plano: para cada região tocada, copiar o `.mca` para pasta temporária, **zerar no cabeçalho** as
   entradas dos chunks escolhidos (posição e data) em `region`, `entities` e `poi`, conferir o hash do que sobrou, e só
   então trocar por rename; região que fica vazia é apagada. Pré-condições recusadas com texto claro: servidor parado
