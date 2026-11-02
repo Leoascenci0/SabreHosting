@@ -18,6 +18,7 @@ import { gerarChavesDoPc } from "@sabrehosting/nucleo/rede/wireguard";
 import type { DepsImportacao } from "./importar.js";
 import type { DepsVersao } from "./versao.js";
 import type { DepsModsGrupo } from "./mods-grupo.js";
+import type { OpcoesMundo } from "./mundo.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 // "dono-eu*": app reaberto com a trava ainda em nome deste PC, sem servidor desta sessão (com ou sem órfão vivo).
@@ -378,5 +379,40 @@ export function depsBoasVindasE2E(dados: string): {
       pastaPadrao: () => join(dados, "padrao"),
     },
     escolherPasta: async () => join(dados, "escolhida"),
+  };
+}
+
+/**
+ * Mundo de mentira para o E2E (chunk-1.5): pastas temporárias com um mundo inventado (sem região nenhuma, então o
+ * reset recusa com "nenhum chunk"), cartório que só conta as chamadas. Dono com `SABRE_E2E_DONO=1`.
+ */
+export function opcoesMundoE2E(
+  servidorRodando: () => boolean,
+): Omit<OpcoesMundo, "demo" | "ocupado"> {
+  const raiz = mkdtempSync(join(tmpdir(), "sabre-e2e-mundo-"));
+  const servidor = join(raiz, "servidor");
+  const pastaDoMundo = join(servidor, "world");
+  const pastaBackups = join(raiz, "backups");
+  mkdirSync(pastaDoMundo, { recursive: true });
+  mkdirSync(pastaBackups, { recursive: true });
+  writeFileSync(join(pastaDoMundo, "level.dat"), "mundo-inventado");
+  const souDono = process.env["SABRE_E2E_DONO"] === "1";
+  const trava = { ok: true as const, epoca: 1, expiraEm: 0, renovarMs: 20_000 };
+  return {
+    eu: async () => ({ dono: souDono }),
+    pastaBackups,
+    pastaDoMundo,
+    pastaDoServidor: servidor,
+    servidorRodando,
+    cliente: {
+      pegar: async () => trava,
+      renovar: async () => trava,
+      soltar: async () => trava,
+      estadoTrava: async () => ({ epoca: 1 }),
+      ultimoRegistrado: async () => 0,
+      maisNova: async () => null,
+      criarVersao: async () => 1,
+      enviarPacote: async () => undefined,
+    },
   };
 }

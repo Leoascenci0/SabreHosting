@@ -120,6 +120,39 @@ export type ResultadoConvite =
 export type EstadoVersao =
   { dono: false } | { dono: true; atual: string; versoes: string[]; erro?: string };
 
+/** Área do reset: chunks (retângulo) ou blocos (ponto + raio). O main valida tudo de novo. */
+export type AreaDoResetDaTela =
+  | { tipo: "retangulo"; x1: number; z1: number; x2: number; z2: number }
+  | { tipo: "raio"; x: number; z: number; raio: number };
+
+export type RecusaDoMundo = { ok: false; mensagem: string; chunksNaArea?: number };
+
+/** Prévia do reset (só leitura): só números e nomes relativos, nunca caminho do PC. */
+export interface PlanoDoResetDaTela {
+  dimensao: "overworld" | "nether" | "end";
+  chunksNaArea: number;
+  chunksExistentes: number;
+  regioesTocadas: number;
+  regioesApagadasInteiras: number;
+  bytesLiberados: number;
+  avisos: string[];
+}
+
+export type PublicacaoDaTela =
+  | { estado: "publicada"; versao: number }
+  | { estado: "pendente" | "conflito"; versao: number; aviso: string };
+
+export type EstadoMundo =
+  { dono: false } | { dono: true; pendencia: "nenhuma" | "aguardando" | "conflito" };
+
+export interface PlanoDoDesfazerDaTela {
+  nome: string;
+  criadoEm: string;
+  versao: number;
+  /** Há coisa jogada depois do reset: desfazer some com ela; só vai adiante com `confirmado`. */
+  jogadoDepois: boolean;
+}
+
 export interface ModDaTela {
   nome: string;
   versao: string;
@@ -220,6 +253,31 @@ export interface PonteSabre {
     /** Só ao selecionar uma versão: cada consulta vai à internet. */
     opcoes(versao: string): Promise<OpcoesDaVersao>;
     gravar(versao: string): Promise<Resultado>;
+  };
+  mundo: {
+    estado(): Promise<EstadoMundo>;
+    planejar(
+      dimensao: string,
+      area: AreaDoResetDaTela,
+      confirmado?: boolean,
+    ): Promise<{ ok: true; plano: PlanoDoResetDaTela } | RecusaDoMundo>;
+    resetar(
+      dimensao: string,
+      area: AreaDoResetDaTela,
+      confirmado?: boolean,
+    ): Promise<
+      | { ok: true; publicacao: PublicacaoDaTela; arquivosTrocados: number; chunksApagados: number }
+      | RecusaDoMundo
+    >;
+    desfazer(
+      confirmado?: boolean,
+    ): Promise<
+      | { ok: true; feito: false; plano: PlanoDoDesfazerDaTela }
+      | { ok: true; feito: true; plano: PlanoDoDesfazerDaTela; publicacao: PublicacaoDaTela }
+      | RecusaDoMundo
+    >;
+    /** Só o dono, e só com `confirmado: true`: tira o aviso de versão pendente (nunca mundo nem backup). */
+    descartarPendencia(confirmado: boolean): Promise<Resultado>;
   };
   inicio: {
     estado(): Promise<EstadoInicio>;

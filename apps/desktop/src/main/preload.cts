@@ -68,6 +68,17 @@ electron.contextBridge.exposeInMainWorld("sabre", {
     gravar: (versao: string): Promise<unknown> =>
       electron.ipcRenderer.invoke("sabre:versoes:gravar", versao),
   },
+  mundo: {
+    estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:mundo:estado"),
+    planejar: (dimensao: string, area: unknown, confirmado?: boolean): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mundo:planejar", dimensao, area, confirmado),
+    resetar: (dimensao: string, area: unknown, confirmado?: boolean): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mundo:resetar", dimensao, area, confirmado),
+    desfazer: (confirmado?: boolean): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mundo:desfazer", confirmado),
+    descartarPendencia: (confirmado: boolean): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mundo:descartar-pendencia", confirmado),
+  },
   inicio: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:estado"),
     jogar: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:inicio:jogar"),

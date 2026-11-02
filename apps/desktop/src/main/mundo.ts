@@ -26,8 +26,7 @@ type Recusa = { ok: false; mensagem: string; chunksNaArea?: number };
 
 export type ResultadoPlano = { ok: true; plano: PlanoDeReset } | Recusa;
 export type ResultadoReset =
-  | { ok: true; publicacao: Publicacao; arquivosTrocados: number; chunksApagados: number }
-  | Recusa;
+  { ok: true; publicacao: Publicacao; arquivosTrocados: number; chunksApagados: number } | Recusa;
 export type ResultadoDesfazer = ({ ok: true } & Desfeito) | Recusa;
 export type ResultadoRetomar = { ok: true; estado: "nada" } | ({ ok: true } & Publicacao) | Recusa;
 export type EstadoMundo =
@@ -52,7 +51,12 @@ const SEM_PASTA = "Este PC ainda não tem a pasta do mundo e a pasta de backups 
  */
 function textoSeguro(erro: unknown): string {
   if (erro instanceof ErroDoPlanoDeReset || erro instanceof SemVez) return erro.message;
-  const e = erro as { message?: unknown; code?: unknown; errno?: unknown; syscall?: unknown } | null;
+  const e = erro as {
+    message?: unknown;
+    code?: unknown;
+    errno?: unknown;
+    syscall?: unknown;
+  } | null;
   if (
     erro instanceof Error &&
     typeof e?.message === "string" &&
@@ -148,7 +152,11 @@ export function criarMundo(o: OpcoesMundo) {
     },
 
     /** Prévia: só lê. */
-    async planejar(dimensao: unknown, area: unknown, confirmado?: unknown): Promise<ResultadoPlano> {
+    async planejar(
+      dimensao: unknown,
+      area: unknown,
+      confirmado?: unknown,
+    ): Promise<ResultadoPlano> {
       if (o.demo.ativa()) return DEMO;
       try {
         if (!(await ehDono())) return { ok: false, mensagem: SO_DONO };
@@ -241,7 +249,8 @@ export function criarMundo(o: OpcoesMundo) {
     async antesDeHospedar(): Promise<Recusa | undefined> {
       const r = await this.retomar();
       if (!r.ok) return r;
-      if (r.estado === "pendente" || r.estado === "conflito") return { ok: false, mensagem: r.aviso };
+      if (r.estado === "pendente" || r.estado === "conflito")
+        return { ok: false, mensagem: r.aviso };
       return undefined;
     },
 
