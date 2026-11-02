@@ -1,4 +1,4 @@
-import { haQuanto } from "./ha-quanto.js";
+import { gradeDeNumeros, pecasDeEstado } from "./inicio-regras.js";
 import { rotuloChip, textoCartorio } from "./navegacao-regras.js";
 import type { EstadoInicio, PonteSabre } from "./ponte.js";
 
@@ -77,11 +77,79 @@ function desenharFatos(e: EstadoInicio): void {
         ? "Não dá para ver quem está jogando daqui"
         : undefined,
   );
-  texto("backup", painel?.ultimoBackup ? haQuanto(painel.ultimoBackup) : undefined);
   texto(
     "versao",
     painel?.versaoMundo !== undefined ? `versão ${painel.versaoMundo} do mundo` : undefined,
   );
+}
+
+const modeloIcone = $<HTMLTemplateElement>("modelo-icone-peca");
+
+function celula(pai: HTMLElement, id: string, tag: string, classe?: string): HTMLElement {
+  const achado = document.getElementById(id);
+  if (achado) return achado;
+  const novo = document.createElement(tag);
+  novo.id = id;
+  if (classe) novo.className = classe;
+  pai.append(novo);
+  return novo;
+}
+
+/** Cartão principal (versão, tempo, jogadores), três peças de estado e grade de números (appuimel-2.4). */
+function desenharPainel(e: EstadoInicio): void {
+  const numeros = gradeDeNumeros(e);
+  const por = (id: string): string => numeros.find((n) => n.id === id)?.valor ?? "—";
+  const painel = e.tipo === "ninguem" || e.tipo === "outro" || e.tipo === "eu" ? e : undefined;
+  $("meta").textContent = painel
+    ? [
+        `Minecraft ${painel.versaoMinecraft ?? "—"}`,
+        `ligado: ${por("tempo")}`,
+        `jogadores: ${por("jogadores")}`,
+      ].join(" · ")
+    : "";
+  const lista = $("pecas");
+  for (const p of pecasDeEstado(e)) {
+    const li = celula(lista, `peca-${p.id}`, "li", "peca");
+    li.dataset["tom"] = p.tom;
+    if (!li.firstChild) {
+      li.append(modeloIcone.content.cloneNode(true), document.createElement("span"));
+    }
+    const rotulo = li.lastElementChild as HTMLElement;
+    rotulo.innerHTML = "";
+    for (const [tag, t] of [
+      ["small", p.rotulo],
+      ["b", p.palavra],
+      ["small", p.detalhe],
+    ] as const) {
+      if (t === "") continue;
+      const el = document.createElement(tag);
+      el.textContent = t;
+      rotulo.append(el);
+    }
+  }
+  const grade = $("numeros");
+  for (const n of numeros) {
+    // "jogadores-valor" já é o da coluna do grupo; "backup-valor" é o do último backup.
+    const nome = n.id === "ultimo" ? "backup" : n.id === "jogadores" ? "numero-jogadores" : n.id;
+    const cel = celula(grade, `num-${n.id}`, "div");
+    if (!cel.firstChild) {
+      for (const [tag, classe, id] of [
+        ["dt", "", ""],
+        ["dd", "valor numero", `${nome}-valor`],
+        ["dd", "comparacao", ""],
+      ] as const) {
+        const el = document.createElement(tag);
+        el.className = classe;
+        if (id) el.id = id;
+        cel.append(el);
+      }
+    }
+    const [rotulo, valor, comparacao] = Array.from(cel.children);
+    if (rotulo) rotulo.textContent = n.rotulo;
+    if (valor) valor.textContent = n.valor;
+    if (comparacao) comparacao.textContent = n.comparacao || n.dica || "";
+    cel.title = n.dica ?? "";
+  }
 }
 
 function desenhar(): void {
@@ -172,6 +240,7 @@ function desenhar(): void {
   $("chip-texto").textContent = chip.texto;
   $("rodape-cartorio").textContent = textoCartorio(e);
   desenharFatos(e);
+  desenharPainel(e);
   const emCurso = ocupado ?? ocupadoRemoto;
   if (emCurso !== undefined) {
     // Ação demorada: texto de progresso e nenhum botão clicável de novo.
@@ -258,6 +327,12 @@ tentar.addEventListener("click", () => {
   void atualizar();
 });
 window.sabre.inicio.aoProgresso(() => void atualizar());
+
+// Tempo ligado e "há quanto tempo" andam sozinhos, mas só com o Início à vista e a janela aberta.
+const REFRESCO_MS = 15_000;
+setInterval(() => {
+  if (!document.hidden && !cartao.hidden && ocupado === undefined) void atualizar();
+}, REFRESCO_MS);
 
 window.sabre
   .versao()

@@ -141,6 +141,8 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
           quantidadeBackups: async () => 7,
           tamanhoMundo: async () => 1_288_490_189,
           ramReservadaMb: () => 4096,
+          totalMemMb: () => 16384,
+          versaoMinecraft: async () => process.env["SABRE_E2E_VERSAO_MC"] ?? "1.21.1",
           jogadores: async () =>
             (process.env["SABRE_E2E_JOGADORES"] ?? "Ana,Lucas").split(",").filter((n) => n !== ""),
         }),

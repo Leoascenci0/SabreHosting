@@ -639,8 +639,138 @@ button.link {
 
 /* Início como painel de controle (appui-1.2). */
 #cartao {
-  width: min(100%, 640px);
+  width: min(100%, 880px);
   gap: var(--espaco-3);
+}
+
+/* Início v2 (appuimel-2.4): coluna principal + coluna do grupo; quebra sozinha em janela estreita. */
+.inicio-colunas {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-3);
+  align-items: flex-start;
+}
+
+.coluna-principal {
+  flex: 3 1 400px;
+  min-width: 0;
+  display: grid;
+  gap: var(--espaco-3);
+  justify-items: center;
+}
+
+.coluna-grupo {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.coluna-grupo .fatos {
+  grid-template-columns: 1fr;
+}
+
+.meta {
+  margin: var(--espaco-1) 0 0;
+  font-size: var(--texto-1);
+  color: var(--cor-texto-suave);
+}
+
+.pecas {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--espaco-2);
+}
+
+.peca {
+  --tom: var(--cor-desligado);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espaco-1);
+  padding: var(--espaco-2);
+  text-align: left;
+  background: var(--cor-camada-2);
+  border: 2px solid var(--tom);
+  border-radius: var(--raio);
+  min-width: 0;
+}
+
+.peca[data-tom="ligado"] {
+  --tom: var(--cor-ligado);
+}
+
+.peca[data-tom="troca"],
+.peca[data-tom="atencao"] {
+  --tom: var(--cor-atencao);
+}
+
+.peca-icone {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--tom);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.peca .marca {
+  display: none;
+}
+
+.peca[data-tom="ligado"] .marca-ligado,
+.peca[data-tom="desligado"] .marca-desligado,
+.peca[data-tom="troca"] .marca-troca,
+.peca[data-tom="atencao"] .marca-atencao {
+  display: inline;
+}
+
+.peca small {
+  display: block;
+  font-size: var(--texto-1);
+  color: var(--cor-texto-suave);
+}
+
+.peca b {
+  display: block;
+  font-size: 0.9375rem;
+}
+
+.numeros {
+  width: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--espaco-2);
+  text-align: left;
+}
+
+.numeros > div {
+  padding: var(--espaco-2) var(--espaco-3);
+  background: var(--cor-camada-2);
+  border-radius: var(--raio);
+  min-width: 0;
+}
+
+.numeros dt,
+.numeros .comparacao {
+  font-size: var(--texto-1);
+  color: var(--cor-texto-suave);
+}
+
+.numeros dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.numeros .valor {
+  font-size: var(--numero-1);
+  font-weight: 700;
 }
 
 #cartao .topo {
@@ -962,4 +1092,18 @@ button.link {
 
 #tela-importar > .acoes {
   justify-self: start;
+}
+
+/* Início v2: o cartão de estado fica enxuto para a ação principal caber na janela mínima (720 x 480). */
+#cartao .estado {
+  padding: var(--espaco-2) var(--espaco-3);
+}
+
+#cartao .estado .estado-icone {
+  width: 36px;
+  height: 36px;
+}
+
+#cartao .estado .status {
+  font-size: var(--texto-3);
 }
