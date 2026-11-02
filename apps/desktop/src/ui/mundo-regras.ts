@@ -170,13 +170,15 @@ export const textoPendencia = (p: "aguardando" | "conflito"): string => SEM_TERM
 export function textoDaPublicacao(
   pub: PublicacaoDaTela,
   chunksApagados: number | undefined,
+  /** Nome, na lista de Backups, do backup que ficou do estado de antes ("Antes de resetar" ou "Antes de restaurar"). */
+  backupDeAntes = "Antes de resetar",
 ): string {
   const feito =
     chunksApagados === undefined
       ? "Pronto neste PC."
       : `Pronto neste PC: ${chunks(chunksApagados)} apagados.`;
   if (pub.estado === "publicada")
-    return `${feito} A versão ${pub.versao} do mundo já foi enviada ao grupo. O backup de antes está na lista de Backups (“Antes de resetar”).`;
+    return `${feito} A versão ${pub.versao} do mundo já foi enviada ao grupo. O backup de antes está na lista de Backups (“${backupDeAntes}”).`;
   if (pub.estado === "pendente")
     return `${feito} Falta enviar a versão ao grupo: ${pub.aviso} ${SEM_TERMO.aguardando}`;
   return `${feito} ${SEM_TERMO.conflito}`;

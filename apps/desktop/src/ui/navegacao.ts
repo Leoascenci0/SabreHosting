@@ -7,6 +7,7 @@ const rodape = document.getElementById("rodape");
 const telas = [
   "cartao",
   "tela-backups",
+  "tela-mundo",
   "tela-grupo",
   "tela-mods",
   "tela-config",
@@ -22,6 +23,7 @@ const botoes = new Map<Area, HTMLButtonElement>(
 );
 const VOLTAR: Record<string, string> = {
   "tela-backups": "voltar-backups",
+  "tela-mundo": "voltar-mundo",
   "tela-grupo": "grupo-voltar",
   "tela-mods": "mods-voltar", // volta ao Grupo; o Grupo se fecha com o próprio "Voltar"
   "tela-config": "config-voltar",
@@ -29,6 +31,7 @@ const VOLTAR: Record<string, string> = {
 };
 const ABRIR: Partial<Record<Area, string>> = {
   backups: "ver-backups",
+  mundo: "ver-mundo",
   configuracoes: "ver-config",
 };
 

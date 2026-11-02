@@ -3,7 +3,7 @@
 import { EventEmitter } from "node:events";
 import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { criarPacote } from "@sabrehosting/nucleo/backup/pacote";
@@ -19,6 +19,7 @@ import type { DepsImportacao } from "./importar.js";
 import type { DepsVersao } from "./versao.js";
 import type { DepsModsGrupo } from "./mods-grupo.js";
 import type { OpcoesMundo } from "./mundo.js";
+import { tamanhoDoMundo } from "./tamanho-mundo.js";
 import { erroSemGrupo, type DepsInicio } from "./inicio.js";
 
 // "dono-eu*": app reaberto com a trava ainda em nome deste PC, sem servidor desta sessão (com ou sem órfão vivo).
@@ -382,9 +383,28 @@ export function depsBoasVindasE2E(dados: string): {
   };
 }
 
+const SETOR = 4096;
+
+/** `.mca` inventado: cabeçalho de verdade (posições + datas) e miolo de lixo; `chunks` = índices 0..1023 presentes. */
+function regiaoInventada(caminho: string, chunks: number[], setoresPorChunk = 2): void {
+  mkdirSync(dirname(caminho), { recursive: true });
+  const cabecalho = Buffer.alloc(2 * SETOR);
+  chunks.forEach((indice, ordem) => {
+    cabecalho.writeUIntBE(2 + ordem * setoresPorChunk, indice * 4, 3);
+    cabecalho.writeUInt8(setoresPorChunk, indice * 4 + 3);
+    cabecalho.writeUInt32BE(1_700_000_000, SETOR + indice * 4);
+  });
+  writeFileSync(
+    caminho,
+    Buffer.concat([cabecalho, Buffer.alloc(chunks.length * setoresPorChunk * SETOR, 0x5a)]),
+  );
+}
+const faixa = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
+
 /**
- * Mundo de mentira para o E2E (chunk-1.5): pastas temporárias com um mundo inventado (sem região nenhuma, então o
- * reset recusa com "nenhum chunk"), cartório que só conta as chamadas. Dono com `SABRE_E2E_DONO=1`.
+ * Mundo de mentira para o E2E (chunk-1.5/1.6): pastas temporárias com um mundo inventado e três regiões do terreno
+ * (r.0.0 com 64 chunks, r.1.0 com 10, r.0.1 com 1; Nether com 4), cartório que só conta as chamadas. Dono com
+ * `SABRE_E2E_DONO=1`. `__sabreE2EMundo` dá ao teste as pastas e `jogar()` (um backup manual novo = "jogou depois").
  */
 export function opcoesMundoE2E(
   servidorRodando: () => boolean,
@@ -396,6 +416,24 @@ export function opcoesMundoE2E(
   mkdirSync(pastaDoMundo, { recursive: true });
   mkdirSync(pastaBackups, { recursive: true });
   writeFileSync(join(pastaDoMundo, "level.dat"), "mundo-inventado");
+  regiaoInventada(join(pastaDoMundo, "region", "r.0.0.mca"), faixa(64));
+  regiaoInventada(join(pastaDoMundo, "region", "r.1.0.mca"), faixa(10));
+  regiaoInventada(join(pastaDoMundo, "region", "r.0.1.mca"), [0]);
+  regiaoInventada(join(pastaDoMundo, "DIM-1", "region", "r.0.0.mca"), faixa(4));
+  (globalThis as Record<string, unknown>)["__sabreE2EMundo"] = {
+    mundo: pastaDoMundo,
+    backups: pastaBackups,
+    jogar: () =>
+      criarPacote(
+        pastaDoMundo,
+        join(pastaBackups, nomeDoBackup(new Date(Date.now() + 5_000), 90)),
+        {
+          versao: 90,
+          epoca: 1,
+          origem: "manual",
+        },
+      ),
+  };
   const souDono = process.env["SABRE_E2E_DONO"] === "1";
   const trava = { ok: true as const, epoca: 1, expiraEm: 0, renovarMs: 20_000 };
   return {
@@ -403,6 +441,7 @@ export function opcoesMundoE2E(
     pastaBackups,
     pastaDoMundo,
     pastaDoServidor: servidor,
+    tamanhoMundo: (pasta) => tamanhoDoMundo(pasta),
     servidorRodando,
     cliente: {
       pegar: async () => trava,

@@ -32,6 +32,13 @@
               /></svg
             ><span>Backups</span>
           </button>
+          <button type="button" class="item-barra" data-area="mundo">
+            <svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path
+                d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm-1 2.1V8H8.5L7 9.5V11h3v2H7.1A7 7 0 0 1 11 5.1zM13 18.9V16h2.5l1.5-1.5V13h-4v-2h5.9A7 7 0 0 1 13 18.9z"
+              /></svg
+            ><span>Mundo</span>
+          </button>
           <button type="button" class="item-barra" data-area="grupo">
             <svg class="icone-nav" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path
@@ -92,6 +99,7 @@
                 <button type="button" class="link" id="importar-abrir">Importar mundo</button>
                 <button type="button" class="link" id="ver-backups">Backups</button>
                 <button type="button" class="link" id="ver-config">Configurações</button>
+                <button type="button" class="link" id="ver-mundo" hidden>Mundo</button>
                 <button type="button" class="link" id="parar" hidden>Parar o servidor</button>
                 <button type="button" class="link" id="tentar" hidden>Tentar de novo</button>
               </div>
@@ -234,6 +242,231 @@
             </div>
           </div>
           <button type="button" class="secundario" id="voltar-backups" hidden>Voltar</button>
+        </main>
+        <main
+          class="cartao"
+          id="tela-mundo"
+          aria-labelledby="titulo-mundo"
+          aria-busy="false"
+          hidden
+        >
+          <h2 id="titulo-mundo" tabindex="-1">Mundo</h2>
+          <p class="detalhe" id="mundo-resultado" role="status"></p>
+          <p class="erro" id="mundo-erro" role="alert" hidden></p>
+          <p class="detalhe" id="mundo-so-dono" hidden>
+            Só o dono do grupo pode resetar parte do mundo. Aqui você não precisa fazer nada.
+          </p>
+          <div id="mundo-area" hidden>
+            <p class="detalhe" id="mundo-intro">
+              Resetar apaga o terreno de uma área; o Minecraft cria de novo quando alguém passa por
+              lá. Um chunk é um pedaço do mundo de 16 x 16 blocos; uma região junta 32 x 32 chunks.
+              Antes de apagar, o app faz um backup e o servidor precisa estar parado.
+            </p>
+            <div class="painel" id="mundo-pendencia" role="status" hidden>
+              <p id="mundo-pendencia-texto"></p>
+              <div class="acoes">
+                <button type="button" class="secundario" id="mundo-descartar">
+                  Descartar este aviso…
+                </button>
+              </div>
+            </div>
+            <section class="painel" aria-labelledby="mundo-titulo-area">
+              <h3 id="mundo-titulo-area">1. Onde apagar</h3>
+              <label for="mundo-dimensao">Dimensão</label>
+              <select id="mundo-dimensao">
+                <option value="overworld" selected>Mundo normal</option>
+                <option value="nether">Nether</option>
+                <option value="end">End</option>
+              </select>
+              <fieldset class="modo-area">
+                <legend>Como escolher a área</legend>
+                <label class="opcao">
+                  <input
+                    type="radio"
+                    name="mundo-modo"
+                    id="mundo-modo-retangulo"
+                    value="retangulo"
+                    checked
+                  />
+                  De um canto a outro
+                </label>
+                <label class="opcao">
+                  <input type="radio" name="mundo-modo" id="mundo-modo-raio" value="raio" />
+                  Raio em blocos ao redor de um ponto
+                </label>
+              </fieldset>
+              <div class="campos-area" id="mundo-campos-retangulo">
+                <label for="mundo-x1">Canto 1: X (blocos)</label>
+                <input
+                  id="mundo-x1"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value="0"
+                />
+                <label for="mundo-z1">Canto 1: Z (blocos)</label>
+                <input
+                  id="mundo-z1"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value="0"
+                />
+                <label for="mundo-x2">Canto 2: X (blocos)</label>
+                <input
+                  id="mundo-x2"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value="511"
+                />
+                <label for="mundo-z2">Canto 2: Z (blocos)</label>
+                <input
+                  id="mundo-z2"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value="511"
+                />
+              </div>
+              <div class="campos-area" id="mundo-campos-raio" hidden>
+                <label for="mundo-x">Ponto: X (blocos)</label>
+                <input
+                  id="mundo-x"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value="0"
+                />
+                <label for="mundo-z">Ponto: Z (blocos)</label>
+                <input
+                  id="mundo-z"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value="0"
+                />
+                <label for="mundo-raio">Raio (blocos)</label>
+                <input
+                  id="mundo-raio"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value="100"
+                />
+              </div>
+              <p class="dica">
+                Os blocos aparecem no jogo ao apertar F3 (campo XYZ). Sem aviso, vale até 1.024
+                chunks ou raio de 1.000 blocos.
+              </p>
+              <h4 id="mundo-titulo-grade">Ou clique nas regiões que existem no disco</h4>
+              <p class="dica" id="mundo-grade-dica">
+                Cada quadrado é uma região (512 x 512 blocos). Clicar marca; o app preenche os
+                campos.
+              </p>
+              <div
+                class="grade-regioes"
+                id="mundo-grade"
+                role="group"
+                aria-labelledby="mundo-titulo-grade"
+              ></div>
+              <p class="detalhe" id="mundo-grade-vazio" hidden></p>
+            </section>
+            <section class="painel" aria-labelledby="mundo-titulo-previa">
+              <h3 id="mundo-titulo-previa">2. Ver o que será apagado</h3>
+              <div class="acoes">
+                <button type="button" class="secundario" id="mundo-ver-previa">Ver prévia</button>
+              </div>
+              <div
+                class="confirmacao"
+                id="mundo-grande"
+                role="alertdialog"
+                aria-labelledby="mundo-grande-texto"
+                hidden
+              >
+                <p id="mundo-grande-texto"></p>
+                <div class="acoes">
+                  <button type="button" class="secundario" id="mundo-grande-sim">
+                    Ver a prévia mesmo assim
+                  </button>
+                  <button type="button" class="secundario" id="mundo-grande-nao">
+                    Escolher outra área
+                  </button>
+                </div>
+              </div>
+              <div id="mundo-previa" role="status" hidden>
+                <p class="titulo-previa" id="mundo-previa-titulo"></p>
+                <ul class="linhas-previa" id="mundo-previa-linhas"></ul>
+              </div>
+            </section>
+            <section class="painel" aria-labelledby="mundo-titulo-acao">
+              <h3 id="mundo-titulo-acao">3. Resetar</h3>
+              <div class="acoes">
+                <button
+                  type="button"
+                  class="perigo"
+                  id="mundo-resetar"
+                  aria-describedby="mundo-dica"
+                  disabled
+                >
+                  Resetar…
+                </button>
+              </div>
+              <p class="detalhe" id="mundo-dica"></p>
+            </section>
+            <section class="painel" aria-labelledby="mundo-titulo-desfazer">
+              <h3 id="mundo-titulo-desfazer">Desfazer</h3>
+              <div class="acoes">
+                <button
+                  type="button"
+                  class="secundario"
+                  id="mundo-desfazer"
+                  aria-describedby="mundo-desfazer-info"
+                  disabled
+                >
+                  Desfazer o último reset…
+                </button>
+              </div>
+              <p class="detalhe" id="mundo-desfazer-info"></p>
+            </section>
+            <div
+              class="confirmacao"
+              id="mundo-confirmacao"
+              role="alertdialog"
+              aria-labelledby="mundo-pergunta"
+              hidden
+            >
+              <p id="mundo-pergunta"></p>
+              <p class="aviso-forte" id="mundo-pergunta-aviso" hidden></p>
+              <label for="mundo-nome-digitado" id="mundo-nome-rotulo"
+                >Digite o nome do mundo para confirmar</label
+              >
+              <input id="mundo-nome-digitado" type="text" autocomplete="off" spellcheck="false" />
+              <div class="acoes">
+                <button type="button" class="perigo" id="mundo-confirmar" disabled>
+                  Confirmar
+                </button>
+                <button type="button" class="secundario" id="mundo-cancelar">Cancelar</button>
+              </div>
+            </div>
+            <div
+              class="progresso"
+              id="mundo-progresso"
+              role="progressbar"
+              aria-label="Mexendo no mundo"
+              hidden
+            >
+              <span></span>
+            </div>
+          </div>
+          <button type="button" class="secundario" id="voltar-mundo" hidden>Voltar</button>
         </main>
         <main class="cartao" id="tela-grupo" aria-labelledby="titulo-grupo" aria-busy="true" hidden>
           <h2 id="titulo-grupo">Grupo</h2>
@@ -1018,6 +1251,7 @@
     <script type="module" src="tela.js"></script>
     <script type="module" src="configuracoes.js"></script>
     <script type="module" src="backups.js"></script>
+    <script type="module" src="mundo.js"></script>
     <script type="module" src="grupo.js"></script>
     <script type="module" src="mods.js"></script>
     <script type="module" src="importar.js"></script>
