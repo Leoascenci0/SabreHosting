@@ -644,11 +644,11 @@ button.link {
 
 /* Barra de salvar: mora no rodapé (appuimel-2.6) e só aparece com a tela Configurações à vista. */
 .barra-salvar {
-  display: flex;
+  display: grid;
   flex: 1 1 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--espaco-1) var(--espaco-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0 var(--espaco-3);
   padding-bottom: var(--espaco-1);
   border-bottom: 1px solid var(--cor-borda);
 }
@@ -657,8 +657,9 @@ button.link {
   display: none;
 }
 
+/* Avisos empilhados à esquerda e os botões à direita: com erro, o rodapé não ganha uma linha só para os botões (720x480). */
 .barra-salvar p {
-  flex: 1 1 12rem;
+  grid-column: 1;
   margin: 0;
 }
 
@@ -666,12 +667,11 @@ button.link {
   display: none;
 }
 
-.barra-salvar .erro {
-  flex-basis: 100%;
-}
-
 .barra-salvar .acoes {
-  margin-left: auto;
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  display: flex;
+  gap: var(--espaco-2);
 }
 
 .barra-salvar button.principal {

@@ -234,6 +234,24 @@ describe("configurações em seções (appui-1.3)", () => {
     expect(await p.locator("#aba-geral").getAttribute("aria-selected")).toBe("false");
   });
 
+  it("janela mínima (720x480): rodapé com erro e Salvar ocupa até 1/4 da altura e a tela ainda rola até o fim", async () => {
+    const p = await abrir();
+    await p.setViewportSize({ width: 720, height: 480 });
+    await ir(p, "backups");
+    await p.locator("#cfg-quantos").fill("0");
+    await salvar(p).click();
+    await esperarTexto(p, "#config-erro", "Quantos guardar");
+    const medidas = await p.evaluate(() => {
+      const r = document.querySelector<HTMLElement>(".rodape")?.getBoundingClientRect();
+      const erro = document.querySelector<HTMLElement>("#config-erro")?.getBoundingClientRect();
+      return { rodape: r?.height ?? 0, topo: r?.top ?? 0, erroBaixo: erro?.bottom ?? 0 };
+    });
+    if (process.env["SABRE_DEPURA"]) await p.screenshot({ path: "/tmp/claude-0/s/rodape.png" });
+    expect(medidas.rodape).toBeLessThanOrEqual(120);
+    expect(medidas.erroBaixo).toBeLessThanOrEqual(480);
+    expect(medidas.topo).toBeGreaterThanOrEqual(360);
+  });
+
   it("Salvar só habilita com mudança; 'Há alterações não salvas' acompanha", async () => {
     const p = await abrir();
     await ir(p, "backups");
