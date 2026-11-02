@@ -138,6 +138,9 @@ export function criarDepsE2E(cenario: Cenario, espiao: Espiao): DepsInicio {
       : {
           ultimoBackup: async () => new Date(Date.now() - 3 * 3_600_000).toISOString(),
           versaoMundo: async () => 12,
+          quantidadeBackups: async () => 7,
+          tamanhoMundo: async () => 1_288_490_189,
+          ramReservadaMb: () => 4096,
           jogadores: async () =>
             (process.env["SABRE_E2E_JOGADORES"] ?? "Ana,Lucas").split(",").filter((n) => n !== ""),
         }),

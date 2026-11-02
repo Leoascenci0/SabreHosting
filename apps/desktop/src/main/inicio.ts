@@ -41,6 +41,12 @@ export interface DepsInicio {
   ultimoBackup?(): Promise<string | undefined>;
   /** Número da versão do mundo no grupo (cartório); `undefined` = grupo sem mundo ou sem conexão. */
   versaoMundo?(): Promise<number | undefined>;
+  /** Quantos backups há neste PC; `undefined` = sem pasta ou ilegível. Só leitura. */
+  quantidadeBackups?(): Promise<number | undefined>;
+  /** Tamanho do mundo no disco, em bytes (soma de `stat`, sem ler o conteúdo); `undefined` = sem dado. */
+  tamanhoMundo?(): Promise<number | undefined>;
+  /** RAM (MB) reservada ao servidor deste PC; `undefined` = não sei. */
+  ramReservadaMb?(): number | undefined;
   /** Nomes de quem está jogando neste servidor; `undefined` = ainda não dá para saber (subindo). */
   jogadores?(servidor: ServidorAtivo): Promise<string[] | undefined>;
   /** Servidor deste PC criado (ainda pode estar subindo): quem agenda o backup passa a ouvir o estado dele. */
@@ -81,21 +87,35 @@ export interface TemposInicio {
   orfaoTetoMs?: number;
   /** Quanto guardar a versão do mundo antes de perguntar ao cartório de novo. Padrão: 60 s. */
   versaoTtlMs?: number;
+  /** Quanto guardar o tamanho do mundo antes de somar de novo. Padrão: 30 s. */
+  tamanhoTtlMs?: number;
+  /** Relógio em ms (monotônico); só os testes trocam. */
+  agora?: () => number;
 }
 
 export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
   const { passoMs = 300, tentativas = 20 } = tempos;
   const { orfaoPassoMs = 1000, orfaoPrazoMs = 30_000, orfaoTetoMs = 120_000 } = tempos;
-  const { versaoTtlMs = 60_000 } = tempos;
-  // A versão do mundo vai ao cartório; o estado é pedido a cada evento da tela, então a resposta (ou a falha) vale por um tempo.
-  let versaoGuardada: { valor: number | undefined; ate: number } | undefined;
-  const lerVersaoMundo = async (): Promise<number | undefined> => {
-    if (!deps.versaoMundo) return undefined;
-    if (versaoGuardada && performance.now() < versaoGuardada.ate) return versaoGuardada.valor;
-    const valor = await deps.versaoMundo().catch(() => undefined);
-    versaoGuardada = { valor, ate: performance.now() + versaoTtlMs };
-    return valor;
+  const { versaoTtlMs = 60_000, tamanhoTtlMs = 30_000, agora = () => performance.now() } = tempos;
+  // O estado é pedido a cada evento da tela: a versão (vai ao cartório) e o tamanho do mundo (percorre o disco)
+  // valem por um tempo, falha incluída.
+  const comCache = (
+    ler: (() => Promise<number | undefined>) | undefined,
+    ttlMs: number,
+  ): (() => Promise<number | undefined>) => {
+    let guardada: { valor: number | undefined; ate: number } | undefined;
+    return async () => {
+      if (!ler) return undefined;
+      if (guardada && agora() < guardada.ate) return guardada.valor;
+      const valor = await ler().catch(() => undefined);
+      guardada = { valor, ate: agora() + ttlMs };
+      return valor;
+    };
   };
+  const lerVersaoMundo = comCache(deps.versaoMundo?.bind(deps), versaoTtlMs);
+  const lerTamanhoMundo = comCache(deps.tamanhoMundo?.bind(deps), tamanhoTtlMs);
+  /** Quando (relógio de `agora`) este PC subiu o servidor; `undefined` = não está hospedando. */
+  let ligadoDesde: number | undefined;
   let ativo: ServidorAtivo | undefined;
   let ocupado = false;
   let parando = false;
@@ -209,13 +229,16 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
   async function comPainel(e: EstadoInicio): Promise<EstadoInicio> {
     if (e.tipo !== "ninguem" && e.tipo !== "outro" && e.tipo !== "eu") return e;
     const servidor = ativo;
-    const [ultimoBackup, versaoMundo, jogadores] = await Promise.all([
-      deps.ultimoBackup?.().catch(() => undefined),
-      lerVersaoMundo(),
-      e.tipo === "eu" && !e.parando && servidor
-        ? deps.jogadores?.(servidor).catch(() => undefined)
-        : undefined,
-    ]);
+    const meu = e.tipo === "eu" && !e.parando && servidor !== undefined;
+    const [ultimoBackup, versaoMundo, quantidadeBackups, tamanhoMundoBytes, jogadores] =
+      await Promise.all([
+        deps.ultimoBackup?.().catch(() => undefined),
+        lerVersaoMundo(),
+        deps.quantidadeBackups?.().catch(() => undefined),
+        lerTamanhoMundo(),
+        meu ? deps.jogadores?.(servidor).catch(() => undefined) : undefined,
+      ]);
+    const ramReservadaMb = meu ? deps.ramReservadaMb?.() : undefined;
     const trabalho = deps.restaurando?.()
       ? ("restaurando" as const)
       : deps.trocandoVersao?.()
@@ -226,7 +249,13 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
       ...(trabalho && e.tipo !== "eu" ? { trabalho } : {}),
       ...(ultimoBackup ? { ultimoBackup } : {}),
       ...(versaoMundo !== undefined ? { versaoMundo } : {}),
+      ...(quantidadeBackups !== undefined ? { quantidadeBackups } : {}),
+      ...(tamanhoMundoBytes !== undefined ? { tamanhoMundoBytes } : {}),
       ...(jogadores ? { jogadores } : {}),
+      ...(meu && ligadoDesde !== undefined
+        ? { ligadoSegundos: Math.max(0, Math.floor((agora() - ligadoDesde) / 1000)) }
+        : {}),
+      ...(ramReservadaMb !== undefined ? { ramReservadaMb } : {}),
     };
   }
 
@@ -308,6 +337,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
         if (await temOrfao()) return { ok: false, mensagem: ORFAO_VIVO };
         const { servidor } = await deps.hospedar(() => avisar());
         ativo = servidor;
+        ligadoDesde = agora();
         deps.aoServidor?.(servidor);
         servidor.on("estado", ({ estado }) => {
           if (estado === "parado" || estado === "caiu") {
