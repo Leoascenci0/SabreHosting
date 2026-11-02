@@ -77,7 +77,7 @@ const DIMENSOES: readonly string[] = ["overworld", "nether", "end"];
 function inteiro(v: unknown, limite: number): number {
   if (typeof v !== "number" || !Number.isInteger(v) || Math.abs(v) > limite)
     throw new ErroDoPlanoDeReset("area-invalida");
-  return v;
+  return v + 0; // normaliza -0 (que JSON e toEqual distinguem de 0)
 }
 
 /** Valida a área (entrada não confiável) e devolve uma cópia limpa; retângulo sai com x1≤x2 e z1≤z2. */
@@ -115,7 +115,7 @@ function raizInteira(n: number): number {
 
 const clamp = (v: number): number => Math.max(-LIMITE_CHUNK, Math.min(LIMITE_CHUNK, v));
 
-function chunkNaArea(area: AreaDoReset, cx: number, cz: number): boolean {
+export function chunkNaArea(area: AreaDoReset, cx: number, cz: number): boolean {
   if (area.tipo === "retangulo")
     return cx >= area.x1 && cx <= area.x2 && cz >= area.z1 && cz <= area.z2;
   return distancia(area.x, cx) ** 2 + distancia(area.z, cz) ** 2 <= area.raio ** 2;

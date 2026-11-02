@@ -15,6 +15,7 @@ import { travaConfirmada } from "../servidor/processo.js";
 import { nomeDoBackup } from "./agendador.js";
 import type { Manifesto } from "./manifesto.js";
 import { abrirPacote, criarPacote, type PacoteCriado } from "./pacote.js";
+import { ehMarcadorDeReset, recuperarReset } from "../mundo/troca-reset.js";
 
 const PRAZO_TRAVA_PADRAO_MS = 10_000;
 
@@ -51,19 +52,23 @@ export interface Restaurado {
   mundoAntigo?: string;
 }
 
-async function exigirPodeTrocar(o: OpcoesRestaurar): Promise<void> {
+/** `acao` completa "pare o servidor antes de …" e "não dá para …" (padrão: restaurar). */
+export async function exigirPodeTrocar(
+  o: Pick<OpcoesRestaurar, "servidorParado" | "temTrava" | "prazoTravaMs">,
+  acao = { parar: "restaurar um backup", fazer: "restaurar o mundo" },
+): Promise<void> {
   if (!o.servidorParado()) {
-    throw new Error("O servidor está rodando; pare o servidor antes de restaurar um backup.");
+    throw new Error(`O servidor está rodando; pare o servidor antes de ${acao.parar}.`);
   }
   const trava = await travaConfirmada(o.temTrava, o.prazoTravaMs ?? PRAZO_TRAVA_PADRAO_MS);
   if (trava !== "sim") {
     throw new Error(
-      "Este PC não tem a trava de host confirmada pelo cartório; não dá para restaurar o mundo.",
+      `Este PC não tem a trava de host confirmada pelo cartório; não dá para ${acao.fazer}.`,
     );
   }
 }
 
-const apagar = (p: string) => rm(p, { recursive: true, force: true });
+export const apagar = (p: string) => rm(p, { recursive: true, force: true });
 
 /** Existe? Recusa o que não é pasta, inclusive link simbólico (quebrado ou não): o app nunca cria o mundo assim. */
 export async function haMundo(pasta: string): Promise<boolean> {
@@ -206,6 +211,8 @@ export const apagarMarcadorTroca = (mundo: string) => apagar(join(dirname(mundo)
 export async function recuperarTroca(
   pastaDoServidor: string,
   renomear: (de: string, para: string) => Promise<void> = rename,
+  /** Nome da pasta do mundo configurado; sem ele vale o `level-name` do `server.properties` (padrão `world`). */
+  nomeDoMundo?: string,
 ): Promise<"nada" | "limpou" | "desfez"> {
   const arquivo = join(pastaDoServidor, MARCADOR_TROCA);
   let texto: string;
@@ -214,6 +221,17 @@ export async function recuperarTroca(
   } catch (erro) {
     if ((erro as NodeJS.ErrnoException).code === "ENOENT") return "nada";
     throw erro;
+  }
+  const bruto: unknown = (() => {
+    try {
+      return JSON.parse(texto);
+    } catch {
+      return undefined;
+    }
+  })();
+  if (ehMarcadorDeReset(bruto)) {
+    const nome = nomeDoMundo ?? (await levelName(pastaDoServidor));
+    return recuperarReset(bruto, pastaDoServidor, nome, renomear);
   }
   const c = lerMarcadorTroca(texto, pastaDoServidor);
   if (await haMundo(c.mundo)) {
@@ -236,6 +254,13 @@ export async function recuperarTroca(
   await apagar(c.temp);
   await rm(arquivo, { force: true });
   return "desfez";
+}
+
+/** `level-name` do `server.properties` (padrão `world`); arquivo e valor são entrada não confiável (sem barra). */
+async function levelName(pasta: string): Promise<string> {
+  const props = await readFile(join(pasta, "server.properties"), "utf8").catch(() => "");
+  const nome = /^level-name=(.*)$/m.exec(props)?.[1]?.trim() ?? "";
+  return nome === "" || /[\\/]/.test(nome) || nome === "." || nome === ".." ? "world" : nome;
 }
 
 /** Marcador ilegível ou apontando para fora da pasta do servidor não é obedecido: trava e pede mão humana. */

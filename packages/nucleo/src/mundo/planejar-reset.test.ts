@@ -212,3 +212,14 @@ describe("planejarReset", () => {
     expect(hashesDoMundo(m)).toEqual(antes);
   });
 });
+
+describe("planejarReset — -0", () => {
+  it("área com -0 sai como 0 (sem -0 no plano)", async () => {
+    const m = mundo();
+    const p = await planejarReset(m, "overworld", { tipo: "raio", x: -0, z: -0, raio: 5 });
+    expect(Object.is((p.area as { x: number }).x, 0)).toBe(true);
+    expect(Object.is((p.area as { z: number }).z, 0)).toBe(true);
+    const r = await planejarReset(m, "overworld", retangulo(-0, -0, 1, 1));
+    expect(Object.is((r.area as { x1: number }).x1, 0)).toBe(true);
+  });
+});

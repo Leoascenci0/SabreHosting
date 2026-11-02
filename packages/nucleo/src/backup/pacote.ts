@@ -280,7 +280,11 @@ async function extrair(pacote: string, pasta: string): Promise<Manifesto> {
     parser.once("end", resolver);
     parser.once("error", rejeitar);
     origem.once("error", rejeitar);
-    origem.once("close", () => resolver());
+    // `close` só encerra aqui se houve falha (origem destruída de propósito): no caminho normal o `close` chega antes de
+    // o parser entregar todas as entradas e quem encerra é o `end` do parser (mundo pequeno e compressível).
+    origem.once("close", () => {
+      if (falha) resolver();
+    });
     origem.pipe(parser);
   });
   await fila;
