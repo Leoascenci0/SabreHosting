@@ -33,7 +33,10 @@ export type EstadoMundo =
   | { dono: false }
   | { dono: true; pendencia: "nenhuma" | "aguardando" | "conflito"; aviso?: string };
 
-const GENERICA = "Não consegui fazer isso agora. O mundo continua como estava.";
+/** Só leitura (nada foi tocado) e ação que pode ter chegado a mexer: o texto não afirma mais do que se sabe. */
+const GENERICA_LEITURA = "Não consegui fazer isso agora. Nada foi alterado.";
+const GENERICA_ACAO =
+  "Não consegui confirmar o estado do mundo; ele será conferido ao abrir o app. O backup antes do reset, se chegou a ser feito, está na pasta de backups.";
 const SO_DONO = "Só o dono do grupo pode resetar parte do mundo.";
 const NO_AR = "Pare o servidor deste PC antes de resetar parte do mundo.";
 const OCUPADO =
@@ -46,37 +49,51 @@ const SEM_CONFIRMAR = "Para descartar o aviso é preciso confirmar.";
 const SEM_PASTA = "Este PC ainda não tem a pasta do mundo e a pasta de backups configuradas.";
 
 /**
- * Texto que pode ir para a tela (S-14): só o que o próprio app escreveu em pt-BR. Erro do sistema (tem `code`),
- * mensagem com cara de caminho ou comprida demais vira o texto genérico; o detalhe fica no log do main.
+ * Lista FECHADA (S-14): as únicas mensagens do núcleo que podem ir à tela, escritas por nós em pt-BR e sem dado do
+ * PC. Qualquer outro erro (TypeError, erro do sistema, texto de rede com IP) vira o texto genérico; o detalhe fica só
+ * no log do main. Texto novo do núcleo que não esteja aqui cai no genérico (seguro) até alguém incluí-lo.
  */
-function textoSeguro(erro: unknown): string {
-  if (erro instanceof ErroDoPlanoDeReset || erro instanceof SemVez) return erro.message;
-  const e = erro as {
-    message?: unknown;
-    code?: unknown;
-    errno?: unknown;
-    syscall?: unknown;
-  } | null;
-  if (
-    erro instanceof Error &&
-    typeof e?.message === "string" &&
-    e.code === undefined &&
-    e.errno === undefined &&
-    e.syscall === undefined &&
-    e.message.length > 0 &&
-    e.message.length <= 400 &&
-    !/[\\/]|\b[A-Za-z]:|\bE[A-Z]{3,}\b/.test(e.message)
-  )
-    return e.message;
-  return GENERICA;
+const CONHECIDOS: ReadonlySet<string> = new Set([
+  SEM_PASTA,
+  "Há um backup ou uma restauração em andamento; espere terminar antes de resetar.",
+  "A pasta do mundo não existe; nada foi alterado.",
+  "O caminho do mundo não é uma pasta; nada foi alterado.",
+  "Há outra troca do mundo em andamento (ou parada no meio); abra o app de novo para recuperar antes de resetar.",
+  "Nenhum chunk existe nessa área; nada foi alterado.",
+  "Já existe um backup com esse nome; não escrevi por cima.",
+  "Há sobra de um reset anterior ao lado do mundo; nada foi alterado.",
+  "Não consegui fazer o backup antes de resetar; o mundo não foi alterado.",
+  "O backup antes de resetar não passou na conferência; descartei-o e não mexi no mundo.",
+  "Não consegui preparar os arquivos do reset (a conferência falhou); o mundo não foi alterado.",
+  "Não consegui registrar a troca; o mundo não foi alterado.",
+  "O reset parou no meio e não consegui desfazer. O servidor não sobe até o app recuperar o mundo: feche e abra o SabreHosting. O backup antes de resetar foi guardado na pasta de backups.",
+  "Não consegui trocar os arquivos do reset; o mundo continua como estava.",
+  "O servidor está rodando; pare o servidor antes de resetar o mundo.",
+  "Este PC não tem a trava de host confirmada pelo cartório; não dá para resetar o mundo.",
+  "O reset anterior ainda não foi espalhado para os outros PCs; conclua isso antes de mexer no mundo. Nada foi alterado.",
+  "Não consegui registrar a troca do mundo; o mundo não foi alterado.",
+  "Não consegui apagar o aviso da versão pendente.",
+  "Não há reset para desfazer.",
+  "Esse reset já foi desfeito (ou o mundo foi restaurado depois). Use a lista de Backups para voltar mais.",
+  "O reset ainda não foi espalhado para os outros PCs; conclua isso antes de desfazer.",
+  "Sem resposta do cartório; nada foi alterado. Tente de novo com o grupo no ar.",
+  "Não consegui ler a lista de backups; nada foi alterado.",
+  "Este PC perdeu a trava de host; a versão não foi enviada.",
+  "O servidor deste PC ainda está no ar. Pare o servidor (e feche o Java, se sobrou) antes de mexer na versão do mundo.",
+  "Este PC ainda não tem a pasta do mundo e a pasta de backups configuradas.",
+]);
+
+function textoSeguro(erro: unknown, generica: string): string {
+  if (erro instanceof ErroDoPlanoDeReset || erro instanceof SemVez) return erro.message; // fixos por construção
+  return erro instanceof Error && CONHECIDOS.has(erro.message) ? erro.message : generica;
 }
 
-const recusar = (erro: unknown): Recusa => {
+const recusar = (erro: unknown, generica = GENERICA_ACAO): Recusa => {
   const chunksNaArea = erro instanceof ErroDoPlanoDeReset ? erro.chunksNaArea : undefined;
   if (!(erro instanceof ErroDoPlanoDeReset)) console.error("[mundo]", erro);
   return {
     ok: false,
-    mensagem: textoSeguro(erro),
+    mensagem: textoSeguro(erro, generica),
     ...(chunksNaArea === undefined ? {} : { chunksNaArea }),
   };
 };
@@ -108,8 +125,14 @@ export function criarMundo(o: OpcoesMundo) {
       return false; // sem cartório não dá para saber: na dúvida, recusa
     }
   };
-  const haAviso = async (): Promise<boolean> =>
-    existsSync(join((await pastas()).servidor, MARCADOR_VERSAO_PENDENTE));
+  /** Sem pasta do mundo ou de backups não pode haver versão pendente: nada a retomar (e nada que barre o Hospedar). */
+  const haAviso = async (): Promise<boolean> => {
+    try {
+      return existsSync(join((await pastas()).servidor, MARCADOR_VERSAO_PENDENTE));
+    } catch {
+      return false;
+    }
+  };
   const anotar = (p: { estado: string }): void => void (conflito = p.estado === "conflito");
 
   /** Recusas comuns, na ordem barata → cara; quem chama já marcou `emCurso`. */
@@ -168,7 +191,7 @@ export function criarMundo(o: OpcoesMundo) {
           }),
         };
       } catch (erro) {
-        return recusar(erro);
+        return recusar(erro, GENERICA_LEITURA);
       }
     },
 
@@ -265,6 +288,25 @@ export function criarMundo(o: OpcoesMundo) {
       });
     },
   };
+}
+
+/** Tudo que mexe no mundo ou copia o mundo: o reset só começa com todas paradas (e elas recusam durante o reset). */
+export function algoMexendoNoMundo(f: {
+  restaurando(): boolean;
+  trocandoVersao(): boolean;
+  fazendoBackup(): boolean;
+  importando(): boolean;
+  atualizando(): boolean;
+  agendaOcupada(): boolean;
+}): boolean {
+  return (
+    f.restaurando() ||
+    f.trocandoVersao() ||
+    f.fazendoBackup() ||
+    f.importando() ||
+    f.atualizando() ||
+    f.agendaOcupada()
+  );
 }
 
 export type Mundo = ReturnType<typeof criarMundo>;

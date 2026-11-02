@@ -7,7 +7,7 @@ import { escreverRegiao } from "../../../../packages/nucleo/test/ajuda/regiao-mc
 import { MARCADOR_VERSAO_PENDENTE } from "@sabrehosting/nucleo/servidor/configurar";
 import { ErroCartorio } from "@sabrehosting/nucleo/cartorio/cliente";
 import { TEXTO_DEMONSTRACAO } from "./demonstracao.js";
-import { criarMundo } from "./mundo.js";
+import { algoMexendoNoMundo, criarMundo } from "./mundo.js";
 
 const pastas: string[] = [];
 afterEach(() => {
@@ -17,7 +17,7 @@ afterEach(() => {
 const AREA = { tipo: "retangulo", x1: 0, z1: 0, x2: 1, z2: 0 };
 
 /** Mundo inventado + cartório falso; `est` e `ev` deixam o teste ver e mexer no que o cartório faz. */
-function cenario(sobre: { dono?: boolean } = {}) {
+function cenario(sobre: { dono?: boolean; semBackups?: boolean } = {}) {
   const base = mkdtempSync(join(tmpdir(), "sabre-mundo-"));
   pastas.push(base);
   const servidor = join(base, "servidor");
@@ -66,6 +66,7 @@ function cenario(sobre: { dono?: boolean } = {}) {
     dono: sobre.dono ?? true,
     euCaiu: false,
     eus: 0,
+    orfao: undefined as undefined | (() => Promise<boolean>),
   };
   const m = criarMundo({
     demo: { ativa: () => o.demonstracao },
@@ -75,11 +76,12 @@ function cenario(sobre: { dono?: boolean } = {}) {
       return { dono: o.dono };
     },
     ocupado: () => o.ocupado,
-    pastaBackups: backups,
+    pastaBackups: sobre.semBackups ? undefined : backups,
     pastaDoMundo: mundo,
     pastaDoServidor: servidor,
     cliente,
     servidorRodando: () => o.rodando,
+    servidorOrfao: () => (o.orfao ? o.orfao() : Promise.resolve(false)),
   });
   const marca = join(servidor, MARCADOR_VERSAO_PENDENTE);
   const nada = () => {
@@ -333,5 +335,82 @@ describe("mundo: antes de hospedar", () => {
     writeFileSync(c.marca, JSON.stringify({ formato: 1, fase: "mundo-trocando" }));
     expect(await c.m.antesDeHospedar()).toBeUndefined();
     expect(existsSync(c.marca)).toBe(false);
+  });
+});
+
+describe("mundo: cruzamentos, texto seguro e bordas (devolução do qa)", () => {
+  it("servidor órfão vivo (ou sem saber se há) recusa sem pegar a vez", async () => {
+    for (const orfao of [async () => true, async () => Promise.reject(new Error("x"))]) {
+      const c = cenario();
+      c.o.orfao = orfao;
+      expect(await c.m.resetar("overworld", AREA)).toMatchObject({
+        ok: false,
+        mensagem: expect.stringContaining("servidor"),
+      });
+      expect(c.ev).toEqual([]);
+      c.nada();
+    }
+  });
+
+  it("planejar: área grande só passa com `confirmado === true` (valor torto não vale)", async () => {
+    const c = cenario();
+    const grande = { tipo: "retangulo", x1: 0, z1: 0, x2: 100, z2: 100 };
+    expect(await c.m.planejar("overworld", grande)).toMatchObject({
+      ok: false,
+      chunksNaArea: 10201,
+    });
+    expect(await c.m.planejar("overworld", grande, "sim")).toMatchObject({ ok: false });
+    expect(await c.m.planejar("overworld", grande, true)).toMatchObject({ ok: true });
+    c.nada();
+  });
+
+  it("erro cru (TypeError, IP:porta) nunca vai para a tela; texto conhecido do núcleo passa", async () => {
+    for (const erro of [
+      new TypeError("Cannot read properties of undefined (reading 'x')"),
+      new Error("ECONNREFUSED 10.0.0.1:25565"),
+      new Error("falha em 10.0.0.1:25565"),
+    ]) {
+      const c = cenario();
+      c.est.estadoTrava = async () => {
+        throw erro;
+      };
+      const r = await c.m.resetar("overworld", AREA);
+      expect(r).toMatchObject({ ok: false });
+      expect(JSON.stringify(r)).not.toMatch(/TypeError|undefined|ECONN|10\.0\.0\.1|reading/);
+      // não afirma mais do que sabe
+      expect((r as { mensagem: string }).mensagem).toMatch(/conferido ao abrir o app/);
+    }
+    const c = cenario();
+    const conhecido = "Não consegui fazer o backup antes de resetar; o mundo não foi alterado.";
+    c.est.estadoTrava = async () => {
+      throw new Error(conhecido);
+    };
+    expect(await c.m.resetar("overworld", AREA)).toEqual({ ok: false, mensagem: conhecido });
+  });
+
+  it("sem pasta de backups não há pendência: retomar, estado e antesDeHospedar não barram", async () => {
+    const c = cenario({ semBackups: true });
+    expect(await c.m.retomar()).toEqual({ ok: true, estado: "nada" });
+    expect(await c.m.estado()).toMatchObject({ dono: true, pendencia: "nenhuma" });
+    expect(await c.m.antesDeHospedar()).toBeUndefined();
+  });
+
+  it("algoMexendoNoMundo: qualquer uma das operações basta", () => {
+    const todas = {
+      restaurando: false,
+      trocandoVersao: false,
+      fazendoBackup: false,
+      importando: false,
+      atualizando: false,
+      agendaOcupada: false,
+    };
+    const f = (v: Partial<typeof todas>) =>
+      algoMexendoNoMundo(
+        Object.fromEntries(
+          Object.entries({ ...todas, ...v }).map(([k, x]) => [k, () => x]),
+        ) as never,
+      );
+    expect(f({})).toBe(false);
+    for (const k of Object.keys(todas)) expect(f({ [k]: true })).toBe(true);
   });
 });

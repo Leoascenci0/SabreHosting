@@ -59,7 +59,7 @@ import { sincronizarMods } from "@sabrehosting/nucleo/launcher/mods";
 import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
 import { criarEncaixeInicio } from "./encaixe-inicio.js";
-import { criarMundo, type Mundo } from "./mundo.js";
+import { algoMexendoNoMundo, criarMundo, type Mundo } from "./mundo.js";
 import { criarPastaBase } from "./pasta-base.js";
 import { tamanhoDoMundo } from "./tamanho-mundo.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
@@ -232,6 +232,7 @@ const avisoHistorico = criarAvisoHistorico();
 let backupsApp: Backups | undefined;
 let versaoApp: Versao | undefined;
 let mundoApp: Mundo | undefined;
+let importacaoApp: Importacao | undefined;
 let agendaApp: AgendaBackups | undefined;
 const intervaloBackupMin = (): number =>
   lerPreferencias(app.getPath("userData")).intervaloBackupMin;
@@ -507,7 +508,7 @@ async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
   const servidorRodando = (): boolean => inicio.ativo();
   if (process.env["SABRE_E2E"] === "1") {
     const { depsImportacaoE2E } = await import("./fake-e2e.js");
-    return criarImportacao(depsImportacaoE2E(servidorRodando, restaurando));
+    return criarImportacao({ ...depsImportacaoE2E(servidorRodando, restaurando), mundoOcupado });
   }
   const exigir = clienteDoPc(pc);
   return criarImportacao({
@@ -536,6 +537,7 @@ async function criarImportacaoDoApp(inicio: Inicio): Promise<Importacao> {
     },
     servidorRodando,
     restaurando,
+    mundoOcupado,
   });
 }
 
@@ -584,16 +586,24 @@ async function criarVersaoDoApp(
       sha1Do: async (v) => (await planoDaVersao(v)).jar.hashEsperado.valor,
       gravar: async (v, sha1) => void (await exigir().gravarConfigGrupo(v, sha1)),
       servidorRodando,
+      mundoOcupado,
     });
   }
   const { depsVersaoE2E } = await import("./fake-e2e.js");
-  return criarVersao(depsVersaoE2E(servidorRodando));
+  return criarVersao({ ...depsVersaoE2E(servidorRodando), mundoOcupado });
 }
 
 /** `mundo:*` (chunk-1.5): as recusas todas moram em `mundo.ts`; aqui só se ligam as peças reais ou as falsas. */
 async function criarMundoDoApp(inicio: Inicio): Promise<Mundo> {
   const ocupado = (): boolean =>
-    restaurando() || trocandoVersao() || (backupsApp?.fazendo() ?? false);
+    algoMexendoNoMundo({
+      restaurando,
+      trocandoVersao,
+      fazendoBackup: () => backupsApp?.fazendo() ?? false,
+      importando: () => importacaoApp?.importando() ?? false,
+      atualizando: () => atualizando() !== undefined,
+      agendaOcupada: () => (agendaApp?.ativa() || agendaApp?.ocupada()) ?? false,
+    });
   if (process.env["SABRE_E2E"] !== "1") {
     const exigir = clienteDoPc(pc);
     // O cartório só é montado na hora de usar: sem grupo, cada ação recusa com o texto de sempre.
@@ -907,6 +917,7 @@ if (!app.requestSingleInstanceLock()) {
       () => inicioPronto.ativo(),
       () => inicioPronto.temOrfao(),
     );
+    importacaoApp = await criarImportacaoDoApp(inicioPronto);
     mundoApp = await criarMundoDoApp(inicioPronto);
     // Reset que parou antes de espalhar a versão: termina agora (depois do recuperarTroca acima). Não segura a janela.
     void mundoApp.retomar().then((r) => {
@@ -919,7 +930,7 @@ if (!app.requestSingleInstanceLock()) {
       await criarGrupoDoApp(),
       versaoApp,
       modsApp,
-      await criarImportacaoDoApp(inicioApp),
+      importacaoApp,
       mundoApp,
     );
     void modsApp.sincronizar(); // não segura a janela; o estado "Atualizando mods…" aparece em Configurações
