@@ -1274,7 +1274,16 @@ button.link {
   gap: var(--espaco-2) var(--espaco-3);
 }
 
-#tela-mundo .painel input[type="text"] {
+#tela-mundo .painel input[type="text"],
+#tela-mundo .confirmacao input[type="text"] {
+  font: inherit;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 var(--espaco-2);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
   min-width: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -1308,6 +1317,25 @@ button.link {
 
 #tela-mundo button.regiao[aria-pressed="true"]::before {
   content: "✓ ";
+}
+
+/* Não clicada, mas dentro do retângulo: também será apagada (tracejado + "no meio", nunca só cor). */
+#tela-mundo button.regiao.coberta {
+  border-style: dashed;
+}
+
+#tela-mundo button.regiao.coberta::before {
+  content: "✓ meio · ";
+}
+
+#tela-mundo .confirmacao input[type="text"]:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+#tela-mundo #mundo-grade-aviso {
+  color: var(--cor-texto);
+  font-weight: 600;
 }
 
 #tela-mundo .titulo-previa {

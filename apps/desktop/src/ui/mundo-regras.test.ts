@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_CHUNKS_SEM_CONFIRMAR,
+  MAX_RAIO_SEM_CONFIRMAR,
+} from "@sabrehosting/nucleo/mundo/planejar-reset";
+import {
+  TETO_CHUNKS,
+  TETO_RAIO,
+  TETO_BOTOES_DA_GRADE,
+  dicaDaConfirmacao,
+  regioesCobertas,
   areaDosCampos,
   camposDasRegioes,
   confirmaNome,
@@ -166,5 +175,49 @@ describe("textos de pendência e de resultado (sem termo técnico)", () => {
     expect(textoDaPublicacao({ estado: "conflito", versao: 8, aviso: "x" }, 64)).toContain(
       "divergiram",
     );
+  });
+});
+
+describe("acabamento do chunk-1.7", () => {
+  it("regiões afastadas: o retângulo cobre as não clicadas do meio, e só elas", () => {
+    const [a, b, c, d] = [
+      { x: 0, z: 0, chunks: 1 },
+      { x: 1, z: 0, chunks: 1 },
+      { x: 2, z: 0, chunks: 1 },
+      { x: 0, z: 5, chunks: 1 },
+    ];
+    const todas = [a, b, c, d];
+    const cobertas = regioesCobertas([a, c], todas);
+    expect(cobertas.map((r) => `${r.x},${r.z}`)).toEqual(["1,0"]);
+    expect(regioesCobertas([a], todas)).toEqual([]);
+    expect(regioesCobertas([], todas)).toEqual([]);
+  });
+
+  it("a prévia diz quantas regiões são atingidas", () => {
+    const t = textoDoPlano(plano({ regioesTocadas: 3 }), undefined);
+    expect(t.linhas.join(" ")).toContain("Atinge 3 regiões");
+    expect(textoDoPlano(plano({ regioesTocadas: 1 }), undefined).linhas.join(" ")).toContain(
+      "Atinge 1 região.",
+    );
+  });
+
+  it("pendente não repete o aviso nem o recado", () => {
+    const t = textoDaPublicacao({ estado: "pendente", versao: 8, aviso: "Sem resposta." }, 64);
+    expect(t.match(/clique em Hospedar/g)).toHaveLength(1);
+    expect(t.match(/Sem resposta\./g)).toHaveLength(1);
+    expect(t).not.toContain("ainda não foi enviado ao grupo");
+  });
+
+  it("confirmar desligado sempre diz por quê", () => {
+    expect(dicaDaConfirmacao("", "")).toContain("Não consegui ler o nome");
+    expect(dicaDaConfirmacao("", "world")).toContain("world");
+    expect(dicaDaConfirmacao("wor", "world")).toContain("igual");
+    expect(dicaDaConfirmacao("world", "world")).toBe("");
+  });
+
+  it("os tetos da tela são os do núcleo, e há teto de botões na grade", () => {
+    expect(TETO_CHUNKS).toBe(MAX_CHUNKS_SEM_CONFIRMAR);
+    expect(TETO_RAIO).toBe(MAX_RAIO_SEM_CONFIRMAR);
+    expect(TETO_BOTOES_DA_GRADE).toBeGreaterThan(0);
   });
 });
