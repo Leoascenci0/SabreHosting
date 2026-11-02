@@ -50,7 +50,7 @@ body {
   display: flex;
   align-items: center;
   gap: var(--espaco-2);
-  padding: var(--espaco-2) var(--espaco-3);
+  padding: var(--espaco-2); /* 5 abas (com Mundo) cabem na janela padrão de 880 px */
   border-color: transparent;
   background: none;
   font-size: var(--texto-1);
@@ -1212,4 +1212,129 @@ button.link {
 
 #cartao .estado .status {
   font-size: var(--texto-3);
+}
+
+/* Aba Mundo (chunk-1.6): painéis em coluna, campos com rótulo ao lado, grade de regiões e prévia em lista. */
+#tela-mundo {
+  text-align: left;
+  align-items: stretch;
+}
+
+#tela-mundo #mundo-area {
+  display: grid;
+  gap: var(--espaco-3);
+}
+
+#tela-mundo .painel h4 {
+  margin: var(--espaco-2) 0 0;
+  font-size: var(--texto-2);
+}
+
+#tela-mundo .painel p,
+#tela-mundo .confirmacao p {
+  margin: 0;
+}
+
+#tela-mundo .painel .acoes,
+#tela-mundo .confirmacao .acoes {
+  justify-content: flex-start;
+}
+
+#tela-mundo .modo-area {
+  display: grid;
+  gap: var(--espaco-1);
+  margin: 0;
+  padding: var(--espaco-2) var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+}
+
+#tela-mundo .modo-area .opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+  min-height: 44px;
+}
+
+#tela-mundo .modo-area input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--cor-destaque);
+}
+
+#tela-mundo .modo-area input[type="radio"]:focus-visible {
+  outline: 3px solid var(--cor-texto);
+  outline-offset: 2px;
+}
+
+#tela-mundo .campos-area {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 12rem);
+  align-items: center;
+  gap: var(--espaco-2) var(--espaco-3);
+}
+
+#tela-mundo .painel input[type="text"] {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+#tela-mundo .grade-regioes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1);
+}
+
+#tela-mundo .grade-regioes.espacial {
+  display: grid;
+  gap: var(--espaco-1);
+}
+
+#tela-mundo button.regiao {
+  min-width: var(--celula-regiao);
+  min-height: 44px;
+  padding: var(--espaco-1);
+  font-size: var(--texto-1);
+  font-variant-numeric: tabular-nums;
+  background: var(--cor-camada-2);
+  border: var(--borda-estado-desligado);
+}
+
+/* Marcada = borda de destaque + ✓ no texto (nunca só cor). */
+#tela-mundo button.regiao[aria-pressed="true"] {
+  border: 2px solid var(--cor-destaque);
+  font-weight: 600;
+}
+
+#tela-mundo button.regiao[aria-pressed="true"]::before {
+  content: "✓ ";
+}
+
+#tela-mundo .titulo-previa {
+  font-size: var(--texto-3);
+  font-weight: 600;
+}
+
+#tela-mundo .linhas-previa {
+  margin: var(--espaco-1) 0 0;
+  padding-left: var(--espaco-4);
+  display: grid;
+  gap: var(--espaco-1);
+}
+
+#tela-mundo .aviso-forte {
+  color: var(--cor-erro);
+  font-weight: 600;
+}
+
+#tela-mundo #mundo-pendencia {
+  border-color: var(--cor-atencao);
+}
+
+#tela-mundo button:disabled {
+  cursor: not-allowed;
+}
+
+#tela-mundo #mundo-resultado:empty {
+  display: none;
 }

@@ -1,6 +1,6 @@
 import type { EstadoInicio } from "./ponte.js";
 // Regras puras da barra superior (sem tela): qual área está aberta e para onde a seta leva o foco.
-export const AREAS = ["inicio", "backups", "grupo", "configuracoes"] as const;
+export const AREAS = ["inicio", "backups", "mundo", "grupo", "configuracoes"] as const;
 export type Area = (typeof AREAS)[number];
 
 // Grupo e Mods têm tela própria (Mods é subtela de Grupo, sem item na barra): os dois marcam "Grupo".
@@ -11,6 +11,8 @@ export function areaDeTela(idTela: string): Area | undefined {
       return "inicio";
     case "tela-backups":
       return "backups";
+    case "tela-mundo":
+      return "mundo";
     case "tela-grupo":
     case "tela-mods":
       return "grupo";

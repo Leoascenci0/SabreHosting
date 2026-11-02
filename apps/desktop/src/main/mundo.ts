@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { listarBackups } from "@sabrehosting/nucleo/backup/listar";
 import {
   ErroDoPlanoDeReset,
@@ -9,7 +9,7 @@ import {
 import { resetarMundo } from "@sabrehosting/nucleo/mundo/resetar";
 import type { Desfeito, Publicacao } from "@sabrehosting/nucleo/mundo/versao-reset";
 import { MARCADOR_VERSAO_PENDENTE } from "@sabrehosting/nucleo/servidor/configurar";
-import type { Dimensao } from "@sabrehosting/nucleo/mundo/regioes";
+import { listarRegioes, type Dimensao } from "@sabrehosting/nucleo/mundo/regioes";
 import { TEXTO_DEMONSTRACAO } from "./demonstracao.js";
 import { comVez, SemVez } from "./deps-backups.js";
 import { depsMundoVersao, type OpcoesMundoVersao } from "./mundo-versao.js";
@@ -20,6 +20,8 @@ export interface OpcoesMundo extends OpcoesMundoVersao {
   eu(): Promise<{ dono: boolean }>;
   /** Backup (agendado ou manual), restauração ou troca de versão em andamento neste app. */
   ocupado(): boolean;
+  /** Tamanho do mundo todo (só para a tela comparar a prévia); `undefined` = não sei. */
+  tamanhoMundo?: (pastaDoMundo: string) => Promise<number | undefined>;
 }
 
 type Recusa = { ok: false; mensagem: string; chunksNaArea?: number };
@@ -29,9 +31,27 @@ export type ResultadoReset =
   { ok: true; publicacao: Publicacao; arquivosTrocados: number; chunksApagados: number } | Recusa;
 export type ResultadoDesfazer = ({ ok: true } & Desfeito) | Recusa;
 export type ResultadoRetomar = { ok: true; estado: "nada" } | ({ ok: true } & Publicacao) | Recusa;
+/** Região do terreno que existe no disco: só posição (em regiões de 32 x 32 chunks) e quantos chunks tem. */
+export interface RegiaoDaTela {
+  x: number;
+  z: number;
+  chunks: number;
+}
+export type ResultadoRegioes =
+  { ok: true; regioes: RegiaoDaTela[]; tamanhoMundo: number | undefined } | Recusa;
 export type EstadoMundo =
-  | { dono: false }
-  | { dono: true; pendencia: "nenhuma" | "aguardando" | "conflito"; aviso?: string };
+  | { dono: false; demonstracao?: true }
+  | {
+      dono: true;
+      pendencia: "nenhuma" | "aguardando" | "conflito";
+      /** Só o nome da pasta do mundo (a tela pede que o dono o digite para confirmar). */
+      nome: string;
+      /** Servidor deste PC no ar (ou de uma sessão anterior ainda vivo): a tela desliga as ações. */
+      servidorLigado: boolean;
+      /** Quando foi feito o backup "antes de resetar" mais novo (ISO); ausente = não há reset para desfazer. */
+      ultimoReset?: string;
+      aviso?: string;
+    };
 
 /** Só leitura (nada foi tocado) e ação que pode ter chegado a mexer: o texto não afirma mais do que se sabe. */
 const GENERICA_LEITURA = "Não consegui fazer isso agora. Nada foi alterado.";
@@ -163,14 +183,56 @@ export function criarMundo(o: OpcoesMundo) {
     ocupado: (): boolean => emCurso,
 
     async estado(): Promise<EstadoMundo> {
-      if (o.demo.ativa() || !(await ehDono())) return { dono: false };
+      if (o.demo.ativa()) return { dono: false, demonstracao: true };
+      if (!(await ehDono())) return { dono: false };
+      const servidorLigado =
+        o.servidorRodando() || (await o.servidorOrfao?.().catch(() => true)) === true;
+      let nome = "";
       try {
-        if (!(await haAviso())) return { dono: true, pendencia: "nenhuma" };
-        return conflito
-          ? { dono: true, pendencia: "conflito" }
-          : { dono: true, pendencia: "aguardando" };
+        nome = basename((await pastas()).mundo);
       } catch {
-        return { dono: true, pendencia: "aguardando" };
+        /* sem pasta configurada: a tela mostra o texto de "configure a pasta" ao tentar */
+      }
+      let ultimoReset: string | undefined;
+      try {
+        ultimoReset = (await listarBackups((await pastas()).backups)).find(
+          (b) => b.origem === "antes-de-resetar",
+        )?.criadoEm; // lista: mais novo primeiro
+      } catch {
+        /* sem lista: a tela mostra "ainda não há reset para desfazer" e o main recusa de qualquer forma */
+      }
+      const base = {
+        dono: true as const,
+        nome,
+        servidorLigado,
+        ...(ultimoReset === undefined ? {} : { ultimoReset }),
+      };
+      try {
+        if (!(await haAviso())) return { ...base, pendencia: "nenhuma" };
+        return { ...base, pendencia: conflito ? "conflito" : "aguardando" };
+      } catch {
+        return { ...base, pendencia: "aguardando" };
+      }
+    },
+
+    /** Grade da tela: regiões do terreno que existem na dimensão (só leitura; nunca caminho nem nome de arquivo). */
+    async regioes(dimensao: unknown): Promise<ResultadoRegioes> {
+      if (o.demo.ativa()) return DEMO;
+      try {
+        if (!(await ehDono())) return { ok: false, mensagem: SO_DONO };
+        if (dimensao !== "overworld" && dimensao !== "nether" && dimensao !== "end")
+          return { ok: false, mensagem: "Dimensão inválida." };
+        const { mundo } = await pastas();
+        const lidas = await listarRegioes(mundo, dimensao);
+        return {
+          ok: true,
+          regioes: lidas
+            .filter((r) => r.tipo === "region")
+            .map((r) => ({ x: r.x, z: r.z, chunks: r.chunks.length })),
+          tamanhoMundo: await o.tamanhoMundo?.(mundo),
+        };
+      } catch (erro) {
+        return recusar(erro, GENERICA_LEITURA);
       }
     },
 
