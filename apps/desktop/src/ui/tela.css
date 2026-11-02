@@ -50,7 +50,7 @@ body {
   display: flex;
   align-items: center;
   gap: var(--espaco-2);
-  padding: var(--espaco-2) var(--espaco-3);
+  padding: var(--espaco-2); /* 5 abas (com Mundo) cabem na janela padrão de 880 px */
   border-color: transparent;
   background: none;
   font-size: var(--texto-1);
