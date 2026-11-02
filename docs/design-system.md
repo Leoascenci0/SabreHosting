@@ -36,7 +36,7 @@ Sombras suaves: `--sombra-1` (cartão, item atual) e `--sombra-2` (o que flutua)
 
 ## Estrutura da janela
 
-- **Barra superior fixa** (`.barra`, appuimel-2.2): nome do app, abas **Início, Backups, Grupo, Configurações** (ícone + nome;
+- **Barra superior fixa** (`.barra`, appuimel-2.2): nome do app, abas **Início, Backups, Mundo, Grupo, Configurações** (ícone + nome;
   abaixo de 840 px só o ícone, o nome segue para leitor de tela) e, à direita, o **chip de estado** (`#chip-estado`: cor +
   ícone + palavra: "Desligado", "Ligando…", "N online", "<nome> hospeda", "Sem cartório"); clicar nele abre o Início.
   A aba atual leva `aria-current="page"` e fundo `--cor-destaque`. Sem barra e sem rodapé só na Boas-vindas.
@@ -54,6 +54,16 @@ Sombras suaves: `--sombra-1` (cartão, item atual) e `--sombra-2` (o que flutua)
   recarrega). Campo = rótulo acima, entrada de largura padrão com unidade ao lado e botão "Padrão" (valor vindo da ponte),
   ajuda de uma linha + "Saiba mais" (`<details>`). Barra fixa no rodapé (`.barra-salvar`): "Há alterações não salvas",
   Salvar (só com mudança), Descartar, Voltar. Nenhuma aba passa de 1,5× a altura da janela (testado).
+
+- **Mundo** (chunk-1.6, `#tela-mundo`, `ui/mundo.ts`; regras puras em `mundo-regras.ts`): só o dono vê as ações (os outros leem
+  uma frase). Quatro painéis: 1. onde apagar (dimensão; "De um canto a outro" ou "Raio em blocos ao redor de um ponto", campos em
+  blocos; grade de regiões que existem no disco, sem mapa; clicar preenche os campos), 2. prévia ("Vai apagar N chunks.", quanto
+  libera **de quanto** no mundo todo; área acima de 1.024 chunks ou raio de 1.000 blocos pede confirmação extra mostrando o
+  número), 3. "Resetar…" (confirmação digitando o nome do mundo, com a data do backup que será feito) e Desfazer o último reset
+  (mesma confirmação; com jogo depois do reset, 2ª confirmação com o aviso). Servidor ligado: botões desligados com a dica
+  "Pare o servidor para resetar" à vista. Conflito/pendência: texto em português e "Descartar este aviso…" (com nome digitado).
+  A tela não decide nada: recusas, plano e backup são do main. Token novo: `--celula-regiao` (lado de uma região na grade);
+  região marcada = borda de destaque **e** "✓" no texto. As 5 abas cabem em 880 px (padding das abas = `--espaco-2`).
 
 ## Regras de tom (texto na tela)
 

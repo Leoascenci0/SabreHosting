@@ -39,12 +39,23 @@ afterAll(async () => {
 });
 
 describe("barra superior", () => {
-  it("mostra Início, Backups, Grupo e Configurações, com o Início marcado", async () => {
+  it("mostra Início, Backups, Mundo, Grupo e Configurações, com o Início marcado", async () => {
     const nomes = await pagina.locator(".item-barra span").allInnerTexts();
-    expect(nomes).toEqual(["Início", "Backups", "Grupo", "Configurações"]);
-    expect(await pagina.locator(".item-barra svg").count()).toBe(4);
+    expect(nomes).toEqual(["Início", "Backups", "Mundo", "Grupo", "Configurações"]);
+    expect(await pagina.locator(".item-barra svg").count()).toBe(5);
     expect(await atual()).toBe("inicio");
     await expect(pagina.locator("#cartao").isVisible()).resolves.toBe(true);
+  });
+
+  it("Mundo abre a sua tela, marca a aba e volta ao Início pela barra", async () => {
+    await item("mundo").click();
+    await expect(pagina.locator("#tela-mundo").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#cartao").isHidden()).resolves.toBe(true);
+    expect(await atual()).toBe("mundo");
+    await item("inicio").click();
+    await expect(pagina.locator("#cartao").isVisible()).resolves.toBe(true);
+    await expect(pagina.locator("#tela-mundo").isHidden()).resolves.toBe(true);
+    expect(await atual()).toBe("inicio");
   });
 
   it("cada item abre a sua tela e marca o atual", async () => {
@@ -112,7 +123,7 @@ describe("barra superior", () => {
     expect(await atual()).toBe("configuracoes");
     // Só o item atual entra na ordem do Tab (os outros se alcançam pelas setas).
     const tabs = await pagina.locator(".item-barra").evaluateAll((l) => l.map((e) => e.tabIndex));
-    expect(tabs).toEqual([-1, -1, -1, 0]);
+    expect(tabs).toEqual([-1, -1, -1, -1, 0]);
     await item("inicio").click();
   });
 

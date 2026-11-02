@@ -98,11 +98,28 @@ describe("modo demonstração (Explorar sem grupo)", () => {
         await s.mods.tirar("sodium.jar"),
         await s.versoes.gravar("1.20.4"),
         await s.pasta.trocar("C:\\Jogos\\Outra"),
+        await s.mundo.resetar("overworld", { tipo: "raio", x: 0, z: 0, raio: 50 }),
+        await s.mundo.desfazer(true),
+        await s.mundo.descartarPendencia(true),
+        await s.mundo.regioes("overworld"),
       ];
       return cru.map((r) => r as { ok: boolean; mensagem?: string });
     });
     for (const r of recusas)
       expect(r).toEqual({ ok: false, mensagem: expect.stringContaining(RECUSA) });
+
+    // Aba Mundo: os controles aparecem e cada clique mostra a recusa do main; nada é escrito.
+    await pagina.locator('[data-area="mundo"]').click();
+    await pagina.locator("#mundo-area:not([hidden])").waitFor();
+    await expect(pagina.locator("#mundo-so-dono").isHidden()).resolves.toBe(true);
+    await pagina.locator("#mundo-ver-previa").click();
+    await expect.poll(() => pagina.locator("#mundo-erro").innerText()).toContain(RECUSA);
+    await pagina.locator("#mundo-resetar").click();
+    await expect.poll(() => pagina.locator("#mundo-erro").innerText()).toContain(RECUSA);
+    await pagina.locator("#mundo-desfazer").click();
+    await expect.poll(() => pagina.locator("#mundo-erro").innerText()).toContain(RECUSA);
+    await expect(pagina.locator("#mundo-confirmacao").isHidden()).resolves.toBe(true);
+    await pagina.locator('[data-area="inicio"]').click();
 
     // As leituras mostram dados de mentira.
     const backups = await pagina.evaluate(() =>

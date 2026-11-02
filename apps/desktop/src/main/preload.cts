@@ -70,6 +70,8 @@ electron.contextBridge.exposeInMainWorld("sabre", {
   },
   mundo: {
     estado: (): Promise<unknown> => electron.ipcRenderer.invoke("sabre:mundo:estado"),
+    regioes: (dimensao: string): Promise<unknown> =>
+      electron.ipcRenderer.invoke("sabre:mundo:regioes", dimensao),
     planejar: (dimensao: string, area: unknown, confirmado?: boolean): Promise<unknown> =>
       electron.ipcRenderer.invoke("sabre:mundo:planejar", dimensao, area, confirmado),
     resetar: (dimensao: string, area: unknown, confirmado?: boolean): Promise<unknown> =>

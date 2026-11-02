@@ -135,6 +135,8 @@ export interface PlanoDoResetDaTela {
   regioesTocadas: number;
   regioesApagadasInteiras: number;
   bytesLiberados: number;
+  /** Setores de 4 KiB que o jogo reaproveita nos arquivos que ficam (o arquivo não encolhe). */
+  setoresReaproveitaveis: number;
   avisos: string[];
 }
 
@@ -142,8 +144,22 @@ export type PublicacaoDaTela =
   | { estado: "publicada"; versao: number }
   | { estado: "pendente" | "conflito"; versao: number; aviso: string };
 
+export interface RegiaoDaTela {
+  x: number;
+  z: number;
+  chunks: number;
+}
+
 export type EstadoMundo =
-  { dono: false } | { dono: true; pendencia: "nenhuma" | "aguardando" | "conflito" };
+  | { dono: false; demonstracao?: true }
+  | {
+      dono: true;
+      pendencia: "nenhuma" | "aguardando" | "conflito";
+      nome: string;
+      servidorLigado: boolean;
+      /** Data (ISO) do backup "antes de resetar" mais novo; ausente = nada para desfazer. */
+      ultimoReset?: string;
+    };
 
 export interface PlanoDoDesfazerDaTela {
   nome: string;
@@ -256,6 +272,12 @@ export interface PonteSabre {
   };
   mundo: {
     estado(): Promise<EstadoMundo>;
+    /** Regiões do terreno que existem no disco (só números); `tamanhoMundo` = mundo todo, se o main souber. */
+    regioes(
+      dimensao: string,
+    ): Promise<
+      { ok: true; regioes: RegiaoDaTela[]; tamanhoMundo: number | undefined } | RecusaDoMundo
+    >;
     planejar(
       dimensao: string,
       area: AreaDoResetDaTela,

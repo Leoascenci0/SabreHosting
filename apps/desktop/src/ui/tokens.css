@@ -38,6 +38,7 @@
   --borda-estado-erro: 2px solid var(--cor-erro);
 
   /* Número grande (grade de números) e numerais tabulares: colunas não "dançam". */
+  --celula-regiao: 4.5rem; /* lado de uma região na grade da aba Mundo */
   --numero-1: 1.5rem;
   --numero-2: 2rem;
   --numero-3: 2.75rem;

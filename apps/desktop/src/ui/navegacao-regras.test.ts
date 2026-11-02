@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import { AREAS, areaDeTela, proximoIndice, rotuloChip, textoCartorio } from "./navegacao-regras.js";
 
 describe("barra lateral: regras", () => {
-  it("tem as quatro áreas na ordem do roadmap", () => {
-    expect([...AREAS]).toEqual(["inicio", "backups", "grupo", "configuracoes"]);
+  it("tem as cinco áreas na ordem da barra (Mundo entre Backups e Grupo)", () => {
+    expect([...AREAS]).toEqual(["inicio", "backups", "mundo", "grupo", "configuracoes"]);
   });
 
   it("cada tela vira a sua área; Boas-vindas fica sem barra", () => {
     expect(areaDeTela("cartao")).toBe("inicio");
     expect(areaDeTela("tela-backups")).toBe("backups");
+    expect(areaDeTela("tela-mundo")).toBe("mundo");
     expect(areaDeTela("tela-grupo")).toBe("grupo");
     expect(areaDeTela("tela-config")).toBe("configuracoes");
     expect(areaDeTela("tela-boas-vindas")).toBeUndefined();
