@@ -70,7 +70,7 @@ backup antes.
   local e avisa que a versão ainda não foi espalhada).
   *Depende de:* 1.3
 
-- [ ] **1.5 — Main e ponte: `mundo:planejar` e `mundo:resetar` com todas as recusas**
+- [x] **1.5 — Main e ponte: `mundo:planejar` e `mundo:resetar` com todas as recusas**
   *O que fazer:* as duas ações no processo principal (e na ponte), com as recusas **no main**, não só na tela:
   demonstração ("Isso é só uma demonstração"), servidor rodando, sem trava, backup/restauração em andamento, PC que não
   pode resetar, outro reset em andamento. Erros em texto fixo seguro (sem caminho cru, S-14). Quem pode: só o dono (decidido).
