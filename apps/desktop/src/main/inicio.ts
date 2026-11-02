@@ -33,6 +33,8 @@ export interface DepsInicio {
   restaurando?(): boolean;
   /** Troca de versão em andamento (backup antes de gravar): o servidor não pode subir no meio. */
   trocandoVersao?(): boolean;
+  /** Reset (ou desfazer) do mundo em curso: subir o servidor no meio da troca de arquivos corromperia o mundo. */
+  mundoOcupado?(): boolean;
   /** Percentual do mundo sendo atualizado neste PC (sync-2.2); `undefined` = não está atualizando. */
   atualizando?(): number | undefined;
   /** Último aviso de falha da atualização do mundo (syncmel-1.14); `undefined` = nenhum. */
@@ -73,6 +75,8 @@ export const RESTAURANDO =
   "Um backup está sendo restaurado. Espere terminar para hospedar o servidor.";
 export const TROCANDO_VERSAO =
   "A versão do Minecraft está sendo trocada (com um backup antes). Espere terminar para hospedar o servidor.";
+export const RESETANDO =
+  "O mundo está sendo mexido (reset ou desfazer). Espere terminar para hospedar o servidor.";
 export const ATUALIZANDO =
   "O seu mundo está sendo atualizado para a versão mais nova. Espere terminar para hospedar o servidor.";
 const ORFAO_VIVO =
@@ -351,6 +355,7 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     async hospedar(): Promise<Resultado> {
       if (deps.restaurando?.()) return { ok: false, mensagem: RESTAURANDO };
       if (deps.trocandoVersao?.()) return { ok: false, mensagem: TROCANDO_VERSAO };
+      if (deps.mundoOcupado?.()) return { ok: false, mensagem: RESETANDO };
       if (deps.atualizando?.() !== undefined) return { ok: false, mensagem: ATUALIZANDO };
       if (ativo || ocupado)
         return { ok: false, mensagem: "O servidor já está subindo ou rodando." };
