@@ -1,5 +1,6 @@
 import type { BackupDaTela, PonteSabre } from "./ponte.js";
 import { dataEmPalavras } from "./ha-quanto.js";
+import { resumoDeBackups, tamanhoDe } from "./backups-resumo.js";
 
 declare global {
   interface Window {
@@ -29,6 +30,49 @@ const vazio = $("backups-vazio");
 const abrir = $<HTMLButtonElement>("ver-backups");
 const fazer = $<HTMLButtonElement>("backups-fazer");
 const dicaFazer = $("backups-fazer-dica");
+const seta = $<HTMLButtonElement>("secao-backups-seta");
+const corpoSecao = $("secao-backups-corpo");
+
+// Seção recolhível: lembra aberta/fechada só neste PC (preferência local; sem localStorage, abre sempre).
+const CHAVE_SECAO = "sabre:secao:backups";
+function lembrarSecao(aberta?: boolean): boolean {
+  try {
+    if (aberta === undefined) return localStorage.getItem(CHAVE_SECAO) !== "fechada";
+    localStorage.setItem(CHAVE_SECAO, aberta ? "aberta" : "fechada");
+  } catch {
+    /* sem armazenamento local: segue sem lembrar */
+  }
+  return aberta ?? true;
+}
+function aplicarSecao(aberta: boolean): void {
+  corpoSecao.hidden = !aberta;
+  seta.setAttribute("aria-expanded", String(aberta));
+  seta.setAttribute(
+    "aria-label",
+    aberta ? "Recolher a lista de backups" : "Abrir a lista de backups",
+  );
+}
+aplicarSecao(lembrarSecao());
+seta.addEventListener("click", () => {
+  const aberta = seta.getAttribute("aria-expanded") !== "true";
+  aplicarSecao(aberta);
+  lembrarSecao(aberta);
+});
+
+function desenharResumo(itens: BackupDaTela[], intervaloMin: number | undefined): void {
+  const r = resumoDeBackups(itens, Date.now(), intervaloMin);
+  const texto = (id: string, t: string | undefined): void => {
+    const el = $(id);
+    el.textContent = t ?? "";
+    if (el.classList.contains("comparacao")) el.hidden = t === undefined;
+  };
+  texto("resumo-quantos", r.quantos);
+  texto("resumo-ultimo", r.ultimo);
+  texto("resumo-ultimo-razao", r.ultimoRazao);
+  texto("resumo-espaco", r.espaco);
+  texto("resumo-proximo", r.proximo);
+  texto("resumo-proximo-razao", r.proximoRazao);
+}
 
 let escolhido: BackupDaTela | undefined;
 let emCurso = false;
@@ -45,13 +89,6 @@ const ORIGENS = {
 const origemDe = (b: BackupDaTela): string => ORIGENS[b.origem ?? "automatico"];
 
 const dataDe = (iso: string): string => dataEmPalavras(iso) ?? "data desconhecida";
-
-function tamanhoDe(bytes: number): string {
-  const mb = bytes / (1024 * 1024);
-  return mb < 1
-    ? `${Math.max(1, Math.round(bytes / 1024)).toLocaleString("pt-BR")} KB`
-    : `${mb.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`;
-}
 
 function mostrarErro(texto: string): void {
   erro.textContent = texto;
@@ -103,6 +140,7 @@ async function carregar(): Promise<void> {
     bloqueado = estado.bloqueado;
     pronto = estado.prontoParaBackup;
     desenhar(estado.itens);
+    desenharResumo(estado.itens, estado.intervaloMin);
     mostrarErro(estado.erro ?? "");
     avisoHistorico.textContent = estado.avisoHistorico ?? "";
     avisoHistorico.hidden = estado.avisoHistorico === undefined;

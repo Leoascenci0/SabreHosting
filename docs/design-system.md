@@ -71,6 +71,9 @@ fica como melhoria (o texto "SABRE HOSTING" não se lê em 16–32 px).
 ## Componentes
 
 - **Botão** (`button`): 44 px de altura mínima, foco visível. `.principal` (uma por tela), `.secundario`, `.perigo` (confirmação de Parar).
+- **Seção recolhível** (`.secao`, appuimel-2.5): cabeçalho com título (`h3`), atalho "Ver tudo →" opcional (`hidden` por padrão; só
+  aparece onde há o que expandir) e botão de seta (`aria-expanded`, `aria-controls`, 44 px). Só recolhe e abre; lembra aberta/fechada
+  por tela em `localStorage` do renderer (`sabre:secao:<tela>`, só preferência local, com try/catch). Primeiro uso: lista de Backups.
 - **Confirmação** (`.confirmacao`): bloco na própria tela, sem janela separada; foco começa em "Cancelar".
 
 ## Direção v2 (appui-melhoria, bloco 2)
