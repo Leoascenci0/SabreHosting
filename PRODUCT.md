@@ -1,6 +1,6 @@
 # Produto — SabreHosting (ficha para quem desenha a interface)
 
-Ficha curta de **produto**, sem visual. O visual mora em `docs/design-system.md`; a arquitetura em `docs/arquitetura.md`;
+Ficha curta de **produto**, sem visual (é o `PRODUCT.md` que a skill `impeccable` lê). O visual mora em `docs/design-system.md`; a arquitetura em `docs/arquitetura.md`;
 as regras em `CLAUDE.md`. Se algo aqui divergir deles, eles vencem.
 
 ## Para quem

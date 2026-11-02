@@ -13,7 +13,7 @@ license: Apache 2.0
 >   `qualidade-sabre` › `references/interface.md`. Em conflito, elas vencem ("the brief wins").
 > - Modo: o app é usado por amigos que só querem jogar = **Operate** (um botão claro, status óbvio, nada de enfeite).
 > - O lançador `scripts/impeccable` baixa um binário da internet: na nuvem a rede costuma bloquear; use o caminho
->   "Launcher unavailable". Não crie `PRODUCT.md`/`DESIGN.md` na raiz.
+>   "Launcher unavailable". O `PRODUCT.md` do projeto fica na raiz (ficha de produto, aprovada pelo Eliel em 02/11/2026); o `DESIGN.md` segue sendo `docs/design-system.md` (não crie outro na raiz).
 > - Fonte, ícone ou imagem de CDN externo proibidos: tudo empacotado no app (funciona sem internet).
 > - Comandos mais úteis: `audit` e `critique` (revisão de tela), `polish` (antes de entregar), `harden` (erro, vazio,
 >   borda).
