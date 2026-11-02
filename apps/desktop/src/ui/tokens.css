@@ -29,7 +29,6 @@
   --texto-5: 2rem;
 
   /* Estrutura da janela. */
-  --largura-barra: 220px;
   --largura-conteudo: 960px;
 
   /* Direção v2: borda por estado (cor + espessura; ícone e palavra vão junto na tela). */

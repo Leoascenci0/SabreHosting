@@ -1,4 +1,5 @@
 import { haQuanto } from "./ha-quanto.js";
+import { rotuloChip, textoCartorio } from "./navegacao-regras.js";
 import type { EstadoInicio, PonteSabre } from "./ponte.js";
 
 declare global {
@@ -166,6 +167,10 @@ function desenhar(): void {
       break;
   }
   $("estado").dataset["tom"] = tom;
+  const chip = rotuloChip(e);
+  $("chip-estado").dataset["tom"] = chip.tom;
+  $("chip-texto").textContent = chip.texto;
+  $("rodape-cartorio").textContent = textoCartorio(e);
   desenharFatos(e);
   const emCurso = ocupado ?? ocupadoRemoto;
   if (emCurso !== undefined) {
@@ -258,6 +263,7 @@ window.sabre
   .versao()
   .then((versao) => {
     $("versao").textContent = `Versão ${versao}`;
+    $("rodape-versao").textContent = `Versão ${versao}`;
   })
   .catch(() => undefined);
 desenhar();

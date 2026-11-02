@@ -1,4 +1,4 @@
-// appui-1.1: barra lateral fixa. Capturas em docs/imagens/appui-1.1 só com SABRE_CAPTURAS=1.
+// appuimel-2.2: barra superior com abas, chip de estado e rodapé. Capturas em docs/imagens/appuimel-2.2 só com SABRE_CAPTURAS=1.
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registrarCaptura } from "./captura.js";
 
 const pastaApp = fileURLToPath(new URL("..", import.meta.url));
-const imagens = fileURLToPath(new URL("../../../docs/imagens/appui-1.1/", import.meta.url));
+const imagens = fileURLToPath(new URL("../../../docs/imagens/appuimel-2.2/", import.meta.url));
 const dados = mkdtempSync(join(tmpdir(), "sabre-e2e-"));
 const semSandbox = process.getuid?.() === 0 ? ["--no-sandbox"] : [];
 
@@ -38,7 +38,7 @@ afterAll(async () => {
   rmSync(dados, { recursive: true, force: true });
 });
 
-describe("barra lateral", () => {
+describe("barra superior", () => {
   it("mostra Início, Backups, Grupo e Configurações, com o Início marcado", async () => {
     const nomes = await pagina.locator(".item-barra span").allInnerTexts();
     expect(nomes).toEqual(["Início", "Backups", "Grupo", "Configurações"]);
@@ -94,17 +94,17 @@ describe("barra lateral", () => {
     expect(await atual()).toBe("inicio");
   });
 
-  it("teclado: Tab chega ao item atual; setas e Home/End andam pela barra", async () => {
+  it("teclado: Tab chega ao item atual; setas e Home/End andam pelas abas", async () => {
     await item("inicio").focus();
-    await pagina.keyboard.press("ArrowDown");
+    await pagina.keyboard.press("ArrowRight");
     await expect(item("backups").evaluate((e) => e === document.activeElement)).resolves.toBe(true);
     await pagina.keyboard.press("End");
     await expect(item("configuracoes").evaluate((e) => e === document.activeElement)).resolves.toBe(
       true,
     );
-    await pagina.keyboard.press("ArrowDown");
+    await pagina.keyboard.press("ArrowRight");
     await expect(item("inicio").evaluate((e) => e === document.activeElement)).resolves.toBe(true);
-    await pagina.keyboard.press("ArrowUp");
+    await pagina.keyboard.press("ArrowLeft");
     await expect(item("configuracoes").evaluate((e) => e === document.activeElement)).resolves.toBe(
       true,
     );
@@ -114,6 +114,55 @@ describe("barra lateral", () => {
     const tabs = await pagina.locator(".item-barra").evaluateAll((l) => l.map((e) => e.tabIndex));
     expect(tabs).toEqual([-1, -1, -1, 0]);
     await item("inicio").click();
+  });
+
+  it("a barra fica no alto, com o chip à direita e o rodapé embaixo", async () => {
+    const caixa = (sel: string) =>
+      pagina.locator(sel).evaluate((e) => e.getBoundingClientRect().toJSON());
+    const [barra, conteudo, rodape, chip, aba] = await Promise.all([
+      caixa("#barra"),
+      caixa(".conteudo"),
+      caixa("#rodape"),
+      caixa("#chip-estado"),
+      caixa('[data-area="configuracoes"]'),
+    ]);
+    expect(barra.top).toBeLessThanOrEqual(1);
+    expect(barra.bottom).toBeLessThanOrEqual(conteudo.top + 1);
+    expect(rodape.top).toBeGreaterThanOrEqual(conteudo.bottom - 1);
+    expect(chip.left).toBeGreaterThan(aba.right);
+    expect(await pagina.locator("#rodape-versao").innerText()).toMatch(/^Versão \d/);
+    expect(await pagina.locator("#rodape-grupo").innerText()).toContain("—");
+    expect(await pagina.locator("#rodape-cartorio").innerText()).toMatch(/^Cartório: /);
+  });
+
+  it("o chip diz o estado do servidor e abre o Início ao clicar", async () => {
+    await expect(pagina.locator("#chip-texto").innerText()).resolves.toBe("Desligado");
+    await item("backups").click();
+    await pagina.locator("#chip-estado").click();
+    expect(await atual()).toBe("inicio");
+    await expect(pagina.locator("#cartao").isVisible()).resolves.toBe(true);
+  });
+
+  it("abaixo de 840 px as abas ficam só com o ícone, sem rolagem horizontal em 720x480", async () => {
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(720, 480));
+    await pagina.waitForTimeout(200);
+    for (const area of ["inicio", "backups", "grupo", "configuracoes"]) {
+      const largura = await item(area)
+        .locator("span")
+        .evaluate((e) => e.getBoundingClientRect().width);
+      expect(largura, area).toBeLessThanOrEqual(1);
+      await expect(item(area).locator("svg").isVisible()).resolves.toBe(true);
+    }
+    const rolagem = await pagina.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(rolagem).toBeLessThanOrEqual(0);
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1000, 700));
+    await pagina.waitForTimeout(200);
+    const larg = await item("backups")
+      .locator("span")
+      .evaluate((e) => e.getBoundingClientRect().width);
+    expect(larg).toBeGreaterThan(20);
   });
 
   it("o conteúdo fica centralizado com no máximo 960 px e a janela tem tamanho mínimo", async () => {
@@ -127,7 +176,7 @@ describe("barra lateral", () => {
     expect(min).toEqual([720, 480]);
   });
 
-  it("a Boas-vindas (primeira vez) fica sem barra lateral", async () => {
+  it("a Boas-vindas (primeira vez) fica sem barra nem rodapé", async () => {
     await pagina.evaluate(() => {
       for (const [id, escondida] of [
         ["cartao", true],
@@ -139,6 +188,7 @@ describe("barra lateral", () => {
     });
     await pagina.waitForTimeout(100);
     await expect(pagina.locator("#barra").isHidden()).resolves.toBe(true);
+    await expect(pagina.locator("#rodape").isHidden()).resolves.toBe(true);
     await pagina.evaluate(() => {
       for (const [id, escondida] of [
         ["tela-boas-vindas", true],

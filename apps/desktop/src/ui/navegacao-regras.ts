@@ -1,4 +1,5 @@
-// Regras puras da barra lateral (sem tela): qual área está aberta e para onde a seta leva o foco.
+import type { EstadoInicio } from "./ponte.js";
+// Regras puras da barra superior (sem tela): qual área está aberta e para onde a seta leva o foco.
 export const AREAS = ["inicio", "backups", "grupo", "configuracoes"] as const;
 export type Area = (typeof AREAS)[number];
 
@@ -35,4 +36,36 @@ export function proximoIndice(atual: number, total: number, tecla: string): numb
     default:
       return undefined;
   }
+}
+
+export type TomChip = "ligado" | "desligado" | "troca" | "atencao";
+
+// Chip de estado da barra superior: o mesmo EstadoInicio da tela Início, resumido em tom + palavra.
+// "Ligando…" não é estado novo: é "ninguém hospeda" com trabalho em curso (atualizando/restaurando/trocando versão).
+export function rotuloChip(e: EstadoInicio): { tom: TomChip; texto: string } {
+  switch (e.tipo) {
+    case "carregando":
+      return { tom: "troca", texto: "Verificando…" };
+    case "sem-cartorio":
+      return { tom: "atencao", texto: "Sem cartório" };
+    case "orfao":
+      return { tom: "atencao", texto: "Servidor preso" };
+    case "outro":
+      return { tom: "ligado", texto: `${e.nomePc} hospeda` };
+    case "eu":
+      if (e.parando) return { tom: "troca", texto: "Desligando…" };
+      return {
+        tom: "ligado",
+        texto: e.jogadores === undefined ? "Online" : `${e.jogadores.length} online`,
+      };
+    case "ninguem":
+      return e.atualizando !== undefined || e.trabalho !== undefined
+        ? { tom: "troca", texto: "Ligando…" }
+        : { tom: "desligado", texto: "Desligado" };
+  }
+}
+
+export function textoCartorio(e: EstadoInicio): string {
+  if (e.tipo === "carregando") return "Cartório: verificando…";
+  return e.tipo === "sem-cartorio" ? "Cartório: sem resposta" : "Cartório: conectado";
 }

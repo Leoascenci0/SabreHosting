@@ -1,8 +1,9 @@
 import { AREAS, areaDeTela, proximoIndice, type Area } from "./navegacao-regras.js";
 
-// Barra lateral fixa: não troca telas por conta própria; só aperta os botões que cada tela já tem
+// Barra superior fixa: não troca telas por conta própria; só aperta os botões que cada tela já tem
 // (abrir/voltar), para o comportamento de cada área continuar o mesmo.
 const barra = document.getElementById("barra");
+const rodape = document.getElementById("rodape");
 const telas = [
   "cartao",
   "tela-backups",
@@ -41,6 +42,7 @@ function marcar(): void {
   const tela = telaVisivel();
   atual = tela ? areaDeTela(tela.id) : undefined;
   if (barra) barra.hidden = atual === undefined;
+  if (rodape) rodape.hidden = atual === undefined;
   for (const [area, b] of botoes) {
     const ativo = area === atual;
     if (ativo) b.setAttribute("aria-current", "page");
@@ -89,6 +91,9 @@ for (const [area, b] of botoes) {
     }
   });
 }
+
+// O chip de estado é um atalho para o Início (mesmo caminho da aba).
+document.getElementById("chip-estado")?.addEventListener("click", () => ir("inicio"));
 
 const observador = new MutationObserver(marcar);
 for (const t of telas) observador.observe(t, { attributes: true, attributeFilter: ["hidden"] });
