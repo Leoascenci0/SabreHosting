@@ -10,7 +10,12 @@ import { existsSync } from "node:fs";
 import { lstat, readFile, rename, rm, writeFile } from "node:fs/promises";
 import * as caminhoPadrao from "node:path";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { MARCADOR_RESTAURACAO, MARCADOR_TROCA, gravarAtomico } from "../servidor/configurar.js";
+import {
+  MARCADOR_RESTAURACAO,
+  MARCADOR_TROCA,
+  MARCADOR_VERSAO_PENDENTE,
+  gravarAtomico,
+} from "../servidor/configurar.js";
 import { travaConfirmada } from "../servidor/processo.js";
 import { nomeDoBackup } from "./agendador.js";
 import type { Manifesto } from "./manifesto.js";
@@ -38,6 +43,8 @@ export interface OpcoesRestaurar {
   /** Pasta do servidor, onde `podeSubir` procura o marcador da troca: o mundo tem de ser filho direto dela. */
   pastaDoServidor?: string;
   prazoTravaMs?: number;
+  /** Só o fluxo de reset/desfazer (que já gravou o marcador de versão pendente) passa com ele. */
+  versaoPendenteDoFluxo?: boolean;
   /** Só para os testes (injetar falha nos `rename`). */
   renomear?: (de: string, para: string) => Promise<void>;
   /** Só para os testes: roda entre os dois `rename`; o que ele lançar simula o app morrendo ali (sem limpeza). */
@@ -68,6 +75,18 @@ export async function exigirPodeTrocar(
   }
 }
 
+/**
+ * Com versão de reset pendente (chunk-1.4) ninguém troca o mundo: regra 5. `doFluxo`: só o próprio fluxo de reset/
+ * desfazer/retomada, que gravou o marcador antes de trocar, passa.
+ */
+export function exigirSemVersaoPendente(mundo: string, doFluxo?: boolean): void {
+  if (doFluxo !== true && existsSync(join(dirname(resolve(mundo)), MARCADOR_VERSAO_PENDENTE))) {
+    throw new Error(
+      "O reset anterior ainda não foi espalhado para os outros PCs; conclua isso antes de mexer no mundo. Nada foi alterado.",
+    );
+  }
+}
+
 export const apagar = (p: string) => rm(p, { recursive: true, force: true });
 
 /** Existe? Recusa o que não é pasta, inclusive link simbólico (quebrado ou não): o app nunca cria o mundo assim. */
@@ -93,6 +112,7 @@ export async function restaurarBackup(o: OpcoesRestaurar): Promise<Restaurado> {
   const destinoBackup = join(o.pastaBackups, nome);
 
   exigirMundoNaPastaDoServidor(mundo, o.pastaDoServidor);
+  exigirSemVersaoPendente(mundo, o.versaoPendenteDoFluxo);
   await exigirPodeTrocar(o);
   const haMundoAtual = await haMundo(mundo);
   // Regra 4: o rename do pacote trocaria um backup bom de mesmo nome.

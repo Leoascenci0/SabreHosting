@@ -100,6 +100,12 @@ export const MARCADOR_RESTAURACAO = "RESTAURACAO-INCOMPLETA.txt";
  */
 export const MARCADOR_TROCA = "TROCA-EM-ANDAMENTO.json";
 
+/**
+ * Gravado ao lado do mundo quando o reset (chunk-1.4) mudou o mundo mas a versão nova ainda não chegou ao cartório.
+ * Enquanto existir, o servidor não sobe (regra 5: o mundo novo precisa existir no cartório antes de outro PC hospedar).
+ */
+export const MARCADOR_VERSAO_PENDENTE = "versao-pendente.json";
+
 /** O servidor só sobe com `eula=true` na pasta e sem restauração incompleta. */
 export async function podeSubir(pasta: string): Promise<{ pode: boolean; motivo?: string }> {
   if (await existe(join(pasta, MARCADOR_RESTAURACAO))) {
@@ -113,6 +119,13 @@ export async function podeSubir(pasta: string): Promise<{ pode: boolean; motivo?
       pode: false,
       motivo:
         "A troca do mundo parou no meio. Feche e abra o SabreHosting para recuperar o mundo antes de ligar o servidor.",
+    };
+  }
+  if (await existe(join(pasta, MARCADOR_VERSAO_PENDENTE))) {
+    return {
+      pode: false,
+      motivo:
+        "O reset do mundo ainda não foi espalhado para os outros PCs. Abra o SabreHosting com o grupo no ar para concluir antes de hospedar.",
     };
   }
   const recusa = { pode: false, motivo: "Aceite o EULA da Mojang antes de ligar o servidor." };

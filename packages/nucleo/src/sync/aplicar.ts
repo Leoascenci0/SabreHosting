@@ -23,6 +23,7 @@ import {
   apagarMarcadorTroca,
   desfazer,
   exigirMundoNaPastaDoServidor,
+  exigirSemVersaoPendente,
   gravarMarcadorTroca,
   haMundo,
 } from "../backup/restaurar.js";
@@ -165,6 +166,7 @@ export async function aplicarDelta(o: OpcoesAplicar): Promise<Aplicado> {
   const antigo = `${mundo}.antigo-v${alvo.versao}`;
 
   exigirMundoNaPastaDoServidor(mundo, o.pastaDoServidor);
+  exigirSemVersaoPendente(mundo); // regra 5: com reset por espalhar, o espalhar não troca o mundo por cima
   await exigirPodeTrocar(o);
   if (!(await haMundo(mundo))) {
     throw new Error("Não há mundo neste PC para atualizar; use a cópia completa do mundo.");
