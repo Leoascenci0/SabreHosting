@@ -108,12 +108,21 @@ export function criarInicio(deps: DepsInicio, tempos: TemposInicio = {}) {
     ttlMs: number,
   ): (() => Promise<number | undefined>) => {
     let guardada: { valor: number | undefined; ate: number } | undefined;
+    // Leitura em andamento: pedidos simultâneos esperam a mesma promessa em vez de repetir a conta.
+    let emAndamento: Promise<number | undefined> | undefined;
     return async () => {
       if (!ler) return undefined;
       if (guardada && agora() < guardada.ate) return guardada.valor;
-      const valor = await ler().catch(() => undefined);
-      guardada = { valor, ate: agora() + ttlMs };
-      return valor;
+      emAndamento ??= ler()
+        .catch(() => undefined)
+        .then((valor) => {
+          guardada = { valor, ate: agora() + ttlMs };
+          return valor;
+        })
+        .finally(() => {
+          emAndamento = undefined;
+        });
+      return emAndamento;
     };
   };
   const lerVersaoMundo = comCache(deps.versaoMundo?.bind(deps), versaoTtlMs);

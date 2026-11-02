@@ -31,4 +31,20 @@ describe("tamanho do mundo no disco (appuimel-2.3)", () => {
     mkdirSync(join(mundo, "vazia"));
     expect(await tamanhoDoMundo(mundo)).toBe(1024 + 4 * 256 * 1024 + 3);
   });
+
+  it("teto de entradas: mundo com arquivos demais devolve undefined (a tela mostra —)", async () => {
+    const mundo = gerarMundo({ tamanho: "1MB" });
+    criadas.push(mundo);
+    // O mundo inventado tem 6 entradas (5 arquivos + a pasta region); teto 3 estoura, teto 6 passa.
+    expect(await tamanhoDoMundo(mundo, { maxEntradas: 3 })).toBeUndefined();
+    expect(await tamanhoDoMundo(mundo, { maxEntradas: 6 })).toBe(1024 + 4 * 256 * 1024);
+  });
+
+  it("teto de tempo: percurso que passa do prazo devolve undefined", async () => {
+    const mundo = gerarMundo({ tamanho: "1MB" });
+    criadas.push(mundo);
+    let t = 0;
+    const agora = (): number => (t += 100);
+    expect(await tamanhoDoMundo(mundo, { maxMs: 250, agora })).toBeUndefined();
+  });
 });
