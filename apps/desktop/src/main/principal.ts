@@ -12,6 +12,7 @@ import {
 } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { totalmem } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -22,7 +23,7 @@ import {
 import { recuperarTroca } from "@sabrehosting/nucleo/backup/restaurar";
 import { listarBackups } from "@sabrehosting/nucleo/backup/listar";
 import { list as listarJogadores } from "@sabrehosting/nucleo/servidor/comandos";
-import type { ServidorMinecraft } from "@sabrehosting/nucleo/servidor/processo";
+import { ramAutomaticaMb, type ServidorMinecraft } from "@sabrehosting/nucleo/servidor/processo";
 import { analisarZip, importarNoCartorio } from "@sabrehosting/nucleo/importar";
 import { criarConfiguracoes } from "./configuracoes.js";
 import { criarAvisoHistorico } from "./aviso-historico.js";
@@ -59,6 +60,7 @@ import { criarImportacao, type Importacao } from "./importar.js";
 import { criarVersao, type Versao } from "./versao.js";
 import { criarEncaixeInicio } from "./encaixe-inicio.js";
 import { criarPastaBase } from "./pasta-base.js";
+import { tamanhoDoMundo } from "./tamanho-mundo.js";
 import { criarInicio, mensagemFalhaSair, type Inicio } from "./inicio.js";
 import { bytesPorSegundo, lerPreferencias, salvarPreferencias } from "./preferencias.js";
 import { ehBooleano, navegacaoPermitida, veioDaPagina } from "./seguranca.js";
@@ -336,6 +338,15 @@ const atualizando = (): number | undefined => atualizandoMundo;
 let avisoAtualizacaoMundo: string | undefined;
 const avisoAtualizacao = (): string | undefined => avisoAtualizacaoMundo;
 
+let listaGuardada: { quando: number; lista: ReturnType<typeof listarBackups> } | undefined;
+/** Backups deste PC para o painel do Início; a mesma leitura vale por 5 s. `undefined` = sem pasta. */
+async function listaDeBackups(): Promise<Awaited<ReturnType<typeof listarBackups>> | undefined> {
+  if (!pc.pastaBackups) return undefined;
+  if (!listaGuardada || performance.now() - listaGuardada.quando > 5_000)
+    listaGuardada = { quando: performance.now(), lista: listarBackups(pc.pastaBackups) };
+  return listaGuardada.lista;
+}
+
 async function criarInicioDoApp(): Promise<Inicio> {
   if (process.env["SABRE_E2E"] !== "1") {
     const reais = depsReais(pc, (t) => clipboard.writeText(t), {
@@ -354,14 +365,16 @@ async function criarInicioDoApp(): Promise<Inicio> {
       avisoAtualizacao,
       aoServidor: (s) => agendaApp?.observar(s),
       // Só leitura, para o painel do Início (appui-1.2): o que falhar some da tela.
-      ultimoBackup: async () => {
-        if (!pc.pastaBackups) return undefined;
-        const lista = await listarBackups(pc.pastaBackups);
-        return lista
-          .map((b) => b.criadoEm)
+      // Uma listagem só serve ao último backup e à quantidade (cada pacote é aberto uma vez; vale por 5 s).
+      ultimoBackup: async () =>
+        (await listaDeBackups())
+          ?.map((b) => b.criadoEm)
           .sort()
-          .at(-1);
-      },
+          .at(-1),
+      quantidadeBackups: async () => (await listaDeBackups())?.length,
+      tamanhoMundo: () => tamanhoDoMundo(pc.pastaMundo),
+      // A RAM que o app reserva ao servidor (a medida do processo fica para depois).
+      ramReservadaMb: () => ramAutomaticaMb(totalmem()),
       versaoMundo: async () => (await clienteDoPc(pc)().maisNova())?.numero,
       jogadores: async (s) => {
         const srv = s as ServidorMinecraft;

@@ -103,4 +103,48 @@ describe("tokens", () => {
       expect(t["--sombra-2"]).toBeDefined();
     }
   });
+
+  it.each([
+    ["claro", claro],
+    ["escuro", escuro],
+  ])("direção v2: camada de peça e estados têm contraste AA no tema %s", (_n, t) => {
+    const camada = cor(t, "--cor-camada-2");
+    expect(camada, "--cor-camada-2 falta").not.toBe("");
+    // A peça é mais "funda" que o cartão, mas ainda distinta do fundo da janela.
+    expect(camada).not.toBe(cor(t, "--cor-superficie"));
+    for (const nome of ["--cor-texto", "--cor-texto-suave"]) {
+      expect(contraste(cor(t, nome), camada), nome).toBeGreaterThanOrEqual(4.5);
+    }
+    // Frase de estado em cor, escrita sobre a peça: texto (4,5:1) e borda/ícone (3:1).
+    for (const nome of [
+      "--cor-ligado",
+      "--cor-desligado",
+      "--cor-atencao",
+      "--cor-erro",
+      "--cor-destaque",
+    ]) {
+      expect(contraste(cor(t, nome), camada), nome).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("direção v2: borda por estado usa a cor de estado, nunca um hex solto", () => {
+    for (const estado of ["ligado", "desligado", "atencao", "erro"]) {
+      expect(claro[`--borda-estado-${estado}`], estado).toBe(`2px solid var(--cor-${estado})`);
+      // Só no tema base: a cor muda sozinha com o tema, a espessura não.
+      expect(escuro[`--borda-estado-${estado}`], estado).toBeUndefined();
+    }
+  });
+
+  it("direção v2: número grande tem escala própria e numerais tabulares", () => {
+    for (const nome of ["--numero-1", "--numero-2", "--numero-3"]) {
+      expect(claro[nome], nome).toMatch(/rem$/);
+    }
+    const [a, b, c] = ["--numero-1", "--numero-2", "--numero-3"].map((n) =>
+      parseFloat(claro[n] ?? "0"),
+    );
+    expect(a).toBeLessThan(b ?? 0);
+    expect(b).toBeLessThan(c ?? 0);
+    expect(claro["--numeros-tabulares"]).toBe("tabular-nums");
+    expect(css).toMatch(/\.numero\s*\{[^}]*font-variant-numeric:\s*var\(--numeros-tabulares\)/);
+  });
 });

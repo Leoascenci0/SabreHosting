@@ -12,6 +12,7 @@ Tema claro por padrão; o escuro vem pelo tema do sistema (`prefers-color-scheme
 | ---------------------- | -------------------------------------- | --------- | --------- |
 | `--cor-fundo`          | fundo da janela                        | `#f4f7f8` | `#0e171c` |
 | `--cor-superficie`     | cartões                                | `#ffffff` | `#16242b` |
+| `--cor-camada-2`       | peça dentro do cartão (direção v2)     | `#eaf0f2` | `#1d2f38` |
 | `--cor-borda`          | contornos                              | `#cfd9dd` | `#2a3d46` |
 | `--cor-texto`          | texto principal                        | `#14232a` | `#eaf2f4` |
 | `--cor-texto-suave`    | apoio (versão, dicas)                  | `#4a5d66` | `#9fb4bd` |
@@ -68,3 +69,34 @@ fica como melhoria (o texto "SABRE HOSTING" não se lê em 16–32 px).
 
 - **Botão** (`button`): 44 px de altura mínima, foco visível. `.principal` (uma por tela), `.secundario`, `.perigo` (confirmação de Parar).
 - **Confirmação** (`.confirmacao`): bloco na própria tela, sem janela separada; foco começa em "Cancelar".
+
+## Direção v2 (appui-melhoria, bloco 2)
+
+Base: a **organização** de um painel de servidor Minecraft que o Eliel mostrou (onde cada coisa mora, o que se vê em 5
+segundos). **Direção reversível:** o Eliel pode trocar; nada aqui muda tela sozinho (as telas vêm nos itens 2.2 em diante).
+Modo `impeccable`: Operate (amigo que só quer jogar).
+
+**Peças**
+
+- **Abas no topo** com o chip de estado sempre visível ao lado; trocar de aba só mostra/esconde (nada recarrega).
+- **Chip de estado:** uma frase em português ("Servidor ligado — 2 amigos jogando"), não uma etiqueta. Cor + ícone + palavra.
+- **Cartão principal:** a frase de estado, a ação principal (uma por tela) e três **peças de estado** pequenas: PC, servidor, painel.
+- **Peças de estado:** fundo `--cor-camada-2` dentro do cartão (`--cor-superficie`), borda `--borda-estado-*`.
+- **Grade de números:** jogadores, tempo ligado, RAM, tamanho do mundo, backups, último backup. Tamanho `--numero-1` a `--numero-3`,
+  classe `.numero` (numerais tabulares). Sempre com a comparação ("4,1 GB, era 5,3 GB"), nunca número solto.
+- **Seção recolhível:** cabeçalho com atalho "Ver tudo →"; só recolhe e abre.
+- **Rodapé de estado:** uma linha com o que o grupo usa na hora (versão do mundo, quem hospeda).
+
+**Original por três escolhas:** (1) estado como frase, não etiqueta; (2) superfícies em camadas claras, com borda de estado em
+cor **e** ícone **e** palavra (nunca só cor); (3) números grandes tabulares com comparação.
+
+**Honestidade dos dados:** só aparece número que o app sabe; o que não existe mostra "—" e a razão numa dica. Nada de TPS (o
+servidor padrão não tem).
+
+**O que não se faz:** fonte monoespaçada em caixa alta; paleta marrom/rosa; ícones de bloco; nome ou arquivo do produto de
+referência; arrastar ou reordenar seções; mapa do mundo (backlog, aba Mundo do roadmap `chunk`); fonte ou imagem de internet.
+Mantém tema claro e escuro, azul-petróleo, fonte do sistema, tudo empacotado, janela mínima 720 x 480.
+
+**Tokens novos** (`tokens.css`): `--cor-camada-2` (nos dois temas), `--borda-estado-ligado|desligado|atencao|erro`
+(2 px + cor de estado, que já muda com o tema), `--numero-1|2|3` (1,5 / 2 / 2,75 rem), `--numeros-tabulares` e `.numero`.
+Contraste AA (4,5:1 texto, 3:1 borda e ícone) conferido nos dois temas em `tokens.test.ts`.

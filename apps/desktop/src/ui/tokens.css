@@ -2,6 +2,7 @@
 :root {
   --cor-fundo: #f4f7f8;
   --cor-superficie: #ffffff;
+  --cor-camada-2: #eaf0f2;
   --cor-borda: #cfd9dd;
   --cor-texto: #14232a;
   --cor-texto-suave: #4a5d66;
@@ -31,6 +32,18 @@
   --largura-barra: 220px;
   --largura-conteudo: 960px;
 
+  /* Direção v2: borda por estado (cor + espessura; ícone e palavra vão junto na tela). */
+  --borda-estado-ligado: 2px solid var(--cor-ligado);
+  --borda-estado-desligado: 2px solid var(--cor-desligado);
+  --borda-estado-atencao: 2px solid var(--cor-atencao);
+  --borda-estado-erro: 2px solid var(--cor-erro);
+
+  /* Número grande (grade de números) e numerais tabulares: colunas não "dançam". */
+  --numero-1: 1.5rem;
+  --numero-2: 2rem;
+  --numero-3: 2.75rem;
+  --numeros-tabulares: tabular-nums;
+
   --sombra-1: 0 1px 2px rgb(20 35 42 / 8%);
   --sombra-2: 0 4px 16px rgb(20 35 42 / 12%);
 
@@ -42,6 +55,7 @@
   :root {
     --cor-fundo: #0e171c;
     --cor-superficie: #16242b;
+    --cor-camada-2: #1d2f38;
     --cor-borda: #2a3d46;
     --cor-texto: #eaf2f4;
     --cor-texto-suave: #9fb4bd;
@@ -54,4 +68,9 @@
     --sombra-1: 0 1px 2px rgb(0 0 0 / 40%);
     --sombra-2: 0 4px 16px rgb(0 0 0 / 50%);
   }
+}
+
+/* Todo número que muda (jogadores, RAM, tempo) leva .numero: dígitos de mesma largura. */
+.numero {
+  font-variant-numeric: var(--numeros-tabulares);
 }

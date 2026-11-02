@@ -245,7 +245,11 @@ describe("hospedar e parar", () => {
     const s = servidorFalso();
     const i = criarInicio(deps({ hospedar: async () => ({ servidor: s }) }));
     expect(await i.hospedar()).toEqual({ ok: true });
-    expect(await i.estado()).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565" });
+    expect(await i.estado()).toEqual({
+      tipo: "eu",
+      endereco: "10.0.0.5:25565",
+      ligadoSegundos: expect.any(Number),
+    });
     expect(await i.parar()).toEqual({ ok: true });
     expect(s.pararServidor).toHaveBeenCalledOnce();
     expect(await i.estado()).toEqual({ tipo: "ninguem" });
@@ -433,7 +437,11 @@ describe("encerrar (Sair do app)", () => {
     expect(mensagemFalhaSair("o Java não respondeu")).toBe(
       "Não consegui parar o servidor: o Java não respondeu. Os amigos podem continuar conectados. Tente Sair de novo.",
     );
-    expect(await i.estado()).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565" }); // sem "parando"
+    expect(await i.estado()).toEqual({
+      tipo: "eu",
+      endereco: "10.0.0.5:25565",
+      ligadoSegundos: expect.any(Number),
+    }); // sem "parando"
     expect(aviso).toHaveBeenCalled();
   });
 
@@ -512,7 +520,11 @@ describe("dados do painel do Início (appui-1.2)", () => {
   it("jogadores indisponíveis (servidor subindo): campo ausente, nunca 'ninguém' inventado", async () => {
     const inicio = criarInicio(deps({ jogadores: async () => undefined }));
     await inicio.hospedar();
-    expect(await inicio.estado()).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565" });
+    expect(await inicio.estado()).toEqual({
+      tipo: "eu",
+      endereco: "10.0.0.5:25565",
+      ligadoSegundos: expect.any(Number),
+    });
   });
 
   it("outro PC hospeda: não consulta jogadores (só neste PC)", async () => {
@@ -544,5 +556,109 @@ describe("trabalho no mundo aparece no estado (appui-1.2)", () => {
     expect(await inicio.estado()).toEqual({ tipo: "ninguem", trabalho: "trocando-versao" });
     trocando = false;
     expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+  });
+});
+
+describe("dados do painel na ponte (appuimel-2.3)", () => {
+  it("parado: quantidade de backups e tamanho do mundo aparecem quando existem; ausentes não aparecem", async () => {
+    const com = criarInicio(
+      deps({ quantidadeBackups: async () => 7, tamanhoMundo: async () => 1_310_720 }),
+    );
+    expect(await com.estado()).toEqual({
+      tipo: "ninguem",
+      quantidadeBackups: 7,
+      tamanhoMundoBytes: 1_310_720,
+    });
+    const sem = criarInicio(
+      deps({ quantidadeBackups: async () => undefined, tamanhoMundo: async () => undefined }),
+    );
+    expect(await sem.estado()).toEqual({ tipo: "ninguem" });
+  });
+
+  it("zero backups e mundo de 0 byte são dados (aparecem), não ausência", async () => {
+    const inicio = criarInicio(
+      deps({ quantidadeBackups: async () => 0, tamanhoMundo: async () => 0 }),
+    );
+    expect(await inicio.estado()).toEqual({
+      tipo: "ninguem",
+      quantidadeBackups: 0,
+      tamanhoMundoBytes: 0,
+    });
+  });
+
+  it("falha ao ler cada dado só some com ele; o resto do painel continua", async () => {
+    const inicio = criarInicio(
+      deps({
+        quantidadeBackups: async () => Promise.reject(new Error("disco")),
+        tamanhoMundo: async () => 10,
+      }),
+    );
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem", tamanhoMundoBytes: 10 });
+  });
+
+  it("tamanho do mundo: leitura barata, guardada por um tempo (o estado é pedido a cada evento)", async () => {
+    const leitura = vi.fn(async () => 99);
+    const inicio = criarInicio(deps({ tamanhoMundo: leitura }), { tamanhoTtlMs: 40 });
+    await inicio.estado();
+    expect(await inicio.estado()).toMatchObject({ tamanhoMundoBytes: 99 });
+    expect(leitura).toHaveBeenCalledTimes(1);
+    await new Promise((ok) => setTimeout(ok, 60));
+    await inicio.estado();
+    expect(leitura).toHaveBeenCalledTimes(2);
+  });
+
+  it("hospedando: tempo ligado e RAM reservada aparecem; parado, não", async () => {
+    let agora = 1_000;
+    const inicio = criarInicio(
+      deps({ ramReservadaMb: () => 4096, jogadores: async () => ["Ana", "Lucas"] }),
+      { agora: () => agora },
+    );
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+    await inicio.hospedar();
+    agora += 125_900;
+    expect(await inicio.estado()).toEqual({
+      tipo: "eu",
+      endereco: "10.0.0.5:25565",
+      ligadoSegundos: 125,
+      ramReservadaMb: 4096,
+      jogadores: ["Ana", "Lucas"],
+    });
+  });
+
+  it("sem dado de RAM, o campo não existe; o tempo ligado vale mesmo assim", async () => {
+    const inicio = criarInicio(deps({ ramReservadaMb: () => undefined }), { agora: () => 0 });
+    await inicio.hospedar();
+    const e = await inicio.estado();
+    expect(e).toEqual({ tipo: "eu", endereco: "10.0.0.5:25565", ligadoSegundos: 0 });
+  });
+
+  it("parando: o tempo ligado e a RAM somem; ao parar e hospedar de novo, o relógio recomeça", async () => {
+    let agora = 0;
+    const inicio = criarInicio(deps({ ramReservadaMb: () => 2048 }), {
+      ...RAPIDO,
+      agora: () => agora,
+    });
+    await inicio.hospedar();
+    agora = 60_000;
+    expect(await inicio.estado()).toMatchObject({ ligadoSegundos: 60 });
+    await inicio.parar();
+    expect(await inicio.estado()).toEqual({ tipo: "ninguem" });
+    agora = 100_000;
+    await inicio.hospedar();
+    agora = 107_000;
+    expect(await inicio.estado()).toMatchObject({ ligadoSegundos: 7 });
+  });
+
+  it("servidor de outro PC: sem tempo ligado nem RAM (não são deste PC)", async () => {
+    const inicio = criarInicio(
+      deps({
+        lerTrava: async () => ({ dono: { id: 2, nome: "PC do Lucas" } }),
+        ramReservadaMb: () => 4096,
+      }),
+    );
+    const e = await inicio.estado();
+    expect(e).toMatchObject({ tipo: "outro" });
+    expect(e).not.toHaveProperty("ligadoSegundos");
+    expect(e).not.toHaveProperty("ramReservadaMb");
   });
 });
