@@ -1,8 +1,8 @@
 # Roadmap chunk — Resetar pedaços do mundo pelo app
 
 Pedido do Eliel (02/11/2026), depois de ver um painel de servidor que tem esse recurso: **resetar chunks pelo app**.
-Sigla `chunk`. Ramos `roadmap/chunk-<id>`. Nasce depois do bloco 2 do `appuimel` (a aba **Mundo** usa a casca nova),
-mas os itens 1.1 a 1.4 (núcleo) não dependem de tela e podem ir antes.
+Sigla `chunk`. Ramos `roadmap/chunk-<id>`. **Ordem decidida pelo Eliel (02/11/2026): interface v2 (`appuimel` bloco 2) primeiro**; a aba **Mundo** usa a casca nova,
+mas os itens 1.1 a 1.4 (núcleo) não dependem de tela e podem rodar em paralelo com ela.
 
 ## O que é, em português
 O mundo do Minecraft é dividido em **chunks** (pedaços de 16 x 16 blocos, de cima a baixo) e os chunks ficam agrupados em
@@ -25,8 +25,7 @@ backup antes.
   `playerdata`, outras dimensões nem outras regiões.
 - **Desempenho:** ler só o **cabeçalho** (8 KiB) de cada `.mca` para saber quais chunks existem; nunca o mundo inteiro na RAM.
 - **Entrada não confiável:** coordenadas, dimensão e nomes de arquivo são validados; nada de caminho montado a partir de texto cru.
-- **Quem pode resetar:** decisão de regra do grupo, **fica com o Eliel**. Padrão proposto até ele decidir: só o dono do
-  grupo, e só no PC que está com a trava. (Item 1.5 confirma antes de ligar a ação.)
+- **Quem pode resetar:** **só o dono do grupo, e só no PC que está com a trava** (decidido pelo Eliel em 02/11/2026).
 
 ## Itens (ordem de execução)
 
@@ -74,8 +73,7 @@ backup antes.
 - [ ] **1.5 — Main e ponte: `mundo:planejar` e `mundo:resetar` com todas as recusas**
   *O que fazer:* as duas ações no processo principal (e na ponte), com as recusas **no main**, não só na tela:
   demonstração ("Isso é só uma demonstração"), servidor rodando, sem trava, backup/restauração em andamento, PC que não
-  pode resetar, outro reset em andamento. Erros em texto fixo seguro (sem caminho cru, S-14). **Confirmar com o Eliel**
-  quem pode resetar antes de ligar (padrão: só o dono do grupo).
+  pode resetar, outro reset em andamento. Erros em texto fixo seguro (sem caminho cru, S-14). Quem pode: só o dono (decidido).
   *Arquivo:* `apps/desktop/src/main/mundo.ts`, `principal.ts`, `preload.cts`, `ponte.ts`, `fake-e2e.ts`, testes
   **Tela no app:** não se aplica.
   *Confirmação:* testes do main (cada recusa; uma chamada de backup antes do reset; demonstração nunca escreve).
