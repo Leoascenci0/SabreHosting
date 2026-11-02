@@ -414,3 +414,58 @@ describe("mundo: cruzamentos, texto seguro e bordas (devolução do qa)", () => 
     for (const k of Object.keys(todas)) expect(f({ [k]: true })).toBe(true);
   });
 });
+
+describe("mundo: o que a tela Mundo lê (chunk-1.6)", () => {
+  it("estado traz o nome do mundo (só a pasta) e se o servidor está ligado", async () => {
+    const c = cenario();
+    expect(await c.m.estado()).toEqual({
+      dono: true,
+      pendencia: "nenhuma",
+      nome: "mundo",
+      servidorLigado: false,
+    });
+    c.o.rodando = true;
+    expect(await c.m.estado()).toMatchObject({ servidorLigado: true });
+    c.o.rodando = false;
+    c.o.orfao = async () => true; // servidor de uma sessão anterior ainda vivo conta como ligado
+    expect(await c.m.estado()).toMatchObject({ servidorLigado: true });
+  });
+
+  it("quem não é dono não recebe nome nem controles; demonstração avisa para a tela mostrar a recusa", async () => {
+    const outro = cenario({ dono: false });
+    expect(await outro.m.estado()).toEqual({ dono: false });
+    const demo = cenario();
+    demo.o.demonstracao = true;
+    expect(await demo.m.estado()).toEqual({ dono: false, demonstracao: true });
+    expect(demo.o.eus).toBe(0);
+  });
+
+  it("regioes: só números da dimensão (sem caminho), com os chunks de cada região do terreno", async () => {
+    const c = cenario();
+    escreverRegiao(join(c.mundo, "region", "r.1.-1.mca"), [5], undefined, 2);
+    const r = await c.m.regioes("overworld");
+    expect(r).toMatchObject({ ok: true });
+    if (!r.ok) throw new Error("esperava ok");
+    expect(r.regioes).toEqual([
+      { x: 0, z: 0, chunks: 4 },
+      { x: 1, z: -1, chunks: 1 },
+    ]);
+    expect(JSON.stringify(r)).not.toContain(c.mundo);
+    expect(typeof r.tamanhoMundo === "number" || r.tamanhoMundo === undefined).toBe(true);
+  });
+
+  it("regioes: dimensão sem pasta é lista vazia; dimensão inválida, não-dono e demonstração recusam", async () => {
+    const c = cenario();
+    expect(await c.m.regioes("nether")).toMatchObject({ ok: true, regioes: [] });
+    expect(await c.m.regioes("lua")).toMatchObject({ ok: false });
+    c.o.dono = false;
+    expect(await c.m.regioes("overworld")).toMatchObject({
+      ok: false,
+      mensagem: expect.stringContaining("dono"),
+    });
+    c.o.dono = true;
+    c.o.demonstracao = true;
+    expect(await c.m.regioes("overworld")).toEqual({ ok: false, mensagem: TEXTO_DEMONSTRACAO });
+    c.nada();
+  });
+});

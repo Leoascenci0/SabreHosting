@@ -623,6 +623,7 @@ async function criarMundoDoApp(inicio: Inicio): Promise<Mundo> {
       pastaDoMundo: pc.pastaMundo,
       pastaDoServidor: pc.pastaServidor,
       mundoAgora: () => pastaDoMundoAgora(pc.pastaServidor),
+      tamanhoMundo: (pasta) => tamanhoDoMundo(pasta),
       cliente,
       servidorRodando: () => inicio.ativo(),
       servidorOrfao: () => inicio.temOrfao(),
@@ -796,6 +797,10 @@ function registrarPonte(
     return r;
   };
   ipcMain.handle("sabre:mundo:estado", (evento) => (permitir(evento), mundo.estado()));
+  ipcMain.handle("sabre:mundo:regioes", (evento, dimensao: unknown) => {
+    permitir(evento);
+    return mundo.regioes(dimensao);
+  });
   ipcMain.handle(
     "sabre:mundo:planejar",
     (evento, dimensao: unknown, area: unknown, ok: unknown) => {
