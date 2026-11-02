@@ -29,7 +29,7 @@ backup antes.
 
 ## Itens (ordem de execução)
 
-- [ ] **1.1 — Núcleo: ler o que existe no mundo (só leitura)**
+- [x] **1.1 — Núcleo: ler o que existe no mundo (só leitura)**
   *O que fazer:* função que, dada a pasta do mundo e a dimensão (`overworld`, `nether`, `end`), lista as regiões e, pelo
   cabeçalho de cada `.mca`, quais chunks existem (e o tamanho em disco), incluindo `entities/` e `poi/` quando houver.
   Só lê; não escreve; ignora link simbólico e arquivo fora do padrão `r.<x>.<z>.mca`.
