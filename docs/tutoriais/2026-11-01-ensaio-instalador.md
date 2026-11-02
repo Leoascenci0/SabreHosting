@@ -15,7 +15,7 @@ Tempo: uns 15 minutos.
 ## 1. Baixar
 
 1. Entre no GitHub com a sua conta e abra:
-   https://github.com/Leoascenci0/SabreHosting/actions/runs/41441121219
+   https://github.com/Leoascenci0/SabreHosting/actions/runs/41451399539
 2. No fim da página, em **Artifacts**, clique em **instalador-ensaio** (cerca de 117 MB (122 581 030 bytes no último ensaio)). Baixa um `.zip`.
 3. Clique com o botão direito no `.zip` › **Extrair tudo**. Dentro está `SabreHosting-Setup-0.0.0.exe`.
 

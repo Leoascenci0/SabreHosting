@@ -246,7 +246,6 @@ describe("configurações em seções (appui-1.3)", () => {
       const erro = document.querySelector<HTMLElement>("#config-erro")?.getBoundingClientRect();
       return { rodape: r?.height ?? 0, topo: r?.top ?? 0, erroBaixo: erro?.bottom ?? 0 };
     });
-    if (process.env["SABRE_DEPURA"]) await p.screenshot({ path: "/tmp/claude-0/s/rodape.png" });
     expect(medidas.rodape).toBeLessThanOrEqual(120);
     expect(medidas.erroBaixo).toBeLessThanOrEqual(480);
     expect(medidas.topo).toBeGreaterThanOrEqual(360);

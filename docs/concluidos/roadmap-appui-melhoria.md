@@ -95,7 +95,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   *Confirmação:* e2e existentes passam sem afrouxar; capturas dos dois temas.
   *Depende de:* 2.5
 
-- [ ] **2.7 — Acabamento da v2: auditoria, polimento e comparação**
+- [x] **2.7 — Acabamento da v2: auditoria, polimento e comparação**
   *O que fazer:* `impeccable` `audit` e `polish` em todas as telas; conferir contraste, foco, teclado, janela mínima, tema
   claro e escuro; confirmar que nada ficou parecido demais com a referência (fonte, paleta, ícones, nomes); teto de RAM do
   app parado e tamanho do instalador conferidos contra `scripts/limites.json` (só descem). Capturas finais.
