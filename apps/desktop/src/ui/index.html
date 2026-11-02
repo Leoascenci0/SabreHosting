@@ -278,7 +278,7 @@
                 <input type="text" id="mods-versao" maxlength="100" />
               </div>
               <div class="passo" data-passo="2" hidden>
-                <label for="mods-arquivo">Nome do arquivo (termina em .jar)</label>
+                <label for="mods-arquivo">Nome do arquivo do mod</label>
                 <input type="text" id="mods-arquivo" maxlength="128" />
               </div>
               <div class="passo" data-passo="3" hidden>
@@ -287,7 +287,7 @@
                 <p class="dica">O link aparece na página do arquivo, no Modrinth.</p>
                 <details id="mods-avancado">
                   <summary>Avançado</summary>
-                  <label for="mods-hash">Código de conferência do arquivo (SHA-512)</label>
+                  <label for="mods-hash">Código de conferência do arquivo</label>
                   <input
                     type="text"
                     id="mods-hash"
@@ -756,14 +756,14 @@
           </div>
           <h2 id="titulo-bv" tabindex="-1">Qual é o seu convite?</h2>
           <div class="config" id="bv-convite">
-            <div class="config" id="bv-convite-form">
+            <form class="config" id="bv-convite-form" novalidate>
               <label for="bv-texto">Cole aqui o convite que você recebeu</label>
               <input type="text" id="bv-texto" autocomplete="off" spellcheck="false" />
               <p class="dica">
                 É o texto que o administrador do grupo te enviou. Ele vale por tempo limitado.
               </p>
               <div class="acoes">
-                <button type="button" class="principal" id="bv-conferir">Conferir convite</button>
+                <button type="submit" class="principal" id="bv-conferir">Conferir convite</button>
               </div>
               <p class="ou" aria-hidden="true">ou</p>
               <div class="alternativa">
@@ -774,7 +774,7 @@
                   Quer só dar uma olhada? Mostra o app com dados de mentira, sem hospedar nada.
                 </p>
               </div>
-            </div>
+            </form>
             <div
               class="confirmacao"
               id="bv-entrar-caixa"
