@@ -126,4 +126,25 @@ describe("listarRegioes", () => {
     await listarRegioes(mundo, "overworld");
     expect(hashesDoMundo(mundo)).toEqual(antes);
   });
+
+  it("devolve os setores de cada chunk (o que o Minecraft pode reaproveitar)", async () => {
+    const mundo = mundoVazio();
+    escreverRegiao(join(mundo, "region", "r.0.0.mca"), [3, 9], undefined, 3);
+    const r = await listarRegioes(mundo, "overworld");
+    expect(r[0]?.chunks).toEqual([3, 9]);
+    expect(r[0]?.setoresDosChunks).toEqual([3, 3]);
+  });
+
+  it("DIM-1 e DIM1 como link simbólico são ignorados com aviso", async () => {
+    const mundo = mundoVazio();
+    const fora = mundoVazio();
+    escreverRegiao(join(fora, "region", "r.0.0.mca"), [1]);
+    symlinkSync(fora, join(mundo, "DIM-1"));
+    symlinkSync(fora, join(mundo, "DIM1"));
+    for (const dim of ["nether", "end"] as const) {
+      const avisos: string[] = [];
+      expect(await listarRegioes(mundo, dim, { aviso: (t) => avisos.push(t) })).toEqual([]);
+      expect(avisos).toHaveLength(1);
+    }
+  });
 });

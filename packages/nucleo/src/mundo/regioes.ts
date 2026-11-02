@@ -14,6 +14,8 @@ export interface RegiaoLida {
   tamanho: number;
   /** Chunks presentes, como índice 0..1023 da tabela do cabeçalho (índice = (x & 31) + (z & 31) * 32), em ordem. */
   chunks: number[];
+  /** Setores de 4 KiB de cada chunk de `chunks` (mesma ordem): o que o Minecraft pode reaproveitar se o chunk sair. */
+  setoresDosChunks: number[];
 }
 
 export interface OpcoesListarRegioes {
@@ -42,7 +44,7 @@ async function lerChunks(
   tamanho: number,
   rotulo: string,
   aviso: (texto: string) => void,
-): Promise<number[] | null> {
+): Promise<{ chunks: number[]; setoresDosChunks: number[] } | null> {
   if (tamanho < TAMANHO_TABELA) {
     aviso(`Região ignorada (menor que o cabeçalho): ${rotulo}`);
     return null;
@@ -59,16 +61,19 @@ async function lerChunks(
     await arquivo.close();
   }
   const chunks: number[] = [];
+  const setoresDosChunks: number[] = [];
   let fora = 0;
   for (let i = 0; i < 1024; i++) {
     const inicio = tabela.readUIntBE(i * 4, 3);
     const setores = tabela.readUInt8(i * 4 + 3);
     if (inicio === 0 && setores === 0) continue;
-    if (inicio >= 2 && setores > 0 && (inicio + setores) * SETOR <= tamanho) chunks.push(i);
-    else fora++;
+    if (inicio >= 2 && setores > 0 && (inicio + setores) * SETOR <= tamanho) {
+      chunks.push(i);
+      setoresDosChunks.push(setores);
+    } else fora++;
   }
   if (fora > 0) aviso(`${fora} chunk(s) com posição inválida ignorado(s) em ${rotulo}`);
-  return chunks;
+  return { chunks, setoresDosChunks };
 }
 
 /**
@@ -109,16 +114,19 @@ export async function listarRegioes(
         continue;
       }
       const completo = join(dirCompleto, entrada.name);
+      // Janela entre este lstat e o open de lerChunks: aceita, porque o servidor está parado (regra de ouro 1)
+      // e ninguém troca o arquivo por link simbólico nesse intervalo.
       const { size } = await lstat(completo);
-      const chunks = await lerChunks(completo, size, rotulo, aviso);
-      if (chunks === null) continue;
+      const lido = await lerChunks(completo, size, rotulo, aviso);
+      if (lido === null) continue;
       achadas.push({
         tipo,
         arquivo: rotulo,
         x: Number(nome[1]),
         z: Number(nome[2]),
         tamanho: size,
-        chunks,
+        chunks: lido.chunks,
+        setoresDosChunks: lido.setoresDosChunks,
       });
     }
     achadas.sort((a, b) => a.x - b.x || a.z - b.z);
