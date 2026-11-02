@@ -18,9 +18,11 @@ import { criarPacote } from "../backup/pacote.js";
 import { restaurarBackup } from "../backup/restaurar.js";
 import { ErroCartorio } from "../cartorio/cliente.js";
 import { hashDoArquivo } from "../integridade/hash.js";
-import { MARCADOR_VERSAO_PENDENTE, podeSubir } from "../servidor/configurar.js";
+import { MARCADOR_TROCA, MARCADOR_VERSAO_PENDENTE, podeSubir } from "../servidor/configurar.js";
 import { resetarMundo } from "./resetar.js";
 import {
+  descartarPendencia,
+  marcarMundoTrocando,
   desfazerUltimoReset,
   publicarVersaoDoMundo,
   retomarVersaoPendente,
@@ -42,6 +44,7 @@ function cartorioFalso(inicial = 7) {
     enviar: 0,
     caiNoEnvio: false,
     manifestos: [] as string[],
+    shaGuardada: "0".repeat(64),
     enviados: [] as { n: number; sha: string }[],
   };
   const cai = () => {
@@ -58,7 +61,7 @@ function cartorioFalso(inicial = 7) {
             numero: est.guardada,
             epoca: 3,
             pcId: 1,
-            manifestoSha256: "0".repeat(64),
+            manifestoSha256: est.shaGuardada,
             arquivos: 1,
             bytes: 1,
             criadaEm: 1,
@@ -113,7 +116,7 @@ async function cenario() {
     agora: () => new Date("2026-11-02T10:00:00.000Z"),
   });
   const depoisDoReset = hashesDoMundo(mundo);
-  const restaurar = async (nome: string) => {
+  const restaurar = async (nome: string, fluxo = true) => {
     const alvo = (await listarBackups(pastaBackups)).find((b) => b.nome === nome);
     if (!alvo) throw new Error("sem backup");
     await restaurarBackup({
@@ -126,6 +129,7 @@ async function cenario() {
       servidorParado: base_.servidorParado,
       versao: Math.max(0, ...(await listarBackups(pastaBackups)).map((b) => b.versao)),
       epoca: 3,
+      versaoPendenteDoFluxo: fluxo,
     });
   };
   return { base, servidor, mundo, pastaBackups, antes, depoisDoReset, trava, o: base_, restaurar };
@@ -357,7 +361,7 @@ describe("desfazerUltimoReset", () => {
       desfazerUltimoReset({ ...c.o, cliente, restaurar: c.restaurar, prazoTravaMs: 50 }),
     ).rejects.toThrow(/trava/);
     c.trava.tem = true;
-    writeFileSync(marcador(c.servidor), "{}");
+    writeFileSync(marcador(c.servidor), '{"formato":1,"fase":"mundo-trocando"}');
     await expect(desfazerUltimoReset({ ...c.o, cliente, restaurar: c.restaurar })).rejects.toThrow(
       /ainda não foi espalhad/,
     );
@@ -387,5 +391,216 @@ describe("desfazerUltimoReset", () => {
     writeFileSync(marcador(c.servidor), "{torto");
     await retomarVersaoPendente({ ...c.o, cliente }).catch((e: Error) => falhas.push(e.message));
     for (const m of falhas) expect(m).not.toContain(c.base);
+  });
+});
+
+const eula = (servidor: string) => writeFileSync(join(servidor, "eula.txt"), "eula=true\n");
+
+describe("conflito: outro PC publicou a mesma versão com outro conteúdo (regra 5)", () => {
+  async function pendente() {
+    const c = await cenario();
+    const f = cartorioFalso(7);
+    f.est.fora = true;
+    await publicarVersaoDoMundo({ ...c.o, cliente: f.cliente });
+    f.est.fora = false;
+    return { c, ...f };
+  }
+
+  it("hash diferente: estado conflito, marcador fica, servidor bloqueado, nada enviado", async () => {
+    const { c, cliente, est } = await pendente();
+    est.ultimo = 8;
+    est.guardada = 8;
+    est.shaGuardada = "b".repeat(64);
+    const r = await retomarVersaoPendente({ ...c.o, cliente });
+    expect(r.estado).toBe("conflito");
+    expect(existsSync(marcador(c.servidor))).toBe(true);
+    expect(est.criar).toBe(0);
+    expect(est.enviar).toBe(0);
+    eula(c.servidor);
+    expect((await podeSubir(c.servidor)).pode).toBe(false);
+  });
+
+  it("mesmo hash (o envio nosso já tinha chegado): publicada e o marcador sai", async () => {
+    const { c, cliente, est } = await pendente();
+    const m = JSON.parse(readFileSync(marcador(c.servidor), "utf8")) as {
+      manifesto: { sha256: string };
+    };
+    est.ultimo = 8;
+    est.guardada = 8;
+    est.shaGuardada = m.manifesto.sha256;
+    expect(await retomarVersaoPendente({ ...c.o, cliente })).toEqual({
+      estado: "publicada",
+      versao: 8,
+    });
+    expect(existsSync(marcador(c.servidor))).toBe(false);
+  });
+});
+
+describe("descartarPendencia", () => {
+  it("só remove o marcador: mundo e backups intactos, e o servidor pode subir", async () => {
+    const c = await cenario();
+    const { cliente, est } = cartorioFalso(7);
+    est.fora = true;
+    await publicarVersaoDoMundo({ ...c.o, cliente });
+    eula(c.servidor);
+    expect((await podeSubir(c.servidor)).pode).toBe(false);
+    const mundo = hashesDoMundo(c.mundo);
+    const nomes = readdirSync(c.pastaBackups).sort();
+    await descartarPendencia({ pastaDoServidor: c.servidor });
+    expect(existsSync(marcador(c.servidor))).toBe(false);
+    expect(hashesDoMundo(c.mundo)).toEqual(mundo);
+    expect(readdirSync(c.pastaBackups).sort()).toEqual(nomes);
+    expect((await podeSubir(c.servidor)).pode).toBe(true);
+  });
+
+  it("sem marcador não faz nada nem falha", async () => {
+    const c = await cenario();
+    await expect(descartarPendencia({ pastaDoServidor: c.servidor })).resolves.toBeUndefined();
+  });
+});
+
+describe("troca do mundo protegida por marcador (fase mundo-trocando)", () => {
+  it("falha depois da troca (trava perdida): servidor bloqueado e a retomada publica N+1 uma vez", async () => {
+    const c = await cenario();
+    const { cliente, est } = cartorioFalso(7);
+    await publicarVersaoDoMundo({ ...c.o, cliente });
+    const r = await desfazerUltimoReset({
+      ...c.o,
+      cliente,
+      prazoTravaMs: 50,
+      restaurar: async (nome) => {
+        await c.restaurar(nome);
+        c.trava.tem = false; // perdeu a trava logo depois da troca
+      },
+    });
+    expect(r.feito).toBe(true);
+    if (r.feito) expect(r.publicacao.estado).toBe("pendente");
+    expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
+    expect(existsSync(marcador(c.servidor))).toBe(true);
+    eula(c.servidor);
+    expect((await podeSubir(c.servidor)).pode).toBe(false);
+    c.trava.tem = true;
+    expect(await retomarVersaoPendente({ ...c.o, cliente })).toEqual({
+      estado: "publicada",
+      versao: 9,
+    });
+    expect(est.criar).toBe(2);
+    expect(est.guardada).toBe(9);
+    expect(existsSync(marcador(c.servidor))).toBe(false);
+  });
+
+  it("queda entre a troca e a publicação: marcador já estava gravado; a retomada constrói o pacote e publica uma vez", async () => {
+    const c = await cenario();
+    const { cliente, est } = cartorioFalso(7);
+    await publicarVersaoDoMundo({ ...c.o, cliente });
+    await expect(
+      desfazerUltimoReset({
+        ...c.o,
+        cliente,
+        restaurar: async (nome) => {
+          await c.restaurar(nome);
+          throw new Error("queda"); // o app morreu aqui
+        },
+      }),
+    ).rejects.toThrow();
+    expect(existsSync(marcador(c.servidor))).toBe(true);
+    eula(c.servidor);
+    expect((await podeSubir(c.servidor)).pode).toBe(false);
+    expect(await retomarVersaoPendente({ ...c.o, cliente })).toEqual({
+      estado: "publicada",
+      versao: 9,
+    });
+    expect(est.criar).toBe(2);
+    expect(hashesDoMundo(c.mundo)).toEqual(c.antes);
+    expect(existsSync(marcador(c.servidor))).toBe(false);
+    expect(await retomarVersaoPendente({ ...c.o, cliente })).toEqual({ estado: "nada" });
+    expect(est.criar).toBe(2);
+  });
+
+  it("troca anterior ainda não recuperada (marcador da troca): a retomada recusa e mantém o marcador", async () => {
+    const c = await cenario();
+    const { cliente, est } = cartorioFalso(7);
+    await marcarMundoTrocando({ pastaDoServidor: c.servidor });
+    writeFileSync(join(c.servidor, MARCADOR_TROCA), "{}");
+    await expect(retomarVersaoPendente({ ...c.o, cliente })).rejects.toThrow(/recuper/);
+    expect(est.criar).toBe(0);
+    expect(existsSync(marcador(c.servidor))).toBe(true);
+  });
+
+  it("marcar a troca já bloqueia o servidor", async () => {
+    const c = await cenario();
+    await marcarMundoTrocando({ pastaDoServidor: c.servidor });
+    eula(c.servidor);
+    expect((await podeSubir(c.servidor)).pode).toBe(false);
+  });
+});
+
+describe("guardas de entrada com versão pendente", () => {
+  async function comPendente() {
+    const c = await cenario();
+    const f = cartorioFalso(7);
+    f.est.fora = true;
+    await publicarVersaoDoMundo({ ...c.o, cliente: f.cliente });
+    return { c, ...f };
+  }
+
+  it("resetarMundo e restaurarBackup recusam, sem escrever", async () => {
+    const { c } = await comPendente();
+    const h = hashesDoMundo(c.mundo);
+    const nomes = readdirSync(c.pastaBackups).sort();
+    await expect(
+      resetarMundo({
+        ...c.o,
+        dimensao: "overworld",
+        area: { tipo: "retangulo", x1: 0, z1: 0, x2: 1, z2: 0 },
+        versao: 8,
+      }),
+    ).rejects.toThrow(/ainda não foi espalhad/);
+    await expect(c.restaurar(nomes[0] ?? "", false)).rejects.toThrow(/ainda não foi espalhad/);
+    expect(hashesDoMundo(c.mundo)).toEqual(h);
+    expect(readdirSync(c.pastaBackups).sort()).toEqual(nomes);
+  });
+
+  it("o fluxo próprio passa pela flag (resetar com o marcador de troca gravado)", async () => {
+    const c = await cenario();
+    await marcarMundoTrocando({ pastaDoServidor: c.servidor });
+    await expect(
+      resetarMundo({
+        ...c.o,
+        dimensao: "overworld",
+        area: { tipo: "retangulo", x1: 0, z1: 0, x2: 1, z2: 0 },
+        versao: 8,
+      }),
+    ).rejects.toThrow(/ainda não foi espalhad/);
+    await expect(
+      resetarMundo({
+        ...c.o,
+        dimensao: "overworld",
+        area: { tipo: "retangulo", x1: 0, z1: 0, x2: 1, z2: 0 },
+        versao: 8,
+        versaoPendenteDoFluxo: true,
+      }),
+    ).rejects.toThrow(/Nenhum chunk/); // passou da guarda (área já resetada na preparação do cenário)
+  });
+});
+
+describe("texto fixo (S-14) nos erros de leitura", () => {
+  it("pasta de backups ilegível não vaza caminho", async () => {
+    const c = await cenario();
+    const { cliente } = cartorioFalso(7);
+    const arquivo = join(c.base, "arquivo-no-lugar-da-pasta");
+    writeFileSync(arquivo, "x");
+    const msgs: string[] = [];
+    await publicarVersaoDoMundo({ ...c.o, pastaBackups: arquivo, cliente }).catch((e: Error) =>
+      msgs.push(e.message),
+    );
+    await desfazerUltimoReset({
+      ...c.o,
+      pastaBackups: arquivo,
+      cliente,
+      restaurar: c.restaurar,
+    }).catch((e: Error) => msgs.push(e.message));
+    expect(msgs).toHaveLength(2);
+    for (const m of msgs) expect(m).not.toContain(c.base);
   });
 });

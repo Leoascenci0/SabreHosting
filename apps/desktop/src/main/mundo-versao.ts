@@ -1,7 +1,9 @@
 import { dirname, resolve } from "node:path";
 import {
   adiarVersaoDoMundo,
+  descartarPendencia,
   desfazerUltimoReset,
+  marcarMundoTrocando,
   publicarVersaoDoMundo,
   retomarVersaoPendente,
   type ClienteVersao,
@@ -10,7 +12,6 @@ import {
   type Publicacao,
 } from "@sabrehosting/nucleo/mundo/versao-reset";
 import {
-  SemVez,
   comVez,
   restaurarNaVez,
   type OpcoesDepsBackups,
@@ -55,32 +56,61 @@ export function depsMundoVersao(o: OpcoesMundoVersao) {
     temTrava: vez.temTrava,
     renovarAgora: vez.renovarAgora,
   });
+  /** Publica; qualquer falha depois da troca cai no adiar (pacote + marcador), sem precisar de trava. */
+  const publicarOuAdiar = async (b: Awaited<ReturnType<typeof base>>): Promise<Publicacao> => {
+    try {
+      return await comVez(
+        o,
+        (vez) => publicarVersaoDoMundo(completo(b, vez)),
+        "publicar a versão do mundo",
+      );
+    } catch (erro) {
+      // O reset já feito não se perde: fica o pacote e o aviso para a retomada. Se nem isso der, vale o erro de cima
+      // (o marcador de troca já gravado mantém o servidor bloqueado).
+      return adiarVersaoDoMundo(b).catch(() => {
+        throw erro;
+      });
+    }
+  };
   return {
     /** Depois do reset: sobe a versão nova (cartório fora = pendente, com aviso). */
-    publicar: async (): Promise<Publicacao> => {
+    publicar: async (): Promise<Publicacao> => publicarOuAdiar(await base()),
+    /**
+     * Envolve a troca do mundo (o `resetarMundo` do 1.5, com `versaoPendenteDoFluxo: true`): grava o marcador ANTES,
+     * roda `fazer` e publica. Se `fazer` falhar, o marcador fica (servidor bloqueado) e a retomada publica o que
+     * estiver no mundo; `descartarPendencia` é a saída explícita do dono.
+     */
+    protegerTroca: async <T>(
+      fazer: () => Promise<T>,
+    ): Promise<{ resultado: T; publicacao: Publicacao }> => {
       const b = await base();
-      try {
-        return await comVez(o, (vez) => publicarVersaoDoMundo(completo(b, vez)));
-      } catch (erro) {
-        // Sem a vez (cartório fora) o reset já feito não se perde: fica o pacote e o aviso para a retomada.
-        if (!(erro instanceof SemVez)) throw erro;
-        return adiarVersaoDoMundo(b);
-      }
+      await marcarMundoTrocando(b);
+      const resultado = await fazer();
+      return { resultado, publicacao: await publicarOuAdiar(b) };
     },
     /** Antes de hospedar: termina a publicação pendente de um reset (`nada` se não há). */
     retomar: async (): Promise<{ estado: "nada" } | Publicacao> => {
       const b = await base();
-      return comVez(o, (vez) => retomarVersaoPendente(completo(b, vez)));
+      return comVez(
+        o,
+        (vez) => retomarVersaoPendente(completo(b, vez)),
+        "concluir a versão do mundo",
+      );
     },
+    /** Só remove o aviso de versão pendente (nunca mundo nem backup). A confirmação do dono é do 1.5/1.6. */
+    descartar: async (): Promise<void> => descartarPendencia(await base()),
     /** Desfaz o último reset. Com `jogadoDepois` e sem `confirmado`, só devolve o plano. */
     desfazer: async (confirmado = false): Promise<Desfeito> => {
       const b = await base();
-      return comVez(o, (vez) =>
-        desfazerUltimoReset({
-          ...completo(b, vez),
-          confirmado,
-          restaurar: (nome) => restaurarNaVez(o, nome, vez),
-        }),
+      return comVez(
+        o,
+        (vez) =>
+          desfazerUltimoReset({
+            ...completo(b, vez),
+            confirmado,
+            restaurar: (nome) => restaurarNaVez(o, nome, vez, true),
+          }),
+        "desfazer o reset",
       );
     },
   };

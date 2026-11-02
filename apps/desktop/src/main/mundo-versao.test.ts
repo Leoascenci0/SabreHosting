@@ -112,6 +112,29 @@ describe("depsMundoVersao", () => {
     expect(c.est.criar).toBe(0);
   });
 
+  it("protegerTroca: marcador antes da troca; falha na troca deixa o servidor bloqueado; descartar libera", async () => {
+    const c = await cenario();
+    await c.d.publicar();
+    const marca = join(c.servidor, MARCADOR_VERSAO_PENDENTE);
+    let viuMarcador = false;
+    const ok = await c.d.protegerTroca(async () => {
+      viuMarcador = existsSync(marca);
+      return 42;
+    });
+    expect(viuMarcador).toBe(true);
+    expect(ok.resultado).toBe(42);
+    expect(ok.publicacao.estado).toBe("publicada");
+    expect(existsSync(marca)).toBe(false);
+    await expect(
+      c.d.protegerTroca(async () => {
+        throw new Error("falhou");
+      }),
+    ).rejects.toThrow("falhou");
+    expect(existsSync(marca)).toBe(true);
+    await c.d.descartar();
+    expect(existsSync(marca)).toBe(false);
+  });
+
   it("servidor no ar recusa sem pegar a vez", async () => {
     const c = await cenario();
     c.ligar(true);

@@ -91,11 +91,13 @@ export class SemVez extends Error {}
 export async function comVez<T>(
   o: Pick<OpcoesDepsBackups, "cliente">,
   fn: (vez: VezDeHospedar) => Promise<T>,
+  /** Completa "pegar a vez de hospedar para …" na mensagem. */
+  para = "restaurar",
 ): Promise<T> {
   const renovador = new Renovador({ cliente: o.cliente, aoPerder: () => undefined });
   await renovador.pegar().catch((erro: unknown) => {
     throw new SemVez(
-      "Não consegui pegar a vez de hospedar para restaurar. Confira a conexão com o grupo ou espere o outro PC terminar.",
+      `Não consegui pegar a vez de hospedar para ${para}. Confira a conexão com o grupo ou espere o outro PC terminar.`,
       { cause: erro },
     );
   });
@@ -116,6 +118,8 @@ export async function restaurarNaVez(
   o: OpcoesDepsBackups,
   nome: string,
   vez: VezDeHospedar,
+  /** Só o fluxo de desfazer (que já marcou a troca) passa por cima do aviso de versão pendente. */
+  versaoPendenteDoFluxo = false,
 ): Promise<void> {
   const { pastaBackups } = o;
   const pastaDoMundo = (await o.mundoAgora?.()) ?? o.pastaDoMundo;
@@ -133,6 +137,7 @@ export async function restaurarNaVez(
     servidorParado: () => !o.servidorRodando(),
     versao: Math.max(0, ...lista.map((b) => b.versao)),
     epoca: vez.epoca,
+    versaoPendenteDoFluxo,
   });
 }
 

@@ -20,6 +20,7 @@ import {
   apagar,
   exigirMundoNaPastaDoServidor,
   exigirPodeTrocar,
+  exigirSemVersaoPendente,
   haMundo,
   type OpcoesRestaurar,
 } from "../backup/restaurar.js";
@@ -49,7 +50,7 @@ const ACAO = { parar: "resetar o mundo", fazer: "resetar o mundo" };
 
 export interface OpcoesResetar extends Pick<
   OpcoesRestaurar,
-  "temTrava" | "servidorParado" | "prazoTravaMs" | "renomear"
+  "temTrava" | "servidorParado" | "prazoTravaMs" | "renomear" | "versaoPendenteDoFluxo"
 > {
   pastaDoMundo: string;
   pastaBackups: string;
@@ -189,6 +190,7 @@ export async function resetarMundo(o: OpcoesResetar): Promise<Resetado> {
   };
   emAndamento();
   exigirMundoNaPastaDoServidor(mundo, o.pastaDoServidor);
+  exigirSemVersaoPendente(mundo, o.versaoPendenteDoFluxo);
   await exigirPodeTrocar(o, ACAO);
   if (!(await haMundo(mundo))) throw new Error("A pasta do mundo não existe; nada foi alterado.");
   if (
