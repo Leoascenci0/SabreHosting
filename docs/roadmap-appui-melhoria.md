@@ -44,7 +44,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   *Confirmação:* teste de contraste dos tokens novos nos dois temas; `impeccable` `document` conferido.
   *Origem:* Eliel · 02/11/2026
 
-- [ ] **2.2 — Casca nova: barra superior com abas e chip de estado, rodapé de estado**
+- [x] **2.2 — Casca nova: barra superior com abas e chip de estado, rodapé de estado**
   *O que fazer:* trocar a barra lateral por **barra superior**: nome do app, abas **Início, Backups, Grupo, Configurações**
   (a aba atual marcada), e à direita um **chip de estado** sempre visível ("Desligado", "Ligando…", "2 online") que abre
   o Início ao clicar. Rodapé fino: versão do app, nome do grupo e estado do cartório. Janela mínima 720 x 480: abas viram
