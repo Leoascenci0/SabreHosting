@@ -51,7 +51,10 @@ describe("lerVersaoDoLevelDat", () => {
 
 describe("lerSpawnDoLevelDat", () => {
   it("lê o formato antigo (Data.SpawnX/SpawnZ), com negativos", () => {
-    expect(lerSpawnDoLevelDat(levelDatComSpawn("antigo", -37, 64, 1001))).toEqual({ x: -37, z: 1001 });
+    expect(lerSpawnDoLevelDat(levelDatComSpawn("antigo", -37, 64, 1001))).toEqual({
+      x: -37,
+      z: 1001,
+    });
   });
 
   it("lê o formato novo (Data.spawn.pos)", () => {

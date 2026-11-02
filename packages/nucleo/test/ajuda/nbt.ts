@@ -38,7 +38,12 @@ export function levelDat(nome: string, id: number): Buffer {
 }
 
 /** level.dat só com o ponto de nascimento: formato antigo (Data.SpawnX/SpawnZ) ou novo (Data.spawn.pos). */
-export function levelDatComSpawn(formato: "antigo" | "novo", x: number, y: number, z: number): Buffer {
+export function levelDatComSpawn(
+  formato: "antigo" | "novo",
+  x: number,
+  y: number,
+  z: number,
+): Buffer {
   const dados =
     formato === "antigo"
       ? [nbtInt("SpawnX", x), nbtInt("SpawnY", y), nbtInt("SpawnZ", z)]
