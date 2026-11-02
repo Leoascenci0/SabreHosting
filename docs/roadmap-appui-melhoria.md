@@ -34,7 +34,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
 - **Sem mapa do mundo** neste bloco (exige mod ou servidor de mapa): fica no backlog; a aba **Mundo** (roadmap `chunk`)
   traz a grade de regiões.
 
-- [ ] **2.1 — Direção v2 documentada e tokens novos**
+- [x] **2.1 — Direção v2 documentada e tokens novos**
   *O que fazer:* escrever a seção "Direção v2" em `docs/design-system.md` (abas no topo, chip de estado, cartão principal,
   peças de estado, grade de números, seção recolhível, rodapé; o que é "original" e o que não se faz) e acrescentar em
   `tokens.css` só o que falta (camadas de superfície, borda por estado, numerais tabulares, tamanhos de número grande).
@@ -54,7 +54,7 @@ sistema, tudo empacotado, sem internet (`docs/design-system.md`). Modo impeccabl
   *Confirmação:* e2e: abas levam a cada tela; chip muda com o estado do servidor falso; teclado percorre as abas.
   *Depende de:* 2.1
 
-- [ ] **2.3 — Dados do Início na ponte: jogadores, tempo ligado, RAM, tamanho do mundo**
+- [x] **2.3 — Dados do Início na ponte: jogadores, tempo ligado, RAM, tamanho do mundo**
   *O que fazer:* o main passa a entregar para a tela, pela ponte e já pronto para mostrar: jogadores online (número e nomes),
   tempo ligado, memória usada pelo servidor (quando ligado), tamanho do mundo no disco (leitura barata, sem ler o mundo
   inteiro na RAM) e quantidade/último backup. Dado que não existe volta `null` (a tela mostra "—"). Atualização por
