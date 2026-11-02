@@ -1,5 +1,5 @@
-// chunk-1.6: aba Mundo (resetar parte do mundo e desfazer) com servidor falso e mundo inventado em pasta temporária.
-// Capturas em docs/imagens/chunk-1.6 só com SABRE_CAPTURAS=1.
+// chunk-1.7: aba Mundo (resetar parte do mundo e desfazer) com servidor falso e mundo inventado em pasta temporária.
+// Capturas em docs/imagens/chunk-1.7 só com SABRE_CAPTURAS=1.
 import { _electron as electron } from "playwright";
 import type { ElectronApplication, Page } from "playwright";
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { registrarCaptura } from "./captura.js";
 
 const pastaApp = fileURLToPath(new URL("..", import.meta.url));
-const imagens = fileURLToPath(new URL("../../../docs/imagens/chunk-1.6/", import.meta.url));
+const imagens = fileURLToPath(new URL("../../../docs/imagens/chunk-1.7/", import.meta.url));
 const semSandbox = process.getuid?.() === 0 ? ["--no-sandbox"] : [];
 
 interface Pastas {
@@ -257,6 +257,9 @@ describe("aba Mundo", () => {
     await expect(pagina.locator("#mundo-pergunta-aviso").innerText()).resolves.toContain(
       "o mundo foi jogado depois desse reset",
     );
+    await expect(pagina.locator("#mundo-pergunta-aviso").innerText()).resolves.toMatch(
+      /O mundo volta ao backup de hoje \d{2}:\d{2}\./,
+    );
     expect(existsSync(regiao(pastas))).toBe(false); // ainda não voltou
     await expect(pagina.locator("#mundo-confirmar").isDisabled()).resolves.toBe(true);
     await registrarCaptura(pagina, join(imagens, "desfazer-aviso-claro.png"));
@@ -289,6 +292,48 @@ describe("aba Mundo", () => {
       .poll(() => pagina.locator("#mundo-resultado").innerText(), { timeout: 15_000 })
       .toContain("Pronto neste PC: 64 chunks apagados.");
     expect(existsSync(regiao(pastas))).toBe(false);
+  });
+
+  it("regiões afastadas: a do meio aparece marcada e o aviso e a prévia dizem que ela também é apagada", async () => {
+    const { pagina } = await abrir("ninguem");
+    await pagina.locator("#mundo-grade button").first().waitFor();
+    await pagina.locator("#mundo-grade button", { hasText: "1, 0" }).click();
+    await pagina.locator("#mundo-grade button", { hasText: "0, 1" }).click();
+    const meio = pagina.locator("#mundo-grade button", { hasText: "0, 0" });
+    await expect(meio.getAttribute("aria-pressed")).resolves.toBe("true");
+    await expect(meio.getAttribute("class")).resolves.toContain("coberta");
+    await expect(pagina.locator("#mundo-grade-aviso").innerText()).resolves.toContain(
+      "1 região que você não marcou também será apagada",
+    );
+    await pagina.locator("#mundo-ver-previa").click();
+    await pagina.locator("#mundo-grande:not([hidden])").waitFor();
+    await pagina.keyboard.press("Escape"); // Esc fecha a pergunta de área grande
+    await expect(pagina.locator("#mundo-grande").isHidden()).resolves.toBe(true);
+    await pagina.locator("#mundo-ver-previa").click();
+    await pagina.locator("#mundo-grande-sim").click();
+    await pagina.locator("#mundo-previa:not([hidden])").waitFor();
+    await expect(pagina.locator("#mundo-previa-linhas").innerText()).resolves.toContain(
+      "Atinge 3 regiões",
+    );
+    // Desmarcar pelo campo limpa o aviso.
+    await pagina.locator("#mundo-x2").fill("600");
+    await expect(pagina.locator("#mundo-grade-aviso").isHidden()).resolves.toBe(true);
+  });
+
+  it("a confirmação explica o botão desligado e o foco volta ao título depois de confirmar", async () => {
+    const { pagina } = await abrir("ninguem");
+    await pagina.locator("#mundo-grade button").first().waitFor();
+    await ateConfirmar(pagina);
+    await expect(pagina.locator("#mundo-confirmar-dica").innerText()).resolves.toContain("world");
+    await pagina.locator("#mundo-nome-digitado").fill("wor");
+    await expect(pagina.locator("#mundo-confirmar-dica").innerText()).resolves.toContain("igual");
+    await pagina.locator("#mundo-nome-digitado").fill("world");
+    await expect(pagina.locator("#mundo-confirmar-dica").innerText()).resolves.toBe("");
+    await pagina.locator("#mundo-confirmar").click();
+    await expect(pagina.evaluate(() => document.activeElement?.id)).resolves.toBe("titulo-mundo");
+    await expect
+      .poll(() => pagina.locator("#mundo-resultado").innerText(), { timeout: 15_000 })
+      .toContain("Pronto neste PC");
   });
 
   it("captura da aba, clara e escura", async () => {

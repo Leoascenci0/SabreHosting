@@ -54,6 +54,11 @@ Tempo: uns 15 minutos.
 cartório (o serviço do grupo na máquina da nuvem), que ainda não foi instalado lá (item cart-2.2, espera você).
 Até lá, a tela de boas-vindas fica parada no convite (e o **Explorar sem grupo** mostra como o app é), e isso é o esperado.
 
+## Teste extra (opcional): aba Mundo
+
+Depois do instalador, quem quiser provar o **reset de parte do mundo** segue `docs/tutoriais/chunk-resetar.md`
+(sempre com um mundo de teste, nunca o real).
+
 ## 4. Me contar
 
 No chat da Máxima, diga para cada passo do 3: ✅ ou o que apareceu (um print ajuda). Diga também se o aviso azul

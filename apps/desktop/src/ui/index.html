@@ -265,10 +265,16 @@
             <div class="painel" id="mundo-pendencia" role="status" hidden>
               <p id="mundo-pendencia-texto"></p>
               <div class="acoes">
-                <button type="button" class="secundario" id="mundo-descartar">
+                <button
+                  type="button"
+                  class="secundario"
+                  id="mundo-descartar"
+                  aria-describedby="mundo-descartar-dica"
+                >
                   Descartar este aviso…
                 </button>
               </div>
+              <p class="detalhe" id="mundo-descartar-dica"></p>
             </div>
             <section class="painel" aria-labelledby="mundo-titulo-area">
               <h3 id="mundo-titulo-area">1. Onde apagar</h3>
@@ -362,15 +368,16 @@
                   value="100"
                 />
               </div>
-              <p class="dica">
-                Os blocos aparecem no jogo ao apertar F3 (campo XYZ). Sem aviso, vale até 1.024
-                chunks ou raio de 1.000 blocos.
+              <p class="dica" id="mundo-teto-dica">
+                Os blocos aparecem no jogo ao apertar F3 (campo XYZ).
               </p>
               <h4 id="mundo-titulo-grade">Ou clique nas regiões que existem no disco</h4>
               <p class="dica" id="mundo-grade-dica">
                 Cada quadrado é uma região (512 x 512 blocos). Clicar marca; o app preenche os
-                campos.
+                campos. Se você marcar regiões afastadas, o app apaga o retângulo que cobre todas:
+                as do meio ficam com contorno tracejado.
               </p>
+              <p class="detalhe" id="mundo-grade-aviso" role="status" hidden></p>
               <div
                 class="grade-regioes"
                 id="mundo-grade"
@@ -448,7 +455,14 @@
               <label for="mundo-nome-digitado" id="mundo-nome-rotulo"
                 >Digite o nome do mundo para confirmar</label
               >
-              <input id="mundo-nome-digitado" type="text" autocomplete="off" spellcheck="false" />
+              <input
+                id="mundo-nome-digitado"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="mundo-confirmar-dica"
+              />
+              <p class="detalhe" id="mundo-confirmar-dica"></p>
               <div class="acoes">
                 <button type="button" class="perigo" id="mundo-confirmar" disabled>
                   Confirmar
